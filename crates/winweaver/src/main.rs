@@ -46,6 +46,31 @@ fn option(args: &[String], name: &str) -> Option<String> {
     })
 }
 
+/// The catalog with the imports of policy templates next to the executable, the templates of
+/// this Windows first; a file that cannot be read or merged is left out.
+fn with_imports(catalog: Catalog, dir: &std::path::Path) -> Catalog {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return catalog;
+    };
+    let mut paths: Vec<std::path::PathBuf> = entries
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e == winweaver_core::admx::CATALOG_EXTENSION))
+        .collect();
+    paths.sort_by_key(|p| {
+        let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        (!name.starts_with("system"), name)
+    });
+    let files: Vec<winweaver_core::admx::CatalogFile> = paths
+        .iter()
+        .filter_map(|p| winweaver_core::admx::CatalogFile::load(p).ok())
+        .collect();
+    match winweaver_core::admx::merge(&catalog, &files) {
+        Ok((merged, _)) => merged,
+        Err(_) => catalog,
+    }
+}
+
 fn mcp(args: &[String]) -> ExitCode {
     let transport = args.first().map(String::as_str).unwrap_or("");
     let mode = match option(args, "--mode")
@@ -67,6 +92,7 @@ fn mcp(args: &[String]) -> ExitCode {
         }
     };
     let dir = winweaver_ui::exe_dir();
+    let catalog = with_imports(catalog, &winweaver_ui::imports_dir());
     let server = winweaver_mcp::Server::new(
         catalog,
         &winweaver_ui::PRESETS,
