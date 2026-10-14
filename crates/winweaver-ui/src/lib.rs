@@ -19,9 +19,18 @@ use winweaver_core::resolver::{self, Resolution, State};
 
 /// The presets embedded in the executable: the name and the profile text.
 pub const PRESETS: [(&str, &str); 4] = [
-    ("Office", include_str!("../../../data/presets/office.wwprofile")),
-    ("Strict", include_str!("../../../data/presets/strict.wwprofile")),
-    ("Laptop", include_str!("../../../data/presets/laptop.wwprofile")),
+    (
+        "Office",
+        include_str!("../../../data/presets/office.wwprofile"),
+    ),
+    (
+        "Strict",
+        include_str!("../../../data/presets/strict.wwprofile"),
+    ),
+    (
+        "Laptop",
+        include_str!("../../../data/presets/laptop.wwprofile"),
+    ),
     ("Home", include_str!("../../../data/presets/home.wwprofile")),
 ];
 
@@ -132,7 +141,10 @@ pub struct Search {
 impl Search {
     /// The lower case words of the search text.
     pub fn words(&self) -> Vec<String> {
-        self.text.split_whitespace().map(str::to_lowercase).collect()
+        self.text
+            .split_whitespace()
+            .map(str::to_lowercase)
+            .collect()
     }
 
     fn remember(&mut self) {
@@ -321,7 +333,10 @@ impl App {
                     }
                     ui.separator();
                     for (name, _) in PRESETS {
-                        if ui.button(format!("Profile from the preset {name}")).clicked() {
+                        if ui
+                            .button(format!("Profile from the preset {name}"))
+                            .clicked()
+                        {
                             acts.push(Act::NewProfile(Some(name)));
                             ui.close();
                         }
@@ -373,12 +388,20 @@ impl App {
                 if ui.selectable_label(i == self.active, label).clicked() {
                     acts.push(Act::Activate(i));
                 }
-                if ui.small_button("x").on_hover_text("Close (Ctrl+W)").clicked() {
+                if ui
+                    .small_button("x")
+                    .on_hover_text("Close (Ctrl+W)")
+                    .clicked()
+                {
                     acts.push(Act::CloseTab(i, false));
                 }
                 ui.add_space(4.0);
             }
-            if ui.button("+").on_hover_text("New profile (Ctrl+N)").clicked() {
+            if ui
+                .button("+")
+                .on_hover_text("New profile (Ctrl+N)")
+                .clicked()
+            {
                 acts.push(Act::NewProfile(None));
             }
         });
@@ -390,7 +413,9 @@ impl App {
                 acts.push(Act::NewProfile(None));
             }
             if ui.button("Open").clicked() {
-                acts.push(Act::Message("Open: the file dialog comes with the next milestone".into()));
+                acts.push(Act::Message(
+                    "Open: the file dialog comes with the next milestone".into(),
+                ));
             }
             if ui.button("Save").on_hover_text("Ctrl+S").clicked() {
                 acts.push(Act::Save);
@@ -400,14 +425,20 @@ impl App {
                 acts.push(Act::Check);
             }
             if ui.button("Build").on_hover_text("F9").clicked() {
-                acts.push(Act::Message("Build: the renderer comes with the next milestone".into()));
+                acts.push(Act::Message(
+                    "Build: the renderer comes with the next milestone".into(),
+                ));
             }
             ui.separator();
             if ui.button("This PC").clicked() {
-                acts.push(Act::Message("This PC: the native read comes with the next milestone".into()));
+                acts.push(Act::Message(
+                    "This PC: the native read comes with the next milestone".into(),
+                ));
             }
             if ui.button("Compare").clicked() {
-                acts.push(Act::Message("Compare: the diff view comes with the next milestone".into()));
+                acts.push(Act::Message(
+                    "Compare: the diff view comes with the next milestone".into(),
+                ));
             }
         });
     }
@@ -426,7 +457,10 @@ impl App {
         if let Some(group) = group {
             for id in self.catalog.path_of(&group) {
                 if let Some(g) = self.catalog.group(id) {
-                    crumbs.push((views::gtitle(texts, g).to_owned(), Sel::Group(id.to_owned())));
+                    crumbs.push((
+                        views::gtitle(texts, g).to_owned(),
+                        Sel::Group(id.to_owned()),
+                    ));
                 }
             }
         }
@@ -488,7 +522,11 @@ impl App {
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if self.search.open {
-                    if ui.button("x").on_hover_text("Clear and close (Esc)").clicked() {
+                    if ui
+                        .button("x")
+                        .on_hover_text("Clear and close (Esc)")
+                        .clicked()
+                    {
                         self.search.text.clear();
                         self.search.open = false;
                     }
@@ -565,21 +603,32 @@ impl App {
                 .show_ui(ui, |ui| {
                     ui.selectable_value(&mut self.settings.language, "en".to_owned(), "English");
                     for t in &self.texts {
-                        ui.selectable_value(&mut self.settings.language, t.code.clone(), &t.language);
+                        ui.selectable_value(
+                            &mut self.settings.language,
+                            t.code.clone(),
+                            &t.language,
+                        );
                     }
                 });
         });
         ui.horizontal(|ui| {
             ui.label("Theme");
             let before = self.settings.theme;
-            ui.radio_value(&mut self.settings.theme, ThemeChoice::System, "Follow Windows");
+            ui.radio_value(
+                &mut self.settings.theme,
+                ThemeChoice::System,
+                "Follow Windows",
+            );
             ui.radio_value(&mut self.settings.theme, ThemeChoice::Light, "Light");
             ui.radio_value(&mut self.settings.theme, ThemeChoice::Dark, "Dark");
             if before != self.settings.theme {
                 self.theme_applied = false;
             }
         });
-        ui.checkbox(&mut self.settings.desc_open, "Show the description panel (Ctrl+D)");
+        ui.checkbox(
+            &mut self.settings.desc_open,
+            "Show the description panel (Ctrl+D)",
+        );
         ui.add_space(12.0);
         ui.weak("Settings are not saved yet; settings.json next to the executable comes with the next milestone.");
     }
@@ -659,7 +708,10 @@ impl App {
                         .map(|p| p.default_value());
                     if let Some(doc) = self.active_profile() {
                         let choice = doc.profile.rules.entry(id).or_default();
-                        if default.as_ref().is_some_and(|d| check::same_value(d, &value)) {
+                        if default
+                            .as_ref()
+                            .is_some_and(|d| check::same_value(d, &value))
+                        {
                             choice.params.shift_remove(&name);
                         } else {
                             choice.params.insert(name, value);
@@ -729,7 +781,10 @@ impl App {
                         if !self.bookmarks.remove(&key) {
                             self.bookmarks.insert(key);
                         }
-                        self.status = format!("{} bookmarks (kept in memory for now)", self.bookmarks.len());
+                        self.status = format!(
+                            "{} bookmarks (kept in memory for now)",
+                            self.bookmarks.len()
+                        );
                     }
                 }
                 Act::Fold => self.settings.desc_open = !self.settings.desc_open,
@@ -770,7 +825,9 @@ impl eframe::App for App {
                 egui::Panel::left("tree")
                     .resizable(true)
                     .default_size(380.0)
-                    .show(ui, |ui| views::tree_view(ui, catalog, texts, doc, search, &mut acts));
+                    .show(ui, |ui| {
+                        views::tree_view(ui, catalog, texts, doc, search, &mut acts)
+                    });
                 egui::CentralPanel::default().show(ui, |ui| {
                     views::detail_view(ui, catalog, texts, doc, settings, &mut acts);
                 });

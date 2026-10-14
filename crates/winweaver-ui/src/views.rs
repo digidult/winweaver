@@ -109,7 +109,10 @@ fn group_rows(
             acts.push(Act::SetGroup(gid.to_owned(), checked));
         }
         let selected = matches!(&doc.sel, Sel::Group(id) if id == gid);
-        if ui.selectable_label(selected, gtitle(texts, group)).clicked() {
+        if ui
+            .selectable_label(selected, gtitle(texts, group))
+            .clicked()
+        {
             acts.push(Act::Select(Sel::Group(gid.to_owned())));
         }
         ui.weak(format!("{on}/{total}"));
@@ -210,7 +213,9 @@ fn profile_detail(ui: &mut egui::Ui, doc: &ProfileDoc) {
         ui.label(format!("{} ({})", a.name, a.group));
     }
     ui.add_space(8.0);
-    ui.weak("The forms become editable with the next milestone. Select a group or a rule in the tree.");
+    ui.weak(
+        "The forms become editable with the next milestone. Select a group or a rule in the tree.",
+    );
 }
 
 fn group_detail(
@@ -371,12 +376,16 @@ fn rule_detail(
         egui::CollapsingHeader::new("Dependencies and conflicts")
             .id_salt("desc-deps")
             .show(ui, |ui| {
-                for (label, list) in [("Needs", &rule.requires), ("Conflicts with", &rule.conflicts)]
-                {
+                for (label, list) in [
+                    ("Needs", &rule.requires),
+                    ("Conflicts with", &rule.conflicts),
+                ] {
                     for other in list {
                         ui.horizontal(|ui| {
                             ui.weak(label);
-                            let title = catalog.rule(other).map_or(other.as_str(), |r| rtitle(texts, r));
+                            let title = catalog
+                                .rule(other)
+                                .map_or(other.as_str(), |r| rtitle(texts, r));
                             if ui.link(title).clicked() {
                                 acts.push(Act::Select(Sel::Rule(other.clone())));
                             }
@@ -400,7 +409,10 @@ fn rule_detail(
         egui::CollapsingHeader::new("Reference")
             .id_salt("desc-ref")
             .show(ui, |ui| {
-                ui.weak(format!("Documentation: {} (opens in a tab with the next milestone)", rule.doc));
+                ui.weak(format!(
+                    "Documentation: {} (opens in a tab with the next milestone)",
+                    rule.doc
+                ));
             });
     }
 }
@@ -445,8 +457,15 @@ fn param_editor(
             }
             Param::Int { min, max, .. } => {
                 let mut v = current.as_i64().unwrap_or(*min);
-                if ui.add(egui::DragValue::new(&mut v).range(*min..=*max)).changed() {
-                    acts.push(Act::SetParam(rule.id.clone(), name.to_owned(), Value::from(v)));
+                if ui
+                    .add(egui::DragValue::new(&mut v).range(*min..=*max))
+                    .changed()
+                {
+                    acts.push(Act::SetParam(
+                        rule.id.clone(),
+                        name.to_owned(),
+                        Value::from(v),
+                    ));
                 }
             }
             Param::Text { .. } => {
@@ -459,7 +478,11 @@ fn param_editor(
                     )
                     .changed()
                 {
-                    acts.push(Act::SetParam(rule.id.clone(), name.to_owned(), Value::from(s)));
+                    acts.push(Act::SetParam(
+                        rule.id.clone(),
+                        name.to_owned(),
+                        Value::from(s),
+                    ));
                 }
             }
         }
