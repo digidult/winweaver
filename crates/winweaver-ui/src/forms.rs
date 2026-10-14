@@ -35,7 +35,13 @@ impl Form {
     }
 }
 
-pub fn form_view(ui: &mut egui::Ui, doc: &ProfileDoc, form: Form, language: &str, acts: &mut Vec<Act>) {
+pub fn form_view(
+    ui: &mut egui::Ui,
+    doc: &ProfileDoc,
+    form: Form,
+    language: &str,
+    acts: &mut Vec<Act>,
+) {
     match form {
         Form::Install => {
             let mut install = doc.profile.install.clone();
@@ -123,7 +129,11 @@ fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
                 .width(320.0)
                 .show_ui(ui, |ui| {
                     for zone in resources::time_zones() {
-                        ui.selectable_value(&mut i.time_zone, zone.id.clone(), zone.title_for(language));
+                        ui.selectable_value(
+                            &mut i.time_zone,
+                            zone.id.clone(),
+                            zone.title_for(language),
+                        );
                     }
                 });
             ui.end_row();
@@ -212,7 +222,9 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>) {
                     ui.add(egui::TextEdit::singleline(&mut account.name).desired_width(200.0));
                     ui.end_row();
                     ui.label("Display name");
-                    ui.add(egui::TextEdit::singleline(&mut account.display_name).desired_width(200.0));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut account.display_name).desired_width(200.0),
+                    );
                     ui.end_row();
                     ui.label("Group");
                     egui::ComboBox::from_id_salt("group")
@@ -224,7 +236,9 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>) {
                         });
                     ui.end_row();
                     ui.label("Description");
-                    ui.add(egui::TextEdit::singleline(&mut account.description).desired_width(320.0));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut account.description).desired_width(320.0),
+                    );
                     ui.end_row();
                     ui.label("Password");
                     ui.add(

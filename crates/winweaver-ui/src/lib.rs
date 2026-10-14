@@ -800,9 +800,15 @@ impl App {
                                     ),
                                     Sel::Rule(id.clone()),
                                 ),
-                                Target::Install => ("Installation".to_owned(), Sel::Form(Form::Install)),
-                                Target::Accounts => ("Accounts".to_owned(), Sel::Form(Form::Accounts)),
-                                Target::Languages => ("Languages".to_owned(), Sel::Form(Form::Languages)),
+                                Target::Install => {
+                                    ("Installation".to_owned(), Sel::Form(Form::Install))
+                                }
+                                Target::Accounts => {
+                                    ("Accounts".to_owned(), Sel::Form(Form::Accounts))
+                                }
+                                Target::Languages => {
+                                    ("Languages".to_owned(), Sel::Form(Form::Languages))
+                                }
                                 Target::Profile => (doc.profile.name.clone(), Sel::None),
                             };
                             if ui.link(label).clicked() {

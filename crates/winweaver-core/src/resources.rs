@@ -87,7 +87,8 @@ pub fn time_zones() -> &'static [TimeZone] {
 
 pub fn keyboards() -> &'static [Keyboard] {
     static KEYBOARDS_PARSED: OnceLock<Vec<Keyboard>> = OnceLock::new();
-    KEYBOARDS_PARSED.get_or_init(|| jsonfile::parse(KEYBOARDS, "keyboards.json").unwrap_or_default())
+    KEYBOARDS_PARSED
+        .get_or_init(|| jsonfile::parse(KEYBOARDS, "keyboards.json").unwrap_or_default())
 }
 
 /// The keyboard of a language tag.
@@ -102,7 +103,11 @@ mod tests {
     #[test]
     fn resources_load() {
         let zones = time_zones();
-        assert!(zones.iter().any(|z| z.id == "FLE Standard Time" && z.recommended));
+        assert!(
+            zones
+                .iter()
+                .any(|z| z.id == "FLE Standard Time" && z.recommended)
+        );
         let kyiv = zones.iter().find(|z| z.id == "FLE Standard Time").unwrap();
         assert!(kyiv.title_for("en").contains("Kyiv"));
         assert!(!kyiv.title_for("uk").is_empty());
