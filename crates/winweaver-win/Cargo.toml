@@ -1,0 +1,21 @@
+[package]
+name = "winweaver-win"
+description = "WinWeaver on Windows: the registry and the system read through the Windows API"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+winweaver-core = { path = "../winweaver-core" }
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.56"
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_Globalization",
+    "Win32_Security",
+    "Win32_System_Threading",
+] }

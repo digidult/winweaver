@@ -24,6 +24,8 @@ use winweaver_core::diff::{self, Diff};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::profile::{self, Account, Install, Languages, Profile};
 use winweaver_core::render;
+use winweaver_core::scripts;
+use winweaver_core::thispc::{self, Report, Verdict};
 use winweaver_core::resolver::{self, Resolution};
 use winweaver_core::validate::{self, Issue, Severity, Target};
 
@@ -186,6 +188,14 @@ impl Search {
     }
 }
 
+/// The stand-alone scripts the window saves.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ScriptKind {
+    Apply,
+    Revert,
+    Audit,
+}
+
 /// A change requested while a frame was drawn, applied after it.
 pub enum Act {
     Select(Sel),
@@ -205,6 +215,14 @@ pub enum Act {
     Forward,
     ToggleBookmark,
     Fold,
+    /// Read every rule of this PC into a new profile tab.
+    ReadPc,
+    /// Read the selected rules of this PC into the open profile.
+    ReadSelection,
+    /// Compare the selected rules with this PC in the messages panel.
+    CheckOnPc,
+    SaveScript(ScriptKind),
+    OpenReport,
     OpenGuide,
     OpenMarks,
     GoToMark(usize),
@@ -553,11 +571,41 @@ impl App {
                 acts.push(Act::Build);
             }
             ui.separator();
-            if ui.button("This PC").clicked() {
-                acts.push(Act::Message(
-                    "This PC: the native read comes with the next milestone".into(),
-                ));
-            }
+            ui.menu_button("This PC", |ui| {
+                if ui.button("Read this PC into a new profile").clicked() {
+                    acts.push(Act::ReadPc);
+                    ui.close();
+                }
+                if ui.button("Read the selection into this profile").clicked() {
+                    acts.push(Act::ReadSelection);
+                    ui.close();
+                }
+                if ui.button("Check the selection on this PC").clicked() {
+                    acts.push(Act::CheckOnPc);
+                    ui.close();
+                }
+                ui.separator();
+                if ui.button("Save an apply script for the selection...").clicked() {
+                    acts.push(Act::SaveScript(ScriptKind::Apply));
+                    ui.close();
+                }
+                if ui
+                    .button("Save a return-to-defaults script for the selection...")
+                    .clicked()
+                {
+                    acts.push(Act::SaveScript(ScriptKind::Revert));
+                    ui.close();
+                }
+                if ui.button("Save an audit script for the selection...").clicked() {
+                    acts.push(Act::SaveScript(ScriptKind::Audit));
+                    ui.close();
+                }
+                ui.separator();
+                if ui.button("Open an audit report...").clicked() {
+                    acts.push(Act::OpenReport);
+                    ui.close();
+                }
+            });
             if ui.button("Compare").clicked() {
                 acts.push(Act::Compare);
             }
@@ -933,6 +981,245 @@ impl App {
         );
     }
 
+    /// The rule ids of the selection of the active profile: a rule, the rules of a group, or every
+    /// rule when nothing (or a form) is selected.
+    fn selection_ids(&self) -> Vec<String> {
+        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+            return Vec::new();
+        };
+        match &doc.sel {
+            Sel::Rule(id) => vec![id.clone()],
+            Sel::Group(group) => self
+                .catalog
+                .rules_under(group)
+                .iter()
+                .map(|r| r.id.clone())
+                .collect(),
+            Sel::None | Sel::Form(_) => self.catalog.rules().iter().map(|r| r.id.clone()).collect(),
+        }
+    }
+
+    /// Reads this PC: every rule into a new profile tab, or the selection into the open profile.
+    fn read_pc(&mut self, only_selection: bool) {
+        let Some(machine) = winweaver_win::this_pc() else {
+            self.status = "This PC can be read on Windows only".to_owned();
+            return;
+        };
+        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+            self.status = "Read this PC: open a profile first; its rules and forms are the base".to_owned();
+            return;
+        };
+        let ids = if only_selection {
+            self.selection_ids()
+        } else {
+            self.catalog.rules().iter().map(|r| r.id.clone()).collect()
+        };
+        let base = doc.profile.clone();
+        let plan = thispc::plan(&self.catalog, &base, &ids);
+        let report = thispc::run(machine.as_ref(), &plan, !only_selection, &clock::now_utc_iso());
+        let readings = thispc::judge(&self.catalog, &plan, &report.results);
+        let (mut profile, summary) =
+            thispc::capture(&self.catalog, &base, &readings, report.system.as_ref());
+        let mut issues: Vec<Issue> = summary
+            .notes
+            .iter()
+            .map(|n| Issue {
+                severity: Severity::Info,
+                target: Target::Profile,
+                text: format!("This PC: {n}"),
+            })
+            .collect();
+        if !plan.excluded.is_empty() {
+            issues.push(Issue {
+                severity: Severity::Info,
+                target: Target::Profile,
+                text: format!(
+                    "This PC: {} rules act only during installation or at a first sign-in and were not read",
+                    plan.excluded.len()
+                ),
+            });
+        }
+        let catalog = &self.catalog;
+        if only_selection {
+            if let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) {
+                doc.profile = profile;
+                doc.refresh(catalog);
+                doc.issues = issues;
+            }
+            self.status = format!("Read the selection on this PC: {}", summary.line());
+        } else {
+            let computer = if report.computer.is_empty() {
+                "This PC".to_owned()
+            } else {
+                report.computer.clone()
+            };
+            profile.name = computer;
+            profile.created = clock::now_utc_iso();
+            profile.modified = String::new();
+            let mut doc = ProfileDoc::new(profile, None, catalog);
+            doc.dirty = true;
+            doc.issues = issues;
+            self.docs.push(Doc::Profile(Box::new(doc)));
+            self.active = self.docs.len() - 1;
+            let forms = if summary.forms.is_empty() {
+                String::new()
+            } else {
+                format!("; forms: {}", summary.forms.join(", "))
+            };
+            self.status = format!("Read this PC: {}{forms}", summary.line());
+        }
+    }
+
+    /// Compares the selected rules of the profile with this PC and lists the result.
+    fn check_on_pc(&mut self) {
+        let Some(machine) = winweaver_win::this_pc() else {
+            self.status = "This PC can be read on Windows only".to_owned();
+            return;
+        };
+        let ids = self.selection_ids();
+        let catalog = &self.catalog;
+        let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        let plan = thispc::plan(catalog, &doc.profile, &ids);
+        let report = thispc::run(machine.as_ref(), &plan, false, &clock::now_utc_iso());
+        let readings = thispc::judge(catalog, &plan, &report.results);
+        let mut issues = Vec::new();
+        let mut differ = 0;
+        for r in &readings {
+            let on = doc.resolution.in_effect(&r.rule);
+            let agrees = match r.verdict {
+                Verdict::InEffect | Verdict::AsDefault => on || r.verdict == Verdict::AsDefault,
+                Verdict::Partly | Verdict::NotInEffect => !on,
+                Verdict::NotReadable => true,
+            };
+            if !agrees {
+                differ += 1;
+            }
+            issues.push(Issue {
+                severity: if agrees { Severity::Info } else { Severity::Warning },
+                target: Target::Rule(r.rule.clone()),
+                text: format!(
+                    "This PC: {} ({} in the profile)",
+                    r.verdict.title(),
+                    if on { "on" } else { "off" }
+                ),
+            });
+        }
+        issues.sort_by_key(|i| i.severity);
+        doc.issues = issues;
+        self.status = format!(
+            "Checked {} rules on this PC: {differ} differ from the profile",
+            readings.len()
+        );
+    }
+
+    /// Saves a stand-alone script for the selection into a folder the user picks; an apply or
+    /// return script gets the undo script next to it.
+    fn save_script(&mut self, kind: ScriptKind) {
+        let ids = self.selection_ids();
+        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+            self.status = "Save a script: the active tab is not a profile".to_owned();
+            return;
+        };
+        let version = winweaver_core::APP_VERSION;
+        let stem = file_stem(&doc.profile.name);
+        let made = match kind {
+            ScriptKind::Apply => scripts::apply_script(&self.catalog, &doc.profile, &ids, version)
+                .map(|(t, p)| (t, p.summary(), format!("Apply-{stem}.ps1"), true)),
+            ScriptKind::Revert => scripts::revert_script(&self.catalog, &doc.profile, &ids, version)
+                .map(|(t, p)| (t, p.summary(), format!("Revert-{stem}.ps1"), true)),
+            ScriptKind::Audit => scripts::audit_script(&self.catalog, &doc.profile, &ids, version)
+                .map(|(t, p)| {
+                    (
+                        t,
+                        format!("{} rules checked", p.rules.len()),
+                        format!("Audit-{stem}.ps1"),
+                        false,
+                    )
+                }),
+        };
+        let (text, summary, name, with_undo) = match made {
+            Ok(m) => m,
+            Err(e) => {
+                self.status = format!("Script not made: {e}");
+                return;
+            }
+        };
+        let undo = if with_undo {
+            match scripts::undo_script(&doc.profile, version) {
+                Ok(u) => Some(u),
+                Err(e) => {
+                    self.status = format!("Script not made: {e}");
+                    return;
+                }
+            }
+        } else {
+            None
+        };
+        let start = output_dir();
+        let dialog = rfd::FileDialog::new().set_title("Choose the folder for the script");
+        let dialog = if start.is_dir() { dialog.set_directory(start) } else { dialog };
+        let Some(dir) = dialog.pick_folder() else {
+            return;
+        };
+        let path = dir.join(&name);
+        if let Err(e) = write_file(&path, &scripts::file_bytes(&text)) {
+            self.status = format!("Script not saved: {e}");
+            return;
+        }
+        if let Some(u) = undo
+            && let Err(e) = write_file(&dir.join(scripts::UNDO_NAME), &scripts::file_bytes(&u))
+        {
+            self.status = format!("Undo script not saved: {e}");
+            return;
+        }
+        self.status = format!("Saved {} ({summary}); run it as administrator, first on a test PC", path.display());
+    }
+
+    /// Opens the report of an audit script made on another PC and reads it into a new profile.
+    fn open_report(&mut self) {
+        let Some(path) = rfd::FileDialog::new()
+            .set_title("Open an audit report")
+            .add_filter("Audit report", &["json"])
+            .pick_file()
+        else {
+            return;
+        };
+        let report = match Report::load(&path) {
+            Ok(r) => r,
+            Err(e) => {
+                self.status = format!("Report not read: {e}");
+                return;
+            }
+        };
+        let base = match self.docs.get(self.active) {
+            Some(Doc::Profile(doc)) => doc.profile.clone(),
+            _ => Profile::parse(PRESETS[0].1, PRESETS[0].0)
+                .unwrap_or_else(|_| Profile::from_defaults(PRESETS[0].0, &self.catalog)),
+        };
+        let mut ids: Vec<String> = Vec::new();
+        for r in &report.results {
+            if !ids.contains(&r.rule) {
+                ids.push(r.rule.clone());
+            }
+        }
+        let plan = thispc::plan(&self.catalog, &base, &ids);
+        let readings = thispc::judge(&self.catalog, &plan, &report.results);
+        let (mut profile, summary) =
+            thispc::capture(&self.catalog, &base, &readings, report.system.as_ref());
+        profile.name = if report.computer.is_empty() {
+            "Audit report".to_owned()
+        } else {
+            report.computer.clone()
+        };
+        let mut doc = ProfileDoc::new(profile, None, &self.catalog);
+        doc.dirty = true;
+        self.docs.push(Doc::Profile(Box::new(doc)));
+        self.active = self.docs.len() - 1;
+        self.status = format!("Read the report {}: {}", path.display(), summary.line());
+    }
+
     fn messages_panel(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             return;
@@ -1150,6 +1437,11 @@ impl App {
                     self.settings_dirty = true;
                 }
                 Act::Check => self.check_active(),
+                Act::ReadPc => self.read_pc(false),
+                Act::ReadSelection => self.read_pc(true),
+                Act::CheckOnPc => self.check_on_pc(),
+                Act::SaveScript(kind) => self.save_script(kind),
+                Act::OpenReport => self.open_report(),
                 Act::Build => self.build_active(),
                 Act::OpenGuide => self.open_guide(),
                 Act::Compare => {

@@ -6,7 +6,7 @@ use winweaver_core::catalog::{Action, Catalog, Group, Param, ROOT_UNATTEND, Rule
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::resolver::State;
 
-use crate::{Act, ProfileDoc, Search, Sel, Settings};
+use crate::{Act, ProfileDoc, ScriptKind, Search, Sel, Settings};
 
 pub fn rtitle<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule) -> &'a str {
     texts.map_or(rule.title.as_str(), |t| t.rule_title(rule))
@@ -265,6 +265,8 @@ fn group_detail(
         ui.label(summary);
     }
     ui.add_space(8.0);
+    this_pc_card(ui, acts);
+    ui.add_space(8.0);
     ui.strong("Rules of this group");
     for rule in catalog.rules_in(id) {
         ui.horizontal(|ui| {
@@ -277,6 +279,26 @@ fn group_detail(
             }
         });
     }
+}
+
+/// The commands of This PC for the selected rule or group.
+fn this_pc_card(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    ui.add_space(8.0);
+    ui.strong("This PC, this selection");
+    ui.horizontal_wrapped(|ui| {
+        if ui.button("Check on this PC").clicked() {
+            acts.push(Act::CheckOnPc);
+        }
+        if ui.button("Read into the profile").clicked() {
+            acts.push(Act::ReadSelection);
+        }
+        if ui.button("Save an apply script...").clicked() {
+            acts.push(Act::SaveScript(ScriptKind::Apply));
+        }
+        if ui.button("Save a return-to-defaults script...").clicked() {
+            acts.push(Act::SaveScript(ScriptKind::Revert));
+        }
+    });
 }
 
 fn describe(action: &Action) -> String {
@@ -356,6 +378,7 @@ fn rule_detail(
             param_editor(ui, catalog, texts, doc, rule, name, param, acts);
         }
     }
+    this_pc_card(ui, acts);
     if !settings.desc_open {
         ui.add_space(6.0);
         ui.weak("Description folded (Ctrl+D)");

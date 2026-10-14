@@ -1,11 +1,16 @@
 [workspace]
 resolver = "3"
-members = ["crates/winweaver-core", "crates/winweaver-ui", "crates/winweaver"]
+members = [
+    "crates/winweaver-core",
+    "crates/winweaver-win",
+    "crates/winweaver-ui",
+    "crates/winweaver",
+]
 
 [workspace.package]
 version = "0.1.0-alpha.1"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.88"
 license = "MIT"
 repository = "https://github.com/digidult/winweaver"
 authors = ["digidult"]

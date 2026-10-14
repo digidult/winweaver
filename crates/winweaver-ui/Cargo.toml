@@ -10,6 +10,7 @@ authors.workspace = true
 
 [dependencies]
 winweaver-core = { path = "../winweaver-core" }
+winweaver-win = { path = "../winweaver-win" }
 eframe = "0.36"
 egui_commonmark = "0.25"
 rfd = "0.17"

@@ -154,7 +154,7 @@ pub fn base64(text: &str) -> String {
 }
 
 /// The text of a parameter value inside a placeholder.
-fn value_text(value: &Value) -> String {
+pub(crate) fn value_text(value: &Value) -> String {
     match value {
         Value::String(s) => s.clone(),
         Value::Null => String::new(),
@@ -184,7 +184,7 @@ pub fn substitute(text: &str, params: &BTreeMap<String, Value>) -> String {
     out
 }
 
-fn fill(template: &str, slots: &[(&str, &str)]) -> Result<String, RenderError> {
+pub(crate) fn fill(template: &str, slots: &[(&str, &str)]) -> Result<String, RenderError> {
     let mut text = template.replace("\r\n", "\n");
     for (name, value) in slots {
         text = text.replace(&format!("{{{{{name}}}}}"), value);
@@ -199,14 +199,14 @@ fn fill(template: &str, slots: &[(&str, &str)]) -> Result<String, RenderError> {
     Ok(text)
 }
 
-fn reg_path(path: &str) -> String {
+pub(crate) fn reg_path(path: &str) -> String {
     match path.strip_prefix("DU:") {
         Some(rest) => format!("($du + {})", ps_quote(rest)),
         None => ps_quote(path),
     }
 }
 
-fn reg_value(rule: &Rule, kind: RegKind, value: &Value) -> Result<String, RenderError> {
+pub(crate) fn reg_value(rule: &Rule, kind: RegKind, value: &Value) -> Result<String, RenderError> {
     let number = |v: &Value| -> Result<String, RenderError> {
         match v {
             Value::Number(n) => Ok(n.to_string()),
@@ -244,7 +244,7 @@ fn reg_value(rule: &Rule, kind: RegKind, value: &Value) -> Result<String, Render
 }
 
 /// The script lines of one action.
-fn script_lines(
+pub(crate) fn script_lines(
     rule: &Rule,
     action: &Action,
     params: &BTreeMap<String, Value>,
@@ -329,6 +329,14 @@ fn script_lines(
     Ok(vec![line])
 }
 
+/// The parameter values of a rule in the profile (the defaults where the profile has none).
+pub(crate) fn params_of(catalog: &Catalog, profile: &Profile, rule: &Rule) -> BTreeMap<String, Value> {
+    rule.params
+        .keys()
+        .filter_map(|n| profile.param(catalog, &rule.id, n).map(|v| (n.clone(), v)))
+        .collect()
+}
+
 /// The block of a rule: the marker and the lines of its script actions.
 fn block(rule: &Rule, params: &BTreeMap<String, Value>) -> Result<Option<String>, RenderError> {
     let mut lines = Vec::new();
@@ -346,7 +354,7 @@ fn block(rule: &Rule, params: &BTreeMap<String, Value>) -> Result<Option<String>
     Ok(Some(text))
 }
 
-fn join_blocks(blocks: &[String], indent: usize) -> String {
+pub(crate) fn join_blocks(blocks: &[String], indent: usize) -> String {
     let pad = " ".repeat(indent);
     blocks
         .iter()
@@ -516,7 +524,7 @@ fn input_languages(profile: &Profile) -> Result<InputLanguages, RenderError> {
     })
 }
 
-fn ps_list(items: &[String]) -> String {
+pub(crate) fn ps_list(items: &[String]) -> String {
     items
         .iter()
         .map(|s| ps_quote(s))
