@@ -52,9 +52,12 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      from the templates), thispc (the plan of checks of a running Windows, the judgement
 │   │                      of the rules, the capture into a profile, the report of the audit script, an
 │   │                      in-memory machine), scripts (stand-alone Apply, Revert, Audit and Undo scripts),
-│   │                      import (an answer file or a WinKickOff profile as a profile); tests/ on the real data
-│   ├── winweaver-win/     the Windows API behind thispc::Machine: the registry (winreg), the token elevation,
-│   │                      the locale names and the language of Windows (windows-sys); reads only
+│   │                      import (an answer file or a WinKickOff profile as a profile), apply (the plan of a
+│   │                      native apply, return or undo, the backup format of the scripts), admx (ADMX and ADML to
+│   │                      rules, catalog files .wwcatalog, their check, merge); tests/ on the real data
+│   ├── winweaver-win/     the Windows API: native.rs (thispc::Machine: the registry, the elevation, the locale
+│   │                      names, the language of Windows), execute.rs (the executor of an apply plan with its
+│   │                      backup, the start of the executable as administrator)
 │   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal, token), tools.rs (the
 │   │                      19 tools and 3 resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and
 │   │                      Origin checks); tests/server.rs (both transports on a free loopback port)
@@ -64,7 +67,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      Languages), diffview.rs, mdview.rs (Markdown tabs, the guide), marksview.rs,
 │   │                      mcpview.rs (the MCP tab), session.rs (drafts, the log), settings.rs (settings.json),
 │   │                      i18n.rs (tr and trf, the translations of the interface)
-│   └── winweaver/         the executable: the window, --mcp stdio, --mcp http, --version, --check-catalog
+│   └── winweaver/         the executable: the window, --mcp stdio, --mcp http, --elevated-apply <plan> <nonce>
+│                          (the helper: only a plan-*.json of output/ with that nonce), --version, --check-catalog
 ├── data/                  embedded into the executable at build time
 │   ├── catalog/           groups.json, 00-17 rules files, lang/ru.json and lang/uk.json (catalog 0.11 of the
 │   │                      predecessor)
@@ -82,7 +86,8 @@ functionality carry over; the file formats are new and no program code is ported
 ```
 
 Next to the executable at run time (never versioned): `settings.json`, `bookmarks.wwmarks`, `profiles/`,
-`output/` (the answer file, the scripts), `drafts/` (unsaved profiles), `logs/` (winweaver-<date>.log),
+`output/` (the answer file, the scripts, plan and backup files of the native apply), `imports/` (catalog files of
+the imported policy templates), `drafts/` (unsaved profiles), `logs/` (winweaver-<date>.log),
 `lang/<code>/` (more or overriding translations).
 
 ## 4. Project rules
@@ -174,6 +179,15 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - MCP: the mode is never saved (read at every start), nor is read_pc; the token is saved in settings.json;
   errors start with not_allowed, not_found, invalid, write_failed or read_failed; passwords and the product
   key are replaced by `***` in every answer.
+- Native apply: the window writes `output/plan-<stamp>.json` with a random nonce of 40 characters and starts
+  itself with `--elevated-apply` through ShellExecuteEx runas; the helper refuses any other file or nonce,
+  backs up every registry value into `output/backup-<stamp>.json` (the format of the apply script, so
+  `Undo-Apply.ps1` restores it too) and writes `plan-<stamp>-report.json`. Script steps, app and capability
+  removals and the default user profile stay with the stand-alone script.
+- Imports: a policy is `admx.<prefix>.<name>` with `<id>.off`; groups `admx.<import>` under `policies`; a catalog
+  file brings only Reg and RegRemove actions under `HKLM:\` or `DU:\` (checked at every load). Turning a group
+  on skips imported policies; the read of the whole PC leaves them out.
+- Pull requests: the CI of a pull request is read with the app's PR tools (`get_status`), not by polling with gh.
 - Drafts: `drafts/<key>.json`, key `p-<fnv of the path>` or `n-<time>-<n>`; written 2 s after the last change
   and at the close; a save or a discard deletes them.
 
@@ -187,7 +201,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Windows API | Reading the registry, the elevation, the locales and the Windows language; the native read of the whole catalog is tested on the Windows runner | 14.10.2026 |
 | Window | Tabs, menu, command bar (icons, compact below 1100 px), navigation, search, tree with row switches, detail panel, forms, check, build, diff tab, bookmarks, Markdown tabs, This PC (read, check, scripts, reports), MCP tab, settings, translations uk and ru, drafts, restored tabs, log | 14.10.2026 |
 | MCP server | stdio and HTTP, 19 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
-| Not yet | Native apply and revert (elevated helper), ADMX import and catalog files, translated documentation pages, egui_kittest tests, themes from files | |
+| Native apply | Plans, the elevated helper, the backup and undo (pull request #2); tested in a test key of HKCU on the runner | 14.10.2026 |
+| Policy templates | ADMX import, catalog files, the settings section (pull request #3); lists and multi-line texts not yet | 14.10.2026 |
+| Not yet | Lists of values in imports, links of imported policies to built-in rules, features and capabilities read natively, the default user profile applied natively, egui_kittest tests, themes from files | |
 | Acceptance | Nothing of WinWeaver has been tried in a VM yet: the build of the answer file, the read of a PC and the scripts need the acceptance the predecessor had | |
 
 Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and
