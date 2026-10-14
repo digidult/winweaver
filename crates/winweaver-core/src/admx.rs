@@ -95,7 +95,7 @@ fn parse_xml(text: &str) -> Result<Node, String> {
             }
             Event::CData(c) => {
                 if let Some(n) = stack.last_mut() {
-                    n.text.push_str(&utf8(&c)?);
+                    n.text.push_str(&utf8(&c.into_inner())?);
                 }
             }
             Event::GeneralRef(r) => {
@@ -128,12 +128,13 @@ fn parse_xml(text: &str) -> Result<Node, String> {
 
 fn element(e: &quick_xml::events::BytesStart<'_>) -> Result<Node, String> {
     let mut node = Node {
-        name: utf8(e.local_name().as_ref())?,
+        name: e.local_name().as_ref().to_owned(),
         ..Node::default()
     };
     for a in e.attributes() {
         let a = a.map_err(|e| format!("an attribute: {e}"))?;
-        let key = utf8(a.key.local_name().as_ref())?;
+        let key = a.key.local_name().as_ref().to_owned();
+        #[allow(deprecated)]
         let value = a.unescape_value().map_err(|e| format!("an attribute: {e}"))?.into_owned();
         node.attrs.push((key, value));
     }
@@ -321,7 +322,10 @@ fn elements_of(node: Option<&Node>, res: &[(String, Resources)]) -> Result<Vec<E
     for e in &node.children {
         let id = e.attr("id").ok_or("an element has no id")?.to_owned();
         let key = e.attr("key").map(str::to_owned);
-        let value_name = || e.attr("valueName").map(str::to_owned).ok_or_else(|| format!("the element {id} has no value name"));
+        let value_name = {
+            let missing = format!("the element {id} has no value name");
+            move || e.attr("valueName").map(str::to_owned).ok_or(missing.clone())
+        };
         out.push(match e.name.as_str() {
             "enum" => {
                 let mut items = Vec::new();
