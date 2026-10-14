@@ -48,10 +48,12 @@ impl HttpServer {
                             }
                             active.fetch_add(1, Ordering::Relaxed);
                             let (srv, tok, act) = (server.clone(), token.clone(), active.clone());
-                            let spawned = std::thread::Builder::new().name("mcp-request".to_owned()).spawn(move || {
-                                let _ = handle(&srv, stream, peer, port, &tok);
-                                act.fetch_sub(1, Ordering::Relaxed);
-                            });
+                            let spawned = std::thread::Builder::new()
+                                .name("mcp-request".to_owned())
+                                .spawn(move || {
+                                    let _ = handle(&srv, stream, peer, port, &tok);
+                                    act.fetch_sub(1, Ordering::Relaxed);
+                                });
                             if spawned.is_err() {
                                 active.fetch_sub(1, Ordering::Relaxed);
                             }
@@ -151,7 +153,13 @@ fn loopback(value: &str, port: u16, with_scheme: bool) -> bool {
     value == format!("127.0.0.1:{port}") || value == format!("localhost:{port}")
 }
 
-fn handle(server: &Server, stream: TcpStream, _peer: SocketAddr, port: u16, token: &str) -> io::Result<()> {
+fn handle(
+    server: &Server,
+    stream: TcpStream,
+    _peer: SocketAddr,
+    port: u16,
+    token: &str,
+) -> io::Result<()> {
     stream.set_nonblocking(false)?;
     stream.set_read_timeout(Some(TIMEOUT))?;
     stream.set_write_timeout(Some(TIMEOUT))?;
@@ -159,7 +167,10 @@ fn handle(server: &Server, stream: TcpStream, _peer: SocketAddr, port: u16, toke
     let mut head = Vec::new();
     loop {
         let mut line = Vec::new();
-        let n = reader.by_ref().take(MAX_HEADERS as u64).read_until(b'\n', &mut line)?;
+        let n = reader
+            .by_ref()
+            .take(MAX_HEADERS as u64)
+            .read_until(b'\n', &mut line)?;
         if n == 0 {
             return Ok(());
         }
@@ -194,12 +205,20 @@ fn handle(server: &Server, stream: TcpStream, _peer: SocketAddr, port: u16, toke
         }
     }
     if !host.as_deref().is_some_and(|h| loopback(h, port, false)) {
-        return respond(stream, 403, "", "the Host header must name 127.0.0.1 or localhost");
+        return respond(
+            stream,
+            403,
+            "",
+            "the Host header must name 127.0.0.1 or localhost",
+        );
     }
     if origin.as_deref().is_some_and(|o| !loopback(o, port, true)) {
         return respond(stream, 403, "", "requests from web pages are refused");
     }
-    let bearer = authorization.as_deref().and_then(|a| a.strip_prefix("Bearer ")).unwrap_or("");
+    let bearer = authorization
+        .as_deref()
+        .and_then(|a| a.strip_prefix("Bearer "))
+        .unwrap_or("");
     if !same_secret(bearer.trim(), token) {
         return respond(stream, 401, "", "a valid bearer token is needed");
     }
@@ -207,7 +226,12 @@ fn handle(server: &Server, stream: TcpStream, _peer: SocketAddr, port: u16, toke
         return respond(stream, 404, "", "the endpoint is /mcp");
     }
     if method != "POST" {
-        return respond(stream, 405, "", "only POST is served; there is no event stream");
+        return respond(
+            stream,
+            405,
+            "",
+            "only POST is served; there is no event stream",
+        );
     }
     let Some(length) = length else {
         return respond(stream, 411, "", "Content-Length is needed");
@@ -236,9 +260,15 @@ mod tests {
 
     #[test]
     fn secrets_and_hosts() {
-        assert!(same_secret("abc", "abc") && !same_secret("abc", "abd") && !same_secret("abc", "ab"));
+        assert!(
+            same_secret("abc", "abc") && !same_secret("abc", "abd") && !same_secret("abc", "ab")
+        );
         assert!(loopback("127.0.0.1:8765", 8765, false) && loopback("LOCALHOST:8765", 8765, false));
-        assert!(!loopback("evil.example:8765", 8765, false) && !loopback("127.0.0.1:1", 8765, false));
-        assert!(loopback("http://127.0.0.1:8765", 8765, true) && !loopback("https://x", 8765, true));
+        assert!(
+            !loopback("evil.example:8765", 8765, false) && !loopback("127.0.0.1:1", 8765, false)
+        );
+        assert!(
+            loopback("http://127.0.0.1:8765", 8765, true) && !loopback("https://x", 8765, true)
+        );
     }
 }

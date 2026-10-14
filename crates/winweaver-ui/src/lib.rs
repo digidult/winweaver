@@ -836,12 +836,18 @@ impl App {
             ui.weak(state);
             ui.weak(trf(
                 "Catalog {version}, {n} rules",
-                &[("version", &self.catalog.version()), ("n", &self.catalog.rules().len())],
+                &[
+                    ("version", &self.catalog.version()),
+                    ("n", &self.catalog.rules().len()),
+                ],
             ));
             if let Some(run) = &self.mcp.run {
                 ui.weak(trf(
                     "MCP: {url}, mode {mode}",
-                    &[("url", &run.http.url()), ("mode", &run.server.options().mode.name())],
+                    &[
+                        ("url", &run.http.url()),
+                        ("mode", &run.server.options().mode.name()),
+                    ],
                 ));
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -1592,7 +1598,11 @@ impl App {
                     Err(e) => self.mcp.error = e,
                 },
                 Act::McpOpen(name) => {
-                    let profile = self.mcp.run.as_ref().and_then(|r| r.server.workspace_profile(&name));
+                    let profile = self
+                        .mcp
+                        .run
+                        .as_ref()
+                        .and_then(|r| r.server.workspace_profile(&name));
                     if let Some(profile) = profile {
                         let mut doc = ProfileDoc::new(profile, None, &self.catalog);
                         doc.dirty = true;
@@ -2104,7 +2114,11 @@ impl App {
                 output_dir: output_dir(),
             },
         ));
-        match winweaver_mcp::http::HttpServer::start(server.clone(), self.mcp.port, self.mcp.token.clone()) {
+        match winweaver_mcp::http::HttpServer::start(
+            server.clone(),
+            self.mcp.port,
+            self.mcp.token.clone(),
+        ) {
             Ok(http) => {
                 self.status = trf("The MCP server runs on {url}", &[("url", &http.url())]);
                 self.mcp.error.clear();
@@ -2210,9 +2224,11 @@ impl eframe::App for App {
         } else if kind == 6 {
             let panel = &mut self.mcp;
             egui::CentralPanel::default().show(ui, |ui| {
-                egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
-                    mcpview::mcp_view(ui, panel, &mut acts);
-                });
+                egui::ScrollArea::vertical()
+                    .auto_shrink(false)
+                    .show(ui, |ui| {
+                        mcpview::mcp_view(ui, panel, &mut acts);
+                    });
             });
         } else if kind == 5 {
             let marks = &self.marks;

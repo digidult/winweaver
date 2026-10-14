@@ -43,14 +43,25 @@ fn call(s: &Server, name: &str, args: Value) -> Value {
 
 fn ok(s: &Server, name: &str, args: Value) -> Value {
     let r = call(s, name, args);
-    assert_eq!(r["isError"], json!(false), "{name}: {}", r["content"][0]["text"]);
+    assert_eq!(
+        r["isError"],
+        json!(false),
+        "{name}: {}",
+        r["content"][0]["text"]
+    );
     r["structuredContent"].clone()
 }
 
 fn error_kind(s: &Server, name: &str, args: Value) -> String {
     let r = call(s, name, args);
     assert_eq!(r["isError"], json!(true), "{name} should fail");
-    r["content"][0]["text"].as_str().unwrap().split(':').next().unwrap().to_owned()
+    r["content"][0]["text"]
+        .as_str()
+        .unwrap()
+        .split(':')
+        .next()
+        .unwrap()
+        .to_owned()
 }
 
 #[test]
@@ -62,21 +73,46 @@ fn the_protocol_answers_and_lists_the_tools() {
         .unwrap();
     assert_eq!(init["result"]["protocolVersion"], json!("2025-06-18"));
     assert_eq!(init["result"]["serverInfo"]["name"], json!("winweaver"));
-    assert!(s.handle(&json!({ "jsonrpc": "2.0", "method": "notifications/initialized" })).is_none());
-    let tools = s.handle(&json!({ "jsonrpc": "2.0", "id": 2, "method": "tools/list" })).unwrap();
-    let names: Vec<&str> = tools["result"]["tools"].as_array().unwrap().iter().map(|t| t["name"].as_str().unwrap()).collect();
+    assert!(
+        s.handle(&json!({ "jsonrpc": "2.0", "method": "notifications/initialized" }))
+            .is_none()
+    );
+    let tools = s
+        .handle(&json!({ "jsonrpc": "2.0", "id": 2, "method": "tools/list" }))
+        .unwrap();
+    let names: Vec<&str> = tools["result"]["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|t| t["name"].as_str().unwrap())
+        .collect();
     assert_eq!(names.len(), 19, "{names:?}");
-    for n in ["get_status", "set_rule", "write_answer_file", "read_this_pc", "compare_profiles"] {
+    for n in [
+        "get_status",
+        "set_rule",
+        "write_answer_file",
+        "read_this_pc",
+        "compare_profiles",
+    ] {
         assert!(names.contains(&n), "{n}");
     }
-    let unknown = s.handle(&json!({ "jsonrpc": "2.0", "id": 3, "method": "nope" })).unwrap();
+    let unknown = s
+        .handle(&json!({ "jsonrpc": "2.0", "id": 3, "method": "nope" }))
+        .unwrap();
     assert_eq!(unknown["error"]["code"], json!(-32601));
-    let batch = s.handle_text("[{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"ping\"}]").unwrap();
+    let batch = s
+        .handle_text("[{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"ping\"}]")
+        .unwrap();
     assert!(batch.contains("-32600"));
     let broken = s.handle_text("{").unwrap();
     assert!(broken.contains("-32700"));
     let resources = s.handle(&json!({ "jsonrpc": "2.0", "id": 4, "method": "resources/read", "params": { "uri": "winweaver://catalog" } })).unwrap();
-    assert!(resources["result"]["contents"][0]["text"].as_str().unwrap().contains("defender.pua"));
+    assert!(
+        resources["result"]["contents"][0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("defender.pua")
+    );
     assert_eq!(s.client(), "test-client");
     assert!(s.journal().iter().any(|e| e.method == "initialize"));
     std::fs::remove_dir_all(&dir).unwrap();
@@ -89,10 +125,19 @@ fn the_mode_read_changes_nothing() {
     let status = ok(&s, "get_status", json!({}));
     assert_eq!(status["mode"], json!("read"));
     assert_eq!(status["catalog"]["rules"], json!(284));
-    assert_eq!(error_kind(&s, "set_rule", json!({ "id": "defender.pua", "on": false })), "not_allowed");
-    assert_eq!(error_kind(&s, "write_answer_file", json!({})), "not_allowed");
+    assert_eq!(
+        error_kind(&s, "set_rule", json!({ "id": "defender.pua", "on": false })),
+        "not_allowed"
+    );
+    assert_eq!(
+        error_kind(&s, "write_answer_file", json!({})),
+        "not_allowed"
+    );
     assert_eq!(error_kind(&s, "read_this_pc", json!({})), "not_allowed");
-    assert_eq!(error_kind(&s, "get_rule", json!({ "id": "no.such" })), "not_found");
+    assert_eq!(
+        error_kind(&s, "get_rule", json!({ "id": "no.such" })),
+        "not_found"
+    );
     let rule = ok(&s, "get_rule", json!({ "id": "defender.pua" }));
     assert_eq!(rule["id"], json!("defender.pua"));
     let found = ok(&s, "search_rules", json!({ "query": "telemetry" }));
@@ -100,7 +145,13 @@ fn the_mode_read_changes_nothing() {
     let groups = ok(&s, "list_groups", json!({}));
     assert_eq!(groups["groups"].as_array().unwrap().len(), 3);
     let preview = ok(&s, "preview_build", json!({}));
-    assert!(preview["beginning"].as_str().unwrap().contains("<Key>***</Key>"), "the key is hidden");
+    assert!(
+        preview["beginning"]
+            .as_str()
+            .unwrap()
+            .contains("<Key>***</Key>"),
+        "the key is hidden"
+    );
     assert!(!dir.join("output").exists(), "nothing was written");
     std::fs::remove_dir_all(&dir).unwrap();
 }
@@ -111,23 +162,58 @@ fn edit_and_files_change_the_workspace_and_write_only_into_the_folders() {
     let s = server(Mode::Files, &dir);
     let set = ok(&s, "set_rule", json!({ "id": "defender.pua", "on": false }));
     assert_eq!(set["state"], json!("off"));
-    assert_eq!(error_kind(&s, "set_param", json!({ "id": "update.automatic", "name": "start", "value": 99 })), "invalid");
-    ok(&s, "set_param", json!({ "id": "update.automatic", "name": "start", "value": 7 }));
+    assert_eq!(
+        error_kind(
+            &s,
+            "set_param",
+            json!({ "id": "update.automatic", "name": "start", "value": 99 })
+        ),
+        "invalid"
+    );
+    ok(
+        &s,
+        "set_param",
+        json!({ "id": "update.automatic", "name": "start", "value": 7 }),
+    );
     let profile = ok(&s, "get_profile", json!({}));
     assert_eq!(profile["changed"], json!(true));
-    assert_eq!(error_kind(&s, "save_profile", json!({ "name": "Office" })), "not_allowed");
-    assert_eq!(error_kind(&s, "save_profile", json!({ "name": "../escape" })), "invalid");
+    assert_eq!(
+        error_kind(&s, "save_profile", json!({ "name": "Office" })),
+        "not_allowed"
+    );
+    assert_eq!(
+        error_kind(&s, "save_profile", json!({ "name": "../escape" })),
+        "invalid"
+    );
     let saved = ok(&s, "save_profile", json!({ "name": "Office edited" }));
     assert_eq!(saved["file"], json!("Office edited.wwprofile"));
-    assert!(dir.join("profiles").join("Office edited.wwprofile").is_file());
+    assert!(
+        dir.join("profiles")
+            .join("Office edited.wwprofile")
+            .is_file()
+    );
     let written = ok(&s, "write_answer_file", json!({}));
     assert_eq!(written["file"], json!("autounattend.xml"));
     assert!(dir.join("output").join("autounattend.xml").is_file());
-    ok(&s, "new_profile", json!({ "name": "Second", "preset": "Strict" }));
-    let cmp = ok(&s, "compare_profiles", json!({ "a": "Office", "b": "Second" }));
+    ok(
+        &s,
+        "new_profile",
+        json!({ "name": "Second", "preset": "Strict" }),
+    );
+    let cmp = ok(
+        &s,
+        "compare_profiles",
+        json!({ "a": "Office", "b": "Second" }),
+    );
     assert!(cmp["differences"].as_u64().unwrap() > 0);
     let listed = ok(&s, "list_profiles", json!({}));
-    assert!(listed["files"].as_array().unwrap().iter().any(|f| f == "Office edited.wwprofile"));
+    assert!(
+        listed["files"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|f| f == "Office edited.wwprofile")
+    );
     ok(&s, "load_profile", json!({ "name": "Office edited" }));
     assert_eq!(s.workspace().len(), 3);
     std::fs::remove_dir_all(&dir).unwrap();

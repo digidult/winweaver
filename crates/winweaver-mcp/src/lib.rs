@@ -297,8 +297,14 @@ impl Server {
         };
         match text {
             Some(text) => {
-                self.record("resources/read", uri.chars().take(80).collect(), "ok".to_owned());
-                Ok(json!({ "contents": [{ "uri": uri, "mimeType": "application/json", "text": text }] }))
+                self.record(
+                    "resources/read",
+                    uri.chars().take(80).collect(),
+                    "ok".to_owned(),
+                );
+                Ok(
+                    json!({ "contents": [{ "uri": uri, "mimeType": "application/json", "text": text }] }),
+                )
             }
             None => Err((-32002, format!("unknown resource {uri}"))),
         }

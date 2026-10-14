@@ -48,7 +48,10 @@ fn option(args: &[String], name: &str) -> Option<String> {
 
 fn mcp(args: &[String]) -> ExitCode {
     let transport = args.first().map(String::as_str).unwrap_or("");
-    let mode = match option(args, "--mode").as_deref().map(winweaver_mcp::Mode::parse) {
+    let mode = match option(args, "--mode")
+        .as_deref()
+        .map(winweaver_mcp::Mode::parse)
+    {
         None => winweaver_mcp::Mode::Read,
         Some(Some(m)) => m,
         Some(None) => {

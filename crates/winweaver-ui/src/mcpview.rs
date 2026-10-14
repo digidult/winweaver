@@ -64,7 +64,17 @@ pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
                     let client = run.server.client();
                     ui.label(trf(
                         "Running on {url}; client {client}",
-                        &[("url", &run.http.url()), ("client", &if client.is_empty() { "-".to_owned() } else { client })],
+                        &[
+                            ("url", &run.http.url()),
+                            (
+                                "client",
+                                &if client.is_empty() {
+                                    "-".to_owned()
+                                } else {
+                                    client
+                                },
+                            ),
+                        ],
                     ));
                 }
                 None => {
@@ -74,15 +84,26 @@ pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
             ui.end_row();
 
             ui.label(tr("Port"));
-            ui.add_enabled(!running, egui::DragValue::new(&mut panel.port).range(1024..=65535));
+            ui.add_enabled(
+                !running,
+                egui::DragValue::new(&mut panel.port).range(1024..=65535),
+            );
             ui.end_row();
 
             ui.label(tr("Mode"));
             ui.horizontal(|ui| {
                 let before = panel.mode;
                 ui.radio_value(&mut panel.mode, Mode::Read, tr("read: nothing changes"));
-                ui.radio_value(&mut panel.mode, Mode::Edit, tr("edit: profiles change in memory"));
-                ui.radio_value(&mut panel.mode, Mode::Files, tr("files: profiles and the answer file are written"));
+                ui.radio_value(
+                    &mut panel.mode,
+                    Mode::Edit,
+                    tr("edit: profiles change in memory"),
+                );
+                ui.radio_value(
+                    &mut panel.mode,
+                    Mode::Files,
+                    tr("files: profiles and the answer file are written"),
+                );
                 if before != panel.mode
                     && let Some(run) = &panel.run
                 {
@@ -93,7 +114,10 @@ pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
 
             ui.label(tr("This PC"));
             if ui
-                .checkbox(&mut panel.read_pc, tr("Allow reading the settings of this PC (off at every start)"))
+                .checkbox(
+                    &mut panel.read_pc,
+                    tr("Allow reading the settings of this PC (off at every start)"),
+                )
                 .changed()
                 && let Some(run) = &panel.run
             {
@@ -108,7 +132,10 @@ pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
                     let url = format!("http://127.0.0.1:{}/mcp", panel.port);
                     ui.ctx().copy_text(http_config(&url, &panel.token));
                 }
-                if ui.add_enabled(!running, egui::Button::new(tr("Renew"))).clicked() {
+                if ui
+                    .add_enabled(!running, egui::Button::new(tr("Renew")))
+                    .clicked()
+                {
                     acts.push(Act::McpRenewToken);
                 }
             });
@@ -123,7 +150,13 @@ pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
         } else if ui.button(tr("Start")).clicked() {
             acts.push(Act::McpStart);
         }
-        if ui.button(tr("Copy the stdio configuration")).on_hover_text(tr("For clients that start the program themselves; it needs no running server")).clicked() {
+        if ui
+            .button(tr("Copy the stdio configuration"))
+            .on_hover_text(tr(
+                "For clients that start the program themselves; it needs no running server",
+            ))
+            .clicked()
+        {
             let exe = std::env::current_exe()
                 .map(|p| p.display().to_string())
                 .unwrap_or_else(|_| "winweaver.exe".to_owned());
@@ -172,7 +205,8 @@ pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
                     }
                 });
         });
-    ui.ctx().request_repaint_after(std::time::Duration::from_secs(1));
+    ui.ctx()
+        .request_repaint_after(std::time::Duration::from_secs(1));
 }
 
 #[cfg(test)]
@@ -181,10 +215,18 @@ mod tests {
 
     #[test]
     fn configurations_are_json() {
-        let http: serde_json::Value = serde_json::from_str(&http_config("http://127.0.0.1:1/mcp", "T")).unwrap();
-        assert_eq!(http["mcpServers"]["winweaver"]["headers"]["Authorization"], "Bearer T");
-        let stdio: serde_json::Value = serde_json::from_str(&stdio_config("C:\\W\\winweaver.exe")).unwrap();
-        assert_eq!(stdio["mcpServers"]["winweaver"]["command"], "C:\\W\\winweaver.exe");
+        let http: serde_json::Value =
+            serde_json::from_str(&http_config("http://127.0.0.1:1/mcp", "T")).unwrap();
+        assert_eq!(
+            http["mcpServers"]["winweaver"]["headers"]["Authorization"],
+            "Bearer T"
+        );
+        let stdio: serde_json::Value =
+            serde_json::from_str(&stdio_config("C:\\W\\winweaver.exe")).unwrap();
+        assert_eq!(
+            stdio["mcpServers"]["winweaver"]["command"],
+            "C:\\W\\winweaver.exe"
+        );
         assert_eq!(masked("abcdefghijkl"), "abcd...ijkl");
     }
 }
