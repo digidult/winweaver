@@ -126,8 +126,7 @@ fn links(catalog: &Catalog, resolution: &Resolution) -> HashMap<String, String> 
         return links;
     }
     for rule in catalog.rules() {
-        if !rule.id.starts_with(RULE_PREFIX) || !rule.params.is_empty() || rule.actions.is_empty()
-        {
+        if !rule.id.starts_with(RULE_PREFIX) || !rule.params.is_empty() || rule.actions.is_empty() {
             continue;
         }
         let mut owner: Option<&str> = None;

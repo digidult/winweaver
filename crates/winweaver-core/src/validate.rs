@@ -440,7 +440,10 @@ fn check_rules(
                         continue;
                     }
                     let items = crate::render::list_items(Some(&value));
-                    if items.iter().any(|t| !t.is_ascii() || t.chars().any(char::is_control)) {
+                    if items
+                        .iter()
+                        .any(|t| !t.is_ascii() || t.chars().any(char::is_control))
+                    {
                         push(
                             issues,
                             Severity::Error,

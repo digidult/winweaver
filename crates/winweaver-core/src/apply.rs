@@ -125,7 +125,10 @@ impl Plan {
     pub fn load(path: &Path) -> Result<Self, String> {
         let plan: Self = jsonfile::read(path, PLAN_MAX_BYTES).map_err(|e| e.to_string())?;
         if plan.format != PLAN_FORMAT || plan.version > PLAN_VERSION {
-            return Err(format!("{}: not an apply plan of this version", jsonfile::display_name(path)));
+            return Err(format!(
+                "{}: not an apply plan of this version",
+                jsonfile::display_name(path)
+            ));
         }
         Ok(plan)
     }
@@ -177,13 +180,17 @@ fn native_path(path: &str) -> Result<String, &'static str> {
     Ok(path.to_owned())
 }
 
-
 /// The program a rule runs, with the switches of DISM for an optional feature.
 fn feature_run(name: &str, state: &str) -> Op {
     let enable = state.eq_ignore_ascii_case("enabled");
     let mut args = vec![
         "/Online".to_owned(),
-        if enable { "/Enable-Feature" } else { "/Disable-Feature" }.to_owned(),
+        if enable {
+            "/Enable-Feature"
+        } else {
+            "/Disable-Feature"
+        }
+        .to_owned(),
         format!("/FeatureName:{name}"),
     ];
     if enable {
@@ -198,10 +205,17 @@ fn feature_run(name: &str, state: &str) -> Op {
 }
 
 /// The operations that make one action of a rule true, or why it is left to the script.
-fn apply_ops(action: &Action, params: &std::collections::BTreeMap<String, Value>) -> Result<Vec<Op>, String> {
+fn apply_ops(
+    action: &Action,
+    params: &std::collections::BTreeMap<String, Value>,
+) -> Result<Vec<Op>, String> {
     Ok(match action {
         Action::Reg {
-            path, name, kind, value, ..
+            path,
+            name,
+            kind,
+            value,
+            ..
         } => vec![Op::SetValue {
             path: native_path(path)?,
             name: name.clone(),
@@ -239,9 +253,13 @@ fn apply_ops(action: &Action, params: &std::collections::BTreeMap<String, Value>
             args: args.iter().map(|a| render::substitute(a, params)).collect(),
         }],
         Action::Feature { name, state, .. } => vec![feature_run(name, state)],
-        Action::Ps { .. } => return Err("a script step: the stand-alone apply script runs it".to_owned()),
+        Action::Ps { .. } => {
+            return Err("a script step: the stand-alone apply script runs it".to_owned());
+        }
         Action::Appx { .. } | Action::Capability { .. } => {
-            return Err("app and capability removals: the stand-alone apply script does them".to_owned());
+            return Err(
+                "app and capability removals: the stand-alone apply script does them".to_owned(),
+            );
         }
         Action::XmlPeCommand { .. }
         | Action::XmlSpecializeCommand { .. }
@@ -255,11 +273,18 @@ fn apply_ops(action: &Action, params: &std::collections::BTreeMap<String, Value>
 fn revert_ops(action: &Action) -> Result<Option<Vec<Op>>, String> {
     Ok(match action {
         Action::Reg {
-            path, name, kind, default, ..
+            path,
+            name,
+            kind,
+            default,
+            ..
         } => {
             let path = native_path(path)?;
             match default {
-                Some(Value::String(s)) if s == "absent" => Some(vec![Op::DeleteValue { path, name: name.clone() }]),
+                Some(Value::String(s)) if s == "absent" => Some(vec![Op::DeleteValue {
+                    path,
+                    name: name.clone(),
+                }]),
                 Some(Value::String(s)) if s == "unknown" => None,
                 Some(value) => Some(vec![Op::SetValue {
                     path,
@@ -268,7 +293,10 @@ fn revert_ops(action: &Action) -> Result<Option<Vec<Op>>, String> {
                     data: value.clone(),
                 }]),
                 None if path.to_ascii_lowercase().contains("\\policies\\") => {
-                    Some(vec![Op::DeleteValue { path, name: name.clone() }])
+                    Some(vec![Op::DeleteValue {
+                        path,
+                        name: name.clone(),
+                    }])
                 }
                 None => None,
             }
@@ -296,16 +324,25 @@ fn revert_ops(action: &Action) -> Result<Option<Vec<Op>>, String> {
                 }]
             })
         }
-        Action::Service { name, default, .. } => default
-            .as_ref()
-            .and_then(Value::as_u64)
-            .map(|start| vec![Op::ServiceStart { name: name.clone(), start: start as u32 }]),
-        Action::Feature { name, default, .. } => default.as_ref().map(|state| vec![feature_run(name, state)]),
+        Action::Service { name, default, .. } => {
+            default.as_ref().and_then(Value::as_u64).map(|start| {
+                vec![Op::ServiceStart {
+                    name: name.clone(),
+                    start: start as u32,
+                }]
+            })
+        }
+        Action::Feature { name, default, .. } => {
+            default.as_ref().map(|state| vec![feature_run(name, state)])
+        }
         Action::XmlPeCommand { .. }
         | Action::XmlSpecializeCommand { .. }
         | Action::XmlSetting { .. }
         | Action::XmlOobe { .. } => Some(Vec::new()),
-        Action::Ps { .. } | Action::Exe { .. } | Action::Appx { .. } | Action::Capability { .. } => None,
+        Action::Ps { .. }
+        | Action::Exe { .. }
+        | Action::Appx { .. }
+        | Action::Capability { .. } => None,
     })
 }
 
@@ -327,8 +364,14 @@ fn with_requirements(catalog: &Catalog, ids: &HashSet<String>) -> HashSet<String
 fn push_revert(plan: &mut Plan, rule: &Rule) {
     for action in &rule.actions {
         match revert_ops(action) {
-            Ok(Some(ops)) => plan.steps.extend(ops.into_iter().map(|op| Step { rule: rule.id.clone(), op })),
-            Ok(None) => plan.skipped.push((rule.id.clone(), "the Windows default of a step is not known".to_owned())),
+            Ok(Some(ops)) => plan.steps.extend(ops.into_iter().map(|op| Step {
+                rule: rule.id.clone(),
+                op,
+            })),
+            Ok(None) => plan.skipped.push((
+                rule.id.clone(),
+                "the Windows default of a step is not known".to_owned(),
+            )),
             Err(why) => plan.skipped.push((rule.id.clone(), why)),
         }
     }
@@ -339,7 +382,11 @@ fn push_revert(plan: &mut Plan, rule: &Rule) {
 pub fn plan_apply(catalog: &Catalog, profile: &Profile, rule_ids: &[String], nonce: &str) -> Plan {
     let resolution = resolver::resolve(catalog, profile);
     let selected: HashSet<String> = rule_ids.iter().cloned().collect();
-    let on: HashSet<String> = selected.iter().filter(|id| resolution.in_effect(id)).cloned().collect();
+    let on: HashSet<String> = selected
+        .iter()
+        .filter(|id| resolution.in_effect(id))
+        .cloned()
+        .collect();
     let applied = with_requirements(catalog, &on);
     let mut plan = Plan::new("apply", nonce);
     for rule in catalog.rules() {
@@ -355,7 +402,10 @@ pub fn plan_apply(catalog: &Catalog, profile: &Profile, rule_ids: &[String], non
             let params = render::params_of(catalog, profile, rule);
             for action in &rule.actions {
                 match apply_ops(action, &params) {
-                    Ok(ops) => plan.steps.extend(ops.into_iter().map(|op| Step { rule: rule.id.clone(), op })),
+                    Ok(ops) => plan.steps.extend(ops.into_iter().map(|op| Step {
+                        rule: rule.id.clone(),
+                        op,
+                    })),
                     Err(why) => plan.skipped.push((rule.id.clone(), why)),
                 }
             }
@@ -402,7 +452,8 @@ pub struct BackupEntry {
 /// The entries of a backup file (a list; PowerShell writes a single entry as an object).
 pub fn read_backup(path: &Path) -> Result<Vec<BackupEntry>, String> {
     let text = jsonfile::read_text_bom(path, PLAN_MAX_BYTES).map_err(|e| e.to_string())?;
-    let value: Value = jsonfile::parse(&text, &jsonfile::display_name(path)).map_err(|e| e.to_string())?;
+    let value: Value =
+        jsonfile::parse(&text, &jsonfile::display_name(path)).map_err(|e| e.to_string())?;
     let items = match value {
         Value::Array(items) => items,
         Value::Null => Vec::new(),
@@ -441,7 +492,10 @@ pub fn plan_undo(entries: &[BackupEntry], nonce: &str) -> Plan {
                     data: e.value.clone(),
                 },
                 None => {
-                    plan.skipped.push((format!("{}\\{}", e.path, e.name), "a value of a kind the program does not restore".to_owned()));
+                    plan.skipped.push((
+                        format!("{}\\{}", e.path, e.name),
+                        "a value of a kind the program does not restore".to_owned(),
+                    ));
                     continue;
                 }
             }
@@ -451,7 +505,10 @@ pub fn plan_undo(entries: &[BackupEntry], nonce: &str) -> Plan {
                 name: e.name.clone(),
             }
         };
-        plan.steps.push(Step { rule: "undo".to_owned(), op });
+        plan.steps.push(Step {
+            rule: "undo".to_owned(),
+            op,
+        });
     }
     plan
 }
@@ -496,7 +553,8 @@ mod tests {
     use std::path::PathBuf;
 
     fn office() -> Profile {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/presets/office.wwprofile");
+        let path =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/presets/office.wwprofile");
         Profile::load(&path).unwrap()
     }
 
@@ -510,10 +568,25 @@ mod tests {
             Op::SetValue { path, .. } | Op::DeleteValue { path, .. } => !path.starts_with("DU:"),
             _ => true,
         }));
-        assert!(plan.steps.iter().any(|s| matches!(&s.op, Op::ServiceStart { name, start: 2 } if name == "Spooler")));
-        assert!(plan.steps.iter().any(|s| matches!(&s.op, Op::Run { file, .. } if file == "net.exe")));
-        assert!(plan.skipped.iter().any(|(id, why)| id == "apps.remove-quick-assist" && why.contains("app")));
-        assert!(plan.uses_default_user(), "the default user profile is written natively");
+        assert!(
+            plan.steps
+                .iter()
+                .any(|s| matches!(&s.op, Op::ServiceStart { name, start: 2 } if name == "Spooler"))
+        );
+        assert!(
+            plan.steps
+                .iter()
+                .any(|s| matches!(&s.op, Op::Run { file, .. } if file == "net.exe"))
+        );
+        assert!(
+            plan.skipped
+                .iter()
+                .any(|(id, why)| id == "apps.remove-quick-assist" && why.contains("app"))
+        );
+        assert!(
+            plan.uses_default_user(),
+            "the default user profile is written natively"
+        );
         assert!(plan.steps.iter().any(|s| matches!(&s.op,
             Op::SetValue { path, .. } if path.starts_with("HKU:\\UnattendDefault\\Software\\"))));
         assert_eq!(
@@ -569,7 +642,12 @@ mod tests {
         ];
         let plan = plan_undo(&entries, "n");
         assert_eq!(plan.steps.len(), 2);
-        assert!(matches!(&plan.steps[0].op, Op::DeleteValue { name, .. } if name == "B"), "the newest change first");
-        assert!(matches!(&plan.steps[1].op, Op::SetValue { name, kind: RegKind::DWord, .. } if name == "A"));
+        assert!(
+            matches!(&plan.steps[0].op, Op::DeleteValue { name, .. } if name == "B"),
+            "the newest change first"
+        );
+        assert!(
+            matches!(&plan.steps[1].op, Op::SetValue { name, kind: RegKind::DWord, .. } if name == "A")
+        );
     }
 }

@@ -43,7 +43,10 @@ pub fn themes(dir: &Path) -> Vec<Theme> {
             if path.extension().is_none_or(|e| e != "json") {
                 continue;
             }
-            let id = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+            let id = path
+                .file_stem()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default();
             if let Ok(mut t) = jsonfile::read::<Theme>(&path, MAX_BYTES) {
                 t.id = id;
                 out.retain(|o| o.id != t.id);

@@ -224,7 +224,10 @@ fn rule_checkbox(
         let by_title = catalog.rule(by).map_or(by, |r| rtitle(texts, r));
         let mut shown = true;
         ui.add_enabled(false, egui::Checkbox::new(&mut shown, label))
-            .on_disabled_hover_text(trf("Set by the built-in rule {rule}", &[("rule", &by_title)]));
+            .on_disabled_hover_text(trf(
+                "Set by the built-in rule {rule}",
+                &[("rule", &by_title)],
+            ));
         return;
     }
     let mut on = doc.profile.is_on(&rule.id);

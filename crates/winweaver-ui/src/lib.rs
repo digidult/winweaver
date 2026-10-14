@@ -13,8 +13,8 @@ mod marksview;
 mod mcpview;
 mod mdview;
 mod session;
-mod themes;
 mod settings;
+mod themes;
 mod views;
 
 use std::collections::HashSet;
@@ -976,7 +976,9 @@ impl App {
         });
         if before != self.settings {
             self.settings_dirty = true;
-            if before.theme != self.settings.theme || before.custom_theme != self.settings.custom_theme {
+            if before.theme != self.settings.theme
+                || before.custom_theme != self.settings.custom_theme
+            {
                 self.theme_applied = false;
             }
             if before.language != self.settings.language {
@@ -987,10 +989,22 @@ impl App {
 
     /// The folders next to the executable and the recent files.
     fn files_settings(&mut self, ui: &mut egui::Ui) {
-        ui.label(trf("Settings file: {path}", &[("path", &Settings::path().display())]));
-        ui.label(trf("Profiles folder: {path}", &[("path", &profiles_dir().display())]));
-        ui.label(trf("Output folder: {path}", &[("path", &output_dir().display())]));
-        ui.label(trf("Policy templates folder: {path}", &[("path", &imports_dir().display())]));
+        ui.label(trf(
+            "Settings file: {path}",
+            &[("path", &Settings::path().display())],
+        ));
+        ui.label(trf(
+            "Profiles folder: {path}",
+            &[("path", &profiles_dir().display())],
+        ));
+        ui.label(trf(
+            "Output folder: {path}",
+            &[("path", &output_dir().display())],
+        ));
+        ui.label(trf(
+            "Policy templates folder: {path}",
+            &[("path", &imports_dir().display())],
+        ));
         ui.add_space(8.0);
         if !self.settings.recent.is_empty() && ui.button(tr("Forget recent files")).clicked() {
             self.settings.recent.clear();
@@ -1043,7 +1057,11 @@ impl App {
             egui::ComboBox::from_id_salt("colours")
                 .selected_text(current)
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.settings.custom_theme, String::new(), tr("Those of the theme"));
+                    ui.selectable_value(
+                        &mut self.settings.custom_theme,
+                        String::new(),
+                        tr("Those of the theme"),
+                    );
                     for t in &list {
                         ui.selectable_value(&mut self.settings.custom_theme, t.id.clone(), &t.name);
                     }
@@ -1565,7 +1583,11 @@ impl App {
         let dialog = rfd::FileDialog::new()
             .set_title(tr("Choose the backup to restore"))
             .add_filter(tr("Backups"), &["json"]);
-        let dialog = if start.is_dir() { dialog.set_directory(start) } else { dialog };
+        let dialog = if start.is_dir() {
+            dialog.set_directory(start)
+        } else {
+            dialog
+        };
         let Some(path) = dialog.pick_file() else {
             return;
         };
@@ -1602,7 +1624,11 @@ impl App {
             self.status = trf("The plan was not written: {e}", &[("e", &e)]);
             return;
         }
-        let stamp = clock::now_utc_iso().replace([':', '-'], "").replace('T', "-").trim_end_matches('Z').to_owned();
+        let stamp = clock::now_utc_iso()
+            .replace([':', '-'], "")
+            .replace('T', "-")
+            .trim_end_matches('Z')
+            .to_owned();
         let path = dir.join(format!("plan-{stamp}.json"));
         let text = plan.to_json();
         let digest = winweaver_core::apply::digest(text.as_bytes());
@@ -1620,12 +1646,19 @@ impl App {
         self.running_skipped = plan.skipped.clone();
         let (tx, rx) = std::sync::mpsc::channel();
         std::thread::spawn(move || {
-            let args = vec!["--elevated-apply".to_owned(), path.display().to_string(), digest];
+            let args = vec![
+                "--elevated-apply".to_owned(),
+                path.display().to_string(),
+                digest,
+            ];
             let result = winweaver_win::run_elevated(&exe, &args).and_then(|code| {
                 let report_path = path.with_file_name(format!("plan-{stamp}-report.json"));
                 let read = std::fs::read_to_string(&report_path)
                     .map_err(|e| e.to_string())
-                    .and_then(|t| serde_json::from_str::<winweaver_core::apply::Report>(&t).map_err(|e| e.to_string()));
+                    .and_then(|t| {
+                        serde_json::from_str::<winweaver_core::apply::Report>(&t)
+                            .map_err(|e| e.to_string())
+                    });
                 let _ = std::fs::remove_file(&report_path);
                 match (code, read) {
                     (0, Ok(report)) => Ok(report),
@@ -1656,7 +1689,11 @@ impl App {
                             .iter()
                             .filter(|r| r.status != "ok")
                             .map(|r| Issue {
-                                severity: if r.status == "failed" { Severity::Warning } else { Severity::Info },
+                                severity: if r.status == "failed" {
+                                    Severity::Warning
+                                } else {
+                                    Severity::Info
+                                },
                                 target: Target::Rule(r.rule.clone()),
                                 text: format!("{}: {} {}", r.status, r.what, r.note),
                             })
@@ -1675,7 +1712,14 @@ impl App {
                                 ("ok", &report.count("ok")),
                                 ("failed", &report.count("failed")),
                                 ("skipped", &report.count("skipped")),
-                                ("backup", &if report.backup.is_empty() { "-".to_owned() } else { report.backup.clone() }),
+                                (
+                                    "backup",
+                                    &if report.backup.is_empty() {
+                                        "-".to_owned()
+                                    } else {
+                                        report.backup.clone()
+                                    },
+                                ),
                             ],
                         );
                     }
@@ -1743,7 +1787,10 @@ impl App {
             .filter(|p| p.extension().is_some_and(|e| e == admx::CATALOG_EXTENSION))
             .collect();
         files.sort_by_key(|p| {
-            let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+            let name = p
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
             (!name.starts_with("system"), name)
         });
         let mut broken = 0;
@@ -1754,7 +1801,10 @@ impl App {
             }
         }
         if broken > 0 {
-            self.status = trf("{n} imports of policy templates could not be read", &[("n", &broken)]);
+            self.status = trf(
+                "{n} imports of policy templates could not be read",
+                &[("n", &broken)],
+            );
         }
         self.rebuild_catalog();
     }
@@ -1800,7 +1850,10 @@ impl App {
         }
         let path = match source {
             ImportSource::ThisWindows => None,
-            ImportSource::Folder => match rfd::FileDialog::new().set_title(tr("Choose the folder of the ADMX files")).pick_folder() {
+            ImportSource::Folder => match rfd::FileDialog::new()
+                .set_title(tr("Choose the folder of the ADMX files"))
+                .pick_folder()
+            {
                 Some(p) => Some(p),
                 None => return,
             },
@@ -1813,21 +1866,34 @@ impl App {
                 None => return,
             },
         };
-        let build = winweaver_win::this_pc().map(|m| m.system_info().build).unwrap_or_default();
+        let build = winweaver_win::this_pc()
+            .map(|m| m.system_info().build)
+            .unwrap_or_default();
         let taken: Vec<String> = self.imports.iter().map(|f| f.id.clone()).collect();
         let (tx, rx) = std::sync::mpsc::channel();
         std::thread::spawn(move || {
             let now = clock::now_utc_iso();
             let result = match (source, path) {
                 (ImportSource::ThisWindows, _) => {
-                    let t = admx::read_folder(std::path::Path::new("C:\\Windows\\PolicyDefinitions"));
-                    let name = if build.is_empty() { "Policy templates of this Windows".to_owned() } else { format!("Policy templates of this Windows ({build})") };
+                    let t =
+                        admx::read_folder(std::path::Path::new("C:\\Windows\\PolicyDefinitions"));
+                    let name = if build.is_empty() {
+                        "Policy templates of this Windows".to_owned()
+                    } else {
+                        format!("Policy templates of this Windows ({build})")
+                    };
                     Ok(admx::to_catalog_file(&t, "system", &name, &build, &now))
                 }
                 (ImportSource::Folder, Some(dir)) => {
                     let t = admx::read_folder(&dir);
-                    let name = dir.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "Templates".to_owned());
-                    let id = format!("folder-{:08x}", session::fnv(&dir.display().to_string().to_lowercase()) as u32);
+                    let name = dir
+                        .file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| "Templates".to_owned());
+                    let id = format!(
+                        "folder-{:08x}",
+                        session::fnv(&dir.display().to_string().to_lowercase()) as u32
+                    );
                     Ok(admx::to_catalog_file(&t, &id, &name, "", &now))
                 }
                 (ImportSource::CatalogFile, Some(file)) => CatalogFile::load(&file).map(|mut f| {
@@ -1856,21 +1922,28 @@ impl App {
                     Ok(file) => {
                         let dir = imports_dir();
                         let path = dir.join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
-                        let saved = std::fs::create_dir_all(&dir).map_err(|e| e.to_string()).and_then(|()| file.save(&path));
+                        let saved = std::fs::create_dir_all(&dir)
+                            .map_err(|e| e.to_string())
+                            .and_then(|()| file.save(&path));
                         let rules = file.rules.len();
                         let skipped = file.skipped.len();
                         self.imports.retain(|f| f.id != file.id);
                         self.imports.push(file);
                         self.rebuild_catalog();
                         self.status = match saved {
-                            Ok(()) => trf("Imported: {rules} rules, {skipped} policies skipped", &[("rules", &rules), ("skipped", &skipped)]),
+                            Ok(()) => trf(
+                                "Imported: {rules} rules, {skipped} policies skipped",
+                                &[("rules", &rules), ("skipped", &skipped)],
+                            ),
                             Err(e) => trf("Imported, but not saved: {e}", &[("e", &e)]),
                         };
                     }
                     Err(e) => self.status = trf("The import failed: {e}", &[("e", &e)]),
                 }
             }
-            Err(std::sync::mpsc::TryRecvError::Empty) => ctx.request_repaint_after(std::time::Duration::from_millis(250)),
+            Err(std::sync::mpsc::TryRecvError::Empty) => {
+                ctx.request_repaint_after(std::time::Duration::from_millis(250))
+            }
             Err(std::sync::mpsc::TryRecvError::Disconnected) => self.importing = None,
         }
     }
@@ -1896,7 +1969,12 @@ impl App {
     /// Shows a policy of an import in the tree of a profile: a hidden import is shown again, the
     /// first profile tab comes to the front, the groups above the policy open and it is selected.
     fn show_in_profile(&mut self, import: &str, rule: &str) {
-        if let Some(i) = self.settings.hidden_imports.iter().position(|h| h == import) {
+        if let Some(i) = self
+            .settings
+            .hidden_imports
+            .iter()
+            .position(|h| h == import)
+        {
             self.settings.hidden_imports.remove(i);
             self.settings_dirty = true;
             self.rebuild_catalog();
@@ -1932,7 +2010,11 @@ impl App {
         };
         file.name = name.to_owned();
         let root = Some(winweaver_core::catalog::ROOT_POLICIES);
-        for group in file.groups.iter_mut().filter(|g| g.parent.as_deref() == root) {
+        for group in file
+            .groups
+            .iter_mut()
+            .filter(|g| g.parent.as_deref() == root)
+        {
             group.title = name.to_owned();
         }
         let path = imports_dir().join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
@@ -1979,7 +2061,10 @@ impl App {
                 if ui.checkbox(&mut shown, &f.name).changed() {
                     acts.push(Act::ToggleImport(f.id.clone()));
                 }
-                ui.weak(trf("{rules} rules, {skipped} skipped", &[("rules", &f.rules.len()), ("skipped", &f.skipped.len())]));
+                ui.weak(trf(
+                    "{rules} rules, {skipped} skipped",
+                    &[("rules", &f.rules.len()), ("skipped", &f.skipped.len())],
+                ));
                 if ui.small_button(tr("Export...")).clicked() {
                     acts.push(Act::ExportImport(f.id.clone()));
                 }
@@ -2010,13 +2095,25 @@ impl App {
         }
         ui.horizontal(|ui| {
             let busy = self.importing.is_some();
-            if ui.add_enabled(!busy, egui::Button::new(tr("Import the templates of this Windows"))).clicked() {
+            if ui
+                .add_enabled(
+                    !busy,
+                    egui::Button::new(tr("Import the templates of this Windows")),
+                )
+                .clicked()
+            {
                 acts.push(Act::ImportTemplates(ImportSource::ThisWindows));
             }
-            if ui.add_enabled(!busy, egui::Button::new(tr("Import a folder..."))).clicked() {
+            if ui
+                .add_enabled(!busy, egui::Button::new(tr("Import a folder...")))
+                .clicked()
+            {
                 acts.push(Act::ImportTemplates(ImportSource::Folder));
             }
-            if ui.add_enabled(!busy, egui::Button::new(tr("Import a catalog file..."))).clicked() {
+            if ui
+                .add_enabled(!busy, egui::Button::new(tr("Import a catalog file...")))
+                .clicked()
+            {
                 acts.push(Act::ImportTemplates(ImportSource::CatalogFile));
             }
         });
@@ -2292,7 +2389,9 @@ impl App {
                     self.rebuild_catalog();
                 }
                 Act::RemoveImport(id) => {
-                    let _ = std::fs::remove_file(imports_dir().join(format!("{id}.{}", admx::CATALOG_EXTENSION)));
+                    let _ = std::fs::remove_file(
+                        imports_dir().join(format!("{id}.{}", admx::CATALOG_EXTENSION)),
+                    );
                     self.imports.retain(|f| f.id != id);
                     self.rebuild_catalog();
                 }
@@ -2821,7 +2920,11 @@ impl App {
         };
         match custom {
             Some(t) => {
-                let base = if t.dark { egui::Theme::Dark } else { egui::Theme::Light };
+                let base = if t.dark {
+                    egui::Theme::Dark
+                } else {
+                    egui::Theme::Light
+                };
                 ctx.set_visuals_of(base, themes::visuals(&t));
                 ctx.set_theme(base);
             }
@@ -3222,17 +3325,32 @@ mod tests {
     fn every_kind_of_tab_draws_without_a_screen() {
         use egui_kittest::kittest::Queryable;
         let catalog = Catalog::embedded().unwrap();
-        let mut app = App::new(catalog, CatalogTexts::embedded().unwrap(), Settings::default());
-        let empty = admx::to_catalog_file(&admx::Templates::default(), "empty", "Empty templates", "", "now");
+        let mut app = App::new(
+            catalog,
+            CatalogTexts::embedded().unwrap(),
+            Settings::default(),
+        );
+        let empty = admx::to_catalog_file(
+            &admx::Templates::default(),
+            "empty",
+            "Empty templates",
+            "",
+            "now",
+        );
         app.imports.push(empty);
         app.rebuild_catalog();
         let mut harness = egui_kittest::Harness::new_eframe(|_| app);
         harness.step();
-        let has = |h: &egui_kittest::Harness<'_, App>, label: &str| h.query_all_by_label(label).next().is_some();
+        let has = |h: &egui_kittest::Harness<'_, App>, label: &str| {
+            h.query_all_by_label(label).next().is_some()
+        };
         assert!(has(&harness, "Menu"));
         for (act, label) in [
             (Act::OpenSettings, Some("General")),
-            (Act::OpenCatalog("empty".to_owned()), Some("Select a policy in the tree.")),
+            (
+                Act::OpenCatalog("empty".to_owned()),
+                Some("Select a policy in the tree."),
+            ),
             (Act::OpenMarks, None),
             (Act::OpenMcp, None),
             (Act::OpenGuide, None),
@@ -3246,7 +3364,10 @@ mod tests {
             }
         }
         assert_eq!(harness.state().docs.len(), 6);
-        assert_eq!(harness.state().docs[harness.state().active].title(), "Office.wwprofile");
+        assert_eq!(
+            harness.state().docs[harness.state().active].title(),
+            "Office.wwprofile"
+        );
         harness.state_mut().apply(vec![
             Act::Expand("unattend".to_owned(), true),
             Act::Expand("install".to_owned(), true),

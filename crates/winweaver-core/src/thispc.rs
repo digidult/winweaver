@@ -176,7 +176,6 @@ fn single_placeholder(rule: &Rule, value: &Value) -> Option<String> {
     rule.params.contains_key(inner).then(|| inner.to_owned())
 }
 
-
 fn checks_of(
     rule: &Rule,
     action: &Action,

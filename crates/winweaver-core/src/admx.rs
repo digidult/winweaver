@@ -16,7 +16,10 @@ use quick_xml::reader::Reader;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::catalog::{Action, Catalog, CatalogError, EnumValue, Group, Level, ListNames, Param, Phase, RegKind, Rule, ROOT_POLICIES, check};
+use crate::catalog::{
+    Action, Catalog, CatalogError, EnumValue, Group, Level, ListNames, Param, Phase, ROOT_POLICIES,
+    RegKind, Rule, check,
+};
 use crate::i18n::{CatalogTexts, GroupText, RuleText};
 use crate::jsonfile;
 
@@ -46,7 +49,10 @@ struct Node {
 
 impl Node {
     fn attr(&self, key: &str) -> Option<&str> {
-        self.attrs.iter().find(|(k, _)| k == key).map(|(_, v)| v.as_str())
+        self.attrs
+            .iter()
+            .find(|(k, _)| k == key)
+            .map(|(_, v)| v.as_str())
     }
 
     fn child(&self, name: &str) -> Option<&Node> {
@@ -64,7 +70,9 @@ fn parse_xml(text: &str) -> Result<Node, String> {
     let mut reader = Reader::from_str(text);
     let mut stack: Vec<Node> = vec![Node::default()];
     loop {
-        let event = reader.read_event().map_err(|e| format!("not well formed: {e}"))?;
+        let event = reader
+            .read_event()
+            .map_err(|e| format!("not well formed: {e}"))?;
         match event {
             Event::Start(e) => {
                 if stack.len() > DEPTH_MAX {
@@ -121,7 +129,9 @@ fn parse_xml(text: &str) -> Result<Node, String> {
     if !stack.is_empty() {
         return Err("an element is not closed".to_owned());
     }
-    root.children.pop().ok_or_else(|| "an empty document".to_owned())
+    root.children
+        .pop()
+        .ok_or_else(|| "an empty document".to_owned())
 }
 
 fn element(e: &quick_xml::events::BytesStart<'_>) -> Result<Node, String> {
@@ -133,7 +143,10 @@ fn element(e: &quick_xml::events::BytesStart<'_>) -> Result<Node, String> {
         let a = a.map_err(|e| format!("an attribute: {e}"))?;
         let key = a.key.local_name().as_ref().to_owned();
         #[allow(deprecated)]
-        let value = a.unescape_value().map_err(|e| format!("an attribute: {e}"))?.into_owned();
+        let value = a
+            .unescape_value()
+            .map_err(|e| format!("an attribute: {e}"))?
+            .into_owned();
         node.attrs.push((key, value));
     }
     Ok(node)
@@ -163,15 +176,51 @@ struct Item {
 
 #[derive(Debug, Clone)]
 enum Element {
-    Enum { id: String, key: Option<String>, value_name: String, items: Vec<(Texts, Val)> },
-    Decimal { id: String, key: Option<String>, value_name: String, min: u64, max: u64, text: bool, long: bool },
-    Boolean { id: String, key: Option<String>, value_name: String, on: Val, off: Val },
-    Text { id: String, key: Option<String>, value_name: String, expandable: bool, required: bool },
+    Enum {
+        id: String,
+        key: Option<String>,
+        value_name: String,
+        items: Vec<(Texts, Val)>,
+    },
+    Decimal {
+        id: String,
+        key: Option<String>,
+        value_name: String,
+        min: u64,
+        max: u64,
+        text: bool,
+        long: bool,
+    },
+    Boolean {
+        id: String,
+        key: Option<String>,
+        value_name: String,
+        on: Val,
+        off: Val,
+    },
+    Text {
+        id: String,
+        key: Option<String>,
+        value_name: String,
+        expandable: bool,
+        required: bool,
+    },
     /// The values of a key; `prefix` absent: the items name the values, empty or set: the prefix
     /// and a number; `explicit`: `name=value` items.
-    List { id: String, key: Option<String>, prefix: Option<String>, additive: bool, expandable: bool, explicit: bool },
+    List {
+        id: String,
+        key: Option<String>,
+        prefix: Option<String>,
+        additive: bool,
+        expandable: bool,
+        explicit: bool,
+    },
     /// The lines of one multi-line value.
-    MultiText { id: String, key: Option<String>, value_name: String },
+    MultiText {
+        id: String,
+        key: Option<String>,
+        value_name: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -243,7 +292,9 @@ fn resources(text: &str) -> Result<Resources, String> {
             let mut labels = HashMap::new();
             for c in &p.children {
                 if let Some(r) = c.attr("refId") {
-                    let label = c.child("label").map_or_else(|| c.text.clone(), |l| l.text.clone());
+                    let label = c
+                        .child("label")
+                        .map_or_else(|| c.text.clone(), |l| l.text.clone());
                     let default = c
                         .attr("defaultValue")
                         .map(str::to_owned)
@@ -299,10 +350,19 @@ fn items_of(list: Option<&Node>) -> Result<Vec<Item>, String> {
     let default_key = list.attr("defaultKey").map(str::to_owned);
     list.all("item")
         .map(|i| {
-            let value = i.child("value").and_then(value_of).ok_or("an item has no value")?;
+            let value = i
+                .child("value")
+                .and_then(value_of)
+                .ok_or("an item has no value")?;
             Ok(Item {
-                key: i.attr("key").map(str::to_owned).or_else(|| default_key.clone()),
-                value_name: i.attr("valueName").ok_or("an item has no value name")?.to_owned(),
+                key: i
+                    .attr("key")
+                    .map(str::to_owned)
+                    .or_else(|| default_key.clone()),
+                value_name: i
+                    .attr("valueName")
+                    .ok_or("an item has no value name")?
+                    .to_owned(),
                 value,
             })
         })
@@ -311,7 +371,13 @@ fn items_of(list: Option<&Node>) -> Result<Vec<Item>, String> {
 
 fn reference(r: &str, own: &str, using: &HashMap<String, String>) -> (String, String) {
     match r.split_once(':') {
-        Some((prefix, name)) => (using.get(prefix).cloned().unwrap_or_else(|| prefix.to_owned()), name.to_owned()),
+        Some((prefix, name)) => (
+            using
+                .get(prefix)
+                .cloned()
+                .unwrap_or_else(|| prefix.to_owned()),
+            name.to_owned(),
+        ),
         None => (own.to_owned(), r.to_owned()),
     }
 }
@@ -326,7 +392,11 @@ fn elements_of(node: Option<&Node>, res: &[(String, Resources)]) -> Result<Vec<E
         let key = e.attr("key").map(str::to_owned);
         let value_name = {
             let missing = format!("the element {id} has no value name");
-            move || e.attr("valueName").map(str::to_owned).ok_or(missing.clone())
+            move || {
+                e.attr("valueName")
+                    .map(str::to_owned)
+                    .ok_or(missing.clone())
+            }
         };
         out.push(match e.name.as_str() {
             "enum" => {
@@ -335,16 +405,27 @@ fn elements_of(node: Option<&Node>, res: &[(String, Resources)]) -> Result<Vec<E
                     if item.child("valueList").is_some() {
                         return Err(format!("the element {id} has value lists"));
                     }
-                    let value = item.child("value").and_then(value_of).ok_or_else(|| format!("an item of {id} has no value"))?;
+                    let value = item
+                        .child("value")
+                        .and_then(value_of)
+                        .ok_or_else(|| format!("an item of {id} has no value"))?;
                     items.push((texts_of(item.attr("displayName"), res, "?"), value));
                 }
-                Element::Enum { id, key, value_name: value_name()?, items }
+                Element::Enum {
+                    id,
+                    key,
+                    value_name: value_name()?,
+                    items,
+                }
             }
             "decimal" | "longDecimal" => Element::Decimal {
                 key,
                 value_name: value_name()?,
                 min: e.attr("minValue").and_then(|v| v.parse().ok()).unwrap_or(0),
-                max: e.attr("maxValue").and_then(|v| v.parse().ok()).unwrap_or(9999),
+                max: e
+                    .attr("maxValue")
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(9999),
                 text: e.attr("storeAsText") == Some("true"),
                 long: e.name == "longDecimal",
                 id,
@@ -353,9 +434,21 @@ fn elements_of(node: Option<&Node>, res: &[(String, Resources)]) -> Result<Vec<E
                 if e.child("trueList").is_some() || e.child("falseList").is_some() {
                     return Err(format!("the element {id} has value lists"));
                 }
-                let on = e.child("trueValue").and_then(value_of).unwrap_or(Val::Decimal(1));
-                let off = e.child("falseValue").and_then(value_of).unwrap_or(Val::Decimal(0));
-                Element::Boolean { id, key, value_name: value_name()?, on, off }
+                let on = e
+                    .child("trueValue")
+                    .and_then(value_of)
+                    .unwrap_or(Val::Decimal(1));
+                let off = e
+                    .child("falseValue")
+                    .and_then(value_of)
+                    .unwrap_or(Val::Decimal(0));
+                Element::Boolean {
+                    id,
+                    key,
+                    value_name: value_name()?,
+                    on,
+                    off,
+                }
             }
             "text" => Element::Text {
                 key,
@@ -377,21 +470,35 @@ fn elements_of(node: Option<&Node>, res: &[(String, Resources)]) -> Result<Vec<E
                 value_name: value_name()?,
                 id,
             },
-            other => return Err(format!("the element {id} is a {other}, which the program does not import yet")),
+            other => {
+                return Err(format!(
+                    "the element {id} is a {other}, which the program does not import yet"
+                ));
+            }
         });
     }
     Ok(out)
 }
 
 /// Reads one ADMX with the ADML texts of its cultures.
-fn read_pair(admx: &str, adml: &[(String, String)], file: &str, out: &mut Templates) -> Result<(), String> {
+fn read_pair(
+    admx: &str,
+    adml: &[(String, String)],
+    file: &str,
+    out: &mut Templates,
+) -> Result<(), String> {
     let root = parse_xml(admx)?;
     if root.name != "policyDefinitions" {
         return Err("not an ADMX file".to_owned());
     }
-    let ns_node = root.child("policyNamespaces").ok_or("no policyNamespaces")?;
+    let ns_node = root
+        .child("policyNamespaces")
+        .ok_or("no policyNamespaces")?;
     let target = ns_node.child("target").ok_or("no target namespace")?;
-    let ns = target.attr("namespace").ok_or("no target namespace")?.to_owned();
+    let ns = target
+        .attr("namespace")
+        .ok_or("no target namespace")?
+        .to_owned();
     let prefix = target.attr("prefix").unwrap_or("x").to_owned();
     let mut using = HashMap::new();
     for u in ns_node.all("using") {
@@ -403,7 +510,10 @@ fn read_pair(admx: &str, adml: &[(String, String)], file: &str, out: &mut Templa
     for (culture, text) in adml {
         match resources(text) {
             Ok(r) => res.push((culture.clone(), r)),
-            Err(e) => out.skipped.push((format!("{file} {culture}"), format!("the texts were not read: {e}"))),
+            Err(e) => out.skipped.push((
+                format!("{file} {culture}"),
+                format!("the texts were not read: {e}"),
+            )),
         }
     }
     if let Some(cats) = root.child("categories") {
@@ -415,7 +525,10 @@ fn read_pair(admx: &str, adml: &[(String, String)], file: &str, out: &mut Templa
                 ns: ns.clone(),
                 name: name.to_owned(),
                 title: texts_of(c.attr("displayName"), &res, name),
-                parent: c.child("parentCategory").and_then(|p| p.attr("ref")).map(|r| reference(r, &ns, &using)),
+                parent: c
+                    .child("parentCategory")
+                    .and_then(|p| p.attr("ref"))
+                    .map(|r| reference(r, &ns, &using)),
             });
         }
     }
@@ -435,7 +548,10 @@ fn read_pair(admx: &str, adml: &[(String, String)], file: &str, out: &mut Templa
             for (culture, r) in &res {
                 if let Some(table) = presentation.and_then(|id| r.presentations.get(id)) {
                     for (refid, (label, default)) in table {
-                        labels.entry(refid.clone()).or_default().insert(culture.clone(), label.trim().to_owned());
+                        labels
+                            .entry(refid.clone())
+                            .or_default()
+                            .insert(culture.clone(), label.trim().to_owned());
                         if let Some(d) = default {
                             defaults.entry(refid.clone()).or_insert_with(|| d.clone());
                         }
@@ -457,7 +573,10 @@ fn read_pair(admx: &str, adml: &[(String, String)], file: &str, out: &mut Templa
                 elements: elements_of(p.child("elements"), &res)?,
                 labels,
                 defaults,
-                category: p.child("parentCategory").and_then(|c| c.attr("ref")).map(|r| reference(r, &ns, &using)),
+                category: p
+                    .child("parentCategory")
+                    .and_then(|c| c.attr("ref"))
+                    .map(|r| reference(r, &ns, &using)),
             })
         })();
         match built {
@@ -473,13 +592,19 @@ fn read_pair(admx: &str, adml: &[(String, String)], file: &str, out: &mut Templa
 pub fn read_folder(dir: &Path) -> Templates {
     let mut out = Templates::default();
     let Ok(entries) = std::fs::read_dir(dir) else {
-        out.skipped.push((dir.display().to_string(), "the folder cannot be read".to_owned()));
+        out.skipped.push((
+            dir.display().to_string(),
+            "the folder cannot be read".to_owned(),
+        ));
         return out;
     };
     let mut files: Vec<_> = entries
         .filter_map(Result::ok)
         .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("admx")))
+        .filter(|p| {
+            p.extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("admx"))
+        })
         .collect();
     files.sort();
     for path in files {
@@ -491,7 +616,10 @@ pub fn read_folder(dir: &Path) -> Templates {
                 continue;
             }
         };
-        let stem = path.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_default();
+        let stem = path
+            .file_stem()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_default();
         let mut adml = Vec::new();
         for (culture, _) in CULTURES {
             let p = dir.join(culture).join(format!("{stem}.adml"));
@@ -548,7 +676,11 @@ fn slug(text: &str) -> String {
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
         .collect();
     let s = s.trim_matches('-').to_owned();
-    if s.is_empty() { "x".to_owned() } else { s.chars().take(80).collect() }
+    if s.is_empty() {
+        "x".to_owned()
+    } else {
+        s.chars().take(80).collect()
+    }
 }
 
 fn en(texts: &Texts) -> String {
@@ -564,18 +696,28 @@ fn en(texts: &Texts) -> String {
 pub fn safe_text(text: &str, limit: usize) -> bool {
     text.chars().count() <= limit
         && !text.contains("]]>")
-        && !text.chars().any(|c| c.is_control() || c == '\u{FFFE}' || c == '\u{FFFF}' || ('\u{80}'..='\u{9F}').contains(&c))
+        && !text.chars().any(|c| {
+            c.is_control()
+                || c == '\u{FFFE}'
+                || c == '\u{FFFF}'
+                || ('\u{80}'..='\u{9F}').contains(&c)
+        })
 }
 
 /// A registry key of a template: segments that are not empty, `.` or `..`.
 pub fn safe_key(key: &str) -> bool {
     safe_text(key, 1024)
         && !key.is_empty()
-        && key.split(['\\', '/']).all(|s| !s.is_empty() && s != "." && s != ".." && s.len() <= NAME_MAX)
+        && key
+            .split(['\\', '/'])
+            .all(|s| !s.is_empty() && s != "." && s != ".." && s.len() <= NAME_MAX)
 }
 
 fn cut(text: &str, limit: usize) -> String {
-    let clean: String = text.chars().map(|c| if c.is_control() && c != '\n' { ' ' } else { c }).collect();
+    let clean: String = text
+        .chars()
+        .map(|c| if c.is_control() && c != '\n' { ' ' } else { c })
+        .collect();
     if clean.chars().count() <= limit {
         clean
     } else {
@@ -588,14 +730,39 @@ fn reg_of(path: &str, name: &str, val: &Val) -> Result<Action, String> {
         return Err("a value name with unsafe characters".to_owned());
     }
     Ok(match val {
-        Val::Delete => Action::RegRemove { path: path.to_owned(), name: name.to_owned(), default: None },
-        Val::Decimal(n) => Action::Reg { path: path.to_owned(), name: name.to_owned(), kind: RegKind::DWord, value: Value::from(*n), default: None, why: String::new() },
-        Val::LongDecimal(n) => Action::Reg { path: path.to_owned(), name: name.to_owned(), kind: RegKind::QWord, value: Value::from(*n), default: None, why: String::new() },
+        Val::Delete => Action::RegRemove {
+            path: path.to_owned(),
+            name: name.to_owned(),
+            default: None,
+        },
+        Val::Decimal(n) => Action::Reg {
+            path: path.to_owned(),
+            name: name.to_owned(),
+            kind: RegKind::DWord,
+            value: Value::from(*n),
+            default: None,
+            why: String::new(),
+        },
+        Val::LongDecimal(n) => Action::Reg {
+            path: path.to_owned(),
+            name: name.to_owned(),
+            kind: RegKind::QWord,
+            value: Value::from(*n),
+            default: None,
+            why: String::new(),
+        },
         Val::Text(t) => {
             if !safe_text(t, 16383) || t.contains('{') {
                 return Err("a text value with unsafe characters or braces".to_owned());
             }
-            Action::Reg { path: path.to_owned(), name: name.to_owned(), kind: RegKind::String, value: Value::from(t.as_str()), default: None, why: String::new() }
+            Action::Reg {
+                path: path.to_owned(),
+                name: name.to_owned(),
+                kind: RegKind::String,
+                value: Value::from(t.as_str()),
+                default: None,
+                why: String::new(),
+            }
         }
     })
 }
@@ -617,8 +784,16 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
     let mut on_actions = Vec::new();
     let mut off_actions = Vec::new();
     if let Some(name) = &p.value_name {
-        on_actions.push(reg_of(&main_path, name, p.enabled.as_ref().unwrap_or(&Val::Decimal(1)))?);
-        off_actions.push(reg_of(&main_path, name, p.disabled.as_ref().unwrap_or(&Val::Decimal(0)))?);
+        on_actions.push(reg_of(
+            &main_path,
+            name,
+            p.enabled.as_ref().unwrap_or(&Val::Decimal(1)),
+        )?);
+        off_actions.push(reg_of(
+            &main_path,
+            name,
+            p.disabled.as_ref().unwrap_or(&Val::Decimal(0)),
+        )?);
     }
     for item in &p.enabled_list {
         on_actions.push(reg_of(&path_of(&item.key)?, &item.value_name, &item.value)?);
@@ -642,10 +817,24 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
             | Element::MultiText { key, id, .. } => (key, id),
         };
         let path = path_of(key)?;
-        let label = p.labels.get(eid).map(en).filter(|l| !l.is_empty()).unwrap_or_else(|| eid.clone());
+        let label = p
+            .labels
+            .get(eid)
+            .map(en)
+            .filter(|l| !l.is_empty())
+            .unwrap_or_else(|| eid.clone());
         let value_name = match e {
-            Element::List { prefix, additive, expandable, explicit, .. } => {
-                if prefix.as_deref().is_some_and(|x| !safe_text(x, NAME_MAX) || x.contains('{')) {
+            Element::List {
+                prefix,
+                additive,
+                expandable,
+                explicit,
+                ..
+            } => {
+                if prefix
+                    .as_deref()
+                    .is_some_and(|x| !safe_text(x, NAME_MAX) || x.contains('{'))
+                {
                     return Err("a list prefix with unsafe characters".to_owned());
                 }
                 let names = if *explicit {
@@ -655,13 +844,37 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
                 } else {
                     ListNames::Items
                 };
-                let kind = if *expandable { RegKind::ExpandString } else { RegKind::String };
+                let kind = if *expandable {
+                    RegKind::ExpandString
+                } else {
+                    RegKind::String
+                };
                 let prefix = prefix.clone().unwrap_or_default();
                 if !*additive {
-                    list_off.push(Action::RegList { path: path.clone(), param: String::new(), names, prefix: prefix.clone(), additive: false, kind });
+                    list_off.push(Action::RegList {
+                        path: path.clone(),
+                        param: String::new(),
+                        names,
+                        prefix: prefix.clone(),
+                        additive: false,
+                        kind,
+                    });
                 }
-                list_on.push(Action::RegList { path, param: pname.clone(), names, prefix, additive: *additive, kind });
-                params.insert(pname, Param::List { title: cut(&label, 200), default: Vec::new() });
+                list_on.push(Action::RegList {
+                    path,
+                    param: pname.clone(),
+                    names,
+                    prefix,
+                    additive: *additive,
+                    kind,
+                });
+                params.insert(
+                    pname,
+                    Param::List {
+                        title: cut(&label, 200),
+                        default: Vec::new(),
+                    },
+                );
                 continue;
             }
             Element::Enum { value_name, .. }
@@ -691,7 +904,11 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
                         title: cut(&en(t), 200),
                     })
                     .collect();
-                if values.iter().any(|v| v.value.as_str().is_some_and(|s| !safe_text(s, 1000) || s.contains('{'))) {
+                if values.iter().any(|v| {
+                    v.value
+                        .as_str()
+                        .is_some_and(|s| !safe_text(s, 1000) || s.contains('{'))
+                }) {
                     return Err("an enum value with unsafe characters".to_owned());
                 }
                 let default = p
@@ -701,8 +918,18 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
                     .and_then(|i| values.get(i))
                     .map_or_else(|| values[0].value.clone(), |v| v.value.clone());
                 (
-                    if decimal { RegKind::DWord } else { RegKind::String },
-                    Param::Enum { title: cut(&label, 200), default, values, differs_from: None, same_allowed: Vec::new() },
+                    if decimal {
+                        RegKind::DWord
+                    } else {
+                        RegKind::String
+                    },
+                    Param::Enum {
+                        title: cut(&label, 200),
+                        default,
+                        values,
+                        differs_from: None,
+                        same_allowed: Vec::new(),
+                    },
                 )
             }
             Element::Boolean { on, off, .. } => {
@@ -711,7 +938,13 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
                 if !decimal {
                     return Err("a check box that writes texts or deletes".to_owned());
                 }
-                let num = |v: &Val| if let Val::Decimal(n) = v { Value::from(*n) } else { Value::Null };
+                let num = |v: &Val| {
+                    if let Val::Decimal(n) = v {
+                        Value::from(*n)
+                    } else {
+                        Value::Null
+                    }
+                };
                 let checked = p.defaults.get(eid).is_some_and(|d| d == "true");
                 (
                     RegKind::DWord,
@@ -719,39 +952,96 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
                         title: cut(&label, 200),
                         default: if checked { num(on) } else { num(off) },
                         values: vec![
-                            EnumValue { value: num(on), title: "On".to_owned() },
-                            EnumValue { value: num(off), title: "Off".to_owned() },
+                            EnumValue {
+                                value: num(on),
+                                title: "On".to_owned(),
+                            },
+                            EnumValue {
+                                value: num(off),
+                                title: "Off".to_owned(),
+                            },
                         ],
                         differs_from: None,
                         same_allowed: Vec::new(),
                     },
                 )
             }
-            Element::Decimal { min, max, text, long, .. } => {
+            Element::Decimal {
+                min,
+                max,
+                text,
+                long,
+                ..
+            } => {
                 if min > max || *max > i64::MAX as u64 {
                     return Err("a number with a wrong range".to_owned());
                 }
-                let default = p.defaults.get(eid).and_then(|d| d.parse::<i64>().ok()).filter(|d| (*min as i64..=*max as i64).contains(d)).unwrap_or(*min as i64);
+                let default = p
+                    .defaults
+                    .get(eid)
+                    .and_then(|d| d.parse::<i64>().ok())
+                    .filter(|d| (*min as i64..=*max as i64).contains(d))
+                    .unwrap_or(*min as i64);
                 (
-                    if *text { RegKind::String } else if *long { RegKind::QWord } else { RegKind::DWord },
-                    Param::Int { title: cut(&label, 200), default, min: *min as i64, max: *max as i64 },
+                    if *text {
+                        RegKind::String
+                    } else if *long {
+                        RegKind::QWord
+                    } else {
+                        RegKind::DWord
+                    },
+                    Param::Int {
+                        title: cut(&label, 200),
+                        default,
+                        min: *min as i64,
+                        max: *max as i64,
+                    },
                 )
             }
-            Element::Text { expandable, required, .. } => {
+            Element::Text {
+                expandable,
+                required,
+                ..
+            } => {
                 let default = p.defaults.get(eid).cloned().unwrap_or_default();
                 if !safe_text(&default, 1000) || default.contains('{') {
                     return Err("a default text with unsafe characters".to_owned());
                 }
                 (
-                    if *expandable { RegKind::ExpandString } else { RegKind::String },
-                    Param::Text { title: cut(&label, 200), default: default.clone(), required: *required && !default.is_empty() },
+                    if *expandable {
+                        RegKind::ExpandString
+                    } else {
+                        RegKind::String
+                    },
+                    Param::Text {
+                        title: cut(&label, 200),
+                        default: default.clone(),
+                        required: *required && !default.is_empty(),
+                    },
                 )
             }
-            Element::MultiText { .. } => (RegKind::MultiString, Param::List { title: cut(&label, 200), default: Vec::new() }),
+            Element::MultiText { .. } => (
+                RegKind::MultiString,
+                Param::List {
+                    title: cut(&label, 200),
+                    default: Vec::new(),
+                },
+            ),
             Element::List { .. } => continue,
         };
-        on_actions.push(Action::Reg { path: path.clone(), name: value_name.clone(), kind, value: placeholder, default: None, why: String::new() });
-        off_actions.push(Action::RegRemove { path, name: value_name.clone(), default: None });
+        on_actions.push(Action::Reg {
+            path: path.clone(),
+            name: value_name.clone(),
+            kind,
+            value: placeholder,
+            default: None,
+            why: String::new(),
+        });
+        off_actions.push(Action::RegRemove {
+            path,
+            name: value_name.clone(),
+            default: None,
+        });
         params.insert(pname, param);
     }
     list_on.append(&mut on_actions);
@@ -763,7 +1053,11 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
     }
     let title = cut(&en(&p.title), 300);
     let summary = cut(&en(&p.explain), SUMMARY_MAX);
-    let phase = if p.user { Phase::DefaultUser } else { Phase::Specialize };
+    let phase = if p.user {
+        Phase::DefaultUser
+    } else {
+        Phase::Specialize
+    };
     let off_id = format!("{id}.off");
     let has_off = !off_actions.is_empty();
     let on = Rule {
@@ -784,7 +1078,11 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
         note: String::new(),
         params,
         requires: Vec::new(),
-        conflicts: if has_off { vec![off_id.clone()] } else { Vec::new() },
+        conflicts: if has_off {
+            vec![off_id.clone()]
+        } else {
+            Vec::new()
+        },
         actions: on_actions,
     };
     let off = has_off.then(|| Rule {
@@ -799,7 +1097,13 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
 }
 
 /// The catalog file of a set of templates.
-pub fn to_catalog_file(t: &Templates, id: &str, name: &str, windows: &str, created: &str) -> CatalogFile {
+pub fn to_catalog_file(
+    t: &Templates,
+    id: &str,
+    name: &str,
+    windows: &str,
+    created: &str,
+) -> CatalogFile {
     let root_id = format!("admx.{}", slug(id));
     let mut groups = vec![Group {
         id: root_id.clone(),
@@ -816,7 +1120,11 @@ pub fn to_catalog_file(t: &Templates, id: &str, name: &str, windows: &str, creat
         if group_of.contains_key(&(c.ns.clone(), c.name.clone())) {
             continue;
         }
-        let mut gid = format!("{root_id}.{}.{}", slug(c.ns.rsplit('.').next().unwrap_or("x")), slug(&c.name));
+        let mut gid = format!(
+            "{root_id}.{}.{}",
+            slug(c.ns.rsplit('.').next().unwrap_or("x")),
+            slug(&c.name)
+        );
         let mut n = 2;
         while used_groups.contains(&gid) {
             gid = format!("{root_id}.{}-{n}", slug(&c.name));
@@ -831,7 +1139,12 @@ pub fn to_catalog_file(t: &Templates, id: &str, name: &str, windows: &str, creat
             continue;
         }
         let gid = group_of[&(c.ns.clone(), c.name.clone())].clone();
-        let parent = c.parent.as_ref().and_then(|p| group_of.get(p)).cloned().unwrap_or_else(|| root_id.clone());
+        let parent = c
+            .parent
+            .as_ref()
+            .and_then(|p| group_of.get(p))
+            .cloned()
+            .unwrap_or_else(|| root_id.clone());
         groups.push(Group {
             id: gid.clone(),
             title: cut(&en(&c.title), 200),
@@ -841,13 +1154,20 @@ pub fn to_catalog_file(t: &Templates, id: &str, name: &str, windows: &str, creat
         });
         for (culture, code) in CULTURES.iter().skip(1) {
             if let Some(text) = c.title.get(*culture) {
-                texts.entry((*code).to_owned()).or_default().groups.insert(gid.clone(), cut(text, 200));
+                texts
+                    .entry((*code).to_owned())
+                    .or_default()
+                    .groups
+                    .insert(gid.clone(), cut(text, 200));
             }
         }
     }
     // A cycle of parents would hang the tree: a group whose chain does not reach the root goes
     // under the root.
-    let parents: HashMap<String, String> = groups.iter().filter_map(|g| g.parent.clone().map(|p| (g.id.clone(), p))).collect();
+    let parents: HashMap<String, String> = groups
+        .iter()
+        .filter_map(|g| g.parent.clone().map(|p| (g.id.clone(), p)))
+        .collect();
     for g in groups.iter_mut().skip(1) {
         let mut seen = HashSet::new();
         let mut cur = g.id.clone();
@@ -877,14 +1197,23 @@ pub fn to_catalog_file(t: &Templates, id: &str, name: &str, windows: &str, creat
             rid = format!("{base}-{n}");
             n += 1;
         }
-        let group = p.category.as_ref().and_then(|c| group_of.get(c)).cloned().unwrap_or_else(|| root_id.clone());
+        let group = p
+            .category
+            .as_ref()
+            .and_then(|c| group_of.get(c))
+            .cloned()
+            .unwrap_or_else(|| root_id.clone());
         match policy_rules(p, &rid, &group) {
             Ok((on, off)) => {
                 used.insert(rid.clone());
                 used.insert(format!("{rid}.off"));
                 for (culture, code) in CULTURES.iter().skip(1) {
                     if let Some(title) = p.title.get(*culture) {
-                        let summary = p.explain.get(*culture).map(|s| cut(s, SUMMARY_MAX)).unwrap_or_default();
+                        let summary = p
+                            .explain
+                            .get(*culture)
+                            .map(|s| cut(s, SUMMARY_MAX))
+                            .unwrap_or_default();
                         let lang = texts.entry((*code).to_owned()).or_default();
                         lang.rules.insert(rid.clone(), (cut(title, 300), summary));
                     }
@@ -952,52 +1281,100 @@ impl CatalogFile {
                 return Err(format!("the rule {} has no group in the file", r.id));
             }
             if !r.requires.is_empty() || r.conflicts.iter().any(|c| !ids.contains(c.as_str())) {
-                return Err(format!("the rule {} refers to rules outside the file", r.id));
+                return Err(format!(
+                    "the rule {} refers to rules outside the file",
+                    r.id
+                ));
             }
             if !matches!(r.phase, Phase::Specialize | Phase::DefaultUser) {
-                return Err(format!("the rule {} has a phase an import cannot have", r.id));
+                return Err(format!(
+                    "the rule {} has a phase an import cannot have",
+                    r.id
+                ));
             }
             for a in &r.actions {
                 let (path, name) = match a {
-                    Action::Reg { path, name, value, .. } => {
-                        let placeholders: Vec<&str> = value.as_str().map(check::placeholders).unwrap_or_default();
+                    Action::Reg {
+                        path, name, value, ..
+                    } => {
+                        let placeholders: Vec<&str> =
+                            value.as_str().map(check::placeholders).unwrap_or_default();
                         match value {
                             Value::String(s) if !placeholders.is_empty() => {
-                                if placeholders.len() != 1 || s != &format!("{{{}}}", placeholders[0]) || !r.params.contains_key(placeholders[0]) {
-                                    return Err(format!("the rule {} has a value with a placeholder of its own", r.id));
+                                if placeholders.len() != 1
+                                    || s != &format!("{{{}}}", placeholders[0])
+                                    || !r.params.contains_key(placeholders[0])
+                                {
+                                    return Err(format!(
+                                        "the rule {} has a value with a placeholder of its own",
+                                        r.id
+                                    ));
                                 }
                             }
                             Value::String(s) if !safe_text(s, 16383) || s.contains('{') => {
                                 return Err(format!("the rule {} writes an unsafe text", r.id));
                             }
                             Value::String(_) | Value::Number(_) => {}
-                            _ => return Err(format!("the rule {} writes a value of an unknown shape", r.id)),
+                            _ => {
+                                return Err(format!(
+                                    "the rule {} writes a value of an unknown shape",
+                                    r.id
+                                ));
+                            }
                         }
                         (path, name)
                     }
                     Action::RegRemove { path, name, .. } => (path, name),
-                    Action::RegList { path, param, kind, prefix, .. } => {
-                        let list = param.is_empty() || matches!(r.params.get(param), Some(Param::List { .. }));
-                        if !list || !matches!(kind, RegKind::String | RegKind::ExpandString) || prefix.contains('{') {
-                            return Err(format!("the rule {} has a list of an unknown shape", r.id));
+                    Action::RegList {
+                        path,
+                        param,
+                        kind,
+                        prefix,
+                        ..
+                    } => {
+                        let list = param.is_empty()
+                            || matches!(r.params.get(param), Some(Param::List { .. }));
+                        if !list
+                            || !matches!(kind, RegKind::String | RegKind::ExpandString)
+                            || prefix.contains('{')
+                        {
+                            return Err(format!(
+                                "the rule {} has a list of an unknown shape",
+                                r.id
+                            ));
                         }
                         (path, prefix)
                     }
-                    _ => return Err(format!("the rule {} has an action an import cannot have", r.id)),
+                    _ => {
+                        return Err(format!(
+                            "the rule {} has an action an import cannot have",
+                            r.id
+                        ));
+                    }
                 };
-                let key = path.strip_prefix("HKLM:\\").or_else(|| path.strip_prefix("DU:\\"));
+                let key = path
+                    .strip_prefix("HKLM:\\")
+                    .or_else(|| path.strip_prefix("DU:\\"));
                 if !key.is_some_and(safe_key) || !safe_text(name, 16383) {
-                    return Err(format!("the rule {} writes an unsafe registry key or value name", r.id));
+                    return Err(format!(
+                        "the rule {} writes an unsafe registry key or value name",
+                        r.id
+                    ));
                 }
             }
             for p in r.params.values() {
                 let texts: Vec<&str> = match p {
-                    Param::Enum { values, .. } => values.iter().filter_map(|v| v.value.as_str()).collect(),
+                    Param::Enum { values, .. } => {
+                        values.iter().filter_map(|v| v.value.as_str()).collect()
+                    }
                     Param::Text { default, .. } => vec![default.as_str()],
                     Param::List { default, .. } => default.iter().map(String::as_str).collect(),
                     Param::Int { .. } => Vec::new(),
                 };
-                if texts.iter().any(|t| !safe_text(t, 16383) || t.contains('{')) {
+                if texts
+                    .iter()
+                    .any(|t| !safe_text(t, 16383) || t.contains('{'))
+                {
                     return Err(format!("the rule {} has an unsafe parameter text", r.id));
                 }
             }
@@ -1008,7 +1385,10 @@ impl CatalogFile {
 
 /// The catalog with the rules and groups of the catalog files added; a rule or group whose id is
 /// already there is left out (the first file wins), and the notes say so.
-pub fn merge(base: &Catalog, files: &[CatalogFile]) -> Result<(Catalog, Vec<String>), CatalogError> {
+pub fn merge(
+    base: &Catalog,
+    files: &[CatalogFile],
+) -> Result<(Catalog, Vec<String>), CatalogError> {
     let mut groups: Vec<Group> = base.groups().to_vec();
     let mut rules: Vec<Rule> = base.rules().to_vec();
     let mut group_ids: HashSet<String> = groups.iter().map(|g| g.id.clone()).collect();
@@ -1021,7 +1401,12 @@ pub fn merge(base: &Catalog, files: &[CatalogFile]) -> Result<(Catalog, Vec<Stri
                 groups.push(g.clone());
             }
         }
-        let own_rules: HashSet<&str> = f.rules.iter().map(|r| r.id.as_str()).filter(|id| !rule_ids.contains(*id)).collect();
+        let own_rules: HashSet<&str> = f
+            .rules
+            .iter()
+            .map(|r| r.id.as_str())
+            .filter(|id| !rule_ids.contains(*id))
+            .collect();
         for r in &f.rules {
             if !own_rules.contains(r.id.as_str()) || !group_ids.contains(&r.group) {
                 skipped += 1;
@@ -1033,7 +1418,10 @@ pub fn merge(base: &Catalog, files: &[CatalogFile]) -> Result<(Catalog, Vec<Stri
             rules.push(r);
         }
         if skipped > 0 {
-            notes.push(format!("{}: {skipped} rules are already in the catalog and were left out", f.name));
+            notes.push(format!(
+                "{}: {skipped} rules are already in the catalog and were left out",
+                f.name
+            ));
         }
     }
     let catalog = Catalog::from_parts(base.version(), groups, rules)?;
@@ -1156,7 +1544,16 @@ mod tests {
 
     fn sample() -> CatalogFile {
         let mut t = Templates::default();
-        read_pair(ADMX, &[("en-US".into(), ADML.into()), ("uk-UA".into(), ADML_UK.into())], "sample.admx", &mut t).unwrap();
+        read_pair(
+            ADMX,
+            &[
+                ("en-US".into(), ADML.into()),
+                ("uk-UA".into(), ADML_UK.into()),
+            ],
+            "sample.admx",
+            &mut t,
+        )
+        .unwrap();
         to_catalog_file(&t, "test", "Sample templates", "26300", "now")
     }
 
@@ -1182,21 +1579,53 @@ mod tests {
         );
         let off = &f.rules[0];
         assert_eq!(off.summary, "Explains A lot.");
-        assert!(matches!(&off.actions[0], Action::Reg { path, name, value, .. } if path == "HKLM:\\Software\\Policies\\Test" && name == "Off" && value == &Value::from(1)));
+        assert!(
+            matches!(&off.actions[0], Action::Reg { path, name, value, .. } if path == "HKLM:\\Software\\Policies\\Test" && name == "Off" && value == &Value::from(1))
+        );
         assert_eq!(off.conflicts, vec!["admx.sample.turnoff.off".to_owned()]);
         let level = &f.rules[2];
         assert_eq!(level.phase, Phase::DefaultUser);
-        assert!(matches!(&level.actions[0], Action::Reg { path, value, .. } if path.starts_with("DU:\\") && value == &Value::from("{e1}")));
-        assert!(matches!(&level.params["e1"], Param::Enum { default, values, .. } if default == &Value::from(2) && values.len() == 2));
-        assert!(matches!(&level.params["e2"], Param::Int { default: 10, min: 1, max: 50, .. }));
-        let listed = f.rules.iter().find(|r| r.id == "admx.sample.listed").unwrap();
+        assert!(
+            matches!(&level.actions[0], Action::Reg { path, value, .. } if path.starts_with("DU:\\") && value == &Value::from("{e1}"))
+        );
+        assert!(
+            matches!(&level.params["e1"], Param::Enum { default, values, .. } if default == &Value::from(2) && values.len() == 2)
+        );
+        assert!(matches!(
+            &level.params["e2"],
+            Param::Int {
+                default: 10,
+                min: 1,
+                max: 50,
+                ..
+            }
+        ));
+        let listed = f
+            .rules
+            .iter()
+            .find(|r| r.id == "admx.sample.listed")
+            .unwrap();
         assert!(matches!(&listed.actions[0],
             Action::RegList { param, names: ListNames::Items, additive: false, kind: RegKind::String, .. } if param == "e1"));
         assert!(matches!(&listed.params["e1"], Param::List { .. }));
-        let off = f.rules.iter().find(|r| r.id == "admx.sample.listed.off").unwrap();
-        assert!(matches!(&off.actions[0], Action::RegList { param, .. } if param.is_empty()), "Disabled clears the list");
-        assert!(f.skipped.iter().any(|(p, why)| p == "sample:Unsafe" && why.contains("unsafe")));
-        assert_eq!(f.texts["uk"].rules["admx.sample.turnoff"].0, "Вимкнути зразок");
+        let off = f
+            .rules
+            .iter()
+            .find(|r| r.id == "admx.sample.listed.off")
+            .unwrap();
+        assert!(
+            matches!(&off.actions[0], Action::RegList { param, .. } if param.is_empty()),
+            "Disabled clears the list"
+        );
+        assert!(
+            f.skipped
+                .iter()
+                .any(|(p, why)| p == "sample:Unsafe" && why.contains("unsafe"))
+        );
+        assert_eq!(
+            f.texts["uk"].rules["admx.sample.turnoff"].0,
+            "Вимкнути зразок"
+        );
         f.check().unwrap();
     }
 
@@ -1212,16 +1641,24 @@ mod tests {
         merge_texts(&mut texts, std::slice::from_ref(&f));
         let uk = texts.iter().find(|t| t.code == "uk").unwrap();
         assert!(uk.rules.contains_key("admx.sample.turnoff"));
-        let off = uk.rules["admx.sample.turnoff.off"].title.as_deref().unwrap_or_default();
+        let off = uk.rules["admx.sample.turnoff.off"]
+            .title
+            .as_deref()
+            .unwrap_or_default();
         assert!(off.ends_with(&format!(": {}", uk.disabled)), "{off}");
         let mut bad = f.clone();
-        bad.rules[0].actions.push(Action::Ps { script: crate::catalog::Lines::One("x".into()) });
+        bad.rules[0].actions.push(Action::Ps {
+            script: crate::catalog::Lines::One("x".into()),
+        });
         assert!(bad.check().is_err(), "an import never brings a script");
         let mut bad = f.clone();
         if let Action::Reg { path, .. } = &mut bad.rules[0].actions[0] {
             *path = "HKCU:\\X".into();
         }
-        assert!(bad.check().is_err(), "only the machine and the default user branches");
+        assert!(
+            bad.check().is_err(),
+            "only the machine and the default user branches"
+        );
         let mut bad = f;
         if let Action::Reg { value, .. } = &mut bad.rules[0].actions[0] {
             *value = Value::from("x]]>y");
@@ -1256,10 +1693,18 @@ mod tests {
         assert_eq!(r.linked_by("admx.sample.turnoff"), Some("test.turn-off"));
         assert!(r.shown_on("admx.sample.turnoff") && !r.in_effect("admx.sample.turnoff"));
         assert_eq!(r.linked_by("admx.sample.turnoff.off"), None, "it writes 0");
-        assert_eq!(r.linked_by("admx.sample.level"), None, "a policy with parameters");
+        assert_eq!(
+            r.linked_by("admx.sample.level"),
+            None,
+            "a policy with parameters"
+        );
         profile.set_on("test.turn-off", false);
         let r = crate::resolver::resolve(&catalog, &profile);
-        assert_eq!(r.linked_by("admx.sample.turnoff"), None, "the built-in rule is off");
+        assert_eq!(
+            r.linked_by("admx.sample.turnoff"),
+            None,
+            "the built-in rule is off"
+        );
     }
 
     #[test]
@@ -1270,14 +1715,22 @@ mod tests {
         let set = |profile: &mut crate::profile::Profile, id: &str, name: &str, items: &[&str]| {
             profile.set_on(id, true);
             let choice = profile.rules.entry(id.to_owned()).or_default();
-            choice.params.insert(name.to_owned(), Value::from(items.to_vec()));
+            choice
+                .params
+                .insert(name.to_owned(), Value::from(items.to_vec()));
         };
-        set(&mut profile, "admx.sample.listed", "e1", &["a.example", " ", "b.example"]);
+        set(
+            &mut profile,
+            "admx.sample.listed",
+            "e1",
+            &["a.example", " ", "b.example"],
+        );
         set(&mut profile, "admx.sample.lines", "e1", &["one", "two"]);
         set(&mut profile, "admx.sample.lines", "e2", &["x", "y"]);
         let listed = catalog.rule("admx.sample.listed").unwrap();
         let params = crate::render::params_of(&catalog, &profile, listed);
-        let line = crate::render::script_lines(listed, &listed.actions[0], &params, listed.phase).unwrap();
+        let line =
+            crate::render::script_lines(listed, &listed.actions[0], &params, listed.phase).unwrap();
         assert_eq!(
             line,
             vec![
@@ -1287,13 +1740,18 @@ mod tests {
         );
         let lines = catalog.rule("admx.sample.lines").unwrap();
         let params = crate::render::params_of(&catalog, &profile, lines);
-        let list = crate::render::script_lines(lines, &lines.actions[0], &params, lines.phase).unwrap();
+        let list =
+            crate::render::script_lines(lines, &lines.actions[0], &params, lines.phase).unwrap();
         assert_eq!(
             list[0],
             "Set-RegList -Path 'HKLM:\\Software\\Policies\\Test\\N' -Type String -Names @('1','2') -Values @('x','y')"
         );
-        let multi = crate::render::script_lines(lines, &lines.actions[1], &params, lines.phase).unwrap();
-        assert!(multi[0].contains("-Name 'Lines' -Type MultiString") && multi[0].contains("'one'"), "{multi:?}");
+        let multi =
+            crate::render::script_lines(lines, &lines.actions[1], &params, lines.phase).unwrap();
+        assert!(
+            multi[0].contains("-Name 'Lines' -Type MultiString") && multi[0].contains("'one'"),
+            "{multi:?}"
+        );
         let ids = vec!["admx.sample.lines".to_owned()];
         let plan = crate::apply::plan_apply(&catalog, &profile, &ids, "n");
         assert!(plan.steps.iter().any(|s| matches!(&s.op,
@@ -1305,16 +1763,27 @@ mod tests {
         m.set(key, "2", crate::thispc::RegData::Str("y".into()));
         let status = |m: &crate::thispc::MemoryMachine| {
             let report = crate::thispc::run(m, &checks, false, "now");
-            report.results.iter().find(|r| r.check.ends_with("(list)")).map(|r| r.status)
+            report
+                .results
+                .iter()
+                .find(|r| r.check.ends_with("(list)"))
+                .map(|r| r.status)
         };
         assert_eq!(status(&m), Some(crate::thispc::Status::Ok));
         m.set(key, "3", crate::thispc::RegData::Str("z".into()));
-        assert_eq!(status(&m), Some(crate::thispc::Status::Differs), "a value outside the list");
+        assert_eq!(
+            status(&m),
+            Some(crate::thispc::Status::Differs),
+            "a value outside the list"
+        );
         let word = format!("caf{}", char::from_u32(0xe9).unwrap());
         set(&mut profile, "admx.sample.lines", "e2", &[word.as_str()]);
         let resolution = crate::resolver::resolve(&catalog, &profile);
         let issues = crate::validate::check(&catalog, &profile, &resolution);
-        assert!(issues.iter().any(|i| i.text.contains("ASCII")), "{issues:?}");
+        assert!(
+            issues.iter().any(|i| i.text.contains("ASCII")),
+            "{issues:?}"
+        );
         let items = |list: &[&str]| list.iter().map(|t| (*t).to_owned()).collect::<Vec<_>>();
         assert!(crate::render::list_entries(ListNames::Pairs, "", &items(&["a=1", "b"])).is_err());
         assert!(crate::render::list_entries(ListNames::Items, "", &items(&["a", "A"])).is_err());
@@ -1331,7 +1800,11 @@ mod tests {
         assert_eq!(parse_xml("<x>a &lt; b</x>").unwrap().text, "a < b");
         let deep = format!("{}{}", "<a>".repeat(80), "</a>".repeat(80));
         assert!(parse_xml(&deep).is_err());
-        assert!(safe_key("Software\\Policies\\X") && !safe_key("Software\\..\\X") && !safe_key("A\\\\B"));
+        assert!(
+            safe_key("Software\\Policies\\X")
+                && !safe_key("Software\\..\\X")
+                && !safe_key("A\\\\B")
+        );
     }
 }
 

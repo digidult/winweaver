@@ -126,7 +126,8 @@ fn revert_action(rule: &Rule, action: &Action) -> Result<Option<Vec<String>>, Re
             ..
         } => {
             let policy = path.to_ascii_lowercase().contains("\\policies\\");
-            (policy && !*additive).then(|| vec![render::reg_list_line(path, *kind, &[], &[], false)])
+            (policy && !*additive)
+                .then(|| vec![render::reg_list_line(path, *kind, &[], &[], false)])
         }
         Action::Service { name, default, .. } => {
             default.as_ref().and_then(Value::as_u64).map(|start| {

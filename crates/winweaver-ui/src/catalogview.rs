@@ -118,7 +118,13 @@ fn group_rows(
     });
 }
 
-fn detail(ui: &mut egui::Ui, file: &CatalogFile, lang: &str, doc: &CatalogDoc, acts: &mut Vec<Act>) {
+fn detail(
+    ui: &mut egui::Ui,
+    file: &CatalogFile,
+    lang: &str,
+    doc: &CatalogDoc,
+    acts: &mut Vec<Act>,
+) {
     let Some(rule) = doc
         .sel
         .as_deref()
@@ -127,7 +133,10 @@ fn detail(ui: &mut egui::Ui, file: &CatalogFile, lang: &str, doc: &CatalogDoc, a
         ui.heading(&file.name);
         ui.weak(trf(
             "{rules} rules, {skipped} skipped",
-            &[("rules", &file.rules.len()), ("skipped", &file.skipped.len())],
+            &[
+                ("rules", &file.rules.len()),
+                ("skipped", &file.skipped.len()),
+            ],
         ));
         ui.add_space(6.0);
         ui.label(tr("Select a policy in the tree."));

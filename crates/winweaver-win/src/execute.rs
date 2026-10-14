@@ -7,7 +7,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
-use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, HKEY_USERS, KEY_READ, KEY_SET_VALUE, RegType};
+use winreg::enums::{
+    HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, HKEY_USERS, KEY_READ, KEY_SET_VALUE, RegType,
+};
 use winreg::{RegKey, RegValue};
 use winweaver_core::apply::{self, BackupEntry, Op, Plan, Report, StepResult};
 use winweaver_core::catalog::RegKind;
@@ -29,7 +31,10 @@ fn split(path: &str) -> Result<(RegKey, String), String> {
 }
 
 fn utf16(text: &str) -> Vec<u8> {
-    text.encode_utf16().chain([0]).flat_map(u16::to_le_bytes).collect()
+    text.encode_utf16()
+        .chain([0])
+        .flat_map(u16::to_le_bytes)
+        .collect()
 }
 
 fn number(data: &Value) -> Result<i64, String> {
@@ -55,8 +60,14 @@ fn text(data: &Value) -> String {
 /// The raw bytes of a value of a kind.
 pub fn encode(kind: RegKind, data: &Value) -> Result<RegValue<'static>, String> {
     let (bytes, vtype) = match kind {
-        RegKind::DWord => ((number(data)? as u32).to_le_bytes().to_vec(), RegType::REG_DWORD),
-        RegKind::QWord => ((number(data)? as u64).to_le_bytes().to_vec(), RegType::REG_QWORD),
+        RegKind::DWord => (
+            (number(data)? as u32).to_le_bytes().to_vec(),
+            RegType::REG_DWORD,
+        ),
+        RegKind::QWord => (
+            (number(data)? as u64).to_le_bytes().to_vec(),
+            RegType::REG_QWORD,
+        ),
         RegKind::String => (utf16(&text(data)), RegType::REG_SZ),
         RegKind::ExpandString => (utf16(&text(data)), RegType::REG_EXPAND_SZ),
         RegKind::MultiString => {
@@ -76,7 +87,10 @@ pub fn encode(kind: RegKind, data: &Value) -> Result<RegValue<'static>, String> 
             let list = data.as_array().ok_or("a binary value is a list of bytes")?;
             let bytes: Result<Vec<u8>, String> = list
                 .iter()
-                .map(|v| number(v).and_then(|n| u8::try_from(n).map_err(|_| format!("{n} is not a byte"))))
+                .map(|v| {
+                    number(v)
+                        .and_then(|n| u8::try_from(n).map_err(|_| format!("{n} is not a byte")))
+                })
                 .collect();
             (bytes?, RegType::REG_BINARY)
         }
@@ -97,7 +111,10 @@ fn snapshot(machine: &NativeMachine, path: &str, name: &str) -> BackupEntry {
                 RegData::Str(s) => (Some("String"), Value::from(s)),
                 RegData::ExpandStr(s) => (Some("ExpandString"), Value::from(s)),
                 RegData::Multi(items) => (Some("MultiString"), Value::from(items)),
-                RegData::Binary(bytes) => (Some("Binary"), Value::from(bytes.into_iter().map(u64::from).collect::<Vec<_>>())),
+                RegData::Binary(bytes) => (
+                    Some("Binary"),
+                    Value::from(bytes.into_iter().map(u64::from).collect::<Vec<_>>()),
+                ),
                 RegData::Other => (None, Value::Null),
             };
             (true, t.map(str::to_owned), v)
@@ -230,7 +247,9 @@ impl DefaultUser {
         let status = unsafe { RegLoadKeyW(USERS, sub_w.as_ptr(), file_w.as_ptr()) };
         if status != 0 {
             let file = file.display();
-            return Err(format!("the default user profile {file} was not loaded (error {status})"));
+            return Err(format!(
+                "the default user profile {file} was not loaded (error {status})"
+            ));
         }
         Ok(Self { loaded_here: true })
     }
@@ -248,7 +267,9 @@ impl DefaultUser {
         if status == 0 {
             Ok(())
         } else {
-            Err(format!("the default user profile was not unloaded (error {status})"))
+            Err(format!(
+                "the default user profile was not unloaded (error {status})"
+            ))
         }
     }
 
@@ -273,7 +294,15 @@ fn value_names(path: &str) -> Result<Vec<String>, String> {
         Err(e) => return Err(e.to_string()),
     };
     key.enum_values()
-        .map(|v| v.map(|(name, _)| if name.is_empty() { "(Default)".to_owned() } else { name }))
+        .map(|v| {
+            v.map(|(name, _)| {
+                if name.is_empty() {
+                    "(Default)".to_owned()
+                } else {
+                    name
+                }
+            })
+        })
         .collect::<io::Result<Vec<_>>>()
         .map_err(|e| e.to_string())
 }
@@ -283,7 +312,9 @@ fn value_names(path: &str) -> Result<Vec<String>, String> {
 pub fn system_program(file: &str) -> Result<PathBuf, String> {
     let ok = file.to_ascii_lowercase().ends_with(".exe")
         && file.len() <= 64
-        && file.chars().all(|c| c.is_ascii_alphanumeric() || "._-".contains(c));
+        && file
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || "._-".contains(c));
     if !ok {
         return Err(format!("{file} is not a program of the system folder"));
     }
@@ -313,14 +344,19 @@ fn run(file: &str, args: &[String]) -> Result<String, String> {
                 .chars()
                 .take(200)
                 .collect::<String>();
-            Err(format!("exit {}: {first}", code.map_or("none".to_owned(), |c| c.to_string())))
+            Err(format!(
+                "exit {}: {first}",
+                code.map_or("none".to_owned(), |c| c.to_string())
+            ))
         }
     }
 }
 
 fn describe(op: &Op) -> String {
     match op {
-        Op::SetValue { path, name, data, .. } => format!("{path}\\{name} = {data}"),
+        Op::SetValue {
+            path, name, data, ..
+        } => format!("{path}\\{name} = {data}"),
         Op::DeleteValue { path, name } => format!("{path}\\{name} removed"),
         Op::SetList {
             path,
@@ -366,7 +402,12 @@ pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
             continue;
         }
         let (status, note) = match &step.op {
-            Op::SetValue { path, name, kind, data } => {
+            Op::SetValue {
+                path,
+                name,
+                kind,
+                data,
+            } => {
                 remember(path, name, &mut backup);
                 match write_value(path, name, *kind, data) {
                     Ok(()) => ("ok", String::new()),
@@ -395,7 +436,10 @@ pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
                     }
                     let mut failed = Vec::new();
                     if !*additive {
-                        for n in present.iter().filter(|n| !names.iter().any(|x| x.eq_ignore_ascii_case(n))) {
+                        for n in present
+                            .iter()
+                            .filter(|n| !names.iter().any(|x| x.eq_ignore_ascii_case(n)))
+                        {
                             if let Err(e) = delete_value(path, n) {
                                 failed.push(e);
                             }
@@ -452,7 +496,9 @@ pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
     if !backup.is_empty() {
         let name = format!("backup-{stamp}.json");
         let text = serde_json::to_string_pretty(&backup).unwrap_or_else(|_| "[]".to_owned());
-        match std::fs::create_dir_all(out_dir).and_then(|()| std::fs::write(out_dir.join(&name), text)) {
+        match std::fs::create_dir_all(out_dir)
+            .and_then(|()| std::fs::write(out_dir.join(&name), text))
+        {
             Ok(()) => report.backup = name,
             Err(e) => report.error = format!("the backup was not written: {e}"),
         }
@@ -464,8 +510,12 @@ pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
 /// and waits for it; the exit code, or an error when the user declined.
 pub fn run_elevated(exe: &Path, args: &[String]) -> Result<u32, String> {
     use windows_sys::Win32::Foundation::{CloseHandle, GetLastError};
-    use windows_sys::Win32::System::Threading::{GetExitCodeProcess, INFINITE, WaitForSingleObject};
-    use windows_sys::Win32::UI::Shell::{SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW, ShellExecuteExW};
+    use windows_sys::Win32::System::Threading::{
+        GetExitCodeProcess, INFINITE, WaitForSingleObject,
+    };
+    use windows_sys::Win32::UI::Shell::{
+        SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW, ShellExecuteExW,
+    };
     use windows_sys::Win32::UI::WindowsAndMessaging::SW_HIDE;
     let params = args
         .iter()
@@ -512,20 +562,56 @@ mod tests {
     #[test]
     fn a_plan_writes_backs_up_and_undoes_in_a_test_key() {
         let key = format!("HKCU:\\Software\\WinWeaverTest-{}", std::process::id());
-        let step = |op| Step { rule: "test".to_owned(), op };
+        let step = |op| Step {
+            rule: "test".to_owned(),
+            op,
+        };
         let plan = Plan {
             format: apply::PLAN_FORMAT.to_owned(),
             version: apply::PLAN_VERSION,
             nonce: "n".to_owned(),
             purpose: "apply".to_owned(),
             steps: vec![
-                step(Op::SetValue { path: key.clone(), name: "D".into(), kind: RegKind::DWord, data: Value::from(7) }),
-                step(Op::SetValue { path: key.clone(), name: "S".into(), kind: RegKind::String, data: Value::from("text") }),
-                step(Op::SetValue { path: key.clone(), name: "M".into(), kind: RegKind::MultiString, data: serde_json::json!(["a", "b"]) }),
-                step(Op::SetValue { path: key.clone(), name: "B".into(), kind: RegKind::Binary, data: serde_json::json!([1, 2, 255]) }),
-                step(Op::SetValue { path: key.clone(), name: "Q".into(), kind: RegKind::QWord, data: Value::from("5") }),
-                step(Op::DeleteValue { path: key.clone(), name: "Absent".into() }),
-                step(Op::SetValue { path: format!("{key}\\L"), name: "old".into(), kind: RegKind::String, data: Value::from("o") }),
+                step(Op::SetValue {
+                    path: key.clone(),
+                    name: "D".into(),
+                    kind: RegKind::DWord,
+                    data: Value::from(7),
+                }),
+                step(Op::SetValue {
+                    path: key.clone(),
+                    name: "S".into(),
+                    kind: RegKind::String,
+                    data: Value::from("text"),
+                }),
+                step(Op::SetValue {
+                    path: key.clone(),
+                    name: "M".into(),
+                    kind: RegKind::MultiString,
+                    data: serde_json::json!(["a", "b"]),
+                }),
+                step(Op::SetValue {
+                    path: key.clone(),
+                    name: "B".into(),
+                    kind: RegKind::Binary,
+                    data: serde_json::json!([1, 2, 255]),
+                }),
+                step(Op::SetValue {
+                    path: key.clone(),
+                    name: "Q".into(),
+                    kind: RegKind::QWord,
+                    data: Value::from("5"),
+                }),
+                step(Op::DeleteValue {
+                    path: key.clone(),
+                    name: "Absent".into(),
+                }),
+                step(Op::SetValue {
+                    path: format!("{key}\\L"),
+                    name: "old".into(),
+                    kind: RegKind::String,
+                    data: Value::from("o"),
+                }),
                 step(Op::SetList {
                     path: format!("{key}\\L"),
                     kind: RegKind::String,
@@ -533,8 +619,14 @@ mod tests {
                     values: vec!["a".into(), "b".into()],
                     additive: false,
                 }),
-                step(Op::ServiceStart { name: "WinWeaverNoSuchService".into(), start: 4 }),
-                step(Op::Run { file: "hostname.exe".into(), args: vec![] }),
+                step(Op::ServiceStart {
+                    name: "WinWeaverNoSuchService".into(),
+                    start: 4,
+                }),
+                step(Op::Run {
+                    file: "hostname.exe".into(),
+                    args: vec![],
+                }),
             ],
             skipped: vec![],
         };
@@ -545,11 +637,21 @@ mod tests {
         let m = NativeMachine;
         assert_eq!(m.value(&key, "D"), Ok(Some(RegData::Dword(7))));
         assert_eq!(m.value(&key, "S"), Ok(Some(RegData::Str("text".into()))));
-        assert_eq!(m.value(&key, "M"), Ok(Some(RegData::Multi(vec!["a".into(), "b".into()]))));
-        assert_eq!(m.value(&key, "B"), Ok(Some(RegData::Binary(vec![1, 2, 255]))));
+        assert_eq!(
+            m.value(&key, "M"),
+            Ok(Some(RegData::Multi(vec!["a".into(), "b".into()])))
+        );
+        assert_eq!(
+            m.value(&key, "B"),
+            Ok(Some(RegData::Binary(vec![1, 2, 255])))
+        );
         assert_eq!(m.value(&key, "Q"), Ok(Some(RegData::Qword(5))));
         let list = format!("{key}\\L");
-        assert_eq!(m.value(&list, "old"), Ok(None), "the list deletes the other values");
+        assert_eq!(
+            m.value(&list, "old"),
+            Ok(None),
+            "the list deletes the other values"
+        );
         assert_eq!(m.value(&list, "2"), Ok(Some(RegData::Str("b".into()))));
         let entries = apply::read_backup(&out.join(&report.backup)).unwrap();
         assert_eq!(entries.len(), 9);

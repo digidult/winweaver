@@ -55,10 +55,16 @@ fn with_imports(catalog: Catalog, dir: &std::path::Path) -> Catalog {
     let mut paths: Vec<std::path::PathBuf> = entries
         .filter_map(Result::ok)
         .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|e| e == winweaver_core::admx::CATALOG_EXTENSION))
+        .filter(|p| {
+            p.extension()
+                .is_some_and(|e| e == winweaver_core::admx::CATALOG_EXTENSION)
+        })
         .collect();
     paths.sort_by_key(|p| {
-        let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let name = p
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
         (!name.starts_with("system"), name)
     });
     let files: Vec<winweaver_core::admx::CatalogFile> = paths
@@ -164,17 +170,25 @@ fn elevated_apply(args: &[String]) -> ExitCode {
         .file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
-    let parent = plan_path.parent().map(std::path::Path::to_path_buf).unwrap_or_default();
+    let parent = plan_path
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_default();
     let in_output = match (std::fs::canonicalize(&parent), std::fs::canonicalize(&out)) {
         (Ok(a), Ok(b)) => a == b,
         _ => false,
     };
-    if !in_output || !name.starts_with("plan-") || !name.ends_with(".json") || name.contains("-report") {
+    if !in_output
+        || !name.starts_with("plan-")
+        || !name.ends_with(".json")
+        || name.contains("-report")
+    {
         return ExitCode::from(3);
     }
     let limit = winweaver_core::apply::PLAN_MAX_BYTES;
     let mut bytes = Vec::new();
-    let read = std::fs::File::open(&plan_path).and_then(|f| f.take(limit + 1).read_to_end(&mut bytes));
+    let read =
+        std::fs::File::open(&plan_path).and_then(|f| f.take(limit + 1).read_to_end(&mut bytes));
     if read.is_err() || bytes.len() as u64 > limit {
         return ExitCode::from(3);
     }
