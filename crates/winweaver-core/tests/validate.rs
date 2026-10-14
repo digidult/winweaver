@@ -9,7 +9,8 @@ use winweaver_core::resolver;
 use winweaver_core::validate::{self, Severity, Target};
 
 fn preset(name: &str) -> Profile {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("../../data/presets/{name}.wwprofile"));
+    let path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("../../data/presets/{name}.wwprofile"));
     Profile::load(&path).unwrap()
 }
 
@@ -23,12 +24,16 @@ fn presets_have_no_errors() {
     let catalog = Catalog::embedded().unwrap();
     for name in ["office", "strict", "laptop", "home"] {
         let issues = check(&catalog, &preset(name));
-        let errors: Vec<&validate::Issue> = issues.iter().filter(|i| i.severity == Severity::Error).collect();
+        let errors: Vec<&validate::Issue> = issues
+            .iter()
+            .filter(|i| i.severity == Severity::Error)
+            .collect();
         assert!(errors.is_empty(), "{name}: {errors:?}");
     }
     let home = check(&catalog, &preset("home"));
     assert!(
-        home.iter().any(|i| i.severity == Severity::Warning && i.text.contains("baseline")),
+        home.iter()
+            .any(|i| i.severity == Severity::Warning && i.text.contains("baseline")),
         "Home leaves baseline rules off and the check says so"
     );
 }
@@ -75,9 +80,16 @@ fn broken_forms_are_errors() {
         "Administrators or Users",
         "listed twice",
     ] {
-        assert!(texts.iter().any(|t| t.contains(expected)), "no error about {expected}: {texts:?}");
+        assert!(
+            texts.iter().any(|t| t.contains(expected)),
+            "no error about {expected}: {texts:?}"
+        );
     }
-    assert!(issues.iter().any(|i| i.target == Target::Install && i.severity == Severity::Warning));
+    assert!(
+        issues
+            .iter()
+            .any(|i| i.target == Target::Install && i.severity == Severity::Warning)
+    );
     assert_eq!(issues[0].severity, Severity::Error, "errors come first");
 }
 
@@ -88,7 +100,11 @@ fn rule_parameters_and_dependencies_are_checked() {
     let with_enum = catalog
         .rules()
         .iter()
-        .find(|r| r.params.values().any(|p| matches!(p, winweaver_core::catalog::Param::Enum { .. })))
+        .find(|r| {
+            r.params
+                .values()
+                .any(|p| matches!(p, winweaver_core::catalog::Param::Enum { .. }))
+        })
         .expect("a rule with an enum parameter");
     let (name, _) = with_enum
         .params
@@ -107,20 +123,28 @@ fn rule_parameters_and_dependencies_are_checked() {
         .insert(name.clone(), Value::from("no such option"));
     let issues = check(&catalog, &profile);
     assert!(
-        issues.iter().any(|i| i.target == Target::Rule(with_enum.id.clone())
-            && i.text.contains("not one of its options")),
+        issues
+            .iter()
+            .any(|i| i.target == Target::Rule(with_enum.id.clone())
+                && i.text.contains("not one of its options")),
         "{issues:?}"
     );
 
-    let dependent = catalog.rules().iter().find(|r| !r.requires.is_empty()).unwrap();
+    let dependent = catalog
+        .rules()
+        .iter()
+        .find(|r| !r.requires.is_empty())
+        .unwrap();
     let mut profile = preset("office");
     profile.set_on(&dependent.id, true);
     profile.set_on(&dependent.requires[0], false);
     let issues = check(&catalog, &profile);
     assert!(
-        issues.iter().any(|i| i.target == Target::Rule(dependent.id.clone())
-            && i.severity == Severity::Warning
-            && i.text.contains("blocked")),
+        issues
+            .iter()
+            .any(|i| i.target == Target::Rule(dependent.id.clone())
+                && i.severity == Severity::Warning
+                && i.text.contains("blocked")),
         "{issues:?}"
     );
 }
@@ -141,7 +165,9 @@ fn autologon_needs_an_account_without_a_password() {
         .insert("account".into(), Value::from("Nobody"));
     let issues = check(&catalog, &profile);
     assert!(
-        issues.iter().any(|i| i.severity == Severity::Error && i.text.contains("does not list")),
+        issues
+            .iter()
+            .any(|i| i.severity == Severity::Error && i.text.contains("does not list")),
         "{issues:?}"
     );
 }

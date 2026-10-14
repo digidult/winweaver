@@ -75,8 +75,11 @@ pub fn summary(issues: &[Issue]) -> String {
         return "Check: no problems".to_owned();
     }
     let mut parts = Vec::new();
-    for (k, one, many) in [(e, "error", "errors"), (w, "warning", "warnings"), (n, "info", "infos")]
-    {
+    for (k, one, many) in [
+        (e, "error", "errors"),
+        (w, "warning", "warnings"),
+        (n, "info", "infos"),
+    ] {
         if k == 1 {
             parts.push(format!("1 {one}"));
         } else if k > 1 {
@@ -87,7 +90,10 @@ pub fn summary(issues: &[Issue]) -> String {
 }
 
 pub fn errors(issues: &[Issue]) -> usize {
-    issues.iter().filter(|i| i.severity == Severity::Error).count()
+    issues
+        .iter()
+        .filter(|i| i.severity == Severity::Error)
+        .count()
 }
 
 fn push(issues: &mut Vec<Issue>, severity: Severity, target: Target, text: impl Into<String>) {
@@ -100,7 +106,9 @@ fn push(issues: &mut Vec<Issue>, severity: Severity, target: Target, text: impl 
 
 fn check_install(profile: &Profile, issues: &mut Vec<Issue>) {
     let i = &profile.install;
-    let err = |issues: &mut Vec<Issue>, text: String| push(issues, Severity::Error, Target::Install, text);
+    let err = |issues: &mut Vec<Issue>, text: String| {
+        push(issues, Severity::Error, Target::Install, text)
+    };
     if i.edition.trim().is_empty() {
         err(issues, "The edition is empty".into());
     }
@@ -195,7 +203,12 @@ fn check_accounts(
         for a in &profile.accounts {
             let name = a.name.trim();
             if name.is_empty() {
-                push(issues, Severity::Error, Target::Accounts, "An account has no name");
+                push(
+                    issues,
+                    Severity::Error,
+                    Target::Accounts,
+                    "An account has no name",
+                );
                 continue;
             }
             if !name.is_ascii() || !a.password.is_ascii() {
@@ -213,7 +226,9 @@ fn check_accounts(
                     issues,
                     Severity::Error,
                     Target::Accounts,
-                    format!("Account {name}: the name is longer than {ACCOUNT_NAME_MAX} characters"),
+                    format!(
+                        "Account {name}: the name is longer than {ACCOUNT_NAME_MAX} characters"
+                    ),
                 );
             }
             if !a.display_name.is_ascii() {
@@ -272,7 +287,9 @@ fn check_accounts(
                 issues,
                 Severity::Error,
                 target,
-                format!("The automatic sign-in needs an account without a password; {account} has one"),
+                format!(
+                    "The automatic sign-in needs an account without a password; {account} has one"
+                ),
             ),
             Some(_) => {
                 if mode == "ask" {
@@ -288,7 +305,9 @@ fn check_accounts(
                 issues,
                 Severity::Error,
                 target,
-                format!("The automatic sign-in names the account {account}, which the profile does not list"),
+                format!(
+                    "The automatic sign-in names the account {account}, which the profile does not list"
+                ),
             ),
         }
     }
@@ -324,7 +343,9 @@ fn check_languages(profile: &Profile, issues: &mut Vec<Issue>) {
                 issues,
                 Severity::Error,
                 Target::Languages,
-                format!("The input language {item} is not a language tag or a layout id such as 0409:00000409"),
+                format!(
+                    "The input language {item} is not a language tag or a layout id such as 0409:00000409"
+                ),
             );
         }
     }
@@ -530,9 +551,7 @@ pub fn is_layout(id: &str) -> bool {
     let Some((a, b)) = id.split_once(':') else {
         return false;
     };
-    a.len() == 4
-        && b.len() == 8
-        && a.bytes().chain(b.bytes()).all(|c| c.is_ascii_hexdigit())
+    a.len() == 4 && b.len() == 8 && a.bytes().chain(b.bytes()).all(|c| c.is_ascii_hexdigit())
 }
 
 #[cfg(test)]
@@ -546,7 +565,11 @@ mod tests {
         assert!(is_computer_name("PC-01") && !is_computer_name("12345"));
         assert!(is_name_template("PC-{random}") && is_name_template("{serial}"));
         assert!(is_name_template("W-{random:8}") && !is_name_template("W-{random:14}"));
-        assert!(!is_name_template("PC-{user}") && !is_name_template("PC-{random") && !is_name_template(""));
+        assert!(
+            !is_name_template("PC-{user}")
+                && !is_name_template("PC-{random")
+                && !is_name_template("")
+        );
         assert!(is_product_key("VK7JG-NPHTM-C97JM-9MPGT-3V66T") && !is_product_key("VK7JG-NPHTM"));
         assert!(is_culture("uk-UA") && is_culture("en") && is_culture("sr-Latn-RS"));
         assert!(!is_culture("UK-ua") && !is_culture("u") && !is_culture("uk-"));

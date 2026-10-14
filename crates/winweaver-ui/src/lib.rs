@@ -761,7 +761,11 @@ impl App {
             ui.horizontal(|ui| {
                 ui.strong(validate::summary(&doc.issues));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui.small_button("x").on_hover_text("Hide the messages").clicked() {
+                    if ui
+                        .small_button("x")
+                        .on_hover_text("Hide the messages")
+                        .clicked()
+                    {
                         acts.push(Act::ClearMessages);
                     }
                 });
@@ -780,9 +784,10 @@ impl App {
                             ui.weak(tag);
                             let (label, sel) = match &issue.target {
                                 Target::Rule(id) => (
-                                    self.catalog
-                                        .rule(id)
-                                        .map_or_else(|| id.clone(), |r| views::rtitle(texts, r).to_owned()),
+                                    self.catalog.rule(id).map_or_else(
+                                        || id.clone(),
+                                        |r| views::rtitle(texts, r).to_owned(),
+                                    ),
                                     Sel::Rule(id.clone()),
                                 ),
                                 Target::Install => ("Installation".to_owned(), Sel::None),
