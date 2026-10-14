@@ -17,7 +17,10 @@ documentation pages open the same way, each in its own tab.
 3. Fill the forms **Installation**, **Accounts** and **Languages** under the first root.
 4. Check the profile with F7. The messages appear under the navigation row; a click on a message
    selects the rule or the form it is about.
-5. Save the profile with Ctrl+S. Profiles are `.wwprofile` files in the folder `profiles` next to
+5. Build the answer file with F9: `autounattend.xml` lands in the folder `output` next to the
+   executable, with the scripts it embeds beside it for a look. Copy the file to the root of the
+   installation USB stick.
+6. Save the profile with Ctrl+S. Profiles are `.wwprofile` files in the folder `profiles` next to
    the executable, or anywhere you choose with Save as.
 
 ## The window
@@ -44,7 +47,7 @@ file that applies later to any profile.
 | Keys | Action |
 |---|---|
 | Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+Shift+S | New, Open, Save, Save as |
-| F7 | Check the profile |
+| F7, F9 | Check the profile, build the answer file |
 | Ctrl+F, Esc | Search, clear and close the search |
 | Alt+Left, Alt+Right | Back, Forward |
 | Ctrl+B | Bookmark the position |

@@ -42,21 +42,36 @@ fn office_builds_like_the_reference() {
     assert!(b.xml.contains("\r\n") && !b.xml.contains("\n\n\n"));
     assert!(b.xml.contains("<Key>VK7JG-NPHTM-C97JM-9MPGT-3V66T</Key>"));
     assert!(b.xml.contains("<WillShowUI>OnError</WillShowUI>"));
-    assert!(b.xml.contains("<InputLocale>0409:00000409;0422:00020422;0419:00000419</InputLocale>"));
+    assert!(
+        b.xml
+            .contains("<InputLocale>0409:00000409;0422:00020422;0419:00000419</InputLocale>")
+    );
     assert!(b.xml.contains("<UILanguage>uk-UA</UILanguage>"));
     assert!(b.xml.contains("<TimeZone>FLE Standard Time</TimeZone>"));
     assert!(b.xml.contains("<HideEULAPage>true</HideEULAPage>"));
     assert!(b.xml.contains("<ProtectYourPC>3</ProtectYourPC>"));
-    assert_eq!(count(&b.xml, "<LocalAccount wcm:action=\"add\">"), 4, "two accounts, two architectures");
+    assert_eq!(
+        count(&b.xml, "<LocalAccount wcm:action=\"add\">"),
+        4,
+        "two accounts, two architectures"
+    );
     assert_eq!(count(&b.xml, "<Name>Admin</Name>"), 2);
-    assert!(b.xml.contains("<Description>Extract embedded scripts from this answer file</Description>"));
+    assert!(
+        b.xml
+            .contains("<Description>Extract embedded scripts from this answer file</Description>")
+    );
     assert!(b.xml.contains("BypassNRO"));
     assert!(!b.xml.contains("<ComputerName>"));
     assert!(!b.xml.contains("JoinWorkgroup") && !b.xml.contains("ImageInstall"));
     let names: Vec<&str> = b.scripts.iter().map(|(n, _)| n.as_str()).collect();
-    assert_eq!(names, vec!["Setup-System.ps1", "Setup-User.ps1", "Post-OOBE.ps1"]);
+    assert_eq!(
+        names,
+        vec!["Setup-System.ps1", "Setup-User.ps1", "Post-OOBE.ps1"]
+    );
     for (name, _) in &b.scripts {
-        assert!(b.xml.contains(&format!("<File path=\"C:\\ProgramData\\Unattend\\Scripts\\{name}\"><![CDATA[")));
+        assert!(b.xml.contains(&format!(
+            "<File path=\"C:\\ProgramData\\Unattend\\Scripts\\{name}\"><![CDATA["
+        )));
     }
     let system = &b.scripts[0].1;
     assert!(system.contains("Set-ServiceStart -Name 'Spooler' -Start 2"));
@@ -79,9 +94,16 @@ fn office_builds_like_the_reference() {
     expected.extend(with_blocks(Phase::DefaultUser));
     let markers: Vec<&str> = system
         .lines()
-        .filter_map(|l| l.trim().strip_prefix("# [").and_then(|s| s.strip_suffix(']')))
+        .filter_map(|l| {
+            l.trim()
+                .strip_prefix("# [")
+                .and_then(|s| s.strip_suffix(']'))
+        })
         .collect();
-    assert_eq!(markers, expected, "every rule in effect with script actions has one block, in catalog order");
+    assert_eq!(
+        markers, expected,
+        "every rule in effect with script actions has one block, in catalog order"
+    );
     let user = &b.scripts[1].1;
     assert!(user.contains("$InputLanguages = @('en-US','uk-UA','ru-UA')"));
     assert!(user.contains("$InputFallback = @('en-US','uk-UA','ru')"));
@@ -119,14 +141,20 @@ fn the_forms_reach_the_passes() {
     let b = build(&p);
     well_formed(&b.xml);
     assert!(!b.xml.contains("<UserAccounts>"));
-    assert!(b.xml.contains(&format!("<ComputerName>{TEMP_COMPUTER_NAME}</ComputerName>")));
+    assert!(b.xml.contains(&format!(
+        "<ComputerName>{TEMP_COMPUTER_NAME}</ComputerName>"
+    )));
     assert!(b.xml.contains("<JoinWorkgroup>LAB</JoinWorkgroup>"));
     assert!(b.xml.contains("<DiskID>1</DiskID>") && b.xml.contains("<PartitionID>4</PartitionID>"));
     assert!(b.xml.contains("<Key>VK7JG-NPHTM-C97JM-9MPGT-3V66T</Key>"));
     let system = &b.scripts[0].1;
     assert!(system.contains("COMPUTER NAME FROM THE TEMPLATE"));
     assert!(system.contains("@('text:PC-','random:6')"));
-    let post = b.scripts.iter().find(|(n, _)| n == "Post-OOBE.ps1").unwrap();
+    let post = b
+        .scripts
+        .iter()
+        .find(|(n, _)| n == "Post-OOBE.ps1")
+        .unwrap();
     assert!(post.1.contains("$accounts = @()"));
 }
 
@@ -145,8 +173,15 @@ fn account_texts_outside_ascii_go_to_post_oobe() {
     assert!(b.xml.is_ascii());
     assert!(b.xml.contains("<DisplayName>Admin</DisplayName>"));
     assert!(b.xml.contains("<Description>Starter</Description>"));
-    let post = b.scripts.iter().find(|(n, _)| n == "Post-OOBE.ps1").expect("Post-OOBE for the texts");
-    assert!(post.1.contains("Set-AccountText -Name 'Admin' -FullName (ConvertFrom-Base64Text '"));
+    let post = b
+        .scripts
+        .iter()
+        .find(|(n, _)| n == "Post-OOBE.ps1")
+        .expect("Post-OOBE for the texts");
+    assert!(
+        post.1
+            .contains("Set-AccountText -Name 'Admin' -FullName (ConvertFrom-Base64Text '")
+    );
     assert!(b.scripts[0].1.contains("Unattend-PostOOBE"));
 }
 
@@ -155,8 +190,15 @@ fn commands_stay_within_the_limit() {
     for name in ["office", "strict", "laptop", "home"] {
         let b = build(&preset(name));
         for line in b.xml.lines() {
-            if let Some(path) = line.trim().strip_prefix("<Path>").and_then(|s| s.strip_suffix("</Path>")) {
-                let text = path.replace("&amp;", "&").replace("&gt;", ">").replace("&lt;", "<");
+            if let Some(path) = line
+                .trim()
+                .strip_prefix("<Path>")
+                .and_then(|s| s.strip_suffix("</Path>"))
+            {
+                let text = path
+                    .replace("&amp;", "&")
+                    .replace("&gt;", ">")
+                    .replace("&lt;", "<");
                 assert!(text.chars().count() <= MAX_COMMAND, "{name}: {text}");
             }
         }

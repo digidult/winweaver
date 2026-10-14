@@ -126,13 +126,16 @@ pub fn ascii_json(text: &str) -> String {
 
 /// Base64 of the UTF-8 bytes of a text (standard alphabet with padding).
 pub fn base64(text: &str) -> String {
-    const ALPHABET: &[u8; 64] =
-        b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let bytes = text.as_bytes();
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
         let n = chunk.len();
-        let b = [chunk[0], *chunk.get(1).unwrap_or(&0), *chunk.get(2).unwrap_or(&0)];
+        let b = [
+            chunk[0],
+            *chunk.get(1).unwrap_or(&0),
+            *chunk.get(2).unwrap_or(&0),
+        ];
         let v = (u32::from(b[0]) << 16) | (u32::from(b[1]) << 8) | u32::from(b[2]);
         out.push(ALPHABET[((v >> 18) & 63) as usize] as char);
         out.push(ALPHABET[((v >> 12) & 63) as usize] as char);
@@ -222,14 +225,20 @@ fn reg_value(rule: &Rule, kind: RegKind, value: &Value) -> Result<String, Render
             }
             Value::String(s) if s.is_empty() => Ok("@()".to_owned()),
             Value::String(s) => Ok(format!("@({})", ps_quote(s))),
-            other => Err(err(rule, format!("the value {other} is not a list of texts"))),
+            other => Err(err(
+                rule,
+                format!("the value {other} is not a list of texts"),
+            )),
         },
         RegKind::Binary => match value {
             Value::Array(items) => {
                 let parts: Result<Vec<String>, RenderError> = items.iter().map(number).collect();
                 Ok(format!("([byte[]]@({}))", parts?.join(",")))
             }
-            other => Err(err(rule, format!("the value {other} is not a list of bytes"))),
+            other => Err(err(
+                rule,
+                format!("the value {other} is not a list of bytes"),
+            )),
         },
     }
 }
@@ -277,7 +286,11 @@ fn script_lines(
             text
         }
         Action::RegRemove { path, name, .. } => {
-            format!("Remove-Reg -Path {} -Name {}", reg_path(path), ps_quote(name))
+            format!(
+                "Remove-Reg -Path {} -Name {}",
+                reg_path(path),
+                ps_quote(name)
+            )
         }
         Action::Ps { script } => {
             return Ok(script.lines().iter().map(|l| s(l)).collect());
@@ -301,7 +314,9 @@ fn script_lines(
         Action::Feature { name, state, .. } => {
             format!("Set-Feature -Name {} -State {state}", ps_quote(name))
         }
-        Action::Capability { pattern } => format!("Remove-Capability -Pattern {}", ps_quote(pattern)),
+        Action::Capability { pattern } => {
+            format!("Remove-Capability -Pattern {}", ps_quote(pattern))
+        }
         Action::Appx { names } => {
             let names: Vec<String> = names.iter().map(|n| ps_quote(n)).collect();
             format!("Remove-Apps @({})", names.join(","))
@@ -589,7 +604,11 @@ fn account_text_lines(profile: &Profile) -> Vec<String> {
 }
 
 /// Builds the answer file of a profile with the embedded catalog data.
-pub fn build(catalog: &Catalog, profile: &Profile, app_version: &str) -> Result<Build, RenderError> {
+pub fn build(
+    catalog: &Catalog,
+    profile: &Profile,
+    app_version: &str,
+) -> Result<Build, RenderError> {
     let resolution = resolver::resolve(catalog, profile);
     let mut warnings = Vec::new();
     let mut rule_ids = Vec::new();
@@ -689,12 +708,18 @@ pub fn build(catalog: &Catalog, profile: &Profile, app_version: &str) -> Result<
         let name_section = if name_parts.is_empty() {
             String::new()
         } else {
-            fill(SECTION_COMPUTER_NAME, &[("name_parts", &ps_list(&name_parts))])?
+            fill(
+                SECTION_COMPUTER_NAME,
+                &[("name_parts", &ps_list(&name_parts))],
+            )?
         };
         let du_section = if du_blocks.is_empty() {
             String::new()
         } else {
-            fill(SECTION_DEFAULT_USER, &[("blocks", &join_blocks(&du_blocks, 4))])?
+            fill(
+                SECTION_DEFAULT_USER,
+                &[("blocks", &join_blocks(&du_blocks, 4))],
+            )?
         };
         let active = if has_user {
             SECTION_ACTIVE_SETUP.replace("\r\n", "\n")
@@ -756,21 +781,40 @@ pub fn build(catalog: &Catalog, profile: &Profile, app_version: &str) -> Result<
     // The passes.
     let key = match install.product_key_mode.as_str() {
         "generic" => resources::generic_key(&install.edition)
-            .ok_or_else(|| RenderError::Profile(format!("no generic key for the edition {}", install.edition)))?
+            .ok_or_else(|| {
+                RenderError::Profile(format!(
+                    "no generic key for the edition {}",
+                    install.edition
+                ))
+            })?
             .to_owned(),
         "ask" => ASK_KEY.to_owned(),
         "key" => install.product_key.trim().to_uppercase(),
-        other => return Err(RenderError::Profile(format!("unknown product key mode {other}"))),
+        other => {
+            return Err(RenderError::Profile(format!(
+                "unknown product key mode {other}"
+            )));
+        }
     };
-    let will_show = if install.product_key_mode == "ask" { "Always" } else { "OnError" };
+    let will_show = if install.product_key_mode == "ask" {
+        "Always"
+    } else {
+        "OnError"
+    };
     let mut pe_body = Vec::new();
     if install.disk_mode == "partition" {
         pe_body.extend([
             "      <ImageInstall>".to_owned(),
             "        <OSImage>".to_owned(),
             "          <InstallTo>".to_owned(),
-            format!("            <DiskID>{}</DiskID>", xml_escape(&install.disk_id)),
-            format!("            <PartitionID>{}</PartitionID>", xml_escape(&install.partition_id)),
+            format!(
+                "            <DiskID>{}</DiskID>",
+                xml_escape(&install.disk_id)
+            ),
+            format!(
+                "            <PartitionID>{}</PartitionID>",
+                xml_escape(&install.partition_id)
+            ),
             "          </InstallTo>".to_owned(),
             "          <WillShowUI>OnError</WillShowUI>".to_owned(),
             "        </OSImage>".to_owned(),
@@ -787,7 +831,9 @@ pub fn build(catalog: &Catalog, profile: &Profile, app_version: &str) -> Result<
         "      </UserData>".to_owned(),
     ]);
     pe_body.extend(command_lines(&pe_commands, 6)?);
-    if let Some(extra) = settings.remove(&("windowsPE".to_owned(), "Microsoft-Windows-Setup".to_owned())) {
+    if let Some(extra) =
+        settings.remove(&("windowsPE".to_owned(), "Microsoft-Windows-Setup".to_owned()))
+    {
         pe_body.extend(setting_lines(&extra, 6)?);
     }
 
@@ -808,7 +854,10 @@ pub fn build(catalog: &Catalog, profile: &Profile, app_version: &str) -> Result<
         });
     }
     let mut deployment_body = command_lines(&deployment, 6)?;
-    if let Some(extra) = settings.remove(&("specialize".to_owned(), "Microsoft-Windows-Deployment".to_owned())) {
+    if let Some(extra) = settings.remove(&(
+        "specialize".to_owned(),
+        "Microsoft-Windows-Deployment".to_owned(),
+    )) {
         deployment_body.extend(setting_lines(&extra, 6)?);
     }
     let mut shell_specialize = vec![format!(
@@ -820,38 +869,67 @@ pub fn build(catalog: &Catalog, profile: &Profile, app_version: &str) -> Result<
             "      <ComputerName>{}</ComputerName>",
             xml_escape(install.computer_name.trim())
         )),
-        "template" => shell_specialize.push(format!("      <ComputerName>{TEMP_COMPUTER_NAME}</ComputerName>")),
+        "template" => shell_specialize.push(format!(
+            "      <ComputerName>{TEMP_COMPUTER_NAME}</ComputerName>"
+        )),
         _ => {}
     }
-    if let Some(extra) = settings.remove(&("specialize".to_owned(), "Microsoft-Windows-Shell-Setup".to_owned())) {
+    if let Some(extra) = settings.remove(&(
+        "specialize".to_owned(),
+        "Microsoft-Windows-Shell-Setup".to_owned(),
+    )) {
         shell_specialize.extend(setting_lines(&extra, 6)?);
     }
     let mut join = Vec::new();
     if !install.workgroup.trim().is_empty() {
         join.extend([
             "      <Identification>".to_owned(),
-            format!("        <JoinWorkgroup>{}</JoinWorkgroup>", xml_escape(install.workgroup.trim())),
+            format!(
+                "        <JoinWorkgroup>{}</JoinWorkgroup>",
+                xml_escape(install.workgroup.trim())
+            ),
             "      </Identification>".to_owned(),
         ]);
     }
-    if let Some(extra) = settings.remove(&("specialize".to_owned(), "Microsoft-Windows-UnattendedJoin".to_owned())) {
+    if let Some(extra) = settings.remove(&(
+        "specialize".to_owned(),
+        "Microsoft-Windows-UnattendedJoin".to_owned(),
+    )) {
         join.extend(setting_lines(&extra, 6)?);
     }
 
     let mut international = vec![
-        format!("      <InputLocale>{}</InputLocale>", xml_escape(&languages.input_locale)),
-        format!("      <SystemLocale>{}</SystemLocale>", xml_escape(&profile.languages.system_locale)),
-        format!("      <UILanguage>{}</UILanguage>", xml_escape(&profile.languages.ui_language)),
-        format!("      <UserLocale>{}</UserLocale>", xml_escape(&profile.languages.user_locale)),
+        format!(
+            "      <InputLocale>{}</InputLocale>",
+            xml_escape(&languages.input_locale)
+        ),
+        format!(
+            "      <SystemLocale>{}</SystemLocale>",
+            xml_escape(&profile.languages.system_locale)
+        ),
+        format!(
+            "      <UILanguage>{}</UILanguage>",
+            xml_escape(&profile.languages.ui_language)
+        ),
+        format!(
+            "      <UserLocale>{}</UserLocale>",
+            xml_escape(&profile.languages.user_locale)
+        ),
     ];
-    if let Some(extra) = settings.remove(&("oobeSystem".to_owned(), "Microsoft-Windows-International-Core".to_owned())) {
+    if let Some(extra) = settings.remove(&(
+        "oobeSystem".to_owned(),
+        "Microsoft-Windows-International-Core".to_owned(),
+    )) {
         international.extend(setting_lines(&extra, 6)?);
     }
     let mut shell_oobe = Vec::new();
     if !oobe_elements.is_empty() {
         shell_oobe.push("      <OOBE>".to_owned());
         for (element, value) in &oobe_elements {
-            shell_oobe.push(format!("        <{element}>{}</{element}>", xml_escape(value)));
+            shell_oobe.push(format!(
+                "        <{element}>{}</{element}>",
+                xml_escape(value)
+            ));
         }
         shell_oobe.push("      </OOBE>".to_owned());
     }
@@ -862,21 +940,36 @@ pub fn build(catalog: &Catalog, profile: &Profile, app_version: &str) -> Result<
             let (display, description) = account_xml(a);
             shell_oobe.push("          <LocalAccount wcm:action=\"add\">".to_owned());
             shell_oobe.push("            <Password>".to_owned());
-            shell_oobe.push(format!("              <Value>{}</Value>", xml_escape(&a.password)));
+            shell_oobe.push(format!(
+                "              <Value>{}</Value>",
+                xml_escape(&a.password)
+            ));
             shell_oobe.push("              <PlainText>true</PlainText>".to_owned());
             shell_oobe.push("            </Password>".to_owned());
             if !description.is_empty() {
-                shell_oobe.push(format!("            <Description>{}</Description>", xml_escape(&description)));
+                shell_oobe.push(format!(
+                    "            <Description>{}</Description>",
+                    xml_escape(&description)
+                ));
             }
-            shell_oobe.push(format!("            <DisplayName>{}</DisplayName>", xml_escape(&display)));
-            shell_oobe.push(format!("            <Group>{}</Group>", xml_escape(&a.group)));
+            shell_oobe.push(format!(
+                "            <DisplayName>{}</DisplayName>",
+                xml_escape(&display)
+            ));
+            shell_oobe.push(format!(
+                "            <Group>{}</Group>",
+                xml_escape(&a.group)
+            ));
             shell_oobe.push(format!("            <Name>{}</Name>", xml_escape(&a.name)));
             shell_oobe.push("          </LocalAccount>".to_owned());
         }
         shell_oobe.push("        </LocalAccounts>".to_owned());
         shell_oobe.push("      </UserAccounts>".to_owned());
     }
-    if let Some(extra) = settings.remove(&("oobeSystem".to_owned(), "Microsoft-Windows-Shell-Setup".to_owned())) {
+    if let Some(extra) = settings.remove(&(
+        "oobeSystem".to_owned(),
+        "Microsoft-Windows-Shell-Setup".to_owned(),
+    )) {
         shell_oobe.extend(setting_lines(&extra, 6)?);
     }
     // The components the fixed passes do not write.
@@ -910,9 +1003,17 @@ pub fn build(catalog: &Catalog, profile: &Profile, app_version: &str) -> Result<
     settings_xml.push("  <settings pass=\"specialize\">".to_owned());
     for arch in ARCHITECTURES {
         if !deployment_body.is_empty() {
-            settings_xml.extend(component("Microsoft-Windows-Deployment", arch, &deployment_body));
+            settings_xml.extend(component(
+                "Microsoft-Windows-Deployment",
+                arch,
+                &deployment_body,
+            ));
         }
-        settings_xml.extend(component("Microsoft-Windows-Shell-Setup", arch, &shell_specialize));
+        settings_xml.extend(component(
+            "Microsoft-Windows-Shell-Setup",
+            arch,
+            &shell_specialize,
+        ));
         if !join.is_empty() {
             settings_xml.extend(component("Microsoft-Windows-UnattendedJoin", arch, &join));
         }
@@ -921,9 +1022,17 @@ pub fn build(catalog: &Catalog, profile: &Profile, app_version: &str) -> Result<
     settings_xml.push("  </settings>".to_owned());
     settings_xml.push("  <settings pass=\"oobeSystem\">".to_owned());
     for arch in ARCHITECTURES {
-        settings_xml.extend(component("Microsoft-Windows-International-Core", arch, &international));
+        settings_xml.extend(component(
+            "Microsoft-Windows-International-Core",
+            arch,
+            &international,
+        ));
         if !shell_oobe.is_empty() {
-            settings_xml.extend(component("Microsoft-Windows-Shell-Setup", arch, &shell_oobe));
+            settings_xml.extend(component(
+                "Microsoft-Windows-Shell-Setup",
+                arch,
+                &shell_oobe,
+            ));
         }
         settings_xml.extend(extras("oobeSystem", arch));
     }
@@ -932,7 +1041,9 @@ pub fn build(catalog: &Catalog, profile: &Profile, app_version: &str) -> Result<
     // The extensions.
     let mut files = Vec::new();
     for (name, text) in &scripts {
-        files.push(format!("    <File path=\"{SCRIPTS_DIR}\\{name}\"><![CDATA["));
+        files.push(format!(
+            "    <File path=\"{SCRIPTS_DIR}\\{name}\"><![CDATA["
+        ));
         files.push(text.trim_end().to_owned());
         files.push("]]></File>".to_owned());
     }
@@ -941,16 +1052,26 @@ pub fn build(catalog: &Catalog, profile: &Profile, app_version: &str) -> Result<
         profile_json = profile_json.replace("]]>", "]]\\u003e");
     }
     let mut header = vec![
-        format!("    Generated by WinWeaver {app_version}, rules catalog {}, runtime {}.", catalog.version(), runtime_version()),
-        format!("    Profile: {}; modified {}.", profile.name.replace("--", "- -"), profile.modified),
+        format!(
+            "    Generated by WinWeaver {app_version}, rules catalog {}, runtime {}.",
+            catalog.version(),
+            runtime_version()
+        ),
+        format!(
+            "    Profile: {}; modified {}.",
+            profile.name.replace("--", "- -"),
+            profile.modified
+        ),
         format!(
             "    Enabled rules: {} of {}. Disabled rules are absent from this file.",
             rule_ids.len(),
             catalog.rules().len()
         ),
-        "    The profile is embedded in Extensions/Profile and can be opened again in WinWeaver.".to_owned(),
+        "    The profile is embedded in Extensions/Profile and can be opened again in WinWeaver."
+            .to_owned(),
         String::new(),
-        "    Hard limits of Windows Setup respected by this file (a violation aborts the install".to_owned(),
+        "    Hard limits of Windows Setup respected by this file (a violation aborts the install"
+            .to_owned(),
         "    with \"The provided unattend file is not valid\", 0x80220005):".to_owned(),
         format!("      - RunSynchronousCommand/Path is {MAX_COMMAND} characters or shorter;"),
         "      - no XML comments inside <component> blocks;".to_owned(),
@@ -966,7 +1087,9 @@ pub fn build(catalog: &Catalog, profile: &Profile, app_version: &str) -> Result<
     }
     let header_text = header.join("\n");
     if header_text.contains("--") {
-        return Err(RenderError::Template("the header comment may not hold two hyphens".into()));
+        return Err(RenderError::Template(
+            "the header comment may not hold two hyphens".into(),
+        ));
     }
     let xml = fill(
         TEMPLATE_XML,
@@ -1011,9 +1134,18 @@ mod tests {
         let mut params = BTreeMap::new();
         params.insert("n".to_owned(), Value::from(5));
         params.insert("s".to_owned(), Value::from("x"));
-        assert_eq!(substitute("/a:{n} {s} {other} {guid-1}", &params), "/a:5 x {other} {guid-1}");
-        assert_eq!(computer_name_parts("PC-{random}"), vec!["text:PC-", "random:6"]);
-        assert_eq!(computer_name_parts("{serial:8}-W"), vec!["serial:8", "text:-W"]);
+        assert_eq!(
+            substitute("/a:{n} {s} {other} {guid-1}", &params),
+            "/a:5 x {other} {guid-1}"
+        );
+        assert_eq!(
+            computer_name_parts("PC-{random}"),
+            vec!["text:PC-", "random:6"]
+        );
+        assert_eq!(
+            computer_name_parts("{serial:8}-W"),
+            vec!["serial:8", "text:-W"]
+        );
         assert_eq!(reg_path("DU:\\Software\\X"), "($du + '\\Software\\X')");
         assert_eq!(reg_path("HKLM:\\X"), "'HKLM:\\X'");
     }

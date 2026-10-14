@@ -879,7 +879,10 @@ impl App {
             return;
         };
         if validate::errors(&doc.issues) > 0 {
-            self.status = format!("{}: fix the errors before the build", validate::summary(&doc.issues));
+            self.status = format!(
+                "{}: fix the errors before the build",
+                validate::summary(&doc.issues)
+            );
             return;
         }
         let build = match render::build(catalog, &doc.profile, winweaver_core::APP_VERSION) {
