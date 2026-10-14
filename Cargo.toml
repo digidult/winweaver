@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/winweaver-core", "crates/winweaver"]
+members = ["crates/winweaver-core", "crates/winweaver-ui", "crates/winweaver"]
 
 [workspace.package]
 version = "0.1.0"

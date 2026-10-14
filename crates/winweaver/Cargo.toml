@@ -14,3 +14,4 @@ path = "src/main.rs"
 
 [dependencies]
 winweaver-core = { path = "../winweaver-core" }
+winweaver-ui = { path = "../winweaver-ui" }

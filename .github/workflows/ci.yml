@@ -29,12 +29,10 @@ jobs:
           cargo fmt --all
           git diff > fmt.patch
           git checkout -- .
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets -- -D warnings
-      - name: Tests
-        run: cargo test --workspace
-      - name: Catalog check
-        run: cargo run -p winweaver -- --check-catalog
+      - name: Clippy (core only; the window needs the Windows runner)
+        run: cargo clippy -p winweaver-core --all-targets -- -D warnings
+      - name: Tests (core)
+        run: cargo test -p winweaver-core
       - name: CI files (Cargo.lock, the format patch)
         if: always()
         uses: actions/upload-artifact@v4
@@ -55,9 +53,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
       - uses: Swatinem/rust-cache@v2
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Tests
         run: cargo test --workspace
+      - name: Catalog check
+        run: cargo run -p winweaver -- --check-catalog
       - name: Release build
         run: cargo build --release --workspace
       - name: Package

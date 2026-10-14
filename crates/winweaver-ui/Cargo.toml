@@ -1,0 +1,14 @@
+[package]
+name = "winweaver-ui"
+description = "WinWeaver window: tabs, toolbar, navigation, the profile tree and detail panel"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+winweaver-core = { path = "../winweaver-core" }
+eframe = "0.36"
+serde_json.workspace = true

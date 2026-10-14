@@ -1,5 +1,10 @@
-//! The WinWeaver executable. The window and the MCP server come with the next milestones; for
-//! now the binary checks the embedded catalog and reports its version.
+//! The WinWeaver executable: the window by default, a few command line functions.
+//!
+//! In a release build the executable has no console (`windows_subsystem`), so the command line
+//! functions print nothing on Windows unless started from a console that attaches; the MCP stdio
+//! transport will get its own arrangement with the MCP milestone.
+
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::process::ExitCode;
 
@@ -8,6 +13,7 @@ use winweaver_core::i18n::CatalogTexts;
 
 const USAGE: &str = "WinWeaver
 
+  winweaver                   open the window
   winweaver --version         print the version
   winweaver --check-catalog   load the embedded catalog and report its problems
   winweaver --help            this text";
@@ -15,12 +21,19 @@ const USAGE: &str = "WinWeaver
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
+        None => match winweaver_ui::run() {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(e) => {
+                eprintln!("{e}");
+                ExitCode::FAILURE
+            }
+        },
         Some("--version") => {
             println!("WinWeaver {}", winweaver_core::APP_VERSION);
             ExitCode::SUCCESS
         }
         Some("--check-catalog") => check_catalog(),
-        Some("--help") | None => {
+        Some("--help") => {
             println!("{USAGE}");
             ExitCode::SUCCESS
         }
