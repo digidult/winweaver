@@ -131,7 +131,10 @@ pub fn placeholders(text: &str) -> Vec<&str> {
         match after.find('}') {
             Some(end) => {
                 let name = &after[..end];
-                if name.as_bytes().first().is_some_and(u8::is_ascii_lowercase) && is_safe_id(name) {
+                if name.as_bytes().first().is_some_and(u8::is_ascii_lowercase)
+                    && is_safe_id(name)
+                    && !is_guid(name)
+                {
                     names.push(name);
                 }
                 rest = &after[end + 1..];
@@ -140,6 +143,16 @@ pub fn placeholders(text: &str) -> Vec<&str> {
         }
     }
     names
+}
+
+/// A GUID in the form 8-4-4-4-12 of hex digits, as registry keys of shell folders hold them.
+pub fn is_guid(text: &str) -> bool {
+    let bytes = text.as_bytes();
+    bytes.len() == 36
+        && bytes.iter().enumerate().all(|(i, b)| match i {
+            8 | 13 | 18 | 23 => *b == b'-',
+            _ => b.is_ascii_hexdigit(),
+        })
 }
 
 /// Identifiers of rules and parameters: ASCII lower case letters, digits, dots and hyphens.
@@ -167,5 +180,7 @@ mod tests {
         assert_eq!(placeholders("/lockoutthreshold:{threshold} x {y}"), vec!["threshold", "y"]);
         assert!(placeholders("no braces").is_empty());
         assert!(placeholders("{ not an id }").is_empty());
+        assert!(placeholders("{d3162b92-9365-467a-956b-92703aca08af} {1} {B4BF}").is_empty());
+        assert!(is_guid("d3162b92-9365-467a-956b-92703aca08af"));
     }
 }
