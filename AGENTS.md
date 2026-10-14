@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 14.10.2026 (the third commit: the window skeleton on eframe; the second: the Cargo workspace,
+Updated with every change of structure, commands or task status. Last update: 14.10.2026 (the fourth commit: settings.json and the file dialogs; the third: the window skeleton on eframe; the second: the Cargo workspace,
 the core crate, the catalog data and CI; the first: specification draft 0.1 and four UI mockups).
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
@@ -47,8 +47,9 @@ ported (clean room specification first, then implementation).
 │   │                      (catalog translations), profile (the .wwprofile format), resolver; tests/catalog.rs
 │   │                      runs on the embedded data, the translations and the presets
 │   ├── winweaver-ui/      the window on eframe (variant A): lib.rs (tabs, the menu with the presets, the command
-│   │                      bar, navigation, search, settings, shortcuts, the actions applied after each frame),
-│   │                      views.rs (the tree and the detail panel); the presets are embedded from data/presets
+│   │                      bar, navigation, search, shortcuts, file dialogs, the actions applied after each frame),
+│   │                      views.rs (the tree and the detail panel), settings.rs (settings.json next to the exe);
+│   │                      the presets are embedded from data/presets
 │   └── winweaver/         the executable: the window without arguments, --version, --check-catalog, --help
 ├── data/
 │   ├── catalog/           groups.json, 00-17 rules files, lang/ru.json and lang/uk.json: the catalog data
@@ -119,7 +120,7 @@ root.
 | Specification | Draft 0.1: scope, UI, documents, features, architecture | 14.10.2026 |
 | UI design | Four HTML mockups (variants A, B, C and the secondary tabs), comparison and recommendation | 14.10.2026 |
 | Core | Catalog model and embedded data, strict JSON reading, translations, the profile format 1, the resolver; tests on the real data; written without a local toolchain, CI is the first compiler | 14.10.2026 |
-| Window | Skeleton of variant A on eframe 0.36: tabs, the menu with the presets, the command bar, navigation with the selection history, breadcrumb, bookmark and search with history, the tree with three-state group check boxes and the search filter, the detail panel with the parameter editor and the collapsible description, the Settings tab (catalog language, theme), shortcuts, the status bar; nothing persisted yet, no file dialogs, no forms editing, no build; CI green | 14.10.2026 |
+| Window | Skeleton of variant A on eframe 0.36: tabs, the menu with the presets, the command bar, navigation with the selection history, breadcrumb, bookmark and search with history, the tree with three-state group check boxes and the search filter, the detail panel with the parameter editor and the collapsible description, the Settings tab (catalog language, theme), shortcuts, the status bar, the window title; settings.json next to the executable (language, theme, description panel, recent files, search history), Open and Save as through the native dialogs (rfd), recent files, a dropped file opens; no forms editing, no build, bookmarks in memory only; CI green | 14.10.2026 |
 | Executable | The window without arguments, `--version`, `--check-catalog`; the Windows API and the MCP server not started | 14.10.2026 |
 
 Decisions awaited from the customer: the UI variant to build (`docs/design/README.md`), the file extensions

@@ -22,9 +22,18 @@ pub use settings::{Settings, ThemeChoice, exe_dir};
 
 /// The presets embedded in the executable: the name and the profile text.
 pub const PRESETS: [(&str, &str); 4] = [
-    ("Office", include_str!("../../../data/presets/office.wwprofile")),
-    ("Strict", include_str!("../../../data/presets/strict.wwprofile")),
-    ("Laptop", include_str!("../../../data/presets/laptop.wwprofile")),
+    (
+        "Office",
+        include_str!("../../../data/presets/office.wwprofile"),
+    ),
+    (
+        "Strict",
+        include_str!("../../../data/presets/strict.wwprofile"),
+    ),
+    (
+        "Laptop",
+        include_str!("../../../data/presets/laptop.wwprofile"),
+    ),
     ("Home", include_str!("../../../data/presets/home.wwprofile")),
 ];
 
@@ -135,7 +144,10 @@ pub struct Search {
 impl Search {
     /// The lower case words of the search text.
     pub fn words(&self) -> Vec<String> {
-        self.text.split_whitespace().map(str::to_lowercase).collect()
+        self.text
+            .split_whitespace()
+            .map(str::to_lowercase)
+            .collect()
     }
 
     /// Puts the current text first in the history; `true` when the history changed.
@@ -311,7 +323,10 @@ impl App {
                     }
                     ui.separator();
                     for (name, _) in PRESETS {
-                        if ui.button(format!("Profile from the preset {name}")).clicked() {
+                        if ui
+                            .button(format!("Profile from the preset {name}"))
+                            .clicked()
+                        {
                             acts.push(Act::NewProfile(Some(name)));
                             ui.close();
                         }
@@ -397,12 +412,20 @@ impl App {
                 {
                     response.on_hover_text(p.display().to_string());
                 }
-                if ui.small_button("x").on_hover_text("Close (Ctrl+W)").clicked() {
+                if ui
+                    .small_button("x")
+                    .on_hover_text("Close (Ctrl+W)")
+                    .clicked()
+                {
                     acts.push(Act::CloseTab(i, false));
                 }
                 ui.add_space(4.0);
             }
-            if ui.button("+").on_hover_text("New profile (Ctrl+N)").clicked() {
+            if ui
+                .button("+")
+                .on_hover_text("New profile (Ctrl+N)")
+                .clicked()
+            {
                 acts.push(Act::NewProfile(None));
             }
         });
@@ -456,7 +479,10 @@ impl App {
         if let Some(group) = group {
             for id in self.catalog.path_of(&group) {
                 if let Some(g) = self.catalog.group(id) {
-                    crumbs.push((views::gtitle(texts, g).to_owned(), Sel::Group(id.to_owned())));
+                    crumbs.push((
+                        views::gtitle(texts, g).to_owned(),
+                        Sel::Group(id.to_owned()),
+                    ));
                 }
             }
         }
@@ -518,7 +544,11 @@ impl App {
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if self.search.open {
-                    if ui.button("x").on_hover_text("Clear and close (Esc)").clicked() {
+                    if ui
+                        .button("x")
+                        .on_hover_text("Clear and close (Esc)")
+                        .clicked()
+                    {
                         self.search.text.clear();
                         self.search.open = false;
                     }
@@ -610,7 +640,11 @@ impl App {
         });
         ui.horizontal(|ui| {
             ui.label("Theme");
-            ui.radio_value(&mut self.settings.theme, ThemeChoice::System, "Follow Windows");
+            ui.radio_value(
+                &mut self.settings.theme,
+                ThemeChoice::System,
+                "Follow Windows",
+            );
             ui.radio_value(&mut self.settings.theme, ThemeChoice::Light, "Light");
             ui.radio_value(&mut self.settings.theme, ThemeChoice::Dark, "Dark");
         });
@@ -833,8 +867,10 @@ impl App {
                         if !self.bookmarks.remove(&key) {
                             self.bookmarks.insert(key);
                         }
-                        self.status =
-                            format!("{} bookmarks (kept in memory for now)", self.bookmarks.len());
+                        self.status = format!(
+                            "{} bookmarks (kept in memory for now)",
+                            self.bookmarks.len()
+                        );
                     }
                 }
                 Act::Fold => {
@@ -1018,13 +1054,20 @@ mod tests {
             with_extension(PathBuf::from("x")),
             PathBuf::from("x.wwprofile")
         );
-        assert_eq!(with_extension(PathBuf::from("x.json")), PathBuf::from("x.json"));
+        assert_eq!(
+            with_extension(PathBuf::from("x.json")),
+            PathBuf::from("x.json")
+        );
     }
 
     #[test]
     fn app_starts_with_the_office_preset() {
         let catalog = Catalog::embedded().unwrap();
-        let app = App::new(catalog, CatalogTexts::embedded().unwrap(), Settings::default());
+        let app = App::new(
+            catalog,
+            CatalogTexts::embedded().unwrap(),
+            Settings::default(),
+        );
         assert_eq!(app.docs.len(), 1);
         assert_eq!(app.docs[0].title(), "Office.wwprofile");
         assert!(!app.docs[0].dirty());

@@ -125,7 +125,10 @@ mod tests {
         settings.save_to(&path).unwrap();
         let loaded = Settings::load_from(&path).unwrap();
         assert_eq!(loaded, settings);
-        assert_eq!(loaded.recent, vec![PathBuf::from("a.wwprofile"), PathBuf::from("b.wwprofile")]);
+        assert_eq!(
+            loaded.recent,
+            vec![PathBuf::from("a.wwprofile"), PathBuf::from("b.wwprofile")]
+        );
         std::fs::write(&path, "{\"format\": \"other\"}").unwrap();
         assert!(Settings::load_from(&path).is_err());
         std::fs::remove_dir_all(&dir).unwrap();
