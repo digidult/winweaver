@@ -9,6 +9,7 @@ mod diffview;
 mod forms;
 mod i18n;
 mod marksview;
+mod mcpview;
 mod mdview;
 mod session;
 mod settings;
@@ -156,6 +157,7 @@ pub enum Doc {
     Diff(Box<DiffDoc>),
     Markdown(Box<MdDoc>),
     Bookmarks,
+    Mcp,
     Settings,
 }
 
@@ -166,6 +168,7 @@ impl Doc {
             Doc::Diff(d) => d.title(),
             Doc::Markdown(d) => d.title.clone(),
             Doc::Bookmarks => tr("Bookmarks").to_owned(),
+            Doc::Mcp => "MCP".to_owned(),
             Doc::Settings => tr("Settings").to_owned(),
         }
     }
@@ -243,6 +246,11 @@ pub enum Act {
     OpenReport,
     OpenGuide,
     OpenMarks,
+    OpenMcp,
+    McpStart,
+    McpStop,
+    McpRenewToken,
+    McpOpen(String),
     GoToMark(usize),
     SetMarkComment(usize, String),
     RemoveMark(usize),
@@ -276,6 +284,7 @@ pub struct App {
     exit: bool,
     drafts_dir: PathBuf,
     logs_dir: PathBuf,
+    mcp: mcpview::McpPanel,
     last_logged: String,
 }
 
@@ -309,6 +318,14 @@ impl App {
             exit: false,
             drafts_dir: exe_dir().join("drafts"),
             logs_dir: exe_dir().join("logs"),
+            mcp: mcpview::McpPanel {
+                port: 8765,
+                token: String::new(),
+                mode: winweaver_mcp::Mode::Read,
+                read_pc: false,
+                run: None,
+                error: String::new(),
+            },
             last_logged: String::new(),
         }
     }
@@ -514,6 +531,10 @@ impl App {
                     .clicked()
                 {
                     acts.push(Act::OpenGuide);
+                    ui.close();
+                }
+                if ui.button(tr("MCP server")).clicked() {
+                    acts.push(Act::OpenMcp);
                     ui.close();
                 }
                 if ui.button(tr("Bookmarks")).clicked() {
@@ -807,17 +828,22 @@ impl App {
     fn status_bar(&self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             let state = match self.docs.get(self.active) {
-                Some(Doc::Profile(d)) if d.dirty => "Modified",
-                Some(Doc::Profile(d)) if d.path.is_some() => "Saved",
-                Some(Doc::Profile(_)) => "Not saved yet",
+                Some(Doc::Profile(d)) if d.dirty => tr("Modified"),
+                Some(Doc::Profile(d)) if d.path.is_some() => tr("Saved"),
+                Some(Doc::Profile(_)) => tr("Not saved yet"),
                 _ => "",
             };
             ui.weak(state);
-            ui.weak(format!(
-                "Catalog {}, {} rules",
-                self.catalog.version(),
-                self.catalog.rules().len()
+            ui.weak(trf(
+                "Catalog {version}, {n} rules",
+                &[("version", &self.catalog.version()), ("n", &self.catalog.rules().len())],
             ));
+            if let Some(run) = &self.mcp.run {
+                ui.weak(trf(
+                    "MCP: {url}, mode {mode}",
+                    &[("url", &run.http.url()), ("mode", &run.server.options().mode.name())],
+                ));
+            }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.weak(&self.status);
             });
@@ -1545,6 +1571,35 @@ impl App {
                         }
                     }
                 }
+                Act::OpenMcp => match self.docs.iter().position(|d| matches!(d, Doc::Mcp)) {
+                    Some(i) => self.active = i,
+                    None => {
+                        self.docs.push(Doc::Mcp);
+                        self.active = self.docs.len() - 1;
+                    }
+                },
+                Act::McpStart => self.start_mcp(),
+                Act::McpStop => {
+                    self.mcp.run = None;
+                    self.status = tr("The MCP server stopped").to_owned();
+                }
+                Act::McpRenewToken => match winweaver_mcp::new_token() {
+                    Ok(t) => {
+                        self.mcp.token = t.clone();
+                        self.settings.mcp_token = t;
+                        self.settings_dirty = true;
+                    }
+                    Err(e) => self.mcp.error = e,
+                },
+                Act::McpOpen(name) => {
+                    let profile = self.mcp.run.as_ref().and_then(|r| r.server.workspace_profile(&name));
+                    if let Some(profile) = profile {
+                        let mut doc = ProfileDoc::new(profile, None, &self.catalog);
+                        doc.dirty = true;
+                        self.docs.push(Doc::Profile(Box::new(doc)));
+                        self.active = self.docs.len() - 1;
+                    }
+                }
                 Act::OpenMarks => {
                     match self.docs.iter().position(|d| matches!(d, Doc::Bookmarks)) {
                         Some(i) => self.active = i,
@@ -1919,7 +1974,7 @@ impl App {
                 Doc::Profile(d) => d.path.clone(),
                 Doc::Diff(d) => d.path.clone(),
                 Doc::Markdown(d) => d.path.clone(),
-                Doc::Bookmarks | Doc::Settings => None,
+                Doc::Bookmarks | Doc::Mcp | Doc::Settings => None,
             };
             if let Some(p) = path {
                 if i == self.active {
@@ -2025,6 +2080,44 @@ impl App {
         }
     }
 
+    /// Starts the HTTP server of the window with the port, mode and token of the MCP tab.
+    fn start_mcp(&mut self) {
+        if self.mcp.token.is_empty() {
+            match winweaver_mcp::new_token() {
+                Ok(t) => {
+                    self.mcp.token = t.clone();
+                    self.settings.mcp_token = t;
+                }
+                Err(e) => {
+                    self.mcp.error = e;
+                    return;
+                }
+            }
+        }
+        let server = std::sync::Arc::new(winweaver_mcp::Server::new(
+            self.catalog.clone(),
+            &PRESETS,
+            winweaver_mcp::Options {
+                mode: self.mcp.mode,
+                read_pc: self.mcp.read_pc,
+                profiles_dir: profiles_dir(),
+                output_dir: output_dir(),
+            },
+        ));
+        match winweaver_mcp::http::HttpServer::start(server.clone(), self.mcp.port, self.mcp.token.clone()) {
+            Ok(http) => {
+                self.status = trf("The MCP server runs on {url}", &[("url", &http.url())]);
+                self.mcp.error.clear();
+                self.mcp.run = Some(mcpview::McpRun { server, http });
+                self.settings.mcp_port = self.mcp.port;
+                self.settings_dirty = true;
+            }
+            Err(e) => {
+                self.mcp.error = trf("The server did not start: {e}", &[("e", &e)]);
+            }
+        }
+    }
+
     fn persist_settings(&mut self) {
         if !self.settings_dirty {
             return;
@@ -2073,6 +2166,7 @@ impl eframe::App for App {
             Some(Doc::Diff(_)) => 3,
             Some(Doc::Markdown(_)) => 4,
             Some(Doc::Bookmarks) => 5,
+            Some(Doc::Mcp) => 6,
             None => 2,
         };
         if kind == 0 {
@@ -2113,6 +2207,13 @@ impl eframe::App for App {
             if let Some(Doc::Markdown(doc)) = self.docs.get_mut(self.active) {
                 egui::CentralPanel::default().show(ui, |ui| mdview::md_view(ui, doc));
             }
+        } else if kind == 6 {
+            let panel = &mut self.mcp;
+            egui::CentralPanel::default().show(ui, |ui| {
+                egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
+                    mcpview::mcp_view(ui, panel, &mut acts);
+                });
+            });
         } else if kind == 5 {
             let marks = &self.marks;
             let path = &self.marks_path;
@@ -2269,6 +2370,8 @@ pub fn run() -> Result<(), String> {
         options,
         Box::new(move |_cc| {
             let mut app = App::new(catalog, texts, settings);
+            app.mcp.port = app.settings.mcp_port;
+            app.mcp.token = app.settings.mcp_token.clone();
             app.apply_language();
             if let Some(w) = warning {
                 app.status = format!("Settings not read, the defaults are used: {w}");

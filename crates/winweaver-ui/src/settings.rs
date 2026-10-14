@@ -52,6 +52,9 @@ pub struct Settings {
     /// The files of the tabs open at the last close, and the active one among them.
     pub open_tabs: Vec<PathBuf>,
     pub active_tab: usize,
+    /// The port and the token of the MCP server of the window.
+    pub mcp_port: u16,
+    pub mcp_token: String,
 }
 
 impl Default for Settings {
@@ -69,6 +72,8 @@ impl Default for Settings {
             restore_tabs: true,
             open_tabs: Vec::new(),
             active_tab: 0,
+            mcp_port: 8765,
+            mcp_token: String::new(),
         }
     }
 }
