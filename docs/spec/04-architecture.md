@@ -80,8 +80,11 @@ native writes -> report.
   type, scheduled task through the Task Scheduler COM API or `schtasks` as the last resort, app removal
   through the deployment API, Defender settings through the WMI or the policy keys), logs every step and
   reports per action. The non-elevated process shows the report.
-- The helper refuses a plan file it did not get from its own folder, checks its signature (a random
-  nonce of the session stored in the plan and passed on the command line) and never runs scripts.
+- The helper refuses a plan file it did not get from its own folder and checks its bytes: the window
+  passes the SHA-256 of the plan it wrote on the command line, the helper reads the file once and runs
+  it only when its digest matches, so a plan another process changed in the output folder after the
+  permission of Windows is refused. The plan keeps a random nonce, so no two plans are equal. The
+  helper never runs scripts.
 - The default user profile: the plan writes the `DU:` values at `HKU:\UnattendDefault`, the key of the
   stand-alone apply script; the helper enables its backup and restore privileges, loads `NTUSER.DAT` of
   the default profile (`GetDefaultUserProfileDirectoryW`) there with `RegLoadKeyW` for the steps that

@@ -150,10 +150,12 @@ fn mcp(args: &[String]) -> ExitCode {
     }
 }
 
-/// The elevated helper: runs a plan file of the output folder whose nonce matches the one on the
-/// command line and writes its report next to it. It refuses any other file.
+/// The elevated helper: runs a plan file of the output folder whose bytes have the SHA-256 given on
+/// the command line and writes its report next to it. It reads the file once and refuses any other
+/// file, so a plan changed after the permission of Windows never runs.
 fn elevated_apply(args: &[String]) -> ExitCode {
-    let (Some(plan_path), Some(nonce)) = (args.first(), args.get(1)) else {
+    use std::io::Read;
+    let (Some(plan_path), Some(expected)) = (args.first(), args.get(1)) else {
         return ExitCode::from(2);
     };
     let out = winweaver_ui::output_dir();
@@ -170,12 +172,18 @@ fn elevated_apply(args: &[String]) -> ExitCode {
     if !in_output || !name.starts_with("plan-") || !name.ends_with(".json") || name.contains("-report") {
         return ExitCode::from(3);
     }
-    let Ok(plan) = winweaver_core::apply::Plan::load(&plan_path) else {
-        return ExitCode::from(3);
-    };
-    if plan.nonce.len() < 32 || plan.nonce != *nonce {
+    let limit = winweaver_core::apply::PLAN_MAX_BYTES;
+    let mut bytes = Vec::new();
+    let read = std::fs::File::open(&plan_path).and_then(|f| f.take(limit + 1).read_to_end(&mut bytes));
+    if read.is_err() || bytes.len() as u64 > limit {
         return ExitCode::from(3);
     }
+    if expected.len() != 64 || winweaver_core::apply::digest(&bytes) != *expected {
+        return ExitCode::from(3);
+    }
+    let Ok(plan) = winweaver_core::apply::Plan::from_bytes(&bytes, &name) else {
+        return ExitCode::from(3);
+    };
     let stamp = winweaver_core::clock::now_utc_iso()
         .replace([':', '-'], "")
         .replace('T', "-")

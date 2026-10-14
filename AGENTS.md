@@ -68,8 +68,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      Languages), diffview.rs, mdview.rs (Markdown tabs, the guide), marksview.rs,
 │   │                      mcpview.rs (the MCP tab), session.rs (drafts, the log), settings.rs (settings.json),
 │   │                      i18n.rs (tr and trf, the translations of the interface), themes.rs (colour themes)
-│   └── winweaver/         the executable: the window, --mcp stdio, --mcp http, --elevated-apply <plan> <nonce>
-│                          (the helper: only a plan-*.json of output/ with that nonce), --version, --check-catalog
+│   └── winweaver/         the executable: the window, --mcp stdio, --mcp http, --elevated-apply <plan> <digest>
+│                          (the helper: only a plan-*.json of output/ with that SHA-256), --version, --check-catalog
 ├── data/                  embedded into the executable at build time
 │   ├── catalog/           groups.json, 00-17 rules files, lang/ru.json and lang/uk.json (catalog 0.11 of the
 │   │                      predecessor)
@@ -187,8 +187,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - MCP: the mode is never saved (read at every start), nor is read_pc; the token is saved in settings.json;
   errors start with not_allowed, not_found, invalid, write_failed or read_failed; passwords and the product
   key are replaced by `***` in every answer.
-- Native apply: the window writes `output/plan-<stamp>.json` with a random nonce of 40 characters and starts
-  itself with `--elevated-apply` through ShellExecuteEx runas; the helper refuses any other file or nonce,
+- Native apply: the window writes `output/plan-<stamp>.json` (with a random nonce, so no two plans are equal)
+  and starts itself with `--elevated-apply <plan> <SHA-256 of its bytes>` through ShellExecuteEx runas; the
+  helper reads the file once and refuses another folder, name or digest (`apply::digest`), so a plan changed
+  after the permission never runs,
   backs up every registry value into `output/backup-<stamp>.json` (the format of the apply script, so
   `Undo-Apply.ps1` restores it too) and writes `plan-<stamp>-report.json`. Script steps, app and capability
   removals and the profiles of other users stay with the stand-alone script. The default user profile is

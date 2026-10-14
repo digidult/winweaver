@@ -1543,7 +1543,9 @@ impl App {
         }
         let stamp = clock::now_utc_iso().replace([':', '-'], "").replace('T', "-").trim_end_matches('Z').to_owned();
         let path = dir.join(format!("plan-{stamp}.json"));
-        if let Err(e) = write_file(&path, plan.to_json().as_bytes()) {
+        let text = plan.to_json();
+        let digest = winweaver_core::apply::digest(text.as_bytes());
+        if let Err(e) = write_file(&path, text.as_bytes()) {
             self.status = trf("The plan was not written: {e}", &[("e", &e)]);
             return;
         }
@@ -1556,9 +1558,8 @@ impl App {
         };
         self.running_skipped = plan.skipped.clone();
         let (tx, rx) = std::sync::mpsc::channel();
-        let nonce = plan.nonce.clone();
         std::thread::spawn(move || {
-            let args = vec!["--elevated-apply".to_owned(), path.display().to_string(), nonce];
+            let args = vec!["--elevated-apply".to_owned(), path.display().to_string(), digest];
             let result = winweaver_win::run_elevated(&exe, &args).and_then(|code| {
                 let report_path = path.with_file_name(format!("plan-{stamp}-report.json"));
                 let read = std::fs::read_to_string(&report_path)

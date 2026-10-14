@@ -13,6 +13,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 
 use crate::catalog::{Action, Catalog, RegKind, Rule};
 use crate::jsonfile;
@@ -23,7 +24,8 @@ use crate::thispc;
 
 pub const PLAN_FORMAT: &str = "winweaver-apply-plan";
 pub const PLAN_VERSION: u32 = 1;
-const PLAN_MAX_BYTES: u64 = 16 * 1024 * 1024;
+/// The largest plan or backup file the program reads.
+pub const PLAN_MAX_BYTES: u64 = 16 * 1024 * 1024;
 const SERVICES: &str = "HKLM:\\SYSTEM\\CurrentControlSet\\Services";
 
 /// One change of the plan.
@@ -95,6 +97,19 @@ impl Plan {
         text
     }
 
+    /// Reads a plan from the bytes of its file strictly; `name` names it in the errors.
+    pub fn from_bytes(bytes: &[u8], name: &str) -> Result<Self, String> {
+        if bytes.len() as u64 > PLAN_MAX_BYTES {
+            return Err(format!("{name}: larger than a plan can be"));
+        }
+        let text = std::str::from_utf8(bytes).map_err(|_| format!("{name}: not UTF-8"))?;
+        let plan: Self = jsonfile::parse(text, name).map_err(|e| e.to_string())?;
+        if plan.format != PLAN_FORMAT || plan.version > PLAN_VERSION {
+            return Err(format!("{name}: not an apply plan of this version"));
+        }
+        Ok(plan)
+    }
+
     /// Reads a plan file strictly.
     pub fn load(path: &Path) -> Result<Self, String> {
         let plan: Self = jsonfile::read(path, PLAN_MAX_BYTES).map_err(|e| e.to_string())?;
@@ -113,6 +128,19 @@ impl Plan {
     pub fn uses_default_user(&self) -> bool {
         self.steps.iter().any(|s| s.op.in_default_user())
     }
+}
+
+/// The SHA-256 of the bytes of a plan file in lower case hexadecimal. The window passes it on the
+/// command line of the elevated helper, which runs a plan only when its file has these bytes, so a
+/// plan changed in the output folder after the permission is refused.
+pub fn digest(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(64);
+    for &b in Sha256::digest(bytes).iter() {
+        out.push(char::from(HEX[usize::from(b >> 4)]));
+        out.push(char::from(HEX[usize::from(b & 0x0f)]));
+    }
+    out
 }
 
 /// Where the helper loads the hive of the default user profile: the key of the stand-alone apply
@@ -454,6 +482,14 @@ mod tests {
         );
         assert!(native_path("HKU:\\.DEFAULT\\X").is_err());
         assert!(in_default_user("hku:\\unattenddefault\\x"));
+        assert_eq!(
+            digest(b"abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+        let bytes = plan.to_json().into_bytes();
+        assert_eq!(Plan::from_bytes(&bytes, "plan").unwrap(), plan);
+        assert!(Plan::from_bytes(b"{\"format\": \"other\"}", "plan").is_err());
+        assert!(Plan::from_bytes(&[0xff, 0xfe], "plan").is_err());
         assert!(!in_default_user("HKU:\\UnattendDefaultX"));
         let text = plan.to_json();
         let back: Plan = serde_json::from_str(&text).unwrap();
