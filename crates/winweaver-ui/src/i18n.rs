@@ -31,7 +31,11 @@ static CODE: RwLock<String> = RwLock::new(String::new());
 /// The code of the language the interface shows (`en` before any choice).
 pub fn current() -> String {
     let code = CODE.read().map(|c| c.clone()).unwrap_or_default();
-    if code.is_empty() { "en".to_owned() } else { code }
+    if code.is_empty() {
+        "en".to_owned()
+    } else {
+        code
+    }
 }
 
 /// The translation of an English text in the current language, the text itself when there is
@@ -148,12 +152,17 @@ mod tests {
         assert_eq!(tr("A text nobody translated"), "A text nobody translated");
         assert_eq!(
             trf("{n} rules for {name}", &[("n", &3), ("name", &"PC")]),
-            tr("{n} rules for {name}").replace("{n}", "3").replace("{name}", "PC")
+            tr("{n} rules for {name}")
+                .replace("{n}", "3")
+                .replace("{name}", "PC")
         );
         for (code, text) in EMBEDDED {
             let (name, table) = parse(text, code).unwrap();
             assert!(!name.is_empty(), "{code}: _language");
-            assert!(table.get("Save").is_some_and(|t| t != "Save"), "{code}: Save");
+            assert!(
+                table.get("Save").is_some_and(|t| t != "Save"),
+                "{code}: Save"
+            );
         }
         let dir = std::env::temp_dir().join("winweaver-no-lang-folder");
         let codes: Vec<String> = languages(&dir).into_iter().map(|l| l.code).collect();
@@ -230,7 +239,11 @@ mod tests {
                 let translated = table
                     .get(key)
                     .unwrap_or_else(|| panic!("{code}/ui.json has no translation of {key:?}"));
-                assert_eq!(placeholders(key), placeholders(translated), "{code}: {key:?}");
+                assert_eq!(
+                    placeholders(key),
+                    placeholders(translated),
+                    "{code}: {key:?}"
+                );
                 assert!(
                     !translated.contains('\u{2013}') && !translated.contains('\u{2014}'),
                     "{code}: a dash in {key:?}"

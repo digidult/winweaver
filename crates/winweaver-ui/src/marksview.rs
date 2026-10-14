@@ -11,7 +11,10 @@ use crate::Act;
 
 pub fn marks_view(ui: &mut egui::Ui, marks: &Bookmarks, path: &Path, acts: &mut Vec<Act>) {
     ui.heading(tr("Bookmarks"));
-    ui.weak(trf("{path} ({n} bookmarks)", &[("path", &path.display()), ("n", &marks.items.len())]));
+    ui.weak(trf(
+        "{path} ({n} bookmarks)",
+        &[("path", &path.display()), ("n", &marks.items.len())],
+    ));
     ui.weak(tr("The Bookmark button in the navigation row adds the current position here or removes it. A click on a title goes to the position; the comment is edited in place."));
     ui.add_space(8.0);
     if marks.items.is_empty() {

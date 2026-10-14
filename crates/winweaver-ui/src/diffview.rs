@@ -10,8 +10,8 @@ use winweaver_core::diff::{self, Diff};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::profile::Choice;
 
-use crate::views::rtitle;
 use crate::i18n::{tr, trf};
+use crate::views::rtitle;
 use crate::{Act, Sel};
 
 pub struct DiffDoc {
@@ -83,8 +83,22 @@ pub fn diff_view(
         "{n} differences; left: {left}, right: {right}",
         &[
             ("n", &d.count()),
-            ("left", &if d.base.path.is_empty() { tr("not saved") } else { d.base.path.as_str() }),
-            ("right", &if d.other.path.is_empty() { tr("not saved") } else { d.other.path.as_str() }),
+            (
+                "left",
+                &if d.base.path.is_empty() {
+                    tr("not saved")
+                } else {
+                    d.base.path.as_str()
+                },
+            ),
+            (
+                "right",
+                &if d.other.path.is_empty() {
+                    tr("not saved")
+                } else {
+                    d.other.path.as_str()
+                },
+            ),
         ],
     ));
     ui.horizontal(|ui| {

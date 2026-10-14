@@ -320,7 +320,10 @@ fn group_detail(
         .iter()
         .filter(|r| doc.resolution.in_effect(&r.id))
         .count();
-    ui.weak(trf("{n} rules, {on} in effect", &[("n", &rules.len()), ("on", &on)]));
+    ui.weak(trf(
+        "{n} rules, {on} in effect",
+        &[("n", &rules.len()), ("on", &on)],
+    ));
     ui.horizontal(|ui| {
         if ui.button(tr("Turn all on")).clicked() {
             acts.push(Act::SetGroup(id.to_owned(), true));
@@ -365,7 +368,10 @@ fn this_pc_card(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         if ui.button(tr("Save an apply script...")).clicked() {
             acts.push(Act::SaveScript(ScriptKind::Apply));
         }
-        if ui.button(tr("Save a return-to-defaults script...")).clicked() {
+        if ui
+            .button(tr("Save a return-to-defaults script..."))
+            .clicked()
+        {
             acts.push(Act::SaveScript(ScriptKind::Revert));
         }
     });
@@ -483,7 +489,10 @@ fn rule_detail(
         egui::CollapsingHeader::new(tr("Dependencies and conflicts"))
             .id_salt("desc-deps")
             .show(ui, |ui| {
-                for (label, list) in [(tr("Needs"), &rule.requires), (tr("Conflicts with"), &rule.conflicts)] {
+                for (label, list) in [
+                    (tr("Needs"), &rule.requires),
+                    (tr("Conflicts with"), &rule.conflicts),
+                ] {
                     for other in list {
                         ui.horizontal(|ui| {
                             ui.weak(label);

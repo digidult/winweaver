@@ -598,7 +598,10 @@ impl App {
                 acts.push(Act::ReadPc);
                 ui.close();
             }
-            if ui.button(tr("Read the selection into this profile")).clicked() {
+            if ui
+                .button(tr("Read the selection into this profile"))
+                .clicked()
+            {
                 acts.push(Act::ReadSelection);
                 ui.close();
             }
@@ -771,7 +774,11 @@ impl App {
                             }
                         });
                     }
-                } else if ui.button(tr("Search")).on_hover_text(tr("Ctrl+F")).clicked() {
+                } else if ui
+                    .button(tr("Search"))
+                    .on_hover_text(tr("Ctrl+F"))
+                    .clicked()
+                {
                     self.search.open = true;
                     self.search.focus = true;
                 }
@@ -817,7 +824,11 @@ impl App {
             egui::ComboBox::from_id_salt("language")
                 .selected_text(current)
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.settings.language, String::new(), tr("Follow Windows"));
+                    ui.selectable_value(
+                        &mut self.settings.language,
+                        String::new(),
+                        tr("Follow Windows"),
+                    );
                     for l in &langs {
                         ui.selectable_value(&mut self.settings.language, l.code.clone(), &l.name);
                     }
@@ -848,7 +859,8 @@ impl App {
         ui.add_space(12.0);
         ui.horizontal(|ui| {
             ui.weak(format!("Settings file: {}", Settings::path().display()));
-            if !self.settings.recent.is_empty() && ui.small_button(tr("Forget recent files")).clicked()
+            if !self.settings.recent.is_empty()
+                && ui.small_button(tr("Forget recent files")).clicked()
             {
                 self.settings.recent.clear();
             }
@@ -872,7 +884,10 @@ impl App {
         } else {
             self.settings.language.clone()
         };
-        if i18n::languages(&lang_dir()).iter().any(|l| l.code == wanted) {
+        if i18n::languages(&lang_dir())
+            .iter()
+            .any(|l| l.code == wanted)
+        {
             wanted
         } else {
             "en".to_owned()
@@ -1077,7 +1092,8 @@ impl App {
         };
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             self.status =
-                tr("Read this PC: open a profile first; its rules and forms are the base").to_owned();
+                tr("Read this PC: open a profile first; its rules and forms are the base")
+                    .to_owned();
             return;
         };
         let ids = if only_selection {
@@ -2024,7 +2040,8 @@ fn pick_any() -> Option<PathBuf> {
     let dir = profiles_dir();
     let dialog = rfd::FileDialog::new()
         .set_title(tr("Open"))
-        .add_filter(tr("WinWeaver files"),
+        .add_filter(
+            tr("WinWeaver files"),
             &[profile::EXTENSION, diff::EXTENSION, bookmarks::EXTENSION],
         )
         .add_filter(tr("Answer files (the profile they embed)"), &["xml"])
