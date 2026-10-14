@@ -8,6 +8,11 @@ use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 
 /// The guide shown at the first start and from the menu (F1).
 pub const GUIDE: &str = include_str!("../../../data/docs/guide.md");
+/// The translated guides: the language code and the page.
+pub const GUIDES: [(&str, &str); 2] = [
+    ("uk", include_str!("../../../data/lang/uk/guide.md")),
+    ("ru", include_str!("../../../data/lang/ru/guide.md")),
+];
 pub const GUIDE_TITLE: &str = "Guide.md";
 
 /// The widest a page is laid out, so that lines stay readable on a wide window.
@@ -31,12 +36,28 @@ impl MdDoc {
     }
 
     pub fn guide() -> Self {
-        Self::new(GUIDE_TITLE, None, GUIDE.to_owned())
+        Self::new(GUIDE_TITLE, None, guide_text(&crate::i18n::current()))
     }
 
     pub fn is_guide(&self) -> bool {
         self.path.is_none() && self.title == GUIDE_TITLE
     }
+}
+
+/// The guide in a language: a file `lang/<code>/guide.md` next to the executable, the embedded
+/// translation, or the English page.
+pub fn guide_text(code: &str) -> String {
+    let file = crate::lang_dir().join(code).join("guide.md");
+    if code != "en"
+        && let Ok(text) = winweaver_core::jsonfile::read_text_bom(&file, 4 * 1024 * 1024)
+    {
+        return text;
+    }
+    GUIDES
+        .iter()
+        .find(|(c, _)| *c == code)
+        .map_or(GUIDE, |(_, text)| text)
+        .to_owned()
 }
 
 pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc) {

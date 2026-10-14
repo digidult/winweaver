@@ -25,15 +25,34 @@ documentation pages open the same way, each in its own tab.
 
 ## The window
 
-- **Tabs**: every open document is a tab: a profile, a diff, this guide, the settings. The menu
-  button at the left end of the tab row holds New, Open, Save, Compare, Settings and Exit.
-- **Command bar**: New, Open, Save, Check, Build, This PC, Compare.
+- **Tabs**: every open document is a tab: a profile, a diff, this guide, the bookmarks, the MCP
+  server, the settings. The menu button at the left end of the tab row holds New, Open, Save,
+  Compare, the guide, the MCP server, the bookmarks, Settings and Exit.
+- **Command bar**: New, Open, Save, Check, Build, This PC, Compare. In a narrow window it shows icons
+  only, in the navigation row.
 - **Navigation row**: Back and Forward move through the items you selected; the breadcrumb shows
   where you are and jumps to any level; Bookmark marks the position; Search filters the tree as
   you type and remembers what you searched.
 - **Tree and detail panel**: the tree on the left, the selected item on the right. The description
-  folds with Ctrl+D.
-- **Status bar**: the state of the document, the catalog version and the last message.
+  folds with Ctrl+D. The rules of a selected group show a switch at the end of their rows.
+- **Status bar**: the state of the document, the catalog version, the MCP server and the last message.
+
+## This PC
+
+**This PC** in the command bar reads the settings of this computer through Windows, without changing
+anything:
+
+- **Read this PC into a new profile**: every rule that can be judged on a running Windows becomes on
+  (in effect), off (partly or not in effect) or keeps its state (not readable, or as on a clean
+  Windows); the forms take the edition, the time zone and the languages.
+- **Read the selection into this profile** and **Check the selection on this PC** work on the
+  selected rule or group.
+- **Save an apply script**, **a return-to-defaults script** or **an audit script** writes a PowerShell
+  script for this or another PC. Run an apply or return script as administrator, first on a test PC;
+  it saves a backup that `Undo-Apply.ps1` next to it restores. The report of an audit script opens
+  with **Open an audit report** and becomes a profile.
+
+Rules that act only during installation or at the first sign-in of a user are not read.
 
 ## Comparing profiles
 
@@ -41,6 +60,19 @@ documentation pages open the same way, each in its own tab.
 the active profile and the other one, in three columns. "Apply the right side" sets those values in
 the profile the diff was made from; "Save as a diff file" keeps the differences as a `.wwdiff`
 file that applies later to any profile.
+
+## Opening other files
+
+Open accepts profiles (`.wwprofile`), diffs (`.wwdiff`), bookmark files (`.wwmarks`), Markdown pages,
+answer files built by WinWeaver or WinKickOff (the profile they embed), WinKickOff profiles and audit
+reports (`.json`).
+
+## The MCP server
+
+**Menu, MCP server** opens the tab of the server through which AI agents read profiles and, when the
+mode allows, change them. The server starts in the mode read; edit lets it change profiles in memory,
+files lets it save them and write the answer file. Reading this PC needs its own permission, which is
+off at every start.
 
 ## Keyboard
 
@@ -58,11 +90,11 @@ file that applies later to any profile.
 
 ## Files next to the executable
 
-`settings.json` (language, theme, recent files, search history), `profiles/` (your profiles),
-`output/` (the built answer file and scripts). Nothing is written anywhere else.
+`settings.json` (language, theme, recent files, the tabs of the last session), `profiles/` (your
+profiles), `output/` (the answer file and the scripts), `drafts/` (unsaved changes, restored at the
+next start), `logs/` (what the program did), `bookmarks.wwmarks`. Nothing is written anywhere else.
 
 ## Not there yet
 
-This build is an early one. This PC (read, apply, return to defaults), imported policy
-templates, the MCP server, bookmark files and the translations of the interface come with the next
-milestones; the commands say so when you use them.
+Applying settings to this PC directly from the program (use the apply script meanwhile) and importing
+policy templates (ADMX) come with the next versions.

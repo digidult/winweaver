@@ -16,6 +16,8 @@ use crate::{Mode, Server, State, WsDoc};
 const TEXT_LIMIT: usize = 60_000;
 const LIST_LIMIT: usize = 200;
 const PRESET_IDS: [&str; 4] = ["office", "strict", "laptop", "home"];
+/// The skill for agents, served as a resource.
+const SKILL: &str = include_str!("../../../skills/winweaver/SKILL.md");
 
 /// A failed tool call: the kind starts the text the client sees.
 pub(crate) struct ToolError {
@@ -192,6 +194,7 @@ pub(crate) fn resources() -> Vec<Value> {
         json!({ "uri": "winweaver://catalog", "name": "Rule catalog", "mimeType": "application/json" }),
         json!({ "uri": "winweaver://profile", "name": "Current profile", "mimeType": "application/json" }),
         json!({ "uri": "winweaver://presets", "name": "Presets", "mimeType": "application/json" }),
+        json!({ "uri": "winweaver://skill", "name": "How to use WinWeaver over MCP", "mimeType": "text/markdown" }),
     ]
 }
 
@@ -207,6 +210,7 @@ pub(crate) fn resource(server: &Server, state: &State, uri: &str) -> Option<Stri
         "winweaver://presets" => {
             json!({ "presets": server.presets.iter().map(|(n, _)| n.clone()).collect::<Vec<_>>() })
         }
+        "winweaver://skill" => return Some(SKILL.to_owned()),
         _ => return None,
     };
     Some(fit(
