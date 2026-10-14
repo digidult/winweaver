@@ -42,9 +42,11 @@ unknown extension, by its content.
   "comment": "",
   "created": "2026-10-14T10:00:00Z",
   "modified": "2026-10-14T10:00:00Z",
-  "install": { "edition": "Pro", "key_mode": "generic", "computer_name_mode": "random", "workgroup": "", "disk_mode": "ask" },
-  "accounts": { "mode": "file", "list": [ { "name": "Admin", "group": "Administrators", "display": "" } ] },
-  "languages": { "ui": "uk-UA", "input": ["0422:00000422", "0409:00000409"], "region": "241", "timezone": "FLE Standard Time" },
+  "install": { "edition": "Pro", "product_key_mode": "generic", "product_key": "", "time_zone": "FLE Standard Time",
+               "account_mode": "file", "computer_name_mode": "random", "computer_name": "", "workgroup": "",
+               "disk_mode": "ask", "disk_id": "0", "partition_id": "3" },
+  "languages": { "ui_language": "uk-UA", "system_locale": "uk-UA", "user_locale": "uk-UA", "input": ["en-US", "uk-UA", "ru-UA"] },
+  "accounts": [ { "name": "Admin", "display_name": "Admin", "group": "Administrators", "description": "", "password": "" } ],
   "rules": {
     "defender.pua": { "on": true, "params": { "action": "block" } },
     "admx.windows.AllowTelemetry": { "on": true, "params": { "level": 0 }, "source": "system" }

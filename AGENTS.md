@@ -1,8 +1,8 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 14.10.2026 (the first commit:
-specification draft 0.1 and four UI mockups).
+Updated with every change of structure, commands or task status. Last update: 14.10.2026 (the third commit: the window skeleton on eframe; the second: the Cargo workspace,
+the core crate, the catalog data and CI; the first: specification draft 0.1 and four UI mockups).
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -46,7 +46,10 @@ ported (clean room specification first, then implementation).
 │   ├── winweaver-core/    the catalog (model, embedded data, checks), jsonfile (strict reading), i18n
 │   │                      (catalog translations), profile (the .wwprofile format), resolver; tests/catalog.rs
 │   │                      runs on the embedded data, the translations and the presets
-│   └── winweaver/         the executable: --version, --check-catalog, --help (the window comes next)
+│   ├── winweaver-ui/      the window on eframe (variant A): lib.rs (tabs, the menu with the presets, the command
+│   │                      bar, navigation, search, settings, shortcuts, the actions applied after each frame),
+│   │                      views.rs (the tree and the detail panel); the presets are embedded from data/presets
+│   └── winweaver/         the executable: the window without arguments, --version, --check-catalog, --help
 ├── data/
 │   ├── catalog/           groups.json, 00-17 rules files, lang/ru.json and lang/uk.json: the catalog data
 │   │                      of the predecessor (0.11), embedded into the executable by core/catalog/embedded.rs
@@ -57,7 +60,7 @@ ported (clean room specification first, then implementation).
     └── design/            UI design variants: README.md (comparison) and mockups/ (HTML, a shared CSS)
 ```
 
-Planned: `crates/winweaver-ui` (eframe), `crates/winweaver-win` (the Windows API), `crates/winweaver-mcp`,
+Planned: `crates/winweaver-win` (the Windows API), `crates/winweaver-mcp`,
 `data/lang/<code>/ui.json`, `data/themes/`, `data/docs/`.
 
 ## 4. Project rules
@@ -98,7 +101,9 @@ cargo run -p winweaver -- --check-catalog
 cargo build --release --workspace
 ```
 
-CI runs the same on every push and pull request (`.github/workflows/ci.yml`). When `cargo fmt` finds
+CI runs the same on every push and pull request (`.github/workflows/ci.yml`): the Linux job formats, lints and
+tests `winweaver-core` only (the window needs the Windows runner), the Windows job lints and tests the whole
+workspace, runs the catalog check and builds the release zip. When `cargo fmt` finds
 differences, the job `check` uploads `fmt.patch` in the artifact `ci-files` (with `Cargo.lock`): download it
 with `gh run download <run id> -n ci-files` and apply it with `git apply fmt.patch`.
 
@@ -114,7 +119,8 @@ root.
 | Specification | Draft 0.1: scope, UI, documents, features, architecture | 14.10.2026 |
 | UI design | Four HTML mockups (variants A, B, C and the secondary tabs), comparison and recommendation | 14.10.2026 |
 | Core | Catalog model and embedded data, strict JSON reading, translations, the profile format 1, the resolver; tests on the real data; written without a local toolchain, CI is the first compiler | 14.10.2026 |
-| Executable | CLI only (`--version`, `--check-catalog`); the window, the Windows API and the MCP server not started | 14.10.2026 |
+| Window | Skeleton of variant A on eframe 0.36: tabs, the menu with the presets, the command bar, navigation with the selection history, breadcrumb, bookmark and search with history, the tree with three-state group check boxes and the search filter, the detail panel with the parameter editor and the collapsible description, the Settings tab (catalog language, theme), shortcuts, the status bar; nothing persisted yet, no file dialogs, no forms editing, no build; CI green | 14.10.2026 |
+| Executable | The window without arguments, `--version`, `--check-catalog`; the Windows API and the MCP server not started | 14.10.2026 |
 
 Decisions awaited from the customer: the UI variant to build (`docs/design/README.md`), the file extensions
 (`docs/spec/02-documents.md` section 1), the minimum Windows version for the executable (10 1809 or 10 21H2).
