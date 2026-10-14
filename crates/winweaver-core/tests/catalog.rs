@@ -34,9 +34,15 @@ fn embedded_matches_data_folder() {
         .collect();
     names.sort();
     let embedded: Vec<&str> = embedded::RULE_FILES.iter().map(|(n, _)| *n).collect();
-    assert_eq!(names, embedded, "RULE_FILES in embedded.rs must list the folder");
+    assert_eq!(
+        names, embedded,
+        "RULE_FILES in embedded.rs must list the folder"
+    );
     let from_dir = Catalog::load_dir(&dir).expect("the folder loads");
-    assert_eq!(from_dir.rules().len(), Catalog::embedded().unwrap().rules().len());
+    assert_eq!(
+        from_dir.rules().len(),
+        Catalog::embedded().unwrap().rules().len()
+    );
 }
 
 #[test]
@@ -48,7 +54,9 @@ fn catalog_is_sound() {
 
 #[test]
 fn catalog_files_are_ascii_without_dashes() {
-    for (name, text) in embedded::RULE_FILES.iter().chain([(embedded::GROUPS_FILE, embedded::GROUPS)].iter())
+    for (name, text) in embedded::RULE_FILES
+        .iter()
+        .chain([(embedded::GROUPS_FILE, embedded::GROUPS)].iter())
     {
         assert!(text.is_ascii(), "{name} must be ASCII");
     }
@@ -69,14 +77,28 @@ fn translations_cover_every_rule() {
         assert!(!t.language.is_empty(), "{}: _language", t.code);
         for rule in catalog.rules() {
             let entry = t.rules.get(&rule.id);
-            assert!(entry.is_some_and(|e| e.title.is_some()), "{}: {} has no title", t.code, rule.id);
-            assert!(!t.rule_title(rule).is_empty(), "{}: {} has an empty title", t.code, rule.id);
+            assert!(
+                entry.is_some_and(|e| e.title.is_some()),
+                "{}: {} has no title",
+                t.code,
+                rule.id
+            );
+            assert!(
+                !t.rule_title(rule).is_empty(),
+                "{}: {} has an empty title",
+                t.code,
+                rule.id
+            );
         }
         for id in t.rules.keys() {
             assert!(catalog.rule(id).is_some(), "{}: unknown rule {id}", t.code);
         }
         for id in t.groups.keys() {
-            assert!(catalog.group(id).is_some(), "{}: unknown group {id}", t.code);
+            assert!(
+                catalog.group(id).is_some(),
+                "{}: unknown group {id}",
+                t.code
+            );
         }
     }
 }
@@ -88,14 +110,27 @@ fn presets_load_and_office_is_the_defaults() {
     for name in ["office", "strict", "laptop", "home"] {
         let path = dir.join(format!("{name}.wwprofile"));
         let mut profile = Profile::load(&path).unwrap_or_else(|e| panic!("{name}: {e}"));
-        assert_eq!(profile.catalog, catalog.version(), "{name}: catalog version");
+        assert_eq!(
+            profile.catalog,
+            catalog.version(),
+            "{name}: catalog version"
+        );
         let unknown = profile.split_unknown(&catalog);
         assert!(unknown.is_empty(), "{name}: unknown rules {unknown:?}");
-        assert_eq!(profile.to_json(), std::fs::read_to_string(&path).unwrap(), "{name}: canonical");
+        assert_eq!(
+            profile.to_json(),
+            std::fs::read_to_string(&path).unwrap(),
+            "{name}: canonical"
+        );
     }
     let office = Profile::load(&dir.join("office.wwprofile")).unwrap();
     for rule in catalog.rules() {
-        assert_eq!(office.is_on(&rule.id), rule.default, "Office differs from the default of {}", rule.id);
+        assert_eq!(
+            office.is_on(&rule.id),
+            rule.default,
+            "Office differs from the default of {}",
+            rule.id
+        );
     }
 }
 
@@ -116,11 +151,17 @@ fn profile_round_trip() {
 
 #[test]
 fn profile_of_another_format_is_refused() {
-    let err = Profile::parse(r#"{"format": "something", "version": 1, "catalog": "0", "name": "x"}"#, "x.wwprofile")
-        .unwrap_err();
+    let err = Profile::parse(
+        r#"{"format": "something", "version": 1, "catalog": "0", "name": "x"}"#,
+        "x.wwprofile",
+    )
+    .unwrap_err();
     assert!(err.to_string().contains("not a WinWeaver profile"), "{err}");
-    let err = Profile::parse(r#"{"format": "winweaver-profile", "version": 99, "catalog": "0", "name": "x"}"#, "x")
-        .unwrap_err();
+    let err = Profile::parse(
+        r#"{"format": "winweaver-profile", "version": 99, "catalog": "0", "name": "x"}"#,
+        "x",
+    )
+    .unwrap_err();
     assert!(err.to_string().contains("newer"), "{err}");
 }
 
@@ -140,7 +181,12 @@ fn resolver_blocks_dependents() {
     assert!(resolution.in_effect(&dependent.id));
     profile.set_on(&required, false);
     let resolution = resolver::resolve(&catalog, &profile);
-    assert_eq!(*resolution.state(&dependent.id), State::Blocked { by: required.clone() });
+    assert_eq!(
+        *resolution.state(&dependent.id),
+        State::Blocked {
+            by: required.clone()
+        }
+    );
     assert!(!resolution.in_effect(&dependent.id));
 }
 

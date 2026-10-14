@@ -185,10 +185,13 @@ impl Profile {
         let mut profile = Self::new(name, catalog.version());
         for rule in catalog.rules() {
             if rule.default {
-                profile.rules.insert(rule.id.clone(), Choice {
-                    on: true,
-                    ..Choice::default()
-                });
+                profile.rules.insert(
+                    rule.id.clone(),
+                    Choice {
+                        on: true,
+                        ..Choice::default()
+                    },
+                );
             }
         }
         profile

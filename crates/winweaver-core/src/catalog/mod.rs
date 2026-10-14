@@ -139,7 +139,9 @@ impl Catalog {
         };
         for root in TREE_ROOTS {
             if catalog.group(root).is_none() {
-                return Err(CatalogError::Invalid(format!("the root group {root} is missing")));
+                return Err(CatalogError::Invalid(format!(
+                    "the root group {root} is missing"
+                )));
             }
         }
         for group in &catalog.groups {

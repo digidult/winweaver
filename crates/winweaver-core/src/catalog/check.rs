@@ -22,7 +22,9 @@ pub fn check(catalog: &Catalog) -> Vec<String> {
 fn check_rule(catalog: &Catalog, rule: &Rule, problems: &mut Vec<String>) {
     let id = &rule.id;
     if !is_safe_id(id) {
-        problems.push(format!("rule {id}: the id has characters outside a-z, 0-9, dot, hyphen"));
+        problems.push(format!(
+            "rule {id}: the id has characters outside a-z, 0-9, dot, hyphen"
+        ));
     }
     if rule.actions.is_empty() {
         problems.push(format!("rule {id}: no actions"));
@@ -94,7 +96,9 @@ fn check_param(id: &str, name: &str, param: &Param, rule: &Rule, problems: &mut 
                 }
             }
         }
-        Param::Int { default, min, max, .. } => {
+        Param::Int {
+            default, min, max, ..
+        } => {
             if min > max || default < min || default > max {
                 problems.push(format!(
                     "rule {id}: parameter {name}: default {default} outside {min}..{max}"
@@ -117,7 +121,9 @@ fn check_param(id: &str, name: &str, param: &Param, rule: &Rule, problems: &mut 
         .flat_map(|a| a.placeholder_fields())
         .any(|(_, text)| placeholders(&text).contains(&name));
     if !used {
-        problems.push(format!("rule {id}: parameter {name} is not used by any action"));
+        problems.push(format!(
+            "rule {id}: parameter {name} is not used by any action"
+        ));
     }
 }
 
@@ -158,9 +164,9 @@ pub fn is_guid(text: &str) -> bool {
 /// Identifiers of rules and parameters: ASCII lower case letters, digits, dots and hyphens.
 pub fn is_safe_id(id: &str) -> bool {
     !id.is_empty()
-        && id
-            .bytes()
-            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'.' || b == b'-' || b == b'_')
+        && id.bytes().all(|b| {
+            b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'.' || b == b'-' || b == b'_'
+        })
 }
 
 /// Whether a JSON value of an enum parameter equals another (numbers compare by value).
@@ -177,7 +183,10 @@ mod tests {
 
     #[test]
     fn placeholders_are_found() {
-        assert_eq!(placeholders("/lockoutthreshold:{threshold} x {y}"), vec!["threshold", "y"]);
+        assert_eq!(
+            placeholders("/lockoutthreshold:{threshold} x {y}"),
+            vec!["threshold", "y"]
+        );
         assert!(placeholders("no braces").is_empty());
         assert!(placeholders("{ not an id }").is_empty());
         assert!(placeholders("{d3162b92-9365-467a-956b-92703aca08af} {1} {B4BF}").is_empty());

@@ -138,7 +138,11 @@ mod tests {
 
     #[test]
     fn too_deep_is_refused() {
-        let text = format!("{}1{}", "[".repeat(MAX_DEPTH + 1), "]".repeat(MAX_DEPTH + 1));
+        let text = format!(
+            "{}1{}",
+            "[".repeat(MAX_DEPTH + 1),
+            "]".repeat(MAX_DEPTH + 1)
+        );
         let err = parse::<serde_json::Value>(&text, "deep.json").unwrap_err();
         assert!(matches!(err, JsonError::TooDeep { .. }), "{err}");
     }

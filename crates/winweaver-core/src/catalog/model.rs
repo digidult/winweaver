@@ -128,7 +128,9 @@ fn yes() -> bool {
 impl Param {
     pub fn title(&self) -> &str {
         match self {
-            Param::Enum { title, .. } | Param::Int { title, .. } | Param::Text { title, .. } => title,
+            Param::Enum { title, .. } | Param::Int { title, .. } | Param::Text { title, .. } => {
+                title
+            }
         }
     }
 

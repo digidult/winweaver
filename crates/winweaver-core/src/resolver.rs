@@ -14,7 +14,9 @@ pub enum State {
     On,
     Off,
     /// Chosen on, but a required rule is not in effect.
-    Blocked { by: String },
+    Blocked {
+        by: String,
+    },
 }
 
 impl State {
