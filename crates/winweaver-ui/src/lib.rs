@@ -704,7 +704,10 @@ impl App {
             &mut self.settings.desc_open,
             "Show the description panel (Ctrl+D)",
         );
-        ui.checkbox(&mut self.settings.show_guide_at_start, "Open the guide at the next start");
+        ui.checkbox(
+            &mut self.settings.show_guide_at_start,
+            "Open the guide at the next start",
+        );
         ui.add_space(12.0);
         ui.horizontal(|ui| {
             ui.weak(format!("Settings file: {}", Settings::path().display()));
@@ -731,7 +734,10 @@ impl App {
             self.open_diff_path(path);
             return;
         }
-        if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("md")) {
+        if path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("md"))
+        {
             self.open_md_path(path);
             return;
         }
@@ -1063,8 +1069,11 @@ impl App {
                     .file_name()
                     .map(|n| n.to_string_lossy().into_owned())
                     .unwrap_or_else(|| "page.md".to_owned());
-                self.docs
-                    .push(Doc::Markdown(Box::new(MdDoc::new(title, Some(path.clone()), text))));
+                self.docs.push(Doc::Markdown(Box::new(MdDoc::new(
+                    title,
+                    Some(path.clone()),
+                    text,
+                ))));
                 self.active = self.docs.len() - 1;
                 self.status = format!("Opened {}", path.display());
                 self.remember_recent(&path);

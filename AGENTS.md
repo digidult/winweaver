@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 14.10.2026 (the seventh commit: diff files and the diff tab; the sixth: the forms Installation, Accounts and Languages; the fifth: the profile check and the messages panel; the fourth: settings.json and the file dialogs; the third: the window skeleton on eframe; the second: the Cargo workspace,
+Updated with every change of structure, commands or task status. Last update: 14.10.2026 (the eighth commit: Markdown tabs and the guide; the seventh: diff files and the diff tab; the sixth: the forms Installation, Accounts and Languages; the fifth: the profile check and the messages panel; the fourth: settings.json and the file dialogs; the third: the window skeleton on eframe; the second: the Cargo workspace,
 the core crate, the catalog data and CI; the first: specification draft 0.1 and four UI mockups).
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
@@ -52,7 +52,7 @@ ported (clean room specification first, then implementation).
 │   ├── winweaver-ui/      the window on eframe (variant A): lib.rs (tabs, the menu with the presets, the command
 │   │                      bar, navigation, search, shortcuts, file dialogs, the actions applied after each frame),
 │   │                      views.rs (the tree and the detail panel), forms.rs (Installation, Accounts, Languages),
-│   │                      diffview.rs (the diff tab),
+│   │                      diffview.rs (the diff tab), mdview.rs (Markdown tabs, the guide embedded from data/docs),
 │   │                      settings.rs (settings.json next to the exe);
 │   │                      the presets are embedded from data/presets
 │   └── winweaver/         the executable: the window without arguments, --version, --check-catalog, --help
@@ -61,6 +61,7 @@ ported (clean room specification first, then implementation).
 │   │                      of the predecessor (0.11), embedded into the executable by core/catalog/embedded.rs
 │   └── presets/           office, strict, laptop, home .wwprofile, converted once from the predecessor's
 │   ├── resources/         timezones.json and keyboards.json of the predecessor, embedded by core/resources.rs
+│   ├── docs/              guide.md, the guide shown at the first start (English; translations come as lang/<code>/docs/)
 │                          presets (a generator from the catalog defaults comes later)
 └── docs/
     ├── spec/              clean room specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
@@ -126,7 +127,7 @@ root.
 | Specification | Draft 0.1: scope, UI, documents, features, architecture | 14.10.2026 |
 | UI design | Four HTML mockups (variants A, B, C and the secondary tabs), comparison and recommendation | 14.10.2026 |
 | Core | Catalog model and embedded data, strict JSON reading, translations, the profile format 1, the resolver, the profile check (validate), diff files (diff), the reference data (resources); tests on the real data; written without a local toolchain, CI is the first compiler | 14.10.2026 |
-| Window | Skeleton of variant A on eframe 0.36: tabs, the menu with the presets, the command bar, navigation with the selection history, breadcrumb, bookmark and search with history, the tree with three-state group check boxes and the search filter, the detail panel with the parameter editor and the collapsible description, the Settings tab (catalog language, theme), shortcuts, the status bar, the window title; settings.json next to the executable (language, theme, description panel, recent files, search history), Open and Save as through the native dialogs (rfd), recent files, a dropped file opens; Check (F7) lists the issues in a panel under the navigation row, a click selects the rule or the form; the forms Installation, Accounts and Languages edit the profile; Compare with a file or a preset opens a diff tab (three columns, links to the rules), the right side applies to the profile tab the diff was made from, a diff saves and opens as a .wwdiff file; no build, no This PC, bookmarks in memory only; CI green | 14.10.2026 |
+| Window | Skeleton of variant A on eframe 0.36: tabs, the menu with the presets, the command bar, navigation with the selection history, breadcrumb, bookmark and search with history, the tree with three-state group check boxes and the search filter, the detail panel with the parameter editor and the collapsible description, the Settings tab (catalog language, theme), shortcuts, the status bar, the window title; settings.json next to the executable (language, theme, description panel, recent files, search history), Open and Save as through the native dialogs (rfd), recent files, a dropped file opens; Check (F7) lists the issues in a panel under the navigation row, a click selects the rule or the form; the forms Installation, Accounts and Languages edit the profile; Compare with a file or a preset opens a diff tab (three columns, links to the rules), the right side applies to the profile tab the diff was made from, a diff saves and opens as a .wwdiff file; the guide opens at the first start, from the menu and with F1, any .md file opens as a tab (egui_commonmark); no build, no This PC, bookmarks in memory only; CI green | 14.10.2026 |
 | Executable | The window without arguments, `--version`, `--check-catalog`; the Windows API and the MCP server not started | 14.10.2026 |
 
 Decisions awaited from the customer: the UI variant to build (`docs/design/README.md`), the file extensions
