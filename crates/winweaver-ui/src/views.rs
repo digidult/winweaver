@@ -6,6 +6,7 @@ use winweaver_core::catalog::{Action, Catalog, Group, Param, ROOT_UNATTEND, Rule
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::resolver::State;
 
+use crate::i18n::{tr, trf};
 use crate::{Act, ProfileDoc, ScriptKind, Search, Sel, Settings};
 
 pub fn rtitle<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule) -> &'a str {
@@ -72,6 +73,36 @@ fn switch(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
         );
     }
     response
+}
+
+fn mechanism_title(m: winweaver_core::catalog::Mechanism) -> &'static str {
+    match m {
+        winweaver_core::catalog::Mechanism::Unattend => "Answer file",
+        winweaver_core::catalog::Mechanism::Policy => "Policy",
+        winweaver_core::catalog::Mechanism::Other => "Other",
+    }
+}
+
+fn phase_title(p: winweaver_core::catalog::Phase) -> &'static str {
+    use winweaver_core::catalog::Phase;
+    match p {
+        Phase::Windowspe => "windowsPE",
+        Phase::SpecializeXml | Phase::Specialize => "specialize",
+        Phase::OobeXml => "oobeSystem",
+        Phase::DefaultUser => "default user",
+        Phase::UserFirstLogon => "first sign-in",
+        Phase::PostOobe => "after OOBE",
+    }
+}
+
+fn level_title(l: winweaver_core::catalog::Level) -> &'static str {
+    use winweaver_core::catalog::Level;
+    match l {
+        Level::Optional => "optional",
+        Level::Baseline => "baseline",
+        Level::Recommended => "recommended",
+        Level::Risky => "risky",
+    }
 }
 
 fn twisty(ui: &mut egui::Ui, open: bool) -> bool {
@@ -151,7 +182,7 @@ fn group_rows(
                     ui.horizontal(|ui| {
                         ui.add_space(14.0);
                         let selected = matches!(&doc.sel, Sel::Form(f) if *f == form);
-                        if ui.selectable_label(selected, form.title()).clicked() {
+                        if ui.selectable_label(selected, tr(form.title())).clicked() {
                             acts.push(Act::Select(Sel::Form(form)));
                         }
                     });
@@ -180,7 +211,7 @@ fn rule_row(
     ui.horizontal(|ui| {
         ui.add_space(14.0);
         let mut on = doc.profile.is_on(&rule.id);
-        if ui.checkbox(&mut on, "").changed() {
+        if ui.checkbox(&mut on, tr("")).changed() {
             acts.push(Act::Toggle(rule.id.clone(), on));
         }
         let state = doc.resolution.state(&rule.id);
@@ -193,17 +224,17 @@ fn rule_row(
         let response = ui.selectable_label(selected, text);
         let clicked = response.clicked();
         if let State::Blocked { by } = state {
-            response.on_hover_text(format!("Blocked: needs {by}"));
+            response.on_hover_text(trf("Blocked: needs {by}", &[("by", by)]));
         }
         if clicked {
             acts.push(Act::Select(Sel::Rule(rule.id.clone())));
         }
         if !rule.params.is_empty() {
-            ui.weak(format!("{} parameters", rule.params.len()));
+            ui.weak(trf("{n} parameters", &[("n", &rule.params.len())]));
         } else if inline && matches!(&doc.sel, Sel::Group(g) if g == &rule.group) {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let mut on = doc.profile.is_on(&rule.id);
-                if switch(ui, &mut on).on_hover_text("On or off").changed() {
+                if switch(ui, &mut on).on_hover_text(tr("On or off")).changed() {
                     acts.push(Act::Toggle(rule.id.clone(), on));
                 }
             });
@@ -226,7 +257,7 @@ pub fn detail_view(
             Sel::Group(id) => group_detail(ui, catalog, texts, doc, id, acts),
             Sel::Rule(id) => rule_detail(ui, catalog, texts, doc, settings, id, acts),
             Sel::Form(form) => {
-                crate::forms::form_view(ui, doc, *form, &settings.language, acts);
+                crate::forms::form_view(ui, doc, *form, &crate::i18n::current(), acts);
             }
         });
 }
@@ -234,30 +265,34 @@ pub fn detail_view(
 fn profile_detail(ui: &mut egui::Ui, doc: &ProfileDoc) {
     let p = &doc.profile;
     ui.heading(&p.name);
-    ui.weak(format!("Catalog {}", p.catalog));
+    ui.weak(trf("Catalog {version}", &[("version", &p.catalog)]));
     if !p.comment.is_empty() {
         ui.label(&p.comment);
     }
     ui.add_space(8.0);
-    ui.strong("Installation");
-    ui.label(format!(
-        "Edition {}, product key {}, time zone {}, computer name {}, accounts {}, disk {}",
-        p.install.edition,
-        p.install.product_key_mode,
-        p.install.time_zone,
-        p.install.computer_name_mode,
-        p.install.account_mode,
-        p.install.disk_mode
+    ui.strong(tr("Installation"));
+    ui.label(trf(
+        "Edition {edition}, product key {key}, time zone {zone}, computer name {name}, accounts {accounts}, disk {disk}",
+        &[
+            ("edition", &p.install.edition),
+            ("key", &p.install.product_key_mode),
+            ("zone", &p.install.time_zone),
+            ("name", &p.install.computer_name_mode),
+            ("accounts", &p.install.account_mode),
+            ("disk", &p.install.disk_mode),
+        ],
     ));
-    ui.strong("Languages");
-    ui.label(format!(
-        "Display {}, system {}, user {}, input {}",
-        p.languages.ui_language,
-        p.languages.system_locale,
-        p.languages.user_locale,
-        p.languages.input.join(", ")
+    ui.strong(tr("Languages"));
+    ui.label(trf(
+        "Display {ui}, system {system}, user {user}, input {input}",
+        &[
+            ("ui", &p.languages.ui_language),
+            ("system", &p.languages.system_locale),
+            ("user", &p.languages.user_locale),
+            ("input", &p.languages.input.join(", ")),
+        ],
     ));
-    ui.strong("Accounts");
+    ui.strong(tr("Accounts"));
     for a in &p.accounts {
         ui.label(format!("{} ({})", a.name, a.group));
     }
@@ -285,12 +320,12 @@ fn group_detail(
         .iter()
         .filter(|r| doc.resolution.in_effect(&r.id))
         .count();
-    ui.weak(format!("{} rules, {on} in effect", rules.len()));
+    ui.weak(trf("{n} rules, {on} in effect", &[("n", &rules.len()), ("on", &on)]));
     ui.horizontal(|ui| {
-        if ui.button("Turn all on").clicked() {
+        if ui.button(tr("Turn all on")).clicked() {
             acts.push(Act::SetGroup(id.to_owned(), true));
         }
-        if ui.button("Turn all off").clicked() {
+        if ui.button(tr("Turn all off")).clicked() {
             acts.push(Act::SetGroup(id.to_owned(), false));
         }
     });
@@ -302,14 +337,14 @@ fn group_detail(
     ui.add_space(8.0);
     this_pc_card(ui, acts);
     ui.add_space(8.0);
-    ui.strong("Rules of this group");
+    ui.strong(tr("Rules of this group"));
     for rule in catalog.rules_in(id) {
         ui.horizontal(|ui| {
             let mut on = doc.profile.is_on(&rule.id);
             if ui.checkbox(&mut on, rtitle(texts, rule)).changed() {
                 acts.push(Act::Toggle(rule.id.clone(), on));
             }
-            if ui.small_button("open").clicked() {
+            if ui.small_button(tr("open")).clicked() {
                 acts.push(Act::Select(Sel::Rule(rule.id.clone())));
             }
         });
@@ -319,18 +354,18 @@ fn group_detail(
 /// The commands of This PC for the selected rule or group.
 fn this_pc_card(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
     ui.add_space(8.0);
-    ui.strong("This PC, this selection");
+    ui.strong(tr("This PC, this selection"));
     ui.horizontal_wrapped(|ui| {
-        if ui.button("Check on this PC").clicked() {
+        if ui.button(tr("Check on this PC")).clicked() {
             acts.push(Act::CheckOnPc);
         }
-        if ui.button("Read into the profile").clicked() {
+        if ui.button(tr("Read into the profile")).clicked() {
             acts.push(Act::ReadSelection);
         }
-        if ui.button("Save an apply script...").clicked() {
+        if ui.button(tr("Save an apply script...")).clicked() {
             acts.push(Act::SaveScript(ScriptKind::Apply));
         }
-        if ui.button("Save a return-to-defaults script...").clicked() {
+        if ui.button(tr("Save a return-to-defaults script...")).clicked() {
             acts.push(Act::SaveScript(ScriptKind::Revert));
         }
     });
@@ -380,35 +415,35 @@ fn rule_detail(
     ui.label(RichText::new(rtitle(texts, rule)).size(18.0).strong());
     ui.monospace(&rule.id);
     ui.horizontal(|ui| {
-        ui.weak(format!("{:?}", Catalog::mechanism(rule)));
-        ui.weak(format!("{:?}", rule.phase));
-        ui.weak(format!("{:?}", rule.level));
+        ui.weak(tr(mechanism_title(Catalog::mechanism(rule))));
+        ui.weak(phase_title(rule.phase));
+        ui.weak(tr(level_title(rule.level)));
         if rule.default {
-            ui.weak("on by default");
+            ui.weak(tr("on by default"));
         }
     });
     ui.add_space(6.0);
     ui.horizontal(|ui| {
         let mut on = doc.profile.is_on(&rule.id);
-        if ui.checkbox(&mut on, "On").changed() {
+        if ui.checkbox(&mut on, tr("On")).changed() {
             acts.push(Act::Toggle(rule.id.clone(), on));
         }
         match doc.resolution.state(&rule.id) {
-            State::On => ui.weak("in effect"),
-            State::Off => ui.weak("off"),
+            State::On => ui.weak(tr("in effect")),
+            State::Off => ui.weak(tr("off")),
             State::Blocked { by } => {
-                ui.weak("blocked: needs");
+                ui.weak(tr("blocked: needs"));
                 let title = catalog.rule(by).map_or(by.as_str(), |r| rtitle(texts, r));
                 if ui.link(title).clicked() {
                     acts.push(Act::Select(Sel::Rule(by.clone())));
                 }
-                ui.weak("")
+                ui.weak(tr(""))
             }
         };
     });
     if !rule.params.is_empty() {
         ui.add_space(6.0);
-        ui.strong("Parameters");
+        ui.strong(tr("Parameters"));
         for (name, param) in &rule.params {
             param_editor(ui, catalog, texts, doc, rule, name, param, acts);
         }
@@ -416,11 +451,11 @@ fn rule_detail(
     this_pc_card(ui, acts);
     if !settings.desc_open {
         ui.add_space(6.0);
-        ui.weak("Description folded (Ctrl+D)");
+        ui.weak(tr("Description folded (Ctrl+D)"));
         return;
     }
     ui.add_space(10.0);
-    egui::CollapsingHeader::new("What it does")
+    egui::CollapsingHeader::new(tr("What it does"))
         .id_salt("desc-what")
         .default_open(true)
         .show(ui, |ui| {
@@ -430,14 +465,14 @@ fn rule_detail(
             }
         });
     if !rule.risk.is_empty() {
-        egui::CollapsingHeader::new("Risk")
+        egui::CollapsingHeader::new(tr("Risk"))
             .id_salt("desc-risk")
             .default_open(true)
             .show(ui, |ui| {
                 ui.label(&rule.risk);
             });
     }
-    egui::CollapsingHeader::new("What it writes")
+    egui::CollapsingHeader::new(tr("What it writes"))
         .id_salt("desc-writes")
         .show(ui, |ui| {
             for action in &rule.actions {
@@ -445,13 +480,10 @@ fn rule_detail(
             }
         });
     if !rule.requires.is_empty() || !rule.conflicts.is_empty() {
-        egui::CollapsingHeader::new("Dependencies and conflicts")
+        egui::CollapsingHeader::new(tr("Dependencies and conflicts"))
             .id_salt("desc-deps")
             .show(ui, |ui| {
-                for (label, list) in [
-                    ("Needs", &rule.requires),
-                    ("Conflicts with", &rule.conflicts),
-                ] {
+                for (label, list) in [(tr("Needs"), &rule.requires), (tr("Conflicts with"), &rule.conflicts)] {
                     for other in list {
                         ui.horizontal(|ui| {
                             ui.weak(label);
@@ -467,7 +499,7 @@ fn rule_detail(
             });
     }
     if !rule.versions.is_empty() || !rule.rollback.is_empty() || !rule.verify.is_empty() {
-        egui::CollapsingHeader::new("Versions, check and rollback")
+        egui::CollapsingHeader::new(tr("Versions, check and rollback"))
             .id_salt("desc-more")
             .show(ui, |ui| {
                 for text in [&rule.versions, &rule.verify, &rule.rollback] {
@@ -478,13 +510,10 @@ fn rule_detail(
             });
     }
     if !rule.doc.is_empty() {
-        egui::CollapsingHeader::new("Reference")
+        egui::CollapsingHeader::new(tr("Reference"))
             .id_salt("desc-ref")
             .show(ui, |ui| {
-                ui.weak(format!(
-                    "Documentation: {} (opens in a tab with the next milestone)",
-                    rule.doc
-                ));
+                ui.weak(trf("Documentation: {doc}", &[("doc", &rule.doc)]));
             });
     }
 }
@@ -558,6 +587,6 @@ fn param_editor(
                 }
             }
         }
-        ui.weak(format!("default {}", param.default_value()));
+        ui.weak(trf("default {value}", &[("value", &param.default_value())]));
     });
 }

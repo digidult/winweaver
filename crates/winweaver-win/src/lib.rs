@@ -21,3 +21,15 @@ pub fn this_pc() -> Option<Box<dyn Machine>> {
         None
     }
 }
+
+/// The language of the Windows interface as a two-letter code (`uk`, `ru`, `en`), if known.
+pub fn ui_language() -> Option<String> {
+    #[cfg(windows)]
+    {
+        native::ui_language()
+    }
+    #[cfg(not(windows))]
+    {
+        None
+    }
+}

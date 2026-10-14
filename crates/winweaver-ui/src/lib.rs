@@ -7,6 +7,7 @@
 
 mod diffview;
 mod forms;
+mod i18n;
 mod marksview;
 mod mdview;
 mod settings;
@@ -33,6 +34,7 @@ use winweaver_core::validate::{self, Issue, Severity, Target};
 
 pub use diffview::DiffDoc;
 pub use forms::Form;
+pub use i18n::{tr, trf};
 pub use mdview::MdDoc;
 pub use settings::{Settings, ThemeChoice, exe_dir};
 
@@ -151,8 +153,8 @@ impl Doc {
             Doc::Profile(d) => d.title(),
             Doc::Diff(d) => d.title(),
             Doc::Markdown(d) => d.title.clone(),
-            Doc::Bookmarks => "Bookmarks".to_owned(),
-            Doc::Settings => "Settings".to_owned(),
+            Doc::Bookmarks => tr("Bookmarks").to_owned(),
+            Doc::Settings => tr("Settings").to_owned(),
         }
     }
 
@@ -415,16 +417,16 @@ impl App {
 
     fn tabs_row(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         ui.horizontal(|ui| {
-            ui.menu_button("Menu", |ui| {
-                ui.menu_button("New", |ui| {
-                    if ui.button("Empty profile").clicked() {
+            ui.menu_button(tr("Menu"), |ui| {
+                ui.menu_button(tr("New"), |ui| {
+                    if ui.button(tr("Empty profile")).clicked() {
                         acts.push(Act::NewProfile(None));
                         ui.close();
                     }
                     ui.separator();
                     for (name, _) in PRESETS {
                         if ui
-                            .button(format!("Profile from the preset {name}"))
+                            .button(trf("Profile from the preset {name}", &[("name", &name)]))
                             .clicked()
                         {
                             acts.push(Act::NewProfile(Some(name)));
@@ -433,14 +435,14 @@ impl App {
                     }
                 });
                 if ui
-                    .add(egui::Button::new("Open...").shortcut_text("Ctrl+O"))
+                    .add(egui::Button::new(tr("Open...")).shortcut_text("Ctrl+O"))
                     .clicked()
                 {
                     acts.push(Act::Open);
                     ui.close();
                 }
                 ui.add_enabled_ui(!self.settings.recent.is_empty(), |ui| {
-                    ui.menu_button("Open recent", |ui| {
+                    ui.menu_button(tr("Open recent"), |ui| {
                         for path in &self.settings.recent {
                             if ui.button(path.display().to_string()).clicked() {
                                 acts.push(Act::OpenPath(path.clone()));
@@ -450,32 +452,32 @@ impl App {
                     });
                 });
                 if ui
-                    .add(egui::Button::new("Save").shortcut_text("Ctrl+S"))
+                    .add(egui::Button::new(tr("Save")).shortcut_text("Ctrl+S"))
                     .clicked()
                 {
                     acts.push(Act::Save);
                     ui.close();
                 }
                 if ui
-                    .add(egui::Button::new("Save as...").shortcut_text("Ctrl+Shift+S"))
+                    .add(egui::Button::new(tr("Save as...")).shortcut_text("Ctrl+Shift+S"))
                     .clicked()
                 {
                     acts.push(Act::SaveAs);
                     ui.close();
                 }
                 if ui
-                    .add(egui::Button::new("Close tab").shortcut_text("Ctrl+W"))
+                    .add(egui::Button::new(tr("Close tab")).shortcut_text("Ctrl+W"))
                     .clicked()
                 {
                     acts.push(Act::CloseTab(self.active, false));
                     ui.close();
                 }
                 ui.separator();
-                if ui.button("Compare with a file...").clicked() {
+                if ui.button(tr("Compare with a file...")).clicked() {
                     acts.push(Act::Compare);
                     ui.close();
                 }
-                ui.menu_button("Compare with a preset", |ui| {
+                ui.menu_button(tr("Compare with a preset"), |ui| {
                     for (name, _) in PRESETS {
                         if ui.button(name).clicked() {
                             acts.push(Act::CompareWith(name));
@@ -484,30 +486,30 @@ impl App {
                     }
                 });
                 ui.separator();
-                if ui.button("Close tab, discard changes").clicked() {
+                if ui.button(tr("Close tab, discard changes")).clicked() {
                     acts.push(Act::CloseTab(self.active, true));
                     ui.close();
                 }
                 ui.separator();
                 if ui
-                    .add(egui::Button::new("Guide").shortcut_text("F1"))
+                    .add(egui::Button::new(tr("Guide")).shortcut_text("F1"))
                     .clicked()
                 {
                     acts.push(Act::OpenGuide);
                     ui.close();
                 }
-                if ui.button("Bookmarks").clicked() {
+                if ui.button(tr("Bookmarks")).clicked() {
                     acts.push(Act::OpenMarks);
                     ui.close();
                 }
                 if ui
-                    .add(egui::Button::new("Settings").shortcut_text("Ctrl+,"))
+                    .add(egui::Button::new(tr("Settings")).shortcut_text("Ctrl+,"))
                     .clicked()
                 {
                     acts.push(Act::OpenSettings);
                     ui.close();
                 }
-                if ui.button("About").clicked() {
+                if ui.button(tr("About")).clicked() {
                     acts.push(Act::Message(format!(
                         "WinWeaver {}, catalog {}, settings {}",
                         winweaver_core::APP_VERSION,
@@ -516,7 +518,7 @@ impl App {
                     )));
                     ui.close();
                 }
-                if ui.button("Exit").clicked() {
+                if ui.button(tr("Exit")).clicked() {
                     acts.push(Act::Exit);
                     ui.close();
                 }
@@ -538,8 +540,8 @@ impl App {
                     response.on_hover_text(p.display().to_string());
                 }
                 if ui
-                    .small_button("x")
-                    .on_hover_text("Close (Ctrl+W)")
+                    .small_button(tr("x"))
+                    .on_hover_text(tr("Close (Ctrl+W)"))
                     .clicked()
                 {
                     acts.push(Act::CloseTab(i, false));
@@ -547,8 +549,8 @@ impl App {
                 ui.add_space(4.0);
             }
             if ui
-                .button("+")
-                .on_hover_text("New profile (Ctrl+N)")
+                .button(tr("+"))
+                .on_hover_text(tr("New profile (Ctrl+N)"))
                 .clicked()
             {
                 acts.push(Act::NewProfile(None));
@@ -558,18 +560,19 @@ impl App {
 
     /// The commands of the active document: icons with labels, icons only when `compact`.
     fn toolbar_items(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>, compact: bool) {
-        let label = |icon: &str, text: &str| {
+        let label = |icon: &str, text: &'static str| {
+            let text = tr(text);
             if compact {
                 icon.to_owned()
             } else {
                 format!("{icon} {text}")
             }
         };
-        let button = |ui: &mut egui::Ui, icon: &str, text: &str, keys: &str| {
+        let button = |ui: &mut egui::Ui, icon: &str, text: &'static str, keys: &str| {
             let hint = if keys.is_empty() {
-                text.to_owned()
+                tr(text).to_owned()
             } else {
-                format!("{text} ({keys})")
+                format!("{} ({keys})", tr(text))
             };
             ui.button(label(icon, text)).on_hover_text(hint).clicked()
         };
@@ -591,42 +594,42 @@ impl App {
         }
         ui.separator();
         ui.menu_button(label("\u{1F5A5}", "This PC"), |ui| {
-            if ui.button("Read this PC into a new profile").clicked() {
+            if ui.button(tr("Read this PC into a new profile")).clicked() {
                 acts.push(Act::ReadPc);
                 ui.close();
             }
-            if ui.button("Read the selection into this profile").clicked() {
+            if ui.button(tr("Read the selection into this profile")).clicked() {
                 acts.push(Act::ReadSelection);
                 ui.close();
             }
-            if ui.button("Check the selection on this PC").clicked() {
+            if ui.button(tr("Check the selection on this PC")).clicked() {
                 acts.push(Act::CheckOnPc);
                 ui.close();
             }
             ui.separator();
             if ui
-                .button("Save an apply script for the selection...")
+                .button(tr("Save an apply script for the selection..."))
                 .clicked()
             {
                 acts.push(Act::SaveScript(ScriptKind::Apply));
                 ui.close();
             }
             if ui
-                .button("Save a return-to-defaults script for the selection...")
+                .button(tr("Save a return-to-defaults script for the selection..."))
                 .clicked()
             {
                 acts.push(Act::SaveScript(ScriptKind::Revert));
                 ui.close();
             }
             if ui
-                .button("Save an audit script for the selection...")
+                .button(tr("Save an audit script for the selection..."))
                 .clicked()
             {
                 acts.push(Act::SaveScript(ScriptKind::Audit));
                 ui.close();
             }
             ui.separator();
-            if ui.button("Open an audit report...").clicked() {
+            if ui.button(tr("Open an audit report...")).clicked() {
                 acts.push(Act::OpenReport);
                 ui.close();
             }
@@ -644,7 +647,7 @@ impl App {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             return Vec::new();
         };
-        let texts = texts_for(&self.texts, &self.settings.language);
+        let texts = texts_for(&self.texts, &i18n::current());
         let mut crumbs = vec![(doc.profile.name.clone(), Sel::None)];
         let group = match &doc.sel {
             Sel::None | Sel::Form(_) => None,
@@ -667,7 +670,7 @@ impl App {
             crumbs.push((views::rtitle(texts, rule).to_owned(), Sel::Rule(id.clone())));
         }
         if let Sel::Form(f) = &doc.sel {
-            crumbs.push((f.title().to_owned(), Sel::Form(*f)));
+            crumbs.push((tr(f.title()).to_owned(), Sel::Form(*f)));
         }
         crumbs
     }
@@ -683,15 +686,15 @@ impl App {
             .is_some_and(|b| self.marks.find(&b).is_some());
         ui.horizontal(|ui| {
             if ui
-                .add_enabled(can_back, egui::Button::new("<").frame(false))
-                .on_hover_text("Back (Alt+Left)")
+                .add_enabled(can_back, egui::Button::new(tr("<")).frame(false))
+                .on_hover_text(tr("Back (Alt+Left)"))
                 .clicked()
             {
                 acts.push(Act::Back);
             }
             if ui
-                .add_enabled(can_forward, egui::Button::new(">").frame(false))
-                .on_hover_text("Forward (Alt+Right)")
+                .add_enabled(can_forward, egui::Button::new(tr(">")).frame(false))
+                .on_hover_text(tr("Forward (Alt+Right)"))
                 .clicked()
             {
                 acts.push(Act::Forward);
@@ -699,7 +702,7 @@ impl App {
             ui.separator();
             for (i, (label, sel)) in crumbs.iter().enumerate() {
                 if i > 0 {
-                    ui.weak(">");
+                    ui.weak(tr(">"));
                 }
                 let text = if i + 1 == crumbs.len() {
                     egui::RichText::new(label.as_str()).strong()
@@ -713,8 +716,8 @@ impl App {
             if !crumbs.is_empty() {
                 let mut m = marked;
                 if ui
-                    .toggle_value(&mut m, "Bookmark")
-                    .on_hover_text("Ctrl+B")
+                    .toggle_value(&mut m, tr("Bookmark"))
+                    .on_hover_text(tr("Ctrl+B"))
                     .changed()
                 {
                     acts.push(Act::ToggleBookmark);
@@ -729,8 +732,8 @@ impl App {
                 }
                 if self.search.open {
                     if ui
-                        .button("x")
-                        .on_hover_text("Clear and close (Esc)")
+                        .button(tr("x"))
+                        .on_hover_text(tr("Clear and close (Esc)"))
                         .clicked()
                     {
                         self.search.text.clear();
@@ -740,7 +743,7 @@ impl App {
                     let response = ui.add(
                         egui::TextEdit::singleline(&mut self.search.text)
                             .id(id)
-                            .hint_text("Search rules (Ctrl+F)")
+                            .hint_text(tr("Search rules (Ctrl+F)"))
                             .desired_width((ui.available_width() - 60.0).clamp(220.0, 640.0)),
                     );
                     if self.search.focus {
@@ -759,7 +762,7 @@ impl App {
                         }
                     }
                     if !self.search.history.is_empty() {
-                        ui.menu_button("v", |ui| {
+                        ui.menu_button(tr("v"), |ui| {
                             for h in self.search.history.clone() {
                                 if ui.button(&h).clicked() {
                                     self.search.text = h;
@@ -768,7 +771,7 @@ impl App {
                             }
                         });
                     }
-                } else if ui.button("Search").on_hover_text("Ctrl+F").clicked() {
+                } else if ui.button(tr("Search")).on_hover_text(tr("Ctrl+F")).clicked() {
                     self.search.open = true;
                     self.search.focus = true;
                 }
@@ -798,56 +801,54 @@ impl App {
 
     fn settings_view(&mut self, ui: &mut egui::Ui) {
         let before = self.settings.clone();
-        ui.heading("Settings");
+        ui.heading(tr("Settings"));
         ui.add_space(8.0);
         ui.horizontal(|ui| {
-            ui.label("Language of the catalog texts");
-            let current = if self.settings.language == "en" {
-                "English".to_owned()
+            ui.label(tr("Language"));
+            let langs = i18n::languages(&lang_dir());
+            let current = if self.settings.language.is_empty() {
+                tr("Follow Windows").to_owned()
             } else {
-                texts_for(&self.texts, &self.settings.language)
-                    .map(|t| t.language.clone())
-                    .unwrap_or_else(|| self.settings.language.clone())
+                langs
+                    .iter()
+                    .find(|l| l.code == self.settings.language)
+                    .map_or_else(|| self.settings.language.clone(), |l| l.name.clone())
             };
             egui::ComboBox::from_id_salt("language")
                 .selected_text(current)
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.settings.language, "en".to_owned(), "English");
-                    for t in &self.texts {
-                        ui.selectable_value(
-                            &mut self.settings.language,
-                            t.code.clone(),
-                            &t.language,
-                        );
+                    ui.selectable_value(&mut self.settings.language, String::new(), tr("Follow Windows"));
+                    for l in &langs {
+                        ui.selectable_value(&mut self.settings.language, l.code.clone(), &l.name);
                     }
                 });
         });
         ui.horizontal(|ui| {
-            ui.label("Theme");
+            ui.label(tr("Theme"));
             ui.radio_value(
                 &mut self.settings.theme,
                 ThemeChoice::System,
-                "Follow Windows",
+                tr("Follow Windows"),
             );
-            ui.radio_value(&mut self.settings.theme, ThemeChoice::Light, "Light");
-            ui.radio_value(&mut self.settings.theme, ThemeChoice::Dark, "Dark");
+            ui.radio_value(&mut self.settings.theme, ThemeChoice::Light, tr("Light"));
+            ui.radio_value(&mut self.settings.theme, ThemeChoice::Dark, tr("Dark"));
         });
         ui.checkbox(
             &mut self.settings.desc_open,
-            "Show the description panel (Ctrl+D)",
+            tr("Show the description panel (Ctrl+D)"),
         );
         ui.checkbox(
             &mut self.settings.show_guide_at_start,
-            "Open the guide at the next start",
+            tr("Open the guide at the next start"),
         );
         ui.checkbox(
             &mut self.settings.inline_switches,
-            "Switches at the end of the rows of the selected group",
+            tr("Switches at the end of the rows of the selected group"),
         );
         ui.add_space(12.0);
         ui.horizontal(|ui| {
             ui.weak(format!("Settings file: {}", Settings::path().display()));
-            if !self.settings.recent.is_empty() && ui.small_button("Forget recent files").clicked()
+            if !self.settings.recent.is_empty() && ui.small_button(tr("Forget recent files")).clicked()
             {
                 self.settings.recent.clear();
             }
@@ -857,7 +858,30 @@ impl App {
             if before.theme != self.settings.theme {
                 self.theme_applied = false;
             }
+            if before.language != self.settings.language {
+                self.apply_language();
+            }
         }
+    }
+
+    /// The language the window shows: the setting, or the language of Windows when it says to
+    /// follow Windows, English when there is no file for it.
+    fn effective_language(&self) -> String {
+        let wanted = if self.settings.language.is_empty() {
+            winweaver_win::ui_language().unwrap_or_else(|| "en".to_owned())
+        } else {
+            self.settings.language.clone()
+        };
+        if i18n::languages(&lang_dir()).iter().any(|l| l.code == wanted) {
+            wanted
+        } else {
+            "en".to_owned()
+        }
+    }
+
+    fn apply_language(&mut self) {
+        let code = self.effective_language();
+        i18n::set_language(&code, &lang_dir());
     }
 
     fn remember_recent(&mut self, path: &Path) {
@@ -914,13 +938,13 @@ impl App {
                 };
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = format!("Open failed: {e}"),
+            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
         }
     }
 
     fn save_active(&mut self, ask: bool) {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
-            self.status = "Nothing to save: the active tab is not a profile".to_owned();
+            self.status = tr("Nothing to save: the active tab is not a profile").to_owned();
             return;
         };
         let path = match (&doc.path, ask) {
@@ -950,14 +974,14 @@ impl App {
                 self.status = format!("Saved {}", path.display());
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = format!("Save failed: {e}"),
+            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
         }
     }
 
     fn check_active(&mut self) {
         let catalog = &self.catalog;
         let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
-            self.status = "Nothing to check: the active tab is not a profile".to_owned();
+            self.status = tr("Nothing to check: the active tab is not a profile").to_owned();
             return;
         };
         doc.issues = validate::check(catalog, &doc.profile, &doc.resolution);
@@ -987,10 +1011,10 @@ impl App {
                     Issue {
                         severity: Severity::Error,
                         target: Target::Profile,
-                        text: format!("Build: {e}"),
+                        text: trf("Build: {e}", &[("e", &e)]),
                     },
                 );
-                self.status = format!("Build failed: {e}");
+                self.status = trf("Build failed: {e}", &[("e", &e)]);
                 return;
             }
         };
@@ -998,7 +1022,7 @@ impl App {
             doc.issues.push(Issue {
                 severity: Severity::Warning,
                 target: Target::Profile,
-                text: format!("Build: {w}"),
+                text: trf("Build: {w}", &[("w", &w)]),
             });
         }
         let dir = output_dir();
@@ -1008,13 +1032,13 @@ impl App {
         }
         let xml_path = dir.join("autounattend.xml");
         if let Err(e) = write_file(&xml_path, build.xml.as_bytes()) {
-            self.status = format!("Build: {e}");
+            self.status = trf("Build: {e}", &[("e", &e)]);
             return;
         }
         for (name, text) in &build.scripts {
             let text = text.replace("\r\n", "\n").replace('\n', "\r\n");
             if let Err(e) = write_file(&dir.join(name), text.as_bytes()) {
-                self.status = format!("Build: {e}");
+                self.status = trf("Build: {e}", &[("e", &e)]);
                 return;
             }
         }
@@ -1048,12 +1072,12 @@ impl App {
     /// Reads this PC: every rule into a new profile tab, or the selection into the open profile.
     fn read_pc(&mut self, only_selection: bool) {
         let Some(machine) = winweaver_win::this_pc() else {
-            self.status = "This PC can be read on Windows only".to_owned();
+            self.status = tr("This PC can be read on Windows only").to_owned();
             return;
         };
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             self.status =
-                "Read this PC: open a profile first; its rules and forms are the base".to_owned();
+                tr("Read this PC: open a profile first; its rules and forms are the base").to_owned();
             return;
         };
         let ids = if only_selection {
@@ -1078,7 +1102,7 @@ impl App {
             .map(|n| Issue {
                 severity: Severity::Info,
                 target: Target::Profile,
-                text: format!("This PC: {n}"),
+                text: trf("This PC: {n}", &[("n", &n)]),
             })
             .collect();
         if !plan.excluded.is_empty() {
@@ -1125,7 +1149,7 @@ impl App {
     /// Compares the selected rules of the profile with this PC and lists the result.
     fn check_on_pc(&mut self) {
         let Some(machine) = winweaver_win::this_pc() else {
-            self.status = "This PC can be read on Windows only".to_owned();
+            self.status = tr("This PC can be read on Windows only").to_owned();
             return;
         };
         let ids = self.selection_ids();
@@ -1175,7 +1199,7 @@ impl App {
     fn save_script(&mut self, kind: ScriptKind) {
         let ids = self.selection_ids();
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
-            self.status = "Save a script: the active tab is not a profile".to_owned();
+            self.status = tr("Save a script: the active tab is not a profile").to_owned();
             return;
         };
         let version = winweaver_core::APP_VERSION;
@@ -1200,7 +1224,7 @@ impl App {
         let (text, summary, name, with_undo) = match made {
             Ok(m) => m,
             Err(e) => {
-                self.status = format!("Script not made: {e}");
+                self.status = trf("Script not made: {e}", &[("e", &e)]);
                 return;
             }
         };
@@ -1208,7 +1232,7 @@ impl App {
             match scripts::undo_script(&doc.profile, version) {
                 Ok(u) => Some(u),
                 Err(e) => {
-                    self.status = format!("Script not made: {e}");
+                    self.status = trf("Script not made: {e}", &[("e", &e)]);
                     return;
                 }
             }
@@ -1216,7 +1240,7 @@ impl App {
             None
         };
         let start = output_dir();
-        let dialog = rfd::FileDialog::new().set_title("Choose the folder for the script");
+        let dialog = rfd::FileDialog::new().set_title(tr("Choose the folder for the script"));
         let dialog = if start.is_dir() {
             dialog.set_directory(start)
         } else {
@@ -1227,13 +1251,13 @@ impl App {
         };
         let path = dir.join(&name);
         if let Err(e) = write_file(&path, &scripts::file_bytes(&text)) {
-            self.status = format!("Script not saved: {e}");
+            self.status = trf("Script not saved: {e}", &[("e", &e)]);
             return;
         }
         if let Some(u) = undo
             && let Err(e) = write_file(&dir.join(scripts::UNDO_NAME), &scripts::file_bytes(&u))
         {
-            self.status = format!("Undo script not saved: {e}");
+            self.status = trf("Undo script not saved: {e}", &[("e", &e)]);
             return;
         }
         self.status = format!(
@@ -1245,15 +1269,15 @@ impl App {
     /// Opens the report of an audit script made on another PC and reads it into a new profile.
     fn open_report(&mut self) {
         let Some(path) = rfd::FileDialog::new()
-            .set_title("Open an audit report")
-            .add_filter("Audit report", &["json"])
+            .set_title(tr("Open an audit report"))
+            .add_filter(tr("Audit report"), &["json"])
             .pick_file()
         else {
             return;
         };
         match Report::load(&path) {
             Ok(report) => self.open_report_from(report, &path),
-            Err(e) => self.status = format!("Report not read: {e}"),
+            Err(e) => self.status = trf("Report not read: {e}", &[("e", &e)]),
         }
     }
 
@@ -1293,14 +1317,14 @@ impl App {
         if doc.issues.is_empty() {
             return;
         }
-        let texts = texts_for(&self.texts, &self.settings.language);
+        let texts = texts_for(&self.texts, &i18n::current());
         egui::Panel::top("messages").show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.strong(validate::summary(&doc.issues));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui
-                        .small_button("x")
-                        .on_hover_text("Hide the messages")
+                        .small_button(tr("x"))
+                        .on_hover_text(tr("Hide the messages"))
                         .clicked()
                     {
                         acts.push(Act::ClearMessages);
@@ -1314,9 +1338,9 @@ impl App {
                     for issue in &doc.issues {
                         ui.horizontal(|ui| {
                             let tag = match issue.severity {
-                                Severity::Error => "Error",
-                                Severity::Warning => "Warning",
-                                Severity::Info => "Info",
+                                Severity::Error => tr("Error"),
+                                Severity::Warning => tr("Warning"),
+                                Severity::Info => tr("Info"),
                             };
                             ui.weak(tag);
                             let (label, sel) = match &issue.target {
@@ -1412,7 +1436,7 @@ impl App {
                 Act::CloseTab(i, force) => {
                     if i < self.docs.len() {
                         if self.docs[i].dirty() && !force {
-                            self.status = "The tab has unsaved changes: save it (Ctrl+S) or close it from the menu discarding them".to_owned();
+                            self.status = tr("The tab has unsaved changes: save it (Ctrl+S) or close it from the menu discarding them").to_owned();
                         } else {
                             self.docs.remove(i);
                             if self.active >= self.docs.len() {
@@ -1514,7 +1538,7 @@ impl App {
                     if let Some(path) = pick_profile() {
                         match Profile::load(&path) {
                             Ok(other) => self.compare_active(other, Some(&path)),
-                            Err(e) => self.status = format!("Compare: {e}"),
+                            Err(e) => self.status = trf("Compare: {e}", &[("e", &e)]),
                         }
                     }
                 }
@@ -1522,7 +1546,7 @@ impl App {
                     if let Some((name, text)) = PRESETS.iter().find(|p| p.0 == name) {
                         match Profile::parse(text, name) {
                             Ok(other) => self.compare_active(other, None),
-                            Err(e) => self.status = format!("Compare: {e}"),
+                            Err(e) => self.status = trf("Compare: {e}", &[("e", &e)]),
                         }
                     }
                 }
@@ -1565,7 +1589,7 @@ impl App {
         match self.marks.save(&self.marks_path) {
             Ok(()) => true,
             Err(e) => {
-                self.status = format!("Bookmarks not saved: {e}");
+                self.status = trf("Bookmarks not saved: {e}", &[("e", &e)]);
                 false
             }
         }
@@ -1580,7 +1604,7 @@ impl App {
                 self.remember_recent(&path);
                 self.apply(vec![Act::OpenMarks]);
             }
-            Err(e) => self.status = format!("Open failed: {e}"),
+            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
         }
     }
 
@@ -1641,7 +1665,7 @@ impl App {
                 self.status = format!("Opened {}", path.display());
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = format!("Open failed: {e}"),
+            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
         }
     }
 
@@ -1652,7 +1676,7 @@ impl App {
         let text = match jsonfile::read_text_bom(&path, jsonfile::MAX_BYTES) {
             Ok(t) => t,
             Err(e) => {
-                self.status = format!("Open failed: {e}");
+                self.status = trf("Open failed: {e}", &[("e", &e)]);
                 return;
             }
         };
@@ -1677,7 +1701,7 @@ impl App {
                     .map(|n| Issue {
                         severity: Severity::Info,
                         target: Target::Profile,
-                        text: format!("Open: {n}"),
+                        text: trf("Open: {n}", &[("n", &n)]),
                     })
                     .collect();
                 if !unknown.is_empty() {
@@ -1698,7 +1722,7 @@ impl App {
                 );
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = format!("Open failed: {e}"),
+            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
         }
     }
 
@@ -1714,13 +1738,13 @@ impl App {
                 self.status = format!("Opened {}", path.display());
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = format!("Open failed: {e}"),
+            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
         }
     }
 
     fn compare_active(&mut self, other: Profile, other_path: Option<&Path>) {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
-            self.status = "Compare: the active tab is not a profile".to_owned();
+            self.status = tr("Compare: the active tab is not a profile").to_owned();
             return;
         };
         let base_side = diff::Side::of(&doc.profile, doc.path.as_deref());
@@ -1756,7 +1780,7 @@ impl App {
         };
         let diff = d.diff.clone();
         let Some(i) = self.diff_target(&diff) else {
-            self.status = "Apply: open the profile to change first".to_owned();
+            self.status = tr("Apply: open the profile to change first").to_owned();
             return;
         };
         let catalog = &self.catalog;
@@ -1770,7 +1794,7 @@ impl App {
 
     fn save_active_diff(&mut self) {
         let Some(Doc::Diff(d)) = self.docs.get(self.active) else {
-            self.status = "Save as a diff file: the active tab is not a diff".to_owned();
+            self.status = tr("Save as a diff file: the active tab is not a diff").to_owned();
             return;
         };
         let proposed = format!(
@@ -1780,7 +1804,7 @@ impl App {
             diff::EXTENSION
         );
         let Some(path) = file_dialog("WinWeaver diff", diff::EXTENSION)
-            .set_title("Save the diff as")
+            .set_title(tr("Save the diff as"))
             .set_file_name(proposed)
             .save_file()
         else {
@@ -1801,7 +1825,7 @@ impl App {
                 self.status = format!("Saved {}", path.display());
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = format!("Save failed: {e}"),
+            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
         }
     }
 
@@ -1811,7 +1835,7 @@ impl App {
         }
         self.settings_dirty = false;
         if let Err(e) = self.settings.save_to(&Settings::path()) {
-            self.status = format!("Settings not saved: {e}");
+            self.status = trf("Settings not saved: {e}", &[("e", &e)]);
         }
     }
 
@@ -1857,7 +1881,7 @@ impl eframe::App for App {
         };
         if kind == 0 {
             let catalog = &self.catalog;
-            let texts = texts_for(&self.texts, &self.settings.language);
+            let texts = texts_for(&self.texts, &i18n::current());
             let search = &self.search;
             let settings = &self.settings;
             if let Some(Doc::Profile(doc)) = self.docs.get(self.active) {
@@ -1882,7 +1906,7 @@ impl eframe::App for App {
             }
         } else if kind == 3 {
             let catalog = &self.catalog;
-            let texts = texts_for(&self.texts, &self.settings.language);
+            let texts = texts_for(&self.texts, &i18n::current());
             if let Some(Doc::Diff(doc)) = self.docs.get(self.active) {
                 let doc: &DiffDoc = doc;
                 egui::CentralPanel::default().show(ui, |ui| {
@@ -1903,7 +1927,7 @@ impl eframe::App for App {
             egui::CentralPanel::default().show(ui, |ui| self.settings_view(ui));
         } else {
             egui::CentralPanel::default().show(ui, |ui| {
-                ui.label("No document is open. Use Menu, New or Ctrl+N.");
+                ui.label(tr("No document is open. Use Menu, New or Ctrl+N."));
             });
         }
         self.apply(acts);
@@ -1924,6 +1948,11 @@ fn sel_from_item(catalog: &Catalog, item: &str) -> Sel {
     } else {
         Sel::None
     }
+}
+
+/// The folder of the translations next to the executable.
+pub fn lang_dir() -> PathBuf {
+    exe_dir().join("lang")
 }
 
 /// The folder of the built files next to the executable.
@@ -1987,21 +2016,20 @@ fn profile_dialog() -> rfd::FileDialog {
 }
 
 fn pick_profile() -> Option<PathBuf> {
-    profile_dialog().set_title("Open a profile").pick_file()
+    profile_dialog().set_title(tr("Open a profile")).pick_file()
 }
 
 /// The open dialog for every kind of file the program opens.
 fn pick_any() -> Option<PathBuf> {
     let dir = profiles_dir();
     let dialog = rfd::FileDialog::new()
-        .set_title("Open")
-        .add_filter(
-            "WinWeaver files",
+        .set_title(tr("Open"))
+        .add_filter(tr("WinWeaver files"),
             &[profile::EXTENSION, diff::EXTENSION, bookmarks::EXTENSION],
         )
-        .add_filter("Answer files (the profile they embed)", &["xml"])
-        .add_filter("WinKickOff profiles and audit reports", &["json"])
-        .add_filter("Markdown pages", &["md"]);
+        .add_filter(tr("Answer files (the profile they embed)"), &["xml"])
+        .add_filter(tr("WinKickOff profiles and audit reports"), &["json"])
+        .add_filter(tr("Markdown pages"), &["md"]);
     let dialog = if dir.is_dir() {
         dialog.set_directory(dir)
     } else {
@@ -2013,7 +2041,7 @@ fn pick_any() -> Option<PathBuf> {
 fn ask_save_path(proposed: &str) -> Option<PathBuf> {
     let _ = std::fs::create_dir_all(profiles_dir());
     profile_dialog()
-        .set_title("Save the profile as")
+        .set_title(tr("Save the profile as"))
         .set_file_name(proposed)
         .save_file()
 }
@@ -2038,6 +2066,7 @@ pub fn run() -> Result<(), String> {
         options,
         Box::new(move |_cc| {
             let mut app = App::new(catalog, texts, settings);
+            app.apply_language();
             if let Some(w) = warning {
                 app.status = format!("Settings not read, the defaults are used: {w}");
             }

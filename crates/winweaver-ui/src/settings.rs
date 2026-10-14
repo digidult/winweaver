@@ -35,7 +35,7 @@ impl ThemeChoice {
 pub struct Settings {
     pub format: String,
     pub version: u32,
-    /// The language code of the catalog texts: `en` or a code of the translations.
+    /// The language of the interface and the catalog texts: a code, empty to follow Windows.
     pub language: String,
     pub theme: ThemeChoice,
     /// Whether the description panel is shown.
@@ -54,7 +54,7 @@ impl Default for Settings {
         Self {
             format: FORMAT.to_owned(),
             version: VERSION,
-            language: "en".to_owned(),
+            language: String::new(),
             theme: ThemeChoice::System,
             desc_open: true,
             recent: Vec::new(),

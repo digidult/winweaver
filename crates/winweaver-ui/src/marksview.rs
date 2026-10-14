@@ -3,22 +3,19 @@
 
 use std::path::Path;
 
+use crate::i18n::{tr, trf};
 use eframe::egui;
 use winweaver_core::bookmarks::Bookmarks;
 
 use crate::Act;
 
 pub fn marks_view(ui: &mut egui::Ui, marks: &Bookmarks, path: &Path, acts: &mut Vec<Act>) {
-    ui.heading("Bookmarks");
-    ui.weak(format!(
-        "{} ({} bookmarks)",
-        path.display(),
-        marks.items.len()
-    ));
-    ui.weak("The star in the navigation row adds the current position here or removes it. A click on a title goes to the position; the comment is edited in place.");
+    ui.heading(tr("Bookmarks"));
+    ui.weak(trf("{path} ({n} bookmarks)", &[("path", &path.display()), ("n", &marks.items.len())]));
+    ui.weak(tr("The Bookmark button in the navigation row adds the current position here or removes it. A click on a title goes to the position; the comment is edited in place."));
     ui.add_space(8.0);
     if marks.items.is_empty() {
-        ui.label("No bookmarks yet.");
+        ui.label(tr("No bookmarks yet."));
         return;
     }
     egui::ScrollArea::vertical()
@@ -43,7 +40,7 @@ pub fn marks_view(ui: &mut egui::Ui, marks: &Bookmarks, path: &Path, acts: &mut 
                         ui.weak(b.item.as_str());
                     }
                     ui.weak(b.document.as_str());
-                    if ui.small_button("remove").clicked() {
+                    if ui.small_button(tr("remove")).clicked() {
                         acts.push(Act::RemoveMark(i));
                     }
                 });
@@ -52,7 +49,7 @@ pub fn marks_view(ui: &mut egui::Ui, marks: &Bookmarks, path: &Path, acts: &mut 
                     .add(
                         egui::TextEdit::singleline(&mut comment)
                             .id_salt(("bookmark-comment", i))
-                            .hint_text("Comment")
+                            .hint_text(tr("Comment"))
                             .desired_width(640.0),
                     )
                     .changed()

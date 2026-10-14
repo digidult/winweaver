@@ -11,6 +11,7 @@ use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::profile::Choice;
 
 use crate::views::rtitle;
+use crate::i18n::{tr, trf};
 use crate::{Act, Sel};
 
 pub struct DiffDoc {
@@ -39,9 +40,9 @@ impl DiffDoc {
 /// The state of a rule in one profile as text.
 fn choice_text(choice: &Option<Choice>) -> String {
     match choice {
-        None => "off".to_owned(),
+        None => tr("off").to_owned(),
         Some(c) => {
-            let mut text = if c.on { "on" } else { "off" }.to_owned();
+            let mut text = if c.on { tr("on") } else { tr("off") }.to_owned();
             for (name, value) in &c.params {
                 text.push_str(&format!(", {name} = {value}"));
             }
@@ -78,29 +79,23 @@ pub fn diff_view(
 ) {
     let d = &doc.diff;
     ui.heading(format!("{} vs {}", d.base.name, d.other.name));
-    ui.weak(format!(
-        "{} differences; left: {}, right: {}",
-        d.count(),
-        if d.base.path.is_empty() {
-            "not saved"
-        } else {
-            d.base.path.as_str()
-        },
-        if d.other.path.is_empty() {
-            "not saved"
-        } else {
-            d.other.path.as_str()
-        }
+    ui.weak(trf(
+        "{n} differences; left: {left}, right: {right}",
+        &[
+            ("n", &d.count()),
+            ("left", &if d.base.path.is_empty() { tr("not saved") } else { d.base.path.as_str() }),
+            ("right", &if d.other.path.is_empty() { tr("not saved") } else { d.other.path.as_str() }),
+        ],
     ));
     ui.horizontal(|ui| {
         if ui
-            .button("Apply the right side to the open profile")
-            .on_hover_text("Sets every difference to the value of the right side in the profile tab the diff was made from")
+            .button(tr("Apply the right side to the open profile"))
+            .on_hover_text(tr("Sets every difference to the value of the right side in the profile tab the diff was made from"))
             .clicked()
         {
             acts.push(Act::ApplyDiff);
         }
-        if ui.button("Save as a diff file...").clicked() {
+        if ui.button(tr("Save as a diff file...")).clicked() {
             acts.push(Act::SaveDiffAs);
         }
     });
@@ -113,24 +108,24 @@ pub fn diff_view(
                 .striped(true)
                 .spacing([18.0, 4.0])
                 .show(ui, |ui| {
-                    ui.strong("Item");
+                    ui.strong(tr("Item"));
                     ui.strong(&d.base.name);
                     ui.strong(&d.other.name);
                     ui.end_row();
                     for (k, f) in &d.install {
-                        ui.label(format!("Installation: {k}"));
+                        ui.label(trf("Installation: {k}", &[("k", k)]));
                         ui.label(value_text(&f.base));
                         ui.label(value_text(&f.other));
                         ui.end_row();
                     }
                     for (k, f) in &d.languages {
-                        ui.label(format!("Languages: {k}"));
+                        ui.label(trf("Languages: {k}", &[("k", k)]));
                         ui.label(value_text(&f.base));
                         ui.label(value_text(&f.other));
                         ui.end_row();
                     }
                     if let Some(f) = &d.accounts {
-                        ui.label("Accounts");
+                        ui.label(tr("Accounts"));
                         ui.label(value_text(&f.base));
                         ui.label(value_text(&f.other));
                         ui.end_row();
@@ -150,7 +145,7 @@ pub fn diff_view(
                         if catalog.rule(id).is_some() {
                             continue;
                         }
-                        ui.weak(format!("{id} (not in this catalog)"));
+                        ui.weak(trf("{id} (not in this catalog)", &[("id", id)]));
                         ui.label(choice_text(&r.base));
                         ui.label(choice_text(&r.other));
                         ui.end_row();

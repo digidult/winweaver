@@ -6,6 +6,7 @@ use eframe::egui;
 use winweaver_core::profile::{Account, Install, Languages};
 use winweaver_core::resources;
 
+use crate::i18n::tr;
 use crate::{Act, ProfileDoc};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -67,9 +68,9 @@ pub fn form_view(
     }
 }
 
-fn mode_row(ui: &mut egui::Ui, value: &mut String, options: &[(&str, &str)]) {
+fn mode_row(ui: &mut egui::Ui, value: &mut String, options: &[(&str, &'static str)]) {
     for (id, title) in options {
-        ui.radio_value(value, (*id).to_owned(), *title);
+        ui.radio_value(value, (*id).to_owned(), tr(title));
     }
 }
 
@@ -82,13 +83,13 @@ fn number_field(ui: &mut egui::Ui, value: &mut String, range: std::ops::RangeInc
 }
 
 fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
-    ui.heading("Installation");
+    ui.heading(tr(Form::Install.title()));
     ui.add_space(6.0);
     egui::Grid::new("install-form")
         .num_columns(2)
         .spacing([16.0, 8.0])
         .show(ui, |ui| {
-            ui.label("Edition");
+            ui.label(tr("Edition"));
             egui::ComboBox::from_id_salt("edition")
                 .selected_text(i.edition.clone())
                 .show_ui(ui, |ui| {
@@ -98,7 +99,7 @@ fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
                 });
             ui.end_row();
 
-            ui.label("Product key");
+            ui.label(tr("Product key"));
             ui.horizontal(|ui| {
                 mode_row(
                     ui,
@@ -112,14 +113,14 @@ fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
                 if i.product_key_mode == "key" {
                     ui.add(
                         egui::TextEdit::singleline(&mut i.product_key)
-                            .hint_text("XXXXX-XXXXX-XXXXX-XXXXX-XXXXX")
+                            .hint_text(tr("XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"))
                             .desired_width(240.0),
                     );
                 }
             });
             ui.end_row();
 
-            ui.label("Time zone");
+            ui.label(tr("Time zone"));
             let shown = resources::time_zones()
                 .iter()
                 .find(|z| z.id == i.time_zone)
@@ -138,7 +139,7 @@ fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
                 });
             ui.end_row();
 
-            ui.label("Accounts");
+            ui.label(tr("Accounts"));
             ui.horizontal(|ui| {
                 mode_row(
                     ui,
@@ -151,7 +152,7 @@ fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
             });
             ui.end_row();
 
-            ui.label("Computer name");
+            ui.label(tr("Computer name"));
             ui.horizontal(|ui| {
                 mode_row(
                     ui,
@@ -176,15 +177,15 @@ fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
             });
             ui.end_row();
 
-            ui.label("Workgroup");
+            ui.label(tr("Workgroup"));
             ui.add(
                 egui::TextEdit::singleline(&mut i.workgroup)
-                    .hint_text("Empty: WORKGROUP")
+                    .hint_text(tr("Empty: WORKGROUP"))
                     .desired_width(180.0),
             );
             ui.end_row();
 
-            ui.label("Disk");
+            ui.label(tr("Disk"));
             ui.horizontal(|ui| {
                 mode_row(
                     ui,
@@ -195,21 +196,21 @@ fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
                     ],
                 );
                 if i.disk_mode == "partition" {
-                    ui.label("disk");
+                    ui.label(tr("disk"));
                     number_field(ui, &mut i.disk_id, 0..=99);
-                    ui.label("partition");
+                    ui.label(tr("partition"));
                     number_field(ui, &mut i.partition_id, 1..=128);
                 }
             });
             ui.end_row();
         });
     ui.add_space(8.0);
-    ui.weak("A template of the computer name may hold {serial}, {mac} and {random}; the expanded name fits 15 characters. The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question.");
+    ui.weak(tr("A template of the computer name may hold {serial}, {mac} and {random}; the expanded name fits 15 characters. The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question."));
 }
 
 fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>) {
-    ui.heading("Accounts");
-    ui.weak("The starter accounts without passwords are a decision of the customer: passwords and groups are set after installation. Names and passwords are ASCII; a display name outside ASCII is set after OOBE.");
+    ui.heading(tr("Accounts"));
+    ui.weak(tr("The starter accounts without passwords are a decision of the customer: passwords and groups are set after installation. Names and passwords are ASCII; a display name outside ASCII is set after OOBE."));
     ui.add_space(6.0);
     let mut remove: Option<usize> = None;
     for (n, account) in accounts.iter_mut().enumerate() {
@@ -218,15 +219,15 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>) {
                 .num_columns(2)
                 .spacing([16.0, 6.0])
                 .show(ui, |ui| {
-                    ui.label("Name");
+                    ui.label(tr("Name"));
                     ui.add(egui::TextEdit::singleline(&mut account.name).desired_width(200.0));
                     ui.end_row();
-                    ui.label("Display name");
+                    ui.label(tr("Display name"));
                     ui.add(
                         egui::TextEdit::singleline(&mut account.display_name).desired_width(200.0),
                     );
                     ui.end_row();
-                    ui.label("Group");
+                    ui.label(tr("Group"));
                     egui::ComboBox::from_id_salt("group")
                         .selected_text(account.group.clone())
                         .show_ui(ui, |ui| {
@@ -235,12 +236,12 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>) {
                             }
                         });
                     ui.end_row();
-                    ui.label("Description");
+                    ui.label(tr("Description"));
                     ui.add(
                         egui::TextEdit::singleline(&mut account.description).desired_width(320.0),
                     );
                     ui.end_row();
-                    ui.label("Password");
+                    ui.label(tr("Password"));
                     ui.add(
                         egui::TextEdit::singleline(&mut account.password)
                             .password(true)
@@ -248,7 +249,7 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>) {
                     );
                     ui.end_row();
                 });
-            if ui.small_button("Remove this account").clicked() {
+            if ui.small_button(tr("Remove this account")).clicked() {
                 remove = Some(n);
             }
             ui.separator();
@@ -257,7 +258,7 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>) {
     if let Some(n) = remove {
         accounts.remove(n);
     }
-    if ui.button("Add an account").clicked() {
+    if ui.button(tr("Add an account")).clicked() {
         accounts.push(Account {
             name: format!("User{}", accounts.len() + 1),
             display_name: String::new(),
@@ -269,7 +270,7 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>) {
 }
 
 fn languages_form(ui: &mut egui::Ui, l: &mut Languages) {
-    ui.heading("Languages");
+    ui.heading(tr("Languages"));
     ui.add_space(6.0);
     egui::Grid::new("languages-form")
         .num_columns(2)
@@ -280,14 +281,14 @@ fn languages_form(ui: &mut egui::Ui, l: &mut Languages) {
                 ("System locale", &mut l.system_locale),
                 ("User locale", &mut l.user_locale),
             ] {
-                ui.label(label);
+                ui.label(tr(label));
                 ui.add(egui::TextEdit::singleline(value).desired_width(120.0));
                 ui.end_row();
             }
         });
-    ui.weak("The display language is never changed later: the installed Windows keeps the language of the answer file.");
+    ui.weak(tr("The display language is never changed later: the installed Windows keeps the language of the answer file."));
     ui.add_space(8.0);
-    ui.strong("Input languages (the first is the default)");
+    ui.strong(tr("Input languages (the first is the default)"));
     let mut remove: Option<usize> = None;
     let mut up: Option<usize> = None;
     for (n, tag) in l.input.iter().enumerate() {
@@ -295,10 +296,10 @@ fn languages_form(ui: &mut egui::Ui, l: &mut Languages) {
             let title = resources::keyboard(tag).map_or("", |k| k.title.as_str());
             ui.label(format!("{}. {tag}", n + 1));
             ui.weak(title);
-            if n > 0 && ui.small_button("up").clicked() {
+            if n > 0 && ui.small_button(tr("up")).clicked() {
                 up = Some(n);
             }
-            if ui.small_button("remove").clicked() {
+            if ui.small_button(tr("remove")).clicked() {
                 remove = Some(n);
             }
         });
@@ -310,7 +311,7 @@ fn languages_form(ui: &mut egui::Ui, l: &mut Languages) {
         l.input.remove(n);
     }
     ui.horizontal(|ui| {
-        ui.label("Add");
+        ui.label(tr("Add"));
         egui::ComboBox::from_id_salt("add-input")
             .selected_text("an input language")
             .width(300.0)

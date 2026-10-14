@@ -100,6 +100,15 @@ fn hex_locale(text: &str) -> Option<String> {
         .and_then(locale_name)
 }
 
+/// The language of the Windows interface of the current user, such as `uk`.
+pub fn ui_language() -> Option<String> {
+    use windows_sys::Win32::Globalization::GetUserDefaultUILanguage;
+    // SAFETY: the function takes no arguments and only returns a language id.
+    let lang = unsafe { GetUserDefaultUILanguage() };
+    let name = locale_name(u32::from(lang))?;
+    name.split('-').next().map(str::to_lowercase)
+}
+
 /// Whether the process runs elevated.
 fn elevated() -> bool {
     use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
