@@ -67,7 +67,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      each frame), views.rs (tree, detail panel), forms.rs (Installation, Accounts,
 │   │                      Languages), diffview.rs, mdview.rs (Markdown tabs, the guide), marksview.rs,
 │   │                      mcpview.rs (the MCP tab), session.rs (drafts, the log), settings.rs (settings.json),
-│   │                      i18n.rs (tr and trf, the translations of the interface), themes.rs (colour themes)
+│   │                      i18n.rs (tr and trf, the translations of the interface), themes.rs (colour themes),
+│   │                      catalogview.rs (the tab of an import: its tree without check boxes, a policy)
 │   └── winweaver/         the executable: the window, --mcp stdio, --mcp http, --elevated-apply <plan> <digest>
 │                          (the helper: only a plan-*.json of output/ with that SHA-256), --version, --check-catalog
 ├── data/                  embedded into the executable at build time
@@ -208,6 +209,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   profile wants ASCII items and refuses a pair without `=` or a name twice. An ADMX `list` element becomes
   such a rule (the Disabled rule clears a list that is not additive), `multiText` a MultiString value; lists
   come before the other values of a policy. The read of this PC checks lists but reads no list parameters.
+- The tab of an import (`Doc::Catalog`, "Open" in Settings, Policy templates) shows its tree without check boxes
+  and the policy with its parameters and registry values; "Show in the profile tree" shows a hidden import
+  again, brings the first profile tab to the front, opens the groups above the policy and selects it.
 - The settings tab has the sections General, Policy templates (show, export, rename, remove, import) and Files
   (the folders next to the executable, the recent files); a rename changes the name of the catalog file and
   the title of its tree and saves the file.

@@ -284,5 +284,8 @@
   "OK": "OK",
   "A name of 1 to 120 characters without control characters is needed": "Потрібна назва від 1 до 120 символів без керівних символів",
   "Renamed to {name}": "Перейменовано на {name}",
-  "Renamed, but not saved: {e}": "Перейменовано, але не збережено: {e}"
+  "Renamed, but not saved: {e}": "Перейменовано, але не збережено: {e}",
+  "This import is no longer there.": "Цього імпорту більше немає.",
+  "Select a policy in the tree.": "Виберіть політику в дереві.",
+  "Show in the profile tree": "Показати в дереві профілю"
 }

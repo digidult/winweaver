@@ -5,6 +5,7 @@
 //! tree with the detail panel, the Settings tab and the status bar. Every change of the profile
 //! is collected as an [`Act`] while the frame is drawn and applied afterwards.
 
+mod catalogview;
 mod diffview;
 mod forms;
 mod i18n;
@@ -161,6 +162,8 @@ pub enum Doc {
     Bookmarks,
     Mcp,
     Settings,
+    /// The tree of an import of policy templates.
+    Catalog(Box<catalogview::CatalogDoc>),
 }
 
 impl Doc {
@@ -172,6 +175,7 @@ impl Doc {
             Doc::Bookmarks => tr("Bookmarks").to_owned(),
             Doc::Mcp => "MCP".to_owned(),
             Doc::Settings => tr("Settings").to_owned(),
+            Doc::Catalog(d) => d.name.clone(),
         }
     }
 
@@ -260,6 +264,12 @@ pub enum Act {
     ExportImport(String),
     /// Starts to rename an import: its id and its name now.
     StartRename(String, String),
+    /// Opens the tab of an import.
+    OpenCatalog(String),
+    CatalogSelect(String),
+    CatalogExpand(String, bool),
+    /// Shows a policy of an import (the import, the rule) in the tree of a profile.
+    ShowInProfile(String, String),
     CancelRename,
     RenameImport(String, String),
     /// Prepare the native apply (false) or the return to the defaults (true) of the selection.
@@ -1862,6 +1872,49 @@ impl App {
         }
     }
 
+    /// Opens the tab of an import, or brings it to the front.
+    fn open_catalog(&mut self, id: &str) {
+        if let Some(i) = self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Catalog(c) if c.id == id))
+        {
+            self.active = i;
+            return;
+        }
+        let Some(file) = self.imports.iter().find(|f| f.id == id) else {
+            return;
+        };
+        self.docs
+            .push(Doc::Catalog(Box::new(catalogview::CatalogDoc::new(file))));
+        self.active = self.docs.len() - 1;
+    }
+
+    /// Shows a policy of an import in the tree of a profile: a hidden import is shown again, the
+    /// first profile tab comes to the front, the groups above the policy open and it is selected.
+    fn show_in_profile(&mut self, import: &str, rule: &str) {
+        if let Some(i) = self.settings.hidden_imports.iter().position(|h| h == import) {
+            self.settings.hidden_imports.remove(i);
+            self.settings_dirty = true;
+            self.rebuild_catalog();
+        }
+        let Some(index) = self.docs.iter().position(|d| matches!(d, Doc::Profile(_))) else {
+            self.status = tr("Open a profile first").to_owned();
+            return;
+        };
+        let mut groups = Vec::new();
+        let mut group = self.catalog.rule(rule).map(|r| r.group.clone());
+        while let Some(g) = group {
+            group = self.catalog.group(&g).and_then(|x| x.parent.clone());
+            groups.push(g);
+        }
+        self.active = index;
+        if let Some(Doc::Profile(doc)) = self.docs.get_mut(index) {
+            doc.expanded.extend(groups);
+            doc.select(Sel::Rule(rule.to_owned()));
+        }
+    }
+
     /// Gives an import another name, in the settings and as the title of its tree.
     fn rename_import(&mut self, id: &str, name: &str) {
         self.renaming = None;
@@ -1881,6 +1934,13 @@ impl App {
         }
         let path = imports_dir().join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
         let saved = file.save(&path);
+        for doc in &mut self.docs {
+            if let Doc::Catalog(c) = doc
+                && c.id == id
+            {
+                c.name = name.to_owned();
+            }
+        }
         self.rebuild_catalog();
         self.status = match saved {
             Ok(()) => trf("Renamed to {name}", &[("name", &name)]),
@@ -1919,6 +1979,9 @@ impl App {
                 ui.weak(trf("{rules} rules, {skipped} skipped", &[("rules", &f.rules.len()), ("skipped", &f.skipped.len())]));
                 if ui.small_button(tr("Export...")).clicked() {
                     acts.push(Act::ExportImport(f.id.clone()));
+                }
+                if ui.small_button(tr("Open")).clicked() {
+                    acts.push(Act::OpenCatalog(f.id.clone()));
                 }
                 if ui.small_button(tr("Rename")).clicked() {
                     acts.push(Act::StartRename(f.id.clone(), f.name.clone()));
@@ -2232,6 +2295,22 @@ impl App {
                 }
                 Act::ExportImport(id) => self.export_import(&id),
                 Act::StartRename(id, name) => self.renaming = Some((id, name)),
+                Act::OpenCatalog(id) => self.open_catalog(&id),
+                Act::CatalogSelect(id) => {
+                    if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) {
+                        c.sel = Some(id);
+                    }
+                }
+                Act::CatalogExpand(gid, open) => {
+                    if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) {
+                        if open {
+                            c.expanded.insert(gid);
+                        } else {
+                            c.expanded.remove(&gid);
+                        }
+                    }
+                }
+                Act::ShowInProfile(import, rule) => self.show_in_profile(&import, &rule),
                 Act::CancelRename => self.renaming = None,
                 Act::RenameImport(id, name) => self.rename_import(&id, &name),
                 Act::PlanNative(revert) => self.plan_native(revert),
@@ -2580,7 +2659,7 @@ impl App {
                 Doc::Profile(d) => d.path.clone(),
                 Doc::Diff(d) => d.path.clone(),
                 Doc::Markdown(d) => d.path.clone(),
-                Doc::Bookmarks | Doc::Mcp | Doc::Settings => None,
+                Doc::Bookmarks | Doc::Mcp | Doc::Settings | Doc::Catalog(_) => None,
             };
             if let Some(p) = path {
                 if i == self.active {
@@ -2824,6 +2903,7 @@ impl eframe::App for App {
             Some(Doc::Markdown(_)) => 4,
             Some(Doc::Bookmarks) => 5,
             Some(Doc::Mcp) => 6,
+            Some(Doc::Catalog(_)) => 7,
             None => 2,
         };
         if kind == 0 {
@@ -2879,6 +2959,23 @@ impl eframe::App for App {
             egui::CentralPanel::default().show(ui, |ui| {
                 marksview::marks_view(ui, marks, path, &mut acts);
             });
+        } else if kind == 7 {
+            let shown = match self.docs.get(self.active) {
+                Some(Doc::Catalog(doc)) => self
+                    .imports
+                    .iter()
+                    .find(|f| f.id == doc.id)
+                    .map(|f| (f, doc)),
+                _ => None,
+            };
+            match shown {
+                Some((file, doc)) => catalogview::catalog_view(ui, file, doc, &mut acts),
+                None => {
+                    egui::CentralPanel::default().show(ui, |ui| {
+                        ui.label(tr("This import is no longer there."));
+                    });
+                }
+            }
         } else if kind == 1 {
             egui::CentralPanel::default().show(ui, |ui| self.settings_view(ui));
         } else {

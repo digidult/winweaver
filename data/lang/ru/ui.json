@@ -284,5 +284,8 @@
   "OK": "OK",
   "A name of 1 to 120 characters without control characters is needed": "Нужно имя от 1 до 120 символов без управляющих символов",
   "Renamed to {name}": "Переименовано в {name}",
-  "Renamed, but not saved: {e}": "Переименовано, но не сохранено: {e}"
+  "Renamed, but not saved: {e}": "Переименовано, но не сохранено: {e}",
+  "This import is no longer there.": "Этого импорта больше нет.",
+  "Select a policy in the tree.": "Выберите политику в дереве.",
+  "Show in the profile tree": "Показать в дереве профиля"
 }

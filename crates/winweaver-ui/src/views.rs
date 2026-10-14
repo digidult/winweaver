@@ -412,7 +412,7 @@ fn this_pc_card(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
     });
 }
 
-fn describe(action: &Action) -> String {
+pub(crate) fn describe(action: &Action) -> String {
     match action {
         Action::Reg {
             path,
