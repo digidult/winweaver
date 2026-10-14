@@ -47,6 +47,11 @@ pub struct Settings {
     pub show_guide_at_start: bool,
     /// The rules of the selected group show a switch at the end of their rows.
     pub inline_switches: bool,
+    /// The tabs with files open at the last close are opened again at the start.
+    pub restore_tabs: bool,
+    /// The files of the tabs open at the last close, and the active one among them.
+    pub open_tabs: Vec<PathBuf>,
+    pub active_tab: usize,
 }
 
 impl Default for Settings {
@@ -61,6 +66,9 @@ impl Default for Settings {
             search_history: Vec::new(),
             show_guide_at_start: true,
             inline_switches: true,
+            restore_tabs: true,
+            open_tabs: Vec::new(),
+            active_tab: 0,
         }
     }
 }

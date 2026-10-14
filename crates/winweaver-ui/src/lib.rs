@@ -10,6 +10,7 @@ mod forms;
 mod i18n;
 mod marksview;
 mod mdview;
+mod session;
 mod settings;
 mod views;
 
@@ -81,12 +82,20 @@ pub struct ProfileDoc {
     pub expanded: HashSet<String>,
     pub resolution: Resolution,
     pub issues: Vec<Issue>,
+    /// The name of the draft file of the unsaved changes.
+    pub draft_key: String,
+    /// When the profile last changed and has no draft yet.
+    changed: Option<std::time::Instant>,
 }
 
 impl ProfileDoc {
     pub fn new(profile: Profile, path: Option<PathBuf>, catalog: &Catalog) -> Self {
         let resolution = resolver::resolve(catalog, &profile);
         let expanded = TREE_ROOTS.iter().map(|s| (*s).to_owned()).collect();
+        let draft_key = match &path {
+            Some(p) => session::key_for_path(p),
+            None => session::new_key(),
+        };
         Self {
             profile,
             path,
@@ -97,6 +106,8 @@ impl ProfileDoc {
             expanded,
             resolution,
             issues: Vec::new(),
+            draft_key,
+            changed: None,
         }
     }
 
@@ -135,6 +146,7 @@ impl ProfileDoc {
     fn refresh(&mut self, catalog: &Catalog) {
         self.resolution = resolver::resolve(catalog, &self.profile);
         self.dirty = true;
+        self.changed = Some(std::time::Instant::now());
     }
 }
 
@@ -262,6 +274,9 @@ pub struct App {
     theme_applied: bool,
     last_title: String,
     exit: bool,
+    drafts_dir: PathBuf,
+    logs_dir: PathBuf,
+    last_logged: String,
 }
 
 /// The translation for a language code, `None` for English.
@@ -292,6 +307,9 @@ impl App {
             theme_applied: false,
             last_title: String::new(),
             exit: false,
+            drafts_dir: exe_dir().join("drafts"),
+            logs_dir: exe_dir().join("logs"),
+            last_logged: String::new(),
         }
     }
 
@@ -856,6 +874,10 @@ impl App {
             &mut self.settings.inline_switches,
             tr("Switches at the end of the rows of the selected group"),
         );
+        ui.checkbox(
+            &mut self.settings.restore_tabs,
+            tr("Open the tabs of the last session at the start"),
+        );
         ui.add_space(12.0);
         ui.horizontal(|ui| {
             ui.weak(format!("Settings file: {}", Settings::path().display()));
@@ -984,9 +1006,13 @@ impl App {
         doc.profile.modified = clock::now_utc_iso();
         match doc.profile.save(&path) {
             Ok(()) => {
+                session::remove_draft(&self.drafts_dir, &doc.draft_key);
+                doc.draft_key = session::key_for_path(&path);
+                session::remove_draft(&self.drafts_dir, &doc.draft_key);
                 doc.path = Some(path.clone());
                 doc.dirty = false;
-                self.status = format!("Saved {}", path.display());
+                doc.changed = None;
+                self.status = trf("Saved {path}", &[("path", &path.display())]);
                 self.remember_recent(&path);
             }
             Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
@@ -1454,6 +1480,9 @@ impl App {
                         if self.docs[i].dirty() && !force {
                             self.status = tr("The tab has unsaved changes: save it (Ctrl+S) or close it from the menu discarding them").to_owned();
                         } else {
+                            if let Doc::Profile(d) = &self.docs[i] {
+                                session::remove_draft(&self.drafts_dir, &d.draft_key);
+                            }
                             self.docs.remove(i);
                             if self.active >= self.docs.len() {
                                 self.active = self.docs.len().saturating_sub(1);
@@ -1845,6 +1874,144 @@ impl App {
         }
     }
 
+    /// Writes the drafts of the modified profiles: two seconds after the last change, and all of
+    /// them when the window closes.
+    fn write_drafts(&mut self, all: bool) {
+        let mut failed = None;
+        for doc in &mut self.docs {
+            let Doc::Profile(d) = doc else {
+                continue;
+            };
+            if !d.dirty {
+                continue;
+            }
+            let due = match d.changed {
+                Some(t) => all || t.elapsed() >= std::time::Duration::from_secs(2),
+                None => false,
+            };
+            if !due {
+                continue;
+            }
+            match session::write_draft(&self.drafts_dir, &d.draft_key, d.path.as_deref(), &d.profile) {
+                Ok(()) => d.changed = None,
+                Err(e) => {
+                    d.changed = None;
+                    failed = Some(e);
+                }
+            }
+        }
+        if let Some(e) = failed {
+            self.status = trf("Draft not saved: {e}", &[("e", &e)]);
+        }
+    }
+
+    /// Remembers the files of the open tabs for the next start.
+    fn remember_tabs(&mut self) {
+        let mut tabs = Vec::new();
+        let mut active = 0;
+        for (i, doc) in self.docs.iter().enumerate() {
+            let path = match doc {
+                Doc::Profile(d) => d.path.clone(),
+                Doc::Diff(d) => d.path.clone(),
+                Doc::Markdown(d) => d.path.clone(),
+                Doc::Bookmarks | Doc::Settings => None,
+            };
+            if let Some(p) = path {
+                if i == self.active {
+                    active = tabs.len();
+                }
+                tabs.push(p);
+            }
+        }
+        if tabs != self.settings.open_tabs || active != self.settings.active_tab {
+            self.settings.open_tabs = tabs;
+            self.settings.active_tab = active;
+            self.settings_dirty = true;
+        }
+    }
+
+    /// Opens the tabs of the last close and the drafts of unsaved changes.
+    fn restore_session(&mut self) {
+        let start_tab_untouched = matches!(self.docs.first(), Some(Doc::Profile(d)) if !d.dirty && d.path.is_none());
+        let before = self.docs.len();
+        let mut missing = 0;
+        if self.settings.restore_tabs {
+            for path in self.settings.open_tabs.clone() {
+                if path.exists() {
+                    self.open_path(path);
+                } else {
+                    missing += 1;
+                }
+            }
+        }
+        let restored_tabs = self.docs.len() - before;
+        let (drafts, broken) = session::read_drafts(&self.drafts_dir);
+        let mut restored = 0;
+        for (key, draft) in drafts {
+            let path = (!draft.path.is_empty()).then(|| PathBuf::from(&draft.path));
+            let open = path.as_ref().and_then(|p| {
+                self.docs
+                    .iter()
+                    .position(|d| matches!(d, Doc::Profile(x) if x.path.as_ref() == Some(p)))
+            });
+            let catalog = &self.catalog;
+            let mut doc = match open {
+                Some(i) => match self.docs.remove(i) {
+                    Doc::Profile(mut d) => {
+                        d.profile = draft.profile;
+                        d
+                    }
+                    _ => continue,
+                },
+                None => Box::new(ProfileDoc::new(
+                    draft.profile,
+                    path.filter(|p| p.exists()),
+                    catalog,
+                )),
+            };
+            doc.refresh(catalog);
+            doc.changed = None;
+            doc.draft_key = key;
+            doc.issues.push(Issue {
+                severity: Severity::Info,
+                target: Target::Profile,
+                text: tr("The unsaved changes of the last session were restored from a draft").to_owned(),
+            });
+            self.docs.push(Doc::Profile(doc));
+            restored += 1;
+        }
+        if start_tab_untouched && (restored_tabs > 0 || restored > 0) {
+            self.docs.remove(0);
+        }
+        if restored_tabs > 0 {
+            self.active = self.settings.active_tab.min(self.docs.len().saturating_sub(1));
+        }
+        if restored > 0 {
+            self.active = self.docs.len() - 1;
+        }
+        let mut notes = Vec::new();
+        if restored > 0 {
+            notes.push(trf("{n} drafts restored", &[("n", &restored)]));
+        }
+        if missing > 0 {
+            notes.push(trf("{n} files of the last session are missing", &[("n", &missing)]));
+        }
+        if !broken.is_empty() {
+            notes.push(trf("{n} drafts could not be read", &[("n", &broken.len())]));
+        }
+        if !notes.is_empty() {
+            self.status = notes.join("; ");
+        }
+    }
+
+    /// Writes every new status line to the log.
+    fn log_status(&mut self) {
+        if self.status != self.last_logged {
+            session::log(&self.logs_dir, "INFO", &self.status);
+            self.last_logged = self.status.clone();
+        }
+    }
+
     fn persist_settings(&mut self) {
         if !self.settings_dirty {
             return;
@@ -1947,7 +2114,13 @@ impl eframe::App for App {
             });
         }
         self.apply(acts);
+        let closing = self.exit || ui.ctx().input(|i| i.viewport().close_requested());
+        self.write_drafts(closing);
+        if closing {
+            self.remember_tabs();
+        }
         self.persist_settings();
+        self.log_status();
     }
 }
 
@@ -2091,6 +2264,7 @@ pub fn run() -> Result<(), String> {
                 Ok(marks) => app.marks = marks,
                 Err(e) => app.status = format!("Bookmarks not read: {e}"),
             }
+            app.restore_session();
             if app.settings.show_guide_at_start {
                 app.open_guide();
                 app.settings.show_guide_at_start = false;
@@ -2182,6 +2356,34 @@ mod tests {
         );
         app.apply(vec![Act::ToggleBookmark]);
         assert!(app.marks.items.is_empty());
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn drafts_come_back_after_a_restart() {
+        let catalog = Catalog::embedded().unwrap();
+        let dir = std::env::temp_dir().join(format!("winweaver-session-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut app = App::new(catalog.clone(), Vec::new(), Settings::default());
+        app.drafts_dir = dir.join("drafts");
+        app.logs_dir = dir.join("logs");
+        app.apply(vec![Act::Toggle("install.bypass-tpm".into(), false)]);
+        app.write_drafts(true);
+        let (drafts, _) = session::read_drafts(&app.drafts_dir);
+        assert_eq!(drafts.len(), 1);
+        let mut next = App::new(catalog, Vec::new(), Settings::default());
+        next.drafts_dir = app.drafts_dir.clone();
+        next.logs_dir = app.logs_dir.clone();
+        next.restore_session();
+        assert_eq!(next.docs.len(), 1, "the untouched start tab gives way to the draft");
+        let Doc::Profile(doc) = &next.docs[0] else {
+            panic!("a profile");
+        };
+        assert!(doc.dirty && !doc.profile.is_on("install.bypass-tpm"));
+        next.apply(vec![Act::CloseTab(0, true)]);
+        assert!(session::read_drafts(&next.drafts_dir).0.is_empty(), "discarding deletes the draft");
+        next.log_status();
+        assert!(dir.join("logs").is_dir());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
