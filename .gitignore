@@ -1,0 +1,21 @@
+# Rust
+/target/
+/crates/*/target/
+Cargo.lock.bak
+
+# Build output
+/dist/
+
+# Runtime files of a program started from the repository
+/settings.json
+/draft.*
+/logs/
+/output/
+*.log
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+.DS_Store

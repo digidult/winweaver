@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WinWeaver mockup D: secondary tabs</title>
+<link rel="stylesheet" href="common.css">
+<style>
+.win { height: auto; min-height: 0; margin-bottom: 16px; border-bottom: 2px solid var(--border); }
+.page { display: flex; min-height: 300px; }
+.nav2 { width: 220px; background: var(--card); border-right: 1px solid var(--border); padding: 8px; }
+.nav2 .mi.cur { background: var(--sel); }
+.pane { flex: 1; padding: 14px 20px; }
+.pane h2 { margin: 0 0 10px; font-size: 16px; font-weight: 600; }
+.grid { display: grid; grid-template-columns: max-content 1fr; gap: 10px 18px; align-items: center; max-width: 720px; }
+.journal { border-collapse: collapse; width: 100%; font-size: 12px; margin-top: 12px; background: var(--card); border: 1px solid var(--border); border-radius: var(--r); }
+.journal th, .journal td { padding: 5px 8px; border-bottom: 1px solid var(--border); text-align: left; }
+.journal th { color: var(--muted); font-weight: 600; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.md { max-width: 820px; padding: 10px 28px 20px; }
+.md h1 { font-size: 22px; margin: 8px 0 10px; } .md h2 { font-size: 16px; margin: 16px 0 6px; }
+.md p, .md li { font-size: 13.5px; } .md pre { background: var(--card2); border: 1px solid var(--border); border-radius: var(--r); padding: 8px 12px; font-family: var(--mono); font-size: 12px; }
+.marks .mi { display: grid; grid-template-columns: 24px 1fr 1fr; gap: 10px; align-items: start; padding: 8px 10px; }
+.marks .mi .c { color: var(--muted); font-style: italic; }
+.marks .grp { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; padding: 10px 10px 4px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 12px; background: var(--sel); font-size: 12px; }
+.pill .led { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+</style>
+</head>
+<body>
+<div class="caption"><b>Secondary tabs (in the chrome of variant A).</b> From top to bottom: the MCP tab, the Settings tab, the bookmark tab, a Markdown tab (the guide).</div>
+
+<div class="win">
+<div class="titlebar"><div class="menubtn">&#9776;</div><div class="tabs"><div class="tab">Office.wwprofile<span class="x">&#10005;</span></div><div class="tab active"><span class="ico">&#9741;</span>MCP<span class="x">&#10005;</span></div><div class="tab add">+</div></div><div class="wc"><span>&#9472;</span><span>&#9633;</span><span>&#10005;</span></div></div>
+<div class="crumbs"><div class="ib dis">&#8592;</div><div class="ib dis">&#8594;</div><span class="crumb cur">MCP server</span><span class="pill" style="margin-left:12px"><span class="led"></span>Running, HTTP 127.0.0.1:8765, mode edit, 1 client</span><div class="search"><span class="sico">&#128269;</span></div></div>
+<div class="page">
+  <div class="pane">
+    <div class="two">
+      <div class="card" style="margin:0">
+        <h3>Server</h3>
+        <div class="grid">
+          <label>Transport</label><div><label><input type="radio" checked> HTTP on 127.0.0.1, port <input type="number" value="8765" style="width:80px"></label> &nbsp; <label><input type="radio"> stdio (started by the client)</label></div>
+          <label>Mode</label><select><option>read: nothing changes</option><option selected>edit: changes in memory</option><option>files: save and create profiles</option></select>
+          <label>This PC</label><label><input type="checkbox"> Allow reading the settings of this PC (never saved, off at every start)</label>
+          <label>Token</label><div><code>Gk3t...9fQ</code> <button class="btn sm">Show</button> <button class="btn sm">Copy</button> <button class="btn sm">Renew</button></div>
+          <label></label><div><button class="btn sm pri">Stop</button> <button class="btn sm">Copy client configuration</button> <button class="btn sm">Open the skill</button></div>
+        </div>
+      </div>
+      <div class="card" style="margin:0">
+        <h3>Workspace of the server (independent of the open tabs)</h3>
+        <table class="kv"><tr><th>Document</th><th>State</th><th></th></tr>
+        <tr><td>office.wwprofile</td><td>modified by the client</td><td><a href="#">Open in a tab</a></td></tr>
+        <tr><td>laptop-2026.wwprofile</td><td>saved 10:51</td><td><a href="#">Open in a tab</a></td></tr>
+        <tr><td>new profile 1</td><td>created, unsaved</td><td><a href="#">Open in a tab</a></td></tr></table>
+        <p style="color:var(--muted);font-size:12px;margin:8px 0 0">Clients: Claude Code (claude-code 2.1), connected 10:40.</p>
+      </div>
+    </div>
+    <table class="journal"><tr><th>Time</th><th>Client</th><th>Tool</th><th>Arguments</th><th>Result</th></tr>
+      <tr><td>10:52:14</td><td>Claude Code</td><td>set_param</td><td>rule=defender.pua param=action</td><td class="ok">ok</td></tr>
+      <tr><td>10:52:02</td><td>Claude Code</td><td>check_profile</td><td></td><td>ok, 2 warnings</td></tr>
+      <tr><td>10:51:40</td><td>Claude Code</td><td>write_answer_file</td><td></td><td style="color:var(--warn)">not_allowed: mode edit</td></tr>
+      <tr><td>10:51:11</td><td>Claude Code</td><td>read_this_pc</td><td></td><td style="color:var(--warn)">not_allowed: read_pc off</td></tr>
+      <tr><td>10:40:03</td><td>Claude Code</td><td>initialize</td><td>protocol 2025-06-18</td><td class="ok">ok</td></tr></table>
+  </div>
+</div>
+<div class="status"><span>Catalog 0.11</span><span class="mcp">MCP: HTTP 127.0.0.1:8765, edit, 1 client</span></div>
+</div>
+
+<div class="win">
+<div class="titlebar"><div class="menubtn">&#9776;</div><div class="tabs"><div class="tab">Office.wwprofile<span class="x">&#10005;</span></div><div class="tab active"><span class="ico">&#9881;</span>Settings<span class="x">&#10005;</span></div><div class="tab add">+</div></div><div class="wc"><span>&#9472;</span><span>&#9633;</span><span>&#10005;</span></div></div>
+<div class="crumbs"><div class="ib">&#8592;</div><div class="ib dis">&#8594;</div><span class="crumb">Settings</span><span class="chev">&#9656;</span><span class="crumb cur">Catalogs</span><div class="search"><span class="sico">&#128269;</span></div></div>
+<div class="page">
+  <div class="nav2"><div class="mi">General</div><div class="mi cur">Catalogs</div><div class="mi">Profiles</div><div class="mi">MCP</div><div class="mi">Advanced</div></div>
+  <div class="pane">
+    <h2>Catalogs of policy templates</h2>
+    <table class="kv"><tr><th>Shown</th><th>Name</th><th>Kind</th><th>Policies</th><th>Windows</th><th></th></tr>
+      <tr><td><span class="sw on"></span></td><td>Policy templates of this Windows</td><td>this Windows</td><td>3552 (20 skipped)</td><td>26300</td><td><a href="#">Update</a> &middot; <a href="#">Rename</a> &middot; <a href="#">Export</a> &middot; <a href="#">Remove</a></td></tr>
+      <tr><td><span class="sw"></span></td><td>Edge 130 templates</td><td>folder</td><td>412</td><td>any</td><td><a href="#">Update</a> &middot; <a href="#">Rename</a> &middot; <a href="#">Export</a> &middot; <a href="#">Remove</a></td></tr>
+      <tr><td><span class="sw on"></span></td><td>Windows 11 25H2 (26200).wwcatalog</td><td>catalog file</td><td>3540</td><td>26200</td><td><a href="#">Rename</a> &middot; <a href="#">Remove</a></td></tr></table>
+    <p style="margin-top:10px"><button class="btn sm">Import the templates of this Windows</button> <button class="btn sm">Import a folder...</button> <button class="btn sm">Import a catalog file...</button></p>
+    <p style="color:var(--muted);font-size:12px">When two imports hold the same policy, the most trusted one owns it: bundled, this Windows, a folder, a catalog file. A choice made in a more trusted import is held while only a less trusted one is shown.</p>
+  </div>
+</div>
+</div>
+
+<div class="win">
+<div class="titlebar"><div class="menubtn">&#9776;</div><div class="tabs"><div class="tab">Office.wwprofile<span class="x">&#10005;</span></div><div class="tab active"><span class="ico">&#9733;</span>bookmarks.wwmarks<span class="x">&#10005;</span></div><div class="tab add">+</div></div><div class="wc"><span>&#9472;</span><span>&#9633;</span><span>&#10005;</span></div></div>
+<div class="toolbar"><div class="tb"><i>&#128194;</i>Open</div><div class="tb"><i>&#128190;</i>Save</div><div class="sep"></div><div class="tb"><i>&#8594;</i>Go to</div><div class="tb"><i>&#128465;</i>Remove</div></div>
+<div class="page marks" style="display:block;padding:6px 14px">
+  <div class="grp">Office.wwprofile</div>
+  <div class="mi"><span>&#9733;</span><div>Potentially unwanted apps<br><span style="color:var(--muted);font-size:11px">Policies / Security / Windows Defender</span></div><div class="c">Ask the customer whether Audit mode is enough for the accounting PC</div></div>
+  <div class="mi"><span>&#9733;</span><div>Attack surface reduction<br><span style="color:var(--muted);font-size:11px">Policies / Security</span></div><div class="c">The USB rule broke the scanner driver in 2025; keep it off here</div></div>
+  <div class="grp">docs/en/this-pc.md</div>
+  <div class="mi"><span>&#9733;</span><div>Apply: what the backup holds<br><span style="color:var(--muted);font-size:11px">heading #backup</span></div><div class="c" contenteditable="true">Edit the comment in place</div></div>
+  <div class="grp">Windows 11 25H2 (26200).wwcatalog</div>
+  <div class="mi"><span>&#9733;</span><div>Allow Telemetry<br><span style="color:var(--muted);font-size:11px">Windows Components / Data Collection</span></div><div class="c">Level 0 only on Enterprise and Education</div></div>
+</div>
+</div>
+
+<div class="win">
+<div class="titlebar"><div class="menubtn">&#9776;</div><div class="tabs"><div class="tab">Office.wwprofile<span class="x">&#10005;</span></div><div class="tab active"><span class="ico">&#128214;</span>Guide.md<span class="x">&#10005;</span></div><div class="tab add">+</div></div><div class="wc"><span>&#9472;</span><span>&#9633;</span><span>&#10005;</span></div></div>
+<div class="crumbs"><div class="ib">&#8592;</div><div class="ib dis">&#8594;</div><span class="crumb">Guide</span><span class="chev">&#9656;</span><span class="crumb">First steps</span><span class="chev">&#9656;</span><span class="crumb cur">Build the answer file</span><div class="ib star">&#9734;</div><div class="search"><span class="sico">&#128269;</span></div></div>
+<div class="md">
+  <h1>WinWeaver guide</h1>
+  <p>This page opens at the first start and from the menu or <span class="kbd">F1</span>. It is a Markdown file in <code>docs/</code>, translated in <code>lang/&lt;code&gt;/docs/</code>.</p>
+  <h2>First steps</h2>
+  <ol><li>Open a preset from the menu: <b>New &#9656; Profile from a preset &#9656; Office</b>.</li><li>Walk the tree; turn rules on and off; the description panel explains each one. Rules that depend on a rule you turned off are greyed.</li><li>Check the profile (<span class="kbd">F7</span>) and build the answer file (<span class="kbd">F9</span>). The file lands in <code>output/</code>.</li></ol>
+  <h2>Build the answer file</h2>
+  <p>Copy <code>autounattend.xml</code> to the root of the installation USB stick. Windows Setup reads it and installs without questions except those you left open in the Installation form. A link to a rule, such as <a href="#">defender.pua</a>, selects it in the open profile; a link to a page opens another tab.</p>
+  <pre>output/
+  autounattend.xml      the answer file with the profile embedded
+  Apply-Office.ps1      stand-alone scripts for a PC without WinWeaver
+  Undo-Office.ps1
+  Audit-Office.ps1</pre>
+</div>
+</div>
+</body>
+</html>

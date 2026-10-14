@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WinWeaver mockup B: Rail</title>
+<link rel="stylesheet" href="common.css">
+<style>
+.shell { display: flex; flex: 1; min-height: 0; }
+.rail { width: 48px; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 6px 0; gap: 2px; border-right: 1px solid var(--border); }
+.rail .ri { width: 40px; height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: var(--r); font-size: 17px; color: var(--muted); position: relative; }
+.rail .ri span { font-size: 9px; line-height: 10px; }
+.rail .ri.cur { color: var(--text); background: var(--card); }
+.rail .ri.cur::before { content: ""; position: absolute; left: 0; top: 11px; width: 3px; height: 18px; background: var(--accent); border-radius: 2px; }
+.rail .ri.n::after { content: "3"; position: absolute; top: 3px; right: 4px; background: var(--accent); color: #fff; font-size: 9px; border-radius: 8px; padding: 0 4px; }
+.rail .spacer { flex: 1; }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.tabs { height: 36px; padding-left: 6px; background: var(--bg); }
+.crumbs .tools { display: flex; gap: 2px; margin-left: 8px; padding-left: 8px; border-left: 1px solid var(--border); }
+.content { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.body { flex: 1; }
+.drawer { border-top: 1px solid var(--border); background: var(--card); height: 230px; display: flex; flex-direction: column; }
+.drawer.folded { height: 32px; }
+.drawer .dh { display: flex; align-items: center; gap: 10px; padding: 0 12px; height: 32px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; color: var(--muted); flex: none; }
+.drawer .dh .ib { margin-left: auto; }
+.drawer .dbody { display: grid; grid-template-columns: 1.2fr 1.5fr 1fr; gap: 12px; padding: 0 12px 10px; overflow: auto; }
+.drawer.folded .dbody { display: none; }
+.drawer .dbody h4 { margin: 0 0 4px; font-size: 12px; }
+.drawer .dbody p { margin: 0 0 6px; }
+.gl { display: flex; flex-direction: column; }
+.gl .row { padding-left: 0; }
+.gl .sw { margin-left: auto; }
+.menu { top: 0; left: 48px; bottom: auto; }
+</style>
+</head>
+<body>
+<div class="caption"><b>Variant B, Rail.</b> A vertical rail groups the documents by kind, the toolbar is a row of icons next to the breadcrumb, the description is a wide drawer under the split view. Shown: a group selected (Attack surface reduction) with its rules as inline toggles in the detail panel, the hamburger menu open. Click the drawer header to fold it.</div>
+<div class="win">
+<div class="titlebar"><span style="padding-left:6px;color:var(--muted)">WinWeaver</span><div class="wc"><span>&#9472;</span><span>&#9633;</span><span>&#10005;</span></div></div>
+<div class="shell">
+  <div class="rail">
+    <div class="ri cur n" title="Profiles">&#9881;<span>Profiles</span></div>
+    <div class="ri" title="Diffs">&#8646;<span>Diffs</span></div>
+    <div class="ri" title="Catalogs">&#128230;<span>Catalogs</span></div>
+    <div class="ri" title="Bookmarks">&#9733;<span>Marks</span></div>
+    <div class="ri" title="Documentation">&#128214;<span>Docs</span></div>
+    <div class="ri" title="MCP server">&#9741;<span>MCP</span></div>
+    <div class="spacer"></div>
+    <div class="ri" title="Settings">&#9881;<span>Settings</span></div>
+    <div class="ri" title="Menu">&#9776;</div>
+  </div>
+
+  <div class="menu">
+    <div class="mi hdr">New</div>
+    <div class="mi">Profile from a preset<span class="sub">&#9656;</span></div>
+    <div class="mi">Empty profile<span class="k">Ctrl+N</span></div>
+    <div class="mi">Bookmark file</div>
+    <div class="msep"></div>
+    <div class="mi">Open...<span class="k">Ctrl+O</span></div>
+    <div class="mi">Open recent<span class="sub">&#9656;</span></div>
+    <div class="mi">Save<span class="k">Ctrl+S</span></div>
+    <div class="mi">Save as...<span class="k">Ctrl+Shift+S</span></div>
+    <div class="mi">Save all</div>
+    <div class="msep"></div>
+    <div class="mi">Import<span class="sub">&#9656;</span></div>
+    <div class="mi">Export<span class="sub">&#9656;</span></div>
+    <div class="mi">Compare two files...</div>
+    <div class="msep"></div>
+    <div class="mi">Guide<span class="k">F1</span></div>
+    <div class="mi">Documentation<span class="sub">&#9656;</span></div>
+    <div class="mi">Settings<span class="k">Ctrl+,</span></div>
+    <div class="mi">About</div>
+    <div class="mi">Exit<span class="k">Alt+F4</span></div>
+  </div>
+
+  <div class="main">
+    <div class="tabs">
+      <div class="tab active"><span class="dot">&bull;</span>Office.wwprofile<span class="x">&#10005;</span></div>
+      <div class="tab">Laptop-2026.wwprofile<span class="x">&#10005;</span></div>
+      <div class="tab">Strict.wwprofile<span class="x">&#10005;</span></div>
+      <div class="tab add">+</div>
+    </div>
+    <div class="crumbs">
+      <div class="ib">&#8592;</div><div class="ib">&#8594;</div>
+      <span class="crumb">Office</span><span class="chev">&#9656;</span><span class="crumb">Policies</span><span class="chev">&#9656;</span><span class="crumb">Security</span><span class="chev">&#9656;</span><span class="crumb cur">Attack surface reduction</span><span class="chev">&#9662;</span>
+      <div class="ib star">&#9734;</div>
+      <div class="search"><span class="sico">&#128269;</span></div>
+      <div class="tools">
+        <div class="ib" title="Save (Ctrl+S)">&#128190;</div><div class="ib" title="Check (F7)">&#10003;</div><div class="ib" title="Build (F9)">&#9881;</div><div class="ib" title="This PC">&#128187;</div><div class="ib" title="Compare">&#8646;</div><div class="ib" title="More">&#8943;</div>
+      </div>
+    </div>
+    <div class="content">
+      <div class="body">
+        <div class="tree">
+          <div class="row"><span class="tw">&#9656;</span><span class="cb mix"></span><span class="t">Installation (windowsPE and specialize)</span><span class="cnt">14/31</span></div>
+          <div class="row"><span class="tw">&#9662;</span><span class="cb mix"></span><span class="t">Policies</span><span class="cnt">118/213</span></div>
+          <div class="row l1"><span class="tw">&#9662;</span><span class="cb mix"></span><span class="t">Security</span><span class="cnt">41/58</span></div>
+          <div class="row l2"><span class="tw">&#9656;</span><span class="cb on">&#10003;</span><span class="t">User Account Control</span><span class="cnt">4/4</span></div>
+          <div class="row l2"><span class="tw">&#9656;</span><span class="cb on">&#10003;</span><span class="t">LSA and credentials</span><span class="cnt">5/5</span></div>
+          <div class="row l2"><span class="tw">&#9656;</span><span class="cb mix"></span><span class="t">Windows Defender</span><span class="cnt">8/11</span></div>
+          <div class="row l2 sel"><span class="tw">&#9662;</span><span class="cb mix"></span><span class="t">Attack surface reduction</span><span class="cnt">16/18</span></div>
+          <div class="row l3"><span class="tw"></span><span class="cb on">&#10003;</span><span class="t">Block Office apps from creating child processes</span></div>
+          <div class="row l3"><span class="tw"></span><span class="cb on">&#10003;</span><span class="t">Block executable content from email</span></div>
+          <div class="row l3"><span class="tw"></span><span class="cb on">&#10003;</span><span class="t">Block credential stealing from LSASS</span></div>
+          <div class="row l3"><span class="tw"></span><span class="cb"></span><span class="t">Block untrusted USB processes</span></div>
+          <div class="row l3"><span class="tw"></span><span class="cb"></span><span class="t">Block abuse of vulnerable drivers</span></div>
+          <div class="row l2"><span class="tw">&#9656;</span><span class="cb on">&#10003;</span><span class="t">SmartScreen</span><span class="cnt">3/3</span></div>
+          <div class="row l1"><span class="tw">&#9656;</span><span class="cb mix"></span><span class="t">Privacy</span><span class="cnt">38/44</span></div>
+          <div class="row l1"><span class="tw">&#9656;</span><span class="cb mix"></span><span class="t">Apps and browsers</span><span class="cnt">22/71</span></div>
+          <div class="row"><span class="tw">&#9656;</span><span class="cb mix"></span><span class="t">Other</span><span class="cnt">33/40</span></div>
+        </div>
+        <div class="detail">
+          <div class="dhead">
+            <h1>Attack surface reduction</h1>
+            <div class="id">security.asr</div>
+            <div class="badges"><span class="chip acc">Policy</span><span class="chip">18 rules, 16 on</span><span class="chip">Preset Office: 16</span></div>
+            <div class="ctl"><button class="btn sm">Turn all on</button><button class="btn sm">Turn all off</button><button class="btn sm">Reset to preset</button>
+              <span style="margin-left:auto" class="fns"><button class="btn sm">Check on this PC</button><button class="btn sm">Apply</button><button class="btn sm pri">Read into the profile</button></span></div>
+          </div>
+          <div class="card">
+            <h3>Rules of this group (plain switches, toggled here)</h3>
+            <div class="gl">
+              <div class="row"><span class="t">Block Office apps from creating child processes</span><span class="sw on"></span></div>
+              <div class="row"><span class="t">Block executable content from email and webmail</span><span class="sw on"></span></div>
+              <div class="row"><span class="t">Block credential stealing from LSASS</span><span class="sw on"></span></div>
+              <div class="row"><span class="t">Block JavaScript and VBScript from launching downloads</span><span class="sw on"></span></div>
+              <div class="row"><span class="t">Block untrusted and unsigned processes from USB</span><span class="sw"></span></div>
+              <div class="row"><span class="t">Block abuse of exploited vulnerable signed drivers</span><span class="sw"></span></div>
+              <div class="row dis" title="Needs: Real-time protection enforced"><span class="t">Use advanced protection against ransomware</span><span class="sw on dis"></span></div>
+              <div class="row"><span class="t">Mode for all rules above</span><span class="cnt">Block <select style="margin-left:8px"><option>Block</option><option>Audit</option><option>Warn</option></select></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="drawer" id="dr">
+        <div class="dh" id="drh">Description: Attack surface reduction<span class="chip">group</span><div class="ib" id="drb">&#9662;</div></div>
+        <div class="dbody">
+          <div><h4>What it does</h4><p>Attack surface reduction rules of Microsoft Defender block the behaviours that malware uses most: Office spawning processes, scripts launching downloads, credential theft from LSASS. Each rule is a GUID with a mode: Block, Audit or Warn.</p><p>The Office preset turns 16 rules on; Strict adds the USB rule.</p></div>
+          <div><h4>What it writes</h4><table class="kv"><tr><th>Key</th><th>Name</th><th>Value</th></tr><tr><td><code>...\Windows Defender\Windows Defender Exploit Guard\ASR</code></td><td>ExploitGuard_ASR_Rules</td><td>1</td></tr><tr><td><code>...\ASR\Rules</code></td><td>&lt;GUID of each rule&gt;</td><td>1 (Block), 2 (Audit), 6 (Warn)</td></tr></table></div>
+          <div><h4>Reference</h4><p><a href="#">Documentation: Attack surface reduction</a></p><p><a href="#">Catalog: Windows Defender Exploit Guard</a></p><h4>Windows default</h4><p>No policy, every rule off.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="status"><span>Modified</span><span>Catalog 0.11</span><span class="mcp">MCP: HTTP 127.0.0.1:8765, read, 1 client</span></div>
+  </div>
+</div>
+</div>
+<script>
+document.getElementById('drh').onclick=function(){const d=document.getElementById('dr');d.classList.toggle('folded');document.getElementById('drb').innerHTML=d.classList.contains('folded')?'&#9652;':'&#9662;';};
+</script>
+</body>
+</html>

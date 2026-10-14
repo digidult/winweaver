@@ -1,0 +1,152 @@
+# 02. Documents and files
+
+Draft 0.1, 14.10.2026.
+
+## 1. Document types
+
+| Document | Extension | Content | Tab |
+|---|---|---|---|
+| Profile | `.wwprofile` | The choices of rules with parameters and the installation forms | Tree and detail panel |
+| Diff | `.wwdiff` | The differences between two profiles | Two-sided tree |
+| Catalog file | `.wwcatalog` | Imported policy templates (records of policies), exchangeable between PCs | Tree without check boxes |
+| Bookmark file | `.wwmarks` | Positions with comments | List |
+| Markdown page | `.md` | Documentation, the guide, any Markdown file | Rendered page |
+| Answer file | `autounattend.xml` | The build; opened as a profile when it embeds one, imported by its actions otherwise | Opens as a profile |
+
+The extensions are registered nowhere (portability); the program opens a file by its extension and, for an
+unknown extension, by its content.
+
+## 2. Common format
+
+- JSON, UTF-8 without a byte order mark, LF, two-space indentation, keys in a fixed order (canonical layout,
+  so that diffs in version control are readable).
+- Every file starts with the fields `format` (the document type, such as `winweaver-profile`) and
+  `version` (an integer). A newer version than the program knows is refused with a message; an older one
+  is migrated on load with a warning listed in the message bar.
+- Reading is strict: duplicate keys, `NaN`, lone surrogates, nesting deeper than 32 levels, a file larger
+  than 16 MB (64 MB for a catalog file, which may be xz or gzip compressed) are errors. A field of a wrong
+  type falls back to its default with a warning; an unknown field is kept and written back unchanged
+  (forward compatibility between minor versions).
+- Writing goes to a temporary file next to the target that is renamed over it, so a failed save leaves the
+  old file whole.
+
+## 3. Profile
+
+```json
+{
+  "format": "winweaver-profile",
+  "version": 1,
+  "catalog": "0.11",
+  "name": "Office",
+  "author": "",
+  "comment": "",
+  "created": "2026-10-14T10:00:00Z",
+  "modified": "2026-10-14T10:00:00Z",
+  "install": { "edition": "Pro", "key_mode": "generic", "computer_name_mode": "random", "workgroup": "", "disk_mode": "ask" },
+  "accounts": { "mode": "file", "list": [ { "name": "Admin", "group": "Administrators", "display": "" } ] },
+  "languages": { "ui": "uk-UA", "input": ["0422:00000422", "0409:00000409"], "region": "241", "timezone": "FLE Standard Time" },
+  "rules": {
+    "defender.pua": { "on": true, "params": { "action": "block" } },
+    "admx.windows.AllowTelemetry": { "on": true, "params": { "level": 0 }, "source": "system" }
+  },
+  "unknown": { }
+}
+```
+
+- `rules` holds only the rules whose state differs from "off with default parameters"; a rule not listed
+  is off. Parameters are written only when they differ from the defaults.
+- `source` of an imported policy records the most trusted kind of import the choice was made in
+  (bundled, system, folder, package); a choice from a less trusted kind than the one that now owns the
+  policy is held in `unknown` and not applied.
+- `unknown` keeps the entries of rules the loaded catalog does not have, unchanged, so that a profile
+  survives a round trip through another catalog version.
+- Passwords of accounts are stored in the profile as the user typed them (the answer file needs them);
+  the MCP server and the logs redact them.
+
+## 4. Diff
+
+```json
+{
+  "format": "winweaver-diff",
+  "version": 1,
+  "base": { "name": "Office", "path": "profiles/office.wwprofile", "modified": "..." },
+  "other": { "name": "Strict", "path": "profiles/strict.wwprofile", "modified": "..." },
+  "rules": { "asr.usb-untrusted": { "base": { "on": false }, "other": { "on": true } } },
+  "install": { "key_mode": { "base": "generic", "other": "ask" } },
+  "accounts": { }, "languages": { }
+}
+```
+
+A diff applied to a profile sets the `other` side of every entry; the resolver then disables what the new
+states make impossible and the message bar lists it.
+
+## 5. Catalog file
+
+An envelope around the records of one import of policy templates: `format` `winweaver-catalog`, `version`,
+`kind` (`admx`), `name`, `windows` (the build the templates came from), `created`, `comment`, `templates`
+(the records: categories, policies with elements, registry keys, value names and values, texts by
+culture). The records are checked on load for safe characters and keys (`03-features.md` section 7).
+Plain, gzip or xz; the compression is detected by the first bytes.
+
+## 6. Bookmark file
+
+```json
+{
+  "format": "winweaver-bookmarks",
+  "version": 1,
+  "items": [
+    { "document": "profile", "path": "profiles/office.wwprofile", "item": "defender.pua", "title": "Potentially unwanted apps", "comment": "Ask the customer about Audit mode", "created": "..." },
+    { "document": "markdown", "path": "docs/en/this-pc.md", "item": "#apply", "title": "Apply", "comment": "", "created": "..." }
+  ]
+}
+```
+
+A bookmark of a document that is not open opens it; a bookmark of a file that is missing is shown greyed
+with "file not found" and can be edited or removed.
+
+## 7. Settings
+
+`settings.json` next to the executable: language, theme, font size, the open tabs and the active one, the
+recent files, the search history, the layout (splitter positions, the description panel), the inline
+toggles, the draft interval, the MCP defaults and token, the logging level. The window is the only writer;
+a headless MCP process never writes it. When the folder is read-only the settings are kept in memory.
+
+## 8. Draft
+
+The unsaved state of every modified document is written to `drafts/<hash of the path>.json` every 30 s and
+on close; at the next start the program offers to restore the drafts it finds. A save or a discard deletes
+the draft.
+
+## 9. Presets
+
+The presets Office, Strict, Laptop and Home are profiles embedded in the executable at build time (from
+`data/presets/*.wwprofile`, generated from the catalog defaults and the preset definitions). They open
+from the New menu as unsaved profiles named after the preset.
+
+## 10. What lives next to the executable
+
+```
+WinWeaver/
+├── winweaver.exe          the window and the MCP server (stdio and HTTP, also headless with --mcp)
+├── settings.json          written by the window
+├── bookmarks.wwmarks      created at the first bookmark
+├── lang/<code>/           ui.json, catalog.json, docs/*.md (a language is a folder; en is embedded)
+├── themes/*.json          colour themes (light and dark are embedded)
+├── catalogs/*.wwcatalog   catalog files shipped with the program (none until the licence check)
+├── imports/<id>/          saved imports of policy templates (created by the program)
+├── profiles/              the user's profiles (the default folder of Open and Save)
+├── docs/                  the user documentation in English (Markdown, served in the Markdown tabs)
+├── drafts/                drafts of unsaved documents
+├── logs/                  winweaver-<date>.log, mcp-<transport>-<pid>.log
+└── output/                autounattend.xml and the generated scripts
+```
+
+Everything embedded (the catalog, English texts, presets, the two base themes, the guide) is in the
+executable, so a bare `winweaver.exe` runs; the folders add languages, themes, catalogs and persistence.
+
+## Open questions
+
+1. Extensions: `.wwprofile`, `.wwdiff`, `.wwcatalog`, `.wwmarks` as proposed, or shorter (`.wwp`, `.wwd`,
+   `.wwc`, `.wwb`)?
+2. Should a profile store the passwords at all, or should the answer file be built with the password typed
+   at build time (then "Open profile from autounattend.xml" cannot restore it either)?
