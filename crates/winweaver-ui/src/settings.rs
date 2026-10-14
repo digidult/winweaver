@@ -114,9 +114,11 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("settings.json");
         assert_eq!(Settings::load_from(&path).unwrap(), Settings::default());
-        let mut settings = Settings::default();
-        settings.language = "uk".to_owned();
-        settings.theme = ThemeChoice::Dark;
+        let mut settings = Settings {
+            language: "uk".to_owned(),
+            theme: ThemeChoice::Dark,
+            ..Settings::default()
+        };
         settings.remember(Path::new("a.wwprofile"));
         settings.remember(Path::new("b.wwprofile"));
         settings.remember(Path::new("a.wwprofile"));
