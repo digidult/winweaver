@@ -306,6 +306,8 @@ pub struct App {
     marks: Bookmarks,
     marks_path: PathBuf,
     theme_applied: bool,
+    /// The colours given to the title bar last: dark, caption, text, border.
+    title_colors: Option<(bool, [u8; 3], [u8; 3], [u8; 3])>,
     last_title: String,
     exit: bool,
     drafts_dir: PathBuf,
@@ -351,6 +353,7 @@ impl App {
             marks: Bookmarks::default(),
             marks_path: exe_dir().join(bookmarks::DEFAULT_FILE),
             theme_applied: false,
+            title_colors: None,
             last_title: String::new(),
             exit: false,
             drafts_dir: exe_dir().join("drafts"),
@@ -2658,6 +2661,29 @@ impl App {
         }
     }
 
+    /// The title bar in the colours of the theme (Windows 11; the dark frame on Windows 10), given
+    /// again whenever the colours change, also when the theme follows Windows.
+    fn color_title_bar(&mut self, ui: &egui::Ui, frame: &eframe::Frame) {
+        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        let v = ui.visuals();
+        let rgb = |c: egui::Color32| [c.r(), c.g(), c.b()];
+        let colors = (
+            v.dark_mode,
+            rgb(v.panel_fill),
+            rgb(v.text_color()),
+            rgb(v.window_stroke.color),
+        );
+        if self.title_colors == Some(colors) {
+            return;
+        }
+        if let Ok(handle) = frame.window_handle()
+            && let RawWindowHandle::Win32(w) = handle.as_raw()
+        {
+            winweaver_win::color_title_bar(w.hwnd.get(), colors.0, colors.1, colors.2, colors.3);
+            self.title_colors = Some(colors);
+        }
+    }
+
     fn persist_settings(&mut self) {
         if !self.settings_dirty {
             return;
@@ -2677,7 +2703,7 @@ impl App {
 }
 
 impl eframe::App for App {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         if self.exit {
             ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
         }
@@ -2685,6 +2711,7 @@ impl eframe::App for App {
             self.apply_theme(ui.ctx());
             self.theme_applied = true;
         }
+        self.color_title_bar(ui, frame);
         let title = self.window_title();
         if title != self.last_title {
             ui.ctx()

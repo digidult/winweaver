@@ -208,6 +208,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   profile wants ASCII items and refuses a pair without `=` or a name twice. An ADMX `list` element becomes
   such a rule (the Disabled rule clears a list that is not additive), `multiText` a MultiString value; lists
   come before the other values of a policy. The read of this PC checks lists but reads no list parameters.
+- The title bar takes the colours of the theme (`winweaver_win::color_title_bar`: DwmSetWindowAttribute 20 for
+  the dark frame, 34 to 36 for the border, caption and text on Windows 11), only for the window of this
+  process and again whenever the visuals change; the system theme is never written.
 - Linked policies (`resolver::links`): an imported policy without parameters whose every Reg or RegRemove
   action one built-in rule in effect has too (path and value name ignoring case, the same kind and value)
   is linked to it: the tree and the group counts show it on (`Resolution::shown_on`), its check box is
@@ -225,7 +228,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | UI design | Variant A with the compact layout and the row switches of C and the secondary tabs of D (decided) | 14.10.2026 |
 | Core | Catalog, profiles, resolver, check, diff, bookmarks, build of the answer file, This PC (plan, judgement, capture, reports), stand-alone scripts, import of answer files and WinKickOff profiles; tests on the real data | 14.10.2026 |
 | Windows API | Reading the registry, the elevation, the locales, the Windows language and the local accounts with their groups; the native read of the whole catalog is tested on the Windows runner | 14.10.2026 |
-| Window | Tabs, menu, command bar (icons, compact below 1100 px), navigation, search, tree with row switches, detail panel, forms, check, build, diff tab, bookmarks, Markdown tabs, This PC (read, check, scripts, reports), MCP tab, settings, translations uk and ru, drafts, restored tabs, log, colour themes (Latte and Matrix, more as files) | 14.10.2026 |
+| Window | Tabs, menu, command bar (icons, compact below 1100 px), navigation, search, tree with row switches, detail panel, forms, check, build, diff tab, bookmarks, Markdown tabs, This PC (read, check, scripts, reports), MCP tab, settings, translations uk and ru, drafts, restored tabs, log, colour themes (Latte and Matrix, more as files) with the title bar in their colours | 14.10.2026 |
 | MCP server | stdio and HTTP, 19 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
 | Native apply | Plans, the elevated helper, the backup and undo (pull request #2), the default user profile loaded and unloaded by the helper; tested in a test key of HKCU and of the default profile on the runner | 14.10.2026 |
 | Policy templates | ADMX import, catalog files, the settings section (pull request #3), lists and multi-line texts (`reg-list`, list parameters), policies linked to built-in rules | 14.10.2026 |
