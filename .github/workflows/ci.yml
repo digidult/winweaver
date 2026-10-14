@@ -78,3 +78,29 @@ jobs:
         with:
           name: WinWeaver-${{ env.VERSION }}
           path: dist/WinWeaver-*.zip
+
+  release:
+    name: Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [check, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: WinWeaver-*
+          merge-multiple: true
+          path: dist
+      - name: Release notes file
+        id: notes
+        run: |
+          f="docs/releases/${GITHUB_REF_NAME}.md"
+          if [ -f "$f" ]; then echo "path=$f" >> "$GITHUB_OUTPUT"; else echo "path=" >> "$GITHUB_OUTPUT"; fi
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          body_path: ${{ steps.notes.outputs.path }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: ${{ steps.notes.outputs.path == '' }}

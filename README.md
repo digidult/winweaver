@@ -16,7 +16,10 @@ Licence: [MIT](LICENSE).
 
 ## Status
 
-Specification and UI design (October 2026). Nothing builds yet.
+Alpha (October 2026): the window with the profile editor builds in CI (`WinWeaver-<version>.zip` in the
+artifacts of every run; a tag `v<version>` publishes a release). Profiles, check, forms, comparison and
+diff files, bookmarks, the guide and Markdown tabs work; the build of `autounattend.xml`, This PC, policy
+templates and the MCP server come next. The specification is the plan.
 
 | What | Where |
 |---|---|
