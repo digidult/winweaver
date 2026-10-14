@@ -56,10 +56,6 @@ impl Node {
     }
 }
 
-fn utf8(bytes: &[u8]) -> Result<String, String> {
-    std::str::from_utf8(bytes).map(str::to_owned).map_err(|_| "a name is not UTF-8".to_owned())
-}
-
 /// Parses XML text into a tree; a DTD, an unknown entity or nesting deeper than the limit is an
 /// error.
 fn parse_xml(text: &str) -> Result<Node, String> {
@@ -95,7 +91,7 @@ fn parse_xml(text: &str) -> Result<Node, String> {
             }
             Event::CData(c) => {
                 if let Some(n) = stack.last_mut() {
-                    n.text.push_str(&utf8(&c.into_inner())?);
+                    n.text.push_str(&c.into_inner());
                 }
             }
             Event::GeneralRef(r) => {
