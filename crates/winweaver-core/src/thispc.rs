@@ -981,9 +981,15 @@ fn capture_forms(profile: &mut Profile, info: &SystemInfo, summary: &mut Capture
         })
         .collect();
     if accounts.is_empty() {
-        summary
-            .notes
-            .push("the accounts of the profile were kept".to_owned());
+        let note = if info.accounts_error.is_empty() {
+            "the accounts of the profile were kept".to_owned()
+        } else {
+            format!(
+                "the accounts of the profile were kept, the local accounts could not be read: {}",
+                info.accounts_error
+            )
+        };
+        summary.notes.push(note);
     } else {
         summary
             .forms

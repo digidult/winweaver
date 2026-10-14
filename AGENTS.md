@@ -1,9 +1,9 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 14.10.2026 (the map rewritten
-after the first day: the core, the window, This PC, the scripts, the translations, the session and the MCP
-server).
+Updated with every change of structure, commands or task status. Last update: 14.10.2026 (the local
+accounts read natively, the colour themes; before it the map rewritten after the first day: the core, the
+window, This PC, the scripts, the translations, the session and the MCP server).
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -56,8 +56,9 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      native apply, return or undo, the backup format of the scripts), admx (ADMX and ADML to
 │   │                      rules, catalog files .wwcatalog, their check, merge); tests/ on the real data
 │   ├── winweaver-win/     the Windows API: native.rs (thispc::Machine: the registry, the elevation, the locale
-│   │                      names, the language of Windows), execute.rs (the executor of an apply plan with its
-│   │                      backup, the start of the executable as administrator)
+│   │                      names, the language of Windows, the local accounts and their groups), execute.rs
+│   │                      (the executor of an apply plan with its backup, the start of the executable as
+│   │                      administrator)
 │   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal, token), tools.rs (the
 │   │                      19 tools and 3 resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and
 │   │                      Origin checks); tests/server.rs (both transports on a free loopback port)
@@ -66,7 +67,7 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      each frame), views.rs (tree, detail panel), forms.rs (Installation, Accounts,
 │   │                      Languages), diffview.rs, mdview.rs (Markdown tabs, the guide), marksview.rs,
 │   │                      mcpview.rs (the MCP tab), session.rs (drafts, the log), settings.rs (settings.json),
-│   │                      i18n.rs (tr and trf, the translations of the interface)
+│   │                      i18n.rs (tr and trf, the translations of the interface), themes.rs (colour themes)
 │   └── winweaver/         the executable: the window, --mcp stdio, --mcp http, --elevated-apply <plan> <nonce>
 │                          (the helper: only a plan-*.json of output/ with that nonce), --version, --check-catalog
 ├── data/                  embedded into the executable at build time
@@ -77,6 +78,7 @@ functionality carry over; the file formats are new and no program code is ported
 │   ├── templates/         the runtime templates of the predecessor carried over as data: the answer file
 │   │                      skeleton and the scripts with {{slot}}s (they name WinWeaver now), VERSION 0.11
 │   ├── lang/<code>/       ui.json: the translations of the interface (uk, ru); guide.md: the guide translated
+│   ├── themes/            latte.json, matrix.json: the embedded colour themes (a base and the colours it changes)
 │   └── docs/              guide.md, the English guide shown at the first start
 ├── skills/winweaver/      the Agent Skill for AI agents that use WinWeaver over MCP
 └── docs/
@@ -88,7 +90,8 @@ functionality carry over; the file formats are new and no program code is ported
 Next to the executable at run time (never versioned): `settings.json`, `bookmarks.wwmarks`, `profiles/`,
 `output/` (the answer file, the scripts, plan and backup files of the native apply), `imports/` (catalog files of
 the imported policy templates), `drafts/` (unsaved profiles), `logs/` (winweaver-<date>.log),
-`lang/<code>/` (more or overriding translations).
+`lang/<code>/` (more or overriding translations), `themes/` (more colour themes, `<id>.json`; the id of an
+embedded theme replaces it).
 
 ## 4. Project rules
 
@@ -170,6 +173,11 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   sign-in screen (`HKU:\.DEFAULT`). The audit script and the native read produce the same checks in the same
   order, so a report of the script on another PC pairs with the plan (rule by rule, check by check).
 - Features and capabilities are not read natively yet (they need DISM); the audit script reads them.
+- The local accounts are read natively the way the audit script reads them: `NetUserEnum` (level 20, normal
+  accounts) without the disabled ones and the relative ids 500, 501, 503 and 504; the group is Administrators
+  or Users by direct membership (`NetUserGetLocalGroups`) in the groups S-1-5-32-544 and S-1-5-32-545, whose
+  names `LookupAccountSidW` gives in the language of Windows. No password is read; the capture keeps the
+  accounts of the profile when none of Administrators or Users is found.
 - The editions and their keys are the 14 of the predecessor (`resources::EDITION_KEYS`); `ASK_KEY` is
   `00000-00000-00000-00000-00000` with `WillShowUI` Always.
 - The answer file is ASCII: account display names and descriptions outside ASCII go to Post-OOBE.ps1 as
@@ -198,12 +206,12 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Specification | Draft 0.1; decisions of 14.10.2026 recorded in `docs/design/README.md` and below | 14.10.2026 |
 | UI design | Variant A with the compact layout and the row switches of C and the secondary tabs of D (decided) | 14.10.2026 |
 | Core | Catalog, profiles, resolver, check, diff, bookmarks, build of the answer file, This PC (plan, judgement, capture, reports), stand-alone scripts, import of answer files and WinKickOff profiles; tests on the real data | 14.10.2026 |
-| Windows API | Reading the registry, the elevation, the locales and the Windows language; the native read of the whole catalog is tested on the Windows runner | 14.10.2026 |
-| Window | Tabs, menu, command bar (icons, compact below 1100 px), navigation, search, tree with row switches, detail panel, forms, check, build, diff tab, bookmarks, Markdown tabs, This PC (read, check, scripts, reports), MCP tab, settings, translations uk and ru, drafts, restored tabs, log | 14.10.2026 |
+| Windows API | Reading the registry, the elevation, the locales, the Windows language and the local accounts with their groups; the native read of the whole catalog is tested on the Windows runner | 14.10.2026 |
+| Window | Tabs, menu, command bar (icons, compact below 1100 px), navigation, search, tree with row switches, detail panel, forms, check, build, diff tab, bookmarks, Markdown tabs, This PC (read, check, scripts, reports), MCP tab, settings, translations uk and ru, drafts, restored tabs, log, colour themes (Latte and Matrix, more as files) | 14.10.2026 |
 | MCP server | stdio and HTTP, 19 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
 | Native apply | Plans, the elevated helper, the backup and undo (pull request #2); tested in a test key of HKCU on the runner | 14.10.2026 |
 | Policy templates | ADMX import, catalog files, the settings section (pull request #3); lists and multi-line texts not yet | 14.10.2026 |
-| Not yet | Lists of values in imports, links of imported policies to built-in rules, features and capabilities read natively, the default user profile applied natively, egui_kittest tests, themes from files | |
+| Not yet | Lists of values in imports, links of imported policies to built-in rules, features and capabilities read natively, the default user profile applied natively, egui_kittest tests | |
 | Acceptance | Nothing of WinWeaver has been tried in a VM yet: the build of the answer file, the read of a PC and the scripts need the acceptance the predecessor had | |
 
 Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and
