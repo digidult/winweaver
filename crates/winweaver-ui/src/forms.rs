@@ -4,7 +4,7 @@
 
 use eframe::egui;
 use winweaver_core::profile::{Account, Install, Languages};
-use winweaver_core::resources::{self, EDITIONS};
+use winweaver_core::resources;
 
 use crate::{Act, ProfileDoc};
 
@@ -92,7 +92,7 @@ fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
             egui::ComboBox::from_id_salt("edition")
                 .selected_text(i.edition.clone())
                 .show_ui(ui, |ui| {
-                    for edition in EDITIONS {
+                    for edition in resources::editions() {
                         ui.selectable_value(&mut i.edition, edition.to_owned(), edition);
                     }
                 });

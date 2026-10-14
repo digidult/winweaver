@@ -13,3 +13,6 @@
 *.gif binary
 *.woff2 binary
 *.zip binary
+
+# The runtime templates are embedded into the executable as data: LF everywhere, so the build is the same on every platform.
+data/templates/* text eol=lf

@@ -50,6 +50,12 @@ discoverable, labels only in tips.
 | Closest to Windows 11 apps | yes | Settings app | no |
 | Effort in egui | medium | medium | low |
 
+## Decision of the customer (14.10.2026)
+
+Variant A is the base; the compact layout of C serves narrow windows and its inline toggles come in as a
+setting; the secondary tabs of D are accepted. The search field grows into the free width of the navigation
+row when there is room.
+
 ## Recommendation
 
 Build variant A with two borrowings: the inline toggles of the tree from C (as a setting, on by default when

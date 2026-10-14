@@ -48,7 +48,8 @@ ported (clean room specification first, then implementation).
 │   │                      check of a profile: forms, accounts, languages, parameters, dependencies, conflicts),
 │   │                      resources (time zones, keyboards and editions embedded from data/resources), diff
 │   │                      (.wwdiff files: the differences of two profiles and their merge), bookmarks (.wwmarks
-│   │                      files), clock (ISO time in UTC without a date crate);
+│   │                      files), clock (ISO time in UTC without a date crate), render (the build of
+│   │                      autounattend.xml from the templates: passes, blocks, scripts, the embedded profile);
 │   │                      tests/ run on the embedded data, the translations and the presets
 │   ├── winweaver-ui/      the window on eframe (variant A): lib.rs (tabs, the menu with the presets, the command
 │   │                      bar, navigation, search, shortcuts, file dialogs, the actions applied after each frame),
@@ -63,6 +64,8 @@ ported (clean room specification first, then implementation).
 │   │                      of the predecessor (0.11), embedded into the executable by core/catalog/embedded.rs
 │   └── presets/           office, strict, laptop, home .wwprofile, converted once from the predecessor's
 │   ├── resources/         timezones.json and keyboards.json of the predecessor, embedded by core/resources.rs
+│   ├── templates/         the runtime templates of the predecessor (the answer file skeleton, the scripts of the
+│   │                      passes with {{slot}}s, VERSION), carried over as data, embedded by core/render.rs
 │   ├── docs/              guide.md, the guide shown at the first start (English; translations come as lang/<code>/docs/)
 │                          presets (a generator from the catalog defaults comes later)
 └── docs/
@@ -137,12 +140,15 @@ root.
 |---|---|---|
 | Specification | Draft 0.1: scope, UI, documents, features, architecture | 14.10.2026 |
 | UI design | Four HTML mockups (variants A, B, C and the secondary tabs), comparison and recommendation | 14.10.2026 |
-| Core | Catalog model and embedded data, strict JSON reading, translations, the profile format 1, the resolver, the profile check (validate), diff files (diff), bookmark files (bookmarks), the reference data (resources), the clock; tests on the real data; written without a local toolchain, CI is the first compiler | 14.10.2026 |
-| Window | Skeleton of variant A on eframe 0.36: tabs, the menu with the presets, the command bar, navigation with the selection history, breadcrumb, bookmark and search with history, the tree with three-state group check boxes and the search filter, the detail panel with the parameter editor and the collapsible description, the Settings tab (catalog language, theme), shortcuts, the status bar, the window title; settings.json next to the executable (language, theme, description panel, recent files, search history), Open and Save as through the native dialogs (rfd), recent files, a dropped file opens; Check (F7) lists the issues in a panel under the navigation row, a click selects the rule or the form; the forms Installation, Accounts and Languages edit the profile; Compare with a file or a preset opens a diff tab (three columns, links to the rules), the right side applies to the profile tab the diff was made from, a diff saves and opens as a .wwdiff file; the guide opens at the first start, from the menu and with F1, any .md file opens as a tab (egui_commonmark); the star keeps bookmarks in bookmarks.wwmarks next to the executable (created at the first bookmark, an external .wwmarks file can be opened instead), the Bookmarks tab lists them with comments edited in place and leads back to the item; no build, no This PC; CI green | 14.10.2026 |
+| Core | Catalog model and embedded data, strict JSON reading, translations, the profile format 1, the resolver, the profile check (validate), diff files (diff), bookmark files (bookmarks), the reference data (resources), the clock, the build of the answer file (render, tested against the structure of the predecessor's build: the same passes, commands, accounts, languages and rule blocks in catalog order; acceptance in a VM pending); tests on the real data; written without a local toolchain, CI is the first compiler | 14.10.2026 |
+| Window | Skeleton of variant A on eframe 0.36: tabs, the menu with the presets, the command bar, navigation with the selection history, breadcrumb, bookmark and search with history, the tree with three-state group check boxes and the search filter, the detail panel with the parameter editor and the collapsible description, the Settings tab (catalog language, theme), shortcuts, the status bar, the window title; settings.json next to the executable (language, theme, description panel, recent files, search history), Open and Save as through the native dialogs (rfd), recent files, a dropped file opens; Check (F7) lists the issues in a panel under the navigation row, a click selects the rule or the form; the forms Installation, Accounts and Languages edit the profile; Compare with a file or a preset opens a diff tab (three columns, links to the rules), the right side applies to the profile tab the diff was made from, a diff saves and opens as a .wwdiff file; the guide opens at the first start, from the menu and with F1, any .md file opens as a tab (egui_commonmark); the star keeps bookmarks in bookmarks.wwmarks next to the executable (created at the first bookmark, an external .wwmarks file can be opened instead), the Bookmarks tab lists them with comments edited in place and leads back to the item; Build (F9) checks, builds and writes output/autounattend.xml with the scripts next to it; no This PC; CI green | 14.10.2026 |
 | Executable | The window without arguments, `--version`, `--check-catalog`; the Windows API and the MCP server not started; version 0.1.0-alpha.1 ready for the first tag (`docs/releases/v0.1.0-alpha.1.md`), the tag is the customer's call | 14.10.2026 |
 
-Decisions awaited from the customer: the UI variant to build (`docs/design/README.md`), the file extensions
-(`docs/spec/02-documents.md` section 1), the minimum Windows version for the executable (10 1809 or 10 21H2).
+Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and
+its inline toggles, and the secondary tabs of D; the search field grows into the free width of the navigation
+row; the extensions `.wwprofile`, `.wwdiff`, `.wwcatalog`, `.wwmarks`; the runtime scripts of the predecessor are
+carried over as data (`data/templates/`); the minimum Windows version is the agent's choice guided by the
+versions in use (the executable targets Windows 10 21H2 and later until the statistics say otherwise).
 
 ## 7. How to update this file
 

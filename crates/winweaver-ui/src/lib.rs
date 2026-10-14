@@ -23,6 +23,7 @@ use winweaver_core::clock;
 use winweaver_core::diff::{self, Diff};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::profile::{self, Account, Install, Languages, Profile};
+use winweaver_core::render;
 use winweaver_core::resolver::{self, Resolution};
 use winweaver_core::validate::{self, Issue, Severity, Target};
 
@@ -217,6 +218,7 @@ pub enum Act {
     SetAccounts(Vec<Account>),
     SetLanguages(Languages),
     Check,
+    Build,
     ClearMessages,
     Exit,
     Message(String),
@@ -366,6 +368,9 @@ impl App {
             }
             if i.consume_shortcut(&sc(Modifiers::NONE, Key::F1)) {
                 acts.push(Act::OpenGuide);
+            }
+            if i.consume_shortcut(&sc(Modifiers::NONE, Key::F9)) {
+                acts.push(Act::Build);
             }
             if i.consume_shortcut(&sc(Modifiers::NONE, Key::F7)) {
                 acts.push(Act::Check);
@@ -545,9 +550,7 @@ impl App {
                 acts.push(Act::Check);
             }
             if ui.button("Build").on_hover_text("F9").clicked() {
-                acts.push(Act::Message(
-                    "Build: the renderer comes with the next milestone".into(),
-                ));
+                acts.push(Act::Build);
             }
             ui.separator();
             if ui.button("This PC").clicked() {
@@ -656,7 +659,7 @@ impl App {
                         egui::TextEdit::singleline(&mut self.search.text)
                             .id(id)
                             .hint_text("Search rules (Ctrl+F)")
-                            .desired_width(280.0),
+                            .desired_width((ui.available_width() - 60.0).clamp(220.0, 640.0)),
                     );
                     if self.search.focus {
                         ui.memory_mut(|m| m.request_focus(id));
@@ -865,6 +868,66 @@ impl App {
         };
         doc.issues = validate::check(catalog, &doc.profile, &doc.resolution);
         self.status = validate::summary(&doc.issues);
+    }
+
+    /// Checks the profile, builds the answer file and writes it with its scripts into the
+    /// output folder; errors and warnings go to the messages panel.
+    fn build_active(&mut self) {
+        self.check_active();
+        let catalog = &self.catalog;
+        let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        if validate::errors(&doc.issues) > 0 {
+            self.status = format!("{}: fix the errors before the build", validate::summary(&doc.issues));
+            return;
+        }
+        let build = match render::build(catalog, &doc.profile, winweaver_core::APP_VERSION) {
+            Ok(b) => b,
+            Err(e) => {
+                doc.issues.insert(
+                    0,
+                    Issue {
+                        severity: Severity::Error,
+                        target: Target::Profile,
+                        text: format!("Build: {e}"),
+                    },
+                );
+                self.status = format!("Build failed: {e}");
+                return;
+            }
+        };
+        for w in &build.warnings {
+            doc.issues.push(Issue {
+                severity: Severity::Warning,
+                target: Target::Profile,
+                text: format!("Build: {w}"),
+            });
+        }
+        let dir = output_dir();
+        if let Err(e) = std::fs::create_dir_all(&dir) {
+            self.status = format!("Build: cannot create {}: {e}", dir.display());
+            return;
+        }
+        let xml_path = dir.join("autounattend.xml");
+        if let Err(e) = write_file(&xml_path, build.xml.as_bytes()) {
+            self.status = format!("Build: {e}");
+            return;
+        }
+        for (name, text) in &build.scripts {
+            let text = text.replace("\r\n", "\n").replace('\n', "\r\n");
+            if let Err(e) = write_file(&dir.join(name), text.as_bytes()) {
+                self.status = format!("Build: {e}");
+                return;
+            }
+        }
+        self.status = format!(
+            "Built {} ({} rules, {} scripts, {} warnings)",
+            xml_path.display(),
+            build.rule_ids.len(),
+            build.scripts.len(),
+            build.warnings.len()
+        );
     }
 
     fn messages_panel(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
@@ -1084,6 +1147,7 @@ impl App {
                     self.settings_dirty = true;
                 }
                 Act::Check => self.check_active(),
+                Act::Build => self.build_active(),
                 Act::OpenGuide => self.open_guide(),
                 Act::Compare => {
                     if let Some(path) = pick_profile() {
@@ -1431,6 +1495,18 @@ fn sel_from_item(catalog: &Catalog, item: &str) -> Sel {
     } else {
         Sel::None
     }
+}
+
+/// The folder of the built files next to the executable.
+pub fn output_dir() -> PathBuf {
+    exe_dir().join("output")
+}
+
+/// Writes a file through a temporary neighbour that replaces the target.
+fn write_file(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    let tmp = path.with_extension("tmp");
+    std::fs::write(&tmp, bytes).map_err(|e| format!("{}: {e}", path.display()))?;
+    std::fs::rename(&tmp, path).map_err(|e| format!("{}: {e}", path.display()))
 }
 
 /// The folder of the user's profiles next to the executable.
