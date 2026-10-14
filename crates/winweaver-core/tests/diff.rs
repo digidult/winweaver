@@ -38,7 +38,10 @@ fn office_and_strict_differ_and_the_diff_merges() {
     let strict = preset("strict");
     let (a, b) = sides();
     let diff = Diff::between(&office, &strict, a, b);
-    assert!(!diff.rules.is_empty(), "Strict turns rules on that Office leaves off");
+    assert!(
+        !diff.rules.is_empty(),
+        "Strict turns rules on that Office leaves off"
+    );
     for d in diff.rules.values() {
         assert_ne!(d.base, d.other);
     }
@@ -62,7 +65,12 @@ fn forms_and_accounts_are_compared_field_by_field() {
     other.accounts[0].display_name = "Administrator".into();
     let (a, b) = sides();
     let diff = Diff::between(&office, &other, a, b);
-    assert_eq!(diff.install.len(), 2, "{:?}", diff.install.keys().collect::<Vec<_>>());
+    assert_eq!(
+        diff.install.len(),
+        2,
+        "{:?}",
+        diff.install.keys().collect::<Vec<_>>()
+    );
     assert_eq!(diff.install["workgroup"].other, serde_json::json!("LAB"));
     assert_eq!(diff.languages.len(), 1);
     assert!(diff.accounts.is_some());

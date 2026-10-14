@@ -81,8 +81,16 @@ pub fn diff_view(
     ui.weak(format!(
         "{} differences; left: {}, right: {}",
         d.count(),
-        if d.base.path.is_empty() { "not saved" } else { d.base.path.as_str() },
-        if d.other.path.is_empty() { "not saved" } else { d.other.path.as_str() }
+        if d.base.path.is_empty() {
+            "not saved"
+        } else {
+            d.base.path.as_str()
+        },
+        if d.other.path.is_empty() {
+            "not saved"
+        } else {
+            d.other.path.as_str()
+        }
     ));
     ui.horizontal(|ui| {
         if ui
