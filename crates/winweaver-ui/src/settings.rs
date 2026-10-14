@@ -45,6 +45,8 @@ pub struct Settings {
     pub search_history: Vec<String>,
     /// The guide opens at the start; the window clears it after the first start.
     pub show_guide_at_start: bool,
+    /// The rules of the selected group show a switch at the end of their rows.
+    pub inline_switches: bool,
 }
 
 impl Default for Settings {
@@ -58,6 +60,7 @@ impl Default for Settings {
             recent: Vec::new(),
             search_history: Vec::new(),
             show_guide_at_start: true,
+            inline_switches: true,
         }
     }
 }

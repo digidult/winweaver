@@ -69,6 +69,25 @@ pub fn read_text(path: &Path, limit: u64) -> Result<String, JsonError> {
     String::from_utf8(bytes).map_err(|_| JsonError::Utf8 { name })
 }
 
+/// Reads a text file of at most `limit` bytes written by another program: a UTF-8 byte order
+/// mark (Windows PowerShell writes one) is dropped.
+pub fn read_text_bom(path: &Path, limit: u64) -> Result<String, JsonError> {
+    let name = display_name(path);
+    let meta = std::fs::metadata(path).map_err(|source| JsonError::Io {
+        name: name.clone(),
+        source,
+    })?;
+    if meta.len() > limit {
+        return Err(JsonError::TooLarge { name, limit });
+    }
+    let bytes = std::fs::read(path).map_err(|source| JsonError::Io {
+        name: name.clone(),
+        source,
+    })?;
+    let bytes = bytes.strip_prefix(&BOM[..]).unwrap_or(&bytes).to_vec();
+    String::from_utf8(bytes).map_err(|_| JsonError::Utf8 { name })
+}
+
 /// Parses JSON text into `T` after the checks of this module.
 pub fn parse<T: DeserializeOwned>(text: &str, name: &str) -> Result<T, JsonError> {
     if text.as_bytes().starts_with(&BOM) {

@@ -50,6 +50,30 @@ fn matches(texts: Option<&CatalogTexts>, rule: &Rule, words: &[String]) -> bool 
     words.iter().all(|w| hay.contains(w.as_str()))
 }
 
+/// A small on and off switch.
+fn switch(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
+    let height = ui.spacing().interact_size.y * 0.75;
+    let (rect, mut response) =
+        ui.allocate_exact_size(egui::vec2(height * 1.9, height), egui::Sense::click());
+    if response.clicked() {
+        *on = !*on;
+        response.mark_changed();
+    }
+    if ui.is_rect_visible(rect) {
+        let t = ui.ctx().animate_bool_responsive(response.id, *on);
+        let visuals = ui.style().interact_selectable(&response, *on);
+        let radius = rect.height() / 2.0;
+        ui.painter().rect_filled(rect, radius, visuals.bg_fill);
+        let x = egui::lerp((rect.left() + radius)..=(rect.right() - radius), t);
+        ui.painter().circle_filled(
+            egui::pos2(x, rect.center().y),
+            radius * 0.72,
+            visuals.fg_stroke.color,
+        );
+    }
+    response
+}
+
 fn twisty(ui: &mut egui::Ui, open: bool) -> bool {
     let (_rect, response) = ui.allocate_exact_size(egui::vec2(14.0, 14.0), egui::Sense::click());
     egui::collapsing_header::paint_default_icon(ui, if open { 1.0 } else { 0.0 }, &response);
@@ -62,6 +86,7 @@ pub fn tree_view(
     texts: Option<&CatalogTexts>,
     doc: &ProfileDoc,
     search: &Search,
+    inline: bool,
     acts: &mut Vec<Act>,
 ) {
     let words = search.words();
@@ -69,7 +94,7 @@ pub fn tree_view(
         .auto_shrink(false)
         .show(ui, |ui| {
             for root in catalog.child_groups(None) {
-                group_rows(ui, catalog, texts, doc, &words, &root.id, acts);
+                group_rows(ui, catalog, texts, doc, &words, &root.id, inline, acts);
             }
         });
 }
@@ -81,6 +106,7 @@ fn group_rows(
     doc: &ProfileDoc,
     words: &[String],
     gid: &str,
+    inline: bool,
     acts: &mut Vec<Act>,
 ) {
     let Some(group) = catalog.group(gid) else {
@@ -131,11 +157,11 @@ fn group_rows(
                 }
             }
             for child in catalog.child_groups(Some(gid)) {
-                group_rows(ui, catalog, texts, doc, words, &child.id, acts);
+                group_rows(ui, catalog, texts, doc, words, &child.id, inline, acts);
             }
             for rule in catalog.rules_in(gid) {
                 if matches(texts, rule, words) {
-                    rule_row(ui, texts, doc, rule, acts);
+                    rule_row(ui, texts, doc, rule, inline, acts);
                 }
             }
         });
@@ -147,6 +173,7 @@ fn rule_row(
     texts: Option<&CatalogTexts>,
     doc: &ProfileDoc,
     rule: &Rule,
+    inline: bool,
     acts: &mut Vec<Act>,
 ) {
     ui.horizontal(|ui| {
@@ -172,6 +199,13 @@ fn rule_row(
         }
         if !rule.params.is_empty() {
             ui.weak(format!("{} parameters", rule.params.len()));
+        } else if inline && matches!(&doc.sel, Sel::Group(g) if g == &rule.group) {
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                let mut on = doc.profile.is_on(&rule.id);
+                if switch(ui, &mut on).on_hover_text("On or off").changed() {
+                    acts.push(Act::Toggle(rule.id.clone(), on));
+                }
+            });
         }
     });
 }

@@ -23,6 +23,8 @@ use winweaver_core::clock;
 use winweaver_core::diff::{self, Diff};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::profile::{self, Account, Install, Languages, Profile};
+use winweaver_core::import;
+use winweaver_core::jsonfile;
 use winweaver_core::render;
 use winweaver_core::scripts;
 use winweaver_core::thispc::{self, Report, Verdict};
@@ -52,6 +54,8 @@ pub const PRESETS: [(&str, &str); 4] = [
 ];
 
 const SEARCH_HISTORY: usize = 20;
+/// Below this width of the window the command bar shows icons only, in the navigation row.
+const COMPACT_WIDTH: f32 = 1100.0;
 /// The largest Markdown file a tab shows.
 const MARKDOWN_MAX_BYTES: u64 = 4 * 1024 * 1024;
 
@@ -552,64 +556,82 @@ impl App {
         });
     }
 
-    fn toolbar(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
-        ui.horizontal(|ui| {
-            if ui.button("New").on_hover_text("Ctrl+N").clicked() {
-                acts.push(Act::NewProfile(None));
+    /// The commands of the active document: icons with labels, icons only when `compact`.
+    fn toolbar_items(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>, compact: bool) {
+        let label = |icon: &str, text: &str| {
+            if compact {
+                icon.to_owned()
+            } else {
+                format!("{icon} {text}")
             }
-            if ui.button("Open").on_hover_text("Ctrl+O").clicked() {
-                acts.push(Act::Open);
+        };
+        let button = |ui: &mut egui::Ui, icon: &str, text: &str, keys: &str| {
+            let hint = if keys.is_empty() {
+                text.to_owned()
+            } else {
+                format!("{text} ({keys})")
+            };
+            ui.button(label(icon, text)).on_hover_text(hint).clicked()
+        };
+        if button(ui, "\u{1F4C4}", "New", "Ctrl+N") {
+            acts.push(Act::NewProfile(None));
+        }
+        if button(ui, "\u{1F4C2}", "Open", "Ctrl+O") {
+            acts.push(Act::Open);
+        }
+        if button(ui, "\u{1F4BE}", "Save", "Ctrl+S") {
+            acts.push(Act::Save);
+        }
+        ui.separator();
+        if button(ui, "\u{2714}", "Check", "F7") {
+            acts.push(Act::Check);
+        }
+        if button(ui, "\u{1F528}", "Build", "F9") {
+            acts.push(Act::Build);
+        }
+        ui.separator();
+        ui.menu_button(label("\u{1F5A5}", "This PC"), |ui| {
+            if ui.button("Read this PC into a new profile").clicked() {
+                acts.push(Act::ReadPc);
+                ui.close();
             }
-            if ui.button("Save").on_hover_text("Ctrl+S").clicked() {
-                acts.push(Act::Save);
+            if ui.button("Read the selection into this profile").clicked() {
+                acts.push(Act::ReadSelection);
+                ui.close();
+            }
+            if ui.button("Check the selection on this PC").clicked() {
+                acts.push(Act::CheckOnPc);
+                ui.close();
             }
             ui.separator();
-            if ui.button("Check").on_hover_text("F7").clicked() {
-                acts.push(Act::Check);
+            if ui.button("Save an apply script for the selection...").clicked() {
+                acts.push(Act::SaveScript(ScriptKind::Apply));
+                ui.close();
             }
-            if ui.button("Build").on_hover_text("F9").clicked() {
-                acts.push(Act::Build);
+            if ui
+                .button("Save a return-to-defaults script for the selection...")
+                .clicked()
+            {
+                acts.push(Act::SaveScript(ScriptKind::Revert));
+                ui.close();
+            }
+            if ui.button("Save an audit script for the selection...").clicked() {
+                acts.push(Act::SaveScript(ScriptKind::Audit));
+                ui.close();
             }
             ui.separator();
-            ui.menu_button("This PC", |ui| {
-                if ui.button("Read this PC into a new profile").clicked() {
-                    acts.push(Act::ReadPc);
-                    ui.close();
-                }
-                if ui.button("Read the selection into this profile").clicked() {
-                    acts.push(Act::ReadSelection);
-                    ui.close();
-                }
-                if ui.button("Check the selection on this PC").clicked() {
-                    acts.push(Act::CheckOnPc);
-                    ui.close();
-                }
-                ui.separator();
-                if ui.button("Save an apply script for the selection...").clicked() {
-                    acts.push(Act::SaveScript(ScriptKind::Apply));
-                    ui.close();
-                }
-                if ui
-                    .button("Save a return-to-defaults script for the selection...")
-                    .clicked()
-                {
-                    acts.push(Act::SaveScript(ScriptKind::Revert));
-                    ui.close();
-                }
-                if ui.button("Save an audit script for the selection...").clicked() {
-                    acts.push(Act::SaveScript(ScriptKind::Audit));
-                    ui.close();
-                }
-                ui.separator();
-                if ui.button("Open an audit report...").clicked() {
-                    acts.push(Act::OpenReport);
-                    ui.close();
-                }
-            });
-            if ui.button("Compare").clicked() {
-                acts.push(Act::Compare);
+            if ui.button("Open an audit report...").clicked() {
+                acts.push(Act::OpenReport);
+                ui.close();
             }
         });
+        if button(ui, "\u{1F500}", "Compare", "") {
+            acts.push(Act::Compare);
+        }
+    }
+
+    fn toolbar(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+        ui.horizontal(|ui| self.toolbar_items(ui, acts, false));
     }
 
     fn crumbs(&self) -> Vec<(String, Sel)> {
@@ -644,7 +666,7 @@ impl App {
         crumbs
     }
 
-    fn nav_row(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    fn nav_row(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>, compact: bool) {
         let (can_back, can_forward) = match self.docs.get(self.active) {
             Some(Doc::Profile(doc)) => (doc.can_go(-1), doc.can_go(1)),
             _ => (false, false),
@@ -693,6 +715,12 @@ impl App {
                 }
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if compact {
+                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                        ui.separator();
+                        self.toolbar_items(ui, acts, true);
+                    });
+                }
                 if self.search.open {
                     if ui
                         .button("x")
@@ -806,6 +834,10 @@ impl App {
             &mut self.settings.show_guide_at_start,
             "Open the guide at the next start",
         );
+        ui.checkbox(
+            &mut self.settings.inline_switches,
+            "Switches at the end of the rows of the selected group",
+        );
         ui.add_space(12.0);
         ui.horizontal(|ui| {
             ui.weak(format!("Settings file: {}", Settings::path().display()));
@@ -834,6 +866,14 @@ impl App {
         }
         if path.extension().is_some_and(|e| e == bookmarks::EXTENSION) {
             self.open_marks_path(path);
+            return;
+        }
+        let ext = path
+            .extension()
+            .map(|e| e.to_string_lossy().to_ascii_lowercase())
+            .unwrap_or_default();
+        if ext == "xml" || ext == "json" {
+            self.open_foreign(path, &ext);
             return;
         }
         if path
@@ -1186,13 +1226,14 @@ impl App {
         else {
             return;
         };
-        let report = match Report::load(&path) {
-            Ok(r) => r,
-            Err(e) => {
-                self.status = format!("Report not read: {e}");
-                return;
-            }
-        };
+        match Report::load(&path) {
+            Ok(report) => self.open_report_from(report, &path),
+            Err(e) => self.status = format!("Report not read: {e}"),
+        }
+    }
+
+    /// Reads an audit report into a new profile, on the base of the open profile.
+    fn open_report_from(&mut self, report: Report, path: &Path) {
         let base = match self.docs.get(self.active) {
             Some(Doc::Profile(doc)) => doc.profile.clone(),
             _ => Profile::parse(PRESETS[0].1, PRESETS[0].0)
@@ -1366,7 +1407,7 @@ impl App {
                     self.active = self.docs.len() - 1;
                 }
                 Act::Open => {
-                    if let Some(path) = pick_profile() {
+                    if let Some(path) = pick_any() {
                         self.open_path(path);
                     }
                 }
@@ -1579,6 +1620,63 @@ impl App {
         }
     }
 
+    /// Opens an answer file (its embedded profile), a WinKickOff profile or an audit report as a
+    /// new, unsaved profile.
+    fn open_foreign(&mut self, path: PathBuf, ext: &str) {
+        let name = jsonfile::display_name(&path);
+        let text = match jsonfile::read_text_bom(&path, jsonfile::MAX_BYTES) {
+            Ok(t) => t,
+            Err(e) => {
+                self.status = format!("Open failed: {e}");
+                return;
+            }
+        };
+        if ext == "json"
+            && let Ok(report) = Report::parse(&text, &name)
+        {
+            self.open_report_from(report, &path);
+            return;
+        }
+        let opened = if ext == "xml" {
+            import::profile_from_answer_file(&text, &name)
+        } else {
+            import::profile_from_json(&text, &name)
+        };
+        match opened {
+            Ok((mut profile, notes)) => {
+                let unknown = profile.split_unknown(&self.catalog);
+                let mut doc = ProfileDoc::new(profile, None, &self.catalog);
+                doc.dirty = true;
+                doc.issues = notes
+                    .into_iter()
+                    .map(|n| Issue {
+                        severity: Severity::Info,
+                        target: Target::Profile,
+                        text: format!("Open: {n}"),
+                    })
+                    .collect();
+                if !unknown.is_empty() {
+                    doc.issues.push(Issue {
+                        severity: Severity::Info,
+                        target: Target::Profile,
+                        text: format!(
+                            "Open: {} choices of rules this catalog does not have are kept aside",
+                            unknown.len()
+                        ),
+                    });
+                }
+                self.docs.push(Doc::Profile(Box::new(doc)));
+                self.active = self.docs.len() - 1;
+                self.status = format!(
+                    "Opened the profile of {}; save it as a .wwprofile file",
+                    path.display()
+                );
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = format!("Open failed: {e}"),
+        }
+    }
+
     fn open_diff_path(&mut self, path: PathBuf) {
         match Diff::load(&path) {
             Ok(diff) => {
@@ -1717,8 +1815,11 @@ impl eframe::App for App {
         }
         let mut acts = self.shortcuts(ui.ctx());
         egui::Panel::top("tabs").show(ui, |ui| self.tabs_row(ui, &mut acts));
-        egui::Panel::top("toolbar").show(ui, |ui| self.toolbar(ui, &mut acts));
-        egui::Panel::top("nav").show(ui, |ui| self.nav_row(ui, &mut acts));
+        let compact = ui.available_width() < COMPACT_WIDTH;
+        if !compact {
+            egui::Panel::top("toolbar").show(ui, |ui| self.toolbar(ui, &mut acts));
+        }
+        egui::Panel::top("nav").show(ui, |ui| self.nav_row(ui, &mut acts, compact));
         self.messages_panel(ui, &mut acts);
         egui::Panel::bottom("status").show(ui, |ui| self.status_bar(ui));
         let kind = match self.docs.get(self.active) {
@@ -1740,7 +1841,15 @@ impl eframe::App for App {
                     .resizable(true)
                     .default_size(380.0)
                     .show(ui, |ui| {
-                        views::tree_view(ui, catalog, texts, doc, search, &mut acts);
+                        views::tree_view(
+                            ui,
+                            catalog,
+                            texts,
+                            doc,
+                            search,
+                            settings.inline_switches,
+                            &mut acts,
+                        );
                     });
                 egui::CentralPanel::default().show(ui, |ui| {
                     views::detail_view(ui, catalog, texts, doc, settings, &mut acts);
@@ -1854,6 +1963,22 @@ fn profile_dialog() -> rfd::FileDialog {
 
 fn pick_profile() -> Option<PathBuf> {
     profile_dialog().set_title("Open a profile").pick_file()
+}
+
+/// The open dialog for every kind of file the program opens.
+fn pick_any() -> Option<PathBuf> {
+    let dir = profiles_dir();
+    let dialog = rfd::FileDialog::new()
+        .set_title("Open")
+        .add_filter(
+            "WinWeaver files",
+            &[profile::EXTENSION, diff::EXTENSION, bookmarks::EXTENSION],
+        )
+        .add_filter("Answer files (the profile they embed)", &["xml"])
+        .add_filter("WinKickOff profiles and audit reports", &["json"])
+        .add_filter("Markdown pages", &["md"]);
+    let dialog = if dir.is_dir() { dialog.set_directory(dir) } else { dialog };
+    dialog.pick_file()
 }
 
 fn ask_save_path(proposed: &str) -> Option<PathBuf> {

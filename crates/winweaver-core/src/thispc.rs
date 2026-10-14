@@ -505,7 +505,7 @@ impl Report {
 
     /// Reads a report file.
     pub fn load(path: &std::path::Path) -> Result<Self, String> {
-        let text = jsonfile::read_text(path, REPORT_MAX_BYTES).map_err(|e| e.to_string())?;
+        let text = jsonfile::read_text_bom(path, REPORT_MAX_BYTES).map_err(|e| e.to_string())?;
         Self::parse(&text, &jsonfile::display_name(path))
     }
 }

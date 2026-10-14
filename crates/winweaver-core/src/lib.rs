@@ -8,6 +8,7 @@ pub mod catalog;
 pub mod clock;
 pub mod diff;
 pub mod i18n;
+pub mod import;
 pub mod jsonfile;
 pub mod profile;
 pub mod render;
