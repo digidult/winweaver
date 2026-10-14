@@ -55,6 +55,8 @@ pub struct CatalogTexts {
     pub code: String,
     /// The native name of the language.
     pub language: String,
+    /// The word after the title of the Disabled rule of an imported policy (`<title>: <word>`).
+    pub disabled: String,
     pub groups: IndexMap<String, GroupText>,
     pub rules: IndexMap<String, RuleText>,
 }
@@ -77,6 +79,9 @@ impl CatalogTexts {
             match key.as_str() {
                 "_language" => {
                     texts.language = value.as_str().unwrap_or_default().to_owned();
+                }
+                "_disabled" => {
+                    texts.disabled = value.as_str().unwrap_or_default().to_owned();
                 }
                 "_comment" => {}
                 "_groups" => {

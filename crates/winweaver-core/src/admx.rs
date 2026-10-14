@@ -56,10 +56,6 @@ impl Node {
     }
 }
 
-fn utf8(bytes: &[u8]) -> Result<String, String> {
-    std::str::from_utf8(bytes).map(str::to_owned).map_err(|_| "a name is not UTF-8".to_owned())
-}
-
 /// Parses XML text into a tree; a DTD, an unknown entity or nesting deeper than the limit is an
 /// error.
 fn parse_xml(text: &str) -> Result<Node, String> {
@@ -95,7 +91,7 @@ fn parse_xml(text: &str) -> Result<Node, String> {
             }
             Event::CData(c) => {
                 if let Some(n) = stack.last_mut() {
-                    n.text.push_str(&utf8(&c.into_inner())?);
+                    n.text.push_str(&c.into_inner());
                 }
             }
             Event::GeneralRef(r) => {
@@ -181,7 +177,6 @@ struct Category {
 
 #[derive(Debug, Clone)]
 struct Policy {
-    ns: String,
     prefix: String,
     name: String,
     user: bool,
@@ -428,7 +423,6 @@ fn read_pair(admx: &str, adml: &[(String, String)], file: &str, out: &mut Templa
                 }
             }
             Ok(Policy {
-                ns: ns.clone(),
                 prefix: prefix.clone(),
                 name: name.clone(),
                 user: class == "User",
@@ -834,11 +828,7 @@ pub fn to_catalog_file(t: &Templates, id: &str, name: &str, windows: &str, creat
                     if let Some(title) = p.title.get(*culture) {
                         let summary = p.explain.get(*culture).map(|s| cut(s, SUMMARY_MAX)).unwrap_or_default();
                         let lang = texts.entry((*code).to_owned()).or_default();
-                        lang.rules.insert(rid.clone(), (cut(title, 300), summary.clone()));
-                        if off.is_some() {
-                            let disabled = if *code == "uk" { "вимкнено" } else { "выключено" };
-                            lang.rules.insert(format!("{rid}.off"), (format!("{}: {disabled}", cut(title, 300)), summary));
-                        }
+                        lang.rules.insert(rid.clone(), (cut(title, 300), summary));
                     }
                 }
                 rules.push(on);
@@ -984,22 +974,38 @@ pub fn merge(base: &Catalog, files: &[CatalogFile]) -> Result<(Catalog, Vec<Stri
     Ok((catalog, notes))
 }
 
-/// Adds the texts of the catalog files to the translations of the catalog.
+/// Adds the texts of the catalog files to the translations of the catalog. The Disabled rule
+/// `<id>.off` of a policy is titled `<title>: <word>` with the word of the translation file
+/// (`_disabled`); without the word it keeps its English title.
 pub fn merge_texts(texts: &mut [CatalogTexts], files: &[CatalogFile]) {
     for f in files {
+        let ids: HashSet<&str> = f.rules.iter().map(|r| r.id.as_str()).collect();
         for (code, lang) in &f.texts {
             let Some(t) = texts.iter_mut().find(|t| &t.code == code) else {
                 continue;
             };
             for (id, title) in &lang.groups {
-                t.groups.entry(id.clone()).or_insert_with(|| GroupText { title: Some(title.clone()), summary: None });
+                t.groups.entry(id.clone()).or_insert_with(|| GroupText {
+                    title: Some(title.clone()),
+                    summary: None,
+                });
             }
             for (id, (title, summary)) in &lang.rules {
+                let summary = (!summary.is_empty()).then(|| summary.clone());
                 t.rules.entry(id.clone()).or_insert_with(|| RuleText {
                     title: Some(title.clone()),
-                    summary: (!summary.is_empty()).then(|| summary.clone()),
+                    summary: summary.clone(),
                     ..RuleText::default()
                 });
+                let off = format!("{id}.off");
+                if !t.disabled.is_empty() && ids.contains(off.as_str()) {
+                    let title = format!("{title}: {}", t.disabled);
+                    t.rules.entry(off).or_insert_with(|| RuleText {
+                        title: Some(title),
+                        summary,
+                        ..RuleText::default()
+                    });
+                }
             }
         }
     }
@@ -1114,9 +1120,11 @@ mod tests {
         assert_eq!(notes.len(), 1, "the second copy is left out");
         assert_eq!(merged.root_of("admx.test"), Some(ROOT_POLICIES));
         let mut texts = CatalogTexts::embedded().unwrap();
-        merge_texts(&mut texts, &[f.clone()]);
+        merge_texts(&mut texts, std::slice::from_ref(&f));
         let uk = texts.iter().find(|t| t.code == "uk").unwrap();
         assert!(uk.rules.contains_key("admx.sample.turnoff"));
+        let off = uk.rules["admx.sample.turnoff.off"].title.as_deref().unwrap_or_default();
+        assert!(off.ends_with(&format!(": {}", uk.disabled)), "{off}");
         let mut bad = f.clone();
         bad.rules[0].actions.push(Action::Ps { script: crate::catalog::Lines::One("x".into()) });
         assert!(bad.check().is_err(), "an import never brings a script");
