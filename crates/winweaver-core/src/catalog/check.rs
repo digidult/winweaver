@@ -42,7 +42,7 @@ fn check_rule(catalog: &Catalog, rule: &Rule, problems: &mut Vec<String>) {
             }
         }
         for (field, text) in action.literal_fields() {
-            if text.contains('{') || text.contains('}') {
+            if !placeholders(text).is_empty() {
                 problems.push(format!(
                     "rule {id}: {}.{field} is literal and may not hold a placeholder",
                     action.kind()
@@ -121,7 +121,8 @@ fn check_param(id: &str, name: &str, param: &Param, rule: &Rule, problems: &mut 
     }
 }
 
-/// The names inside `{...}` of a text, in order of appearance.
+/// The parameter names inside `{...}` of a text, in order of appearance. A name starts with a
+/// lower case letter, so a GUID such as `{B4BFCC3A-...}` or a format index `{1}` is literal text.
 pub fn placeholders(text: &str) -> Vec<&str> {
     let mut names = Vec::new();
     let mut rest = text;
@@ -130,7 +131,7 @@ pub fn placeholders(text: &str) -> Vec<&str> {
         match after.find('}') {
             Some(end) => {
                 let name = &after[..end];
-                if !name.is_empty() && is_safe_id(name) {
+                if name.as_bytes().first().is_some_and(u8::is_ascii_lowercase) && is_safe_id(name) {
                     names.push(name);
                 }
                 rest = &after[end + 1..];
