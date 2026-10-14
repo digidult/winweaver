@@ -1,0 +1,696 @@
+{
+  "format": "winweaver-profile",
+  "version": 1,
+  "catalog": "0.11",
+  "name": "Laptop",
+  "author": "",
+  "comment": "Office for laptops: the screen locks after 10 minutes of inactivity. As in every preset, the drive is not encrypted by itself: BitLocker is turned on separately, together with the escrow of recovery keys and user passwords.",
+  "created": "2026-09-25T00:00:00",
+  "modified": "2026-09-25T00:00:00",
+  "install": {
+    "edition": "Pro",
+    "product_key_mode": "generic",
+    "product_key": "",
+    "time_zone": "FLE Standard Time",
+    "account_mode": "file",
+    "computer_name_mode": "random",
+    "computer_name": "",
+    "workgroup": "",
+    "disk_mode": "ask",
+    "disk_id": "0",
+    "partition_id": "3"
+  },
+  "languages": {
+    "ui_language": "uk-UA",
+    "system_locale": "uk-UA",
+    "user_locale": "uk-UA",
+    "input": [
+      "en-US",
+      "uk-UA",
+      "ru-UA"
+    ]
+  },
+  "accounts": [
+    {
+      "name": "Admin",
+      "display_name": "Admin",
+      "group": "Administrators",
+      "description": "Local administrator (starter account)",
+      "password": ""
+    },
+    {
+      "name": "User",
+      "display_name": "User",
+      "group": "Users",
+      "description": "Standard user (starter account)",
+      "password": ""
+    }
+  ],
+  "rules": {
+    "install.bypass-tpm": {
+      "on": true
+    },
+    "install.bypass-secureboot": {
+      "on": true
+    },
+    "install.bypass-cpu": {
+      "on": true
+    },
+    "install.bypass-ram": {
+      "on": true
+    },
+    "install.bypass-storage": {
+      "on": true
+    },
+    "install.bypass-nro": {
+      "on": true
+    },
+    "install.netfx3": {
+      "on": true
+    },
+    "oobe.hide-eula": {
+      "on": true
+    },
+    "oobe.hide-oem-registration": {
+      "on": true
+    },
+    "oobe.hide-online-account": {
+      "on": true
+    },
+    "oobe.hide-wireless": {
+      "on": true
+    },
+    "oobe.protect-your-pc": {
+      "on": true
+    },
+    "printing.spooler-automatic": {
+      "on": true
+    },
+    "printing.point-and-print-admins": {
+      "on": true
+    },
+    "update.unblock": {
+      "on": true
+    },
+    "update.automatic": {
+      "on": true
+    },
+    "update.defer-feature": {
+      "on": true
+    },
+    "update.delivery-optimization-lan": {
+      "on": true
+    },
+    "defender.realtime": {
+      "on": true
+    },
+    "defender.cloud": {
+      "on": true
+    },
+    "defender.pua": {
+      "on": true
+    },
+    "defender.network-protection": {
+      "on": true
+    },
+    "defender.asr": {
+      "on": true
+    },
+    "asr.vulnerable-drivers": {
+      "on": true
+    },
+    "asr.wmi-persistence": {
+      "on": true
+    },
+    "asr.adobe-reader-child": {
+      "on": true
+    },
+    "asr.office-child": {
+      "on": true
+    },
+    "asr.email-executable": {
+      "on": true
+    },
+    "asr.obfuscated-scripts": {
+      "on": true
+    },
+    "asr.script-download": {
+      "on": true
+    },
+    "asr.office-executable": {
+      "on": true
+    },
+    "asr.office-injection": {
+      "on": true
+    },
+    "asr.office-comm-child": {
+      "on": true
+    },
+    "asr.office-win32-api": {
+      "on": true
+    },
+    "asr.ransomware": {
+      "on": true
+    },
+    "asr.safe-mode-reboot": {
+      "on": true
+    },
+    "asr.copied-system-tools": {
+      "on": true
+    },
+    "asr.prevalence": {
+      "on": true
+    },
+    "asr.psexec-wmi": {
+      "on": true
+    },
+    "defender.controlled-folder-access": {
+      "on": true
+    },
+    "defender.notifications": {
+      "on": true
+    },
+    "defender.smartscreen-shell": {
+      "on": true
+    },
+    "uac.baseline": {
+      "on": true
+    },
+    "accounts.inactivity-lock": {
+      "on": true,
+      "params": {
+        "seconds": 600
+      }
+    },
+    "lsa.baseline": {
+      "on": true
+    },
+    "lsa.protection": {
+      "on": true
+    },
+    "lsa.ntlmv2-only": {
+      "on": true
+    },
+    "accounts.lockout": {
+      "on": true
+    },
+    "accounts.password-never-expires": {
+      "on": true
+    },
+    "remote.assistance-off": {
+      "on": true
+    },
+    "remote.rdp-inbound-off": {
+      "on": true
+    },
+    "remote.rdp-nla": {
+      "on": true
+    },
+    "remote.registry-off": {
+      "on": true
+    },
+    "encryption.prevent-auto-bitlocker": {
+      "on": true
+    },
+    "accounts.block-aad-join": {
+      "on": true
+    },
+    "network.smb1-off": {
+      "on": true
+    },
+    "network.smb-signing": {
+      "on": true
+    },
+    "network.llmnr-off": {
+      "on": true
+    },
+    "network.firewall": {
+      "on": true
+    },
+    "removable.autorun-off": {
+      "on": true
+    },
+    "scripts.open-in-notepad": {
+      "on": true
+    },
+    "edge.smartscreen-locked": {
+      "on": true
+    },
+    "edge.baseline": {
+      "on": true
+    },
+    "logging.eventlog-sizes": {
+      "on": true
+    },
+    "logging.audit-policy": {
+      "on": true
+    },
+    "logging.powershell": {
+      "on": true
+    },
+    "logging.powershell-v2-off": {
+      "on": true
+    },
+    "privacy.telemetry-minimal": {
+      "on": true
+    },
+    "privacy.consumer-content": {
+      "on": true
+    },
+    "privacy.copilot-recall-off": {
+      "on": true
+    },
+    "privacy.widgets-off": {
+      "on": true
+    },
+    "privacy.web-search-off": {
+      "on": true
+    },
+    "system.long-paths": {
+      "on": true
+    },
+    "ai.recall-user-off": {
+      "on": true
+    },
+    "ai.settings-agent-off": {
+      "on": true
+    },
+    "ai.agent-connectors-off": {
+      "on": true
+    },
+    "ai.apps-generative-off": {
+      "on": true
+    },
+    "ai.copilot-microphone-off": {
+      "on": true
+    },
+    "ai.paint-off": {
+      "on": true
+    },
+    "ai.notepad-off": {
+      "on": true
+    },
+    "ai.copilot-pin-screen-off": {
+      "on": true
+    },
+    "ai.typing-insights-off": {
+      "on": true
+    },
+    "telemetry.settings-state": {
+      "on": true
+    },
+    "telemetry.user-policy": {
+      "on": true
+    },
+    "telemetry.change-notification-off": {
+      "on": true
+    },
+    "telemetry.limit-logs-dumps": {
+      "on": true
+    },
+    "telemetry.app-telemetry-off": {
+      "on": true
+    },
+    "telemetry.steps-recorder-off": {
+      "on": true
+    },
+    "telemetry.app-diagnostics-off": {
+      "on": true
+    },
+    "telemetry.feedback-user-off": {
+      "on": true
+    },
+    "ads.lock-screen-spotlight-off": {
+      "on": true
+    },
+    "ads.suggestions-user-policies": {
+      "on": true
+    },
+    "ads.account-notifications-off": {
+      "on": true
+    },
+    "ads.advertising-id-user-off": {
+      "on": true
+    },
+    "search.cloud-off": {
+      "on": true
+    },
+    "search.user-cloud-off": {
+      "on": true
+    },
+    "search.start-track-off": {
+      "on": true
+    },
+    "speech.online-off": {
+      "on": true
+    },
+    "speech.online-user-off": {
+      "on": true
+    },
+    "speech.narrator-online-off": {
+      "on": true
+    },
+    "speech.narrator-extensions-off": {
+      "on": true
+    },
+    "drivers.coinstallers-off": {
+      "on": true
+    },
+    "drivers.metadata-off": {
+      "on": true
+    },
+    "apps.retail-demo-off": {
+      "on": true
+    },
+    "apps.xbox-services-off": {
+      "on": true
+    },
+    "apps.maps-broker-off": {
+      "on": true
+    },
+    "apps.remove-quick-assist": {
+      "on": true
+    },
+    "apps.remove.bing-search": {
+      "on": true
+    },
+    "apps.remove.bing-news": {
+      "on": true
+    },
+    "apps.remove.bing-weather": {
+      "on": true
+    },
+    "apps.remove.get-help": {
+      "on": true
+    },
+    "apps.remove.get-started": {
+      "on": true
+    },
+    "apps.remove.feedback-hub": {
+      "on": true
+    },
+    "apps.remove.3d-viewer": {
+      "on": true
+    },
+    "apps.remove.mixed-reality": {
+      "on": true
+    },
+    "apps.remove.solitaire": {
+      "on": true
+    },
+    "apps.remove.xbox-gaming-app": {
+      "on": true
+    },
+    "apps.remove.xbox-app": {
+      "on": true
+    },
+    "apps.remove.xbox-game-overlay": {
+      "on": true
+    },
+    "apps.remove.xbox-gaming-overlay": {
+      "on": true
+    },
+    "apps.remove.xbox-identity": {
+      "on": true
+    },
+    "apps.remove.xbox-speech-to-text": {
+      "on": true
+    },
+    "apps.remove.xbox-tcui": {
+      "on": true
+    },
+    "apps.remove.edge-game-assist": {
+      "on": true
+    },
+    "apps.remove.maps": {
+      "on": true
+    },
+    "apps.remove.people": {
+      "on": true
+    },
+    "apps.remove.phone-link": {
+      "on": true
+    },
+    "apps.remove.power-automate": {
+      "on": true
+    },
+    "apps.remove.todo": {
+      "on": true
+    },
+    "apps.remove.family": {
+      "on": true
+    },
+    "apps.remove.dev-home": {
+      "on": true
+    },
+    "apps.remove.clipchamp": {
+      "on": true
+    },
+    "apps.remove.teams": {
+      "on": true
+    },
+    "apps.remove.skype": {
+      "on": true
+    },
+    "apps.remove.office-hub": {
+      "on": true
+    },
+    "apps.remove.outlook-new": {
+      "on": true
+    },
+    "apps.remove.mail-calendar": {
+      "on": true
+    },
+    "apps.remove.copilot": {
+      "on": true
+    },
+    "apps.remove.copilot-provider": {
+      "on": true
+    },
+    "apps.remove.cortana": {
+      "on": true
+    },
+    "apps.remove.onedrive": {
+      "on": true
+    },
+    "onedrive.kfm-block": {
+      "on": true
+    },
+    "onedrive.no-traffic-before-signin": {
+      "on": true
+    },
+    "onedrive.feedback-off": {
+      "on": true
+    },
+    "default-user.show-file-extensions": {
+      "on": true
+    },
+    "default-user.no-sync-provider-ads": {
+      "on": true
+    },
+    "default-user.no-consumer-content": {
+      "on": true
+    },
+    "default-user.widgets-button-off": {
+      "on": true
+    },
+    "default-user.copilot-off": {
+      "on": true
+    },
+    "default-user.autoplay-off": {
+      "on": true
+    },
+    "default-user.region": {
+      "on": true
+    },
+    "default-user.http-accept-language-optout": {
+      "on": true
+    },
+    "user-logon.pin-ui-language": {
+      "on": true
+    },
+    "user-logon.input-languages": {
+      "on": true
+    },
+    "post-oobe.password-never-expires": {
+      "on": true
+    },
+    "post-oobe.disable-builtin-accounts": {
+      "on": true
+    },
+    "post-oobe.collect-specialize-errors": {
+      "on": true
+    },
+    "post-oobe.delete-answer-file-copies": {
+      "on": true
+    },
+    "edge.diagnostic-data-off": {
+      "on": true
+    },
+    "edge.search-telemetry-off": {
+      "on": true
+    },
+    "edge.sidebar-off": {
+      "on": true
+    },
+    "edge.shopping-off": {
+      "on": true
+    },
+    "edge.rewards-off": {
+      "on": true
+    },
+    "edge.insider-promo-off": {
+      "on": true
+    },
+    "edge.translate-off": {
+      "on": true
+    },
+    "edge.feedback-off": {
+      "on": true
+    },
+    "edge.signin-off": {
+      "on": true
+    },
+    "edge.autofill-cards-off": {
+      "on": true
+    },
+    "edge.genai-local-model-off": {
+      "on": true
+    },
+    "edge.builtin-ai-apis-off": {
+      "on": true
+    },
+    "edge.history-ai-search-off": {
+      "on": true
+    },
+    "edge.ai-themes-off": {
+      "on": true
+    },
+    "edge.text-prediction-off": {
+      "on": true
+    },
+    "edge.tab-services-off": {
+      "on": true
+    },
+    "edge.autofill-ml-off": {
+      "on": true
+    },
+    "edge.copilot-address-bar-off": {
+      "on": true
+    },
+    "edge.ntp-copilot-off": {
+      "on": true
+    },
+    "edge.copilot-cowork-off": {
+      "on": true
+    },
+    "edge.browsing-with-copilot-off": {
+      "on": true
+    },
+    "edge.copilot-page-context-off": {
+      "on": true
+    },
+    "edge.entra-copilot-page-context-off": {
+      "on": true
+    },
+    "edge.m365-copilot-icon-off": {
+      "on": true
+    },
+    "edge.compose-inline-off": {
+      "on": true
+    },
+    "edge.copilot-search-history-off": {
+      "on": true
+    },
+    "chrome.metrics-off": {
+      "on": true
+    },
+    "chrome.variations": {
+      "on": true
+    },
+    "chrome.background-off": {
+      "on": true
+    },
+    "chrome.genai-off": {
+      "on": true
+    },
+    "chrome.genai-local-model-off": {
+      "on": true
+    },
+    "chrome.devtools-genai-off": {
+      "on": true
+    },
+    "chrome.translate-off": {
+      "on": true
+    },
+    "chrome.cast-private-only": {
+      "on": true
+    },
+    "chrome.promotions-off": {
+      "on": true
+    },
+    "chrome.autofill-cards-off": {
+      "on": true
+    },
+    "brave.rewards-off": {
+      "on": true
+    },
+    "brave.wallet-off": {
+      "on": true
+    },
+    "brave.vpn-off": {
+      "on": true
+    },
+    "brave.ai-chat-off": {
+      "on": true
+    },
+    "brave.stats-ping-off": {
+      "on": true
+    },
+    "brave.p3a-off": {
+      "on": true
+    },
+    "brave.news-off": {
+      "on": true
+    },
+    "brave.talk-off": {
+      "on": true
+    },
+    "brave.playlist-off": {
+      "on": true
+    },
+    "brave.speedreader-off": {
+      "on": true
+    },
+    "brave.wayback-off": {
+      "on": true
+    },
+    "brave.web-discovery-off": {
+      "on": true
+    },
+    "brave.translate-off": {
+      "on": true
+    },
+    "brave.tor-off": {
+      "on": true
+    },
+    "office.connected-ai-off": {
+      "on": true
+    },
+    "office.optional-connected-off": {
+      "on": true
+    },
+    "office.telemetry-off": {
+      "on": true
+    },
+    "office.feedback-off": {
+      "on": true
+    },
+    "office.copilot-checkbox-off": {
+      "on": true
+    },
+    "nav.gallery-hidden": {
+      "on": true
+    }
+  }
+}

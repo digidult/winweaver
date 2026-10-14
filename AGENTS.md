@@ -34,15 +34,31 @@ ported (clean room specification first, then implementation).
 ├── AGENTS.md              this file
 ├── README.md              purpose, status, links
 ├── LICENSE                MIT
+├── Cargo.toml             the workspace (edition 2024, resolver 3), shared dependencies, release profile
+├── rust-toolchain.toml    stable with rustfmt and clippy
+├── rustfmt.toml           max_width 100
+├── .cargo/config.toml     static CRT for the Windows target
 ├── .gitattributes         LF line endings for every text file
 ├── .gitignore
+├── .github/workflows/ci.yml  CI: fmt (a patch artifact), clippy, tests and the catalog check on Linux;
+│                          tests, the release build and the zip artifact on Windows
+├── crates/
+│   ├── winweaver-core/    the catalog (model, embedded data, checks), jsonfile (strict reading), i18n
+│   │                      (catalog translations), profile (the .wwprofile format), resolver; tests/catalog.rs
+│   │                      runs on the embedded data, the translations and the presets
+│   └── winweaver/         the executable: --version, --check-catalog, --help (the window comes next)
+├── data/
+│   ├── catalog/           groups.json, 00-17 rules files, lang/ru.json and lang/uk.json: the catalog data
+│   │                      of the predecessor (0.11), embedded into the executable by core/catalog/embedded.rs
+│   └── presets/           office, strict, laptop, home .wwprofile, converted once from the predecessor's
+│                          presets (a generator from the catalog defaults comes later)
 └── docs/
     ├── spec/              clean room specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
     └── design/            UI design variants: README.md (comparison) and mockups/ (HTML, a shared CSS)
 ```
 
-Planned (not yet created): `crates/` (a Cargo workspace), `data/` (the rule catalog, translations, themes,
-presets, documentation shipped next to the executable), `.github/workflows/` (CI build on Windows).
+Planned: `crates/winweaver-ui` (eframe), `crates/winweaver-win` (the Windows API), `crates/winweaver-mcp`,
+`data/lang/<code>/ui.json`, `data/themes/`, `data/docs/`.
 
 ## 4. Project rules
 
@@ -72,7 +88,24 @@ presets, documentation shipped next to the executable), `.github/workflows/` (CI
 
 ## 5. Commands
 
-None yet. The Cargo workspace comes with the first implementation milestone.
+On a machine with Rust (CI or a VM, never the customer's PC):
+
+```bash
+cargo fmt --all --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+cargo run -p winweaver -- --check-catalog
+cargo build --release --workspace
+```
+
+CI runs the same on every push and pull request (`.github/workflows/ci.yml`). When `cargo fmt` finds
+differences, the job `check` uploads `fmt.patch` in the artifact `ci-files` (with `Cargo.lock`): download it
+with `gh run download <run id> -n ci-files` and apply it with `git apply fmt.patch`.
+
+Catalog data: edit `data/catalog/*.json` by hand (strict JSON, ASCII, the layout of the predecessor), add a
+new rules file to `RULE_FILES` in `crates/winweaver-core/src/catalog/embedded.rs`; `tests/catalog.rs` fails
+on an unknown field, a missing reference, a placeholder outside the allowed fields or a rule under the wrong
+root.
 
 ## 6. Work status
 
@@ -80,7 +113,8 @@ None yet. The Cargo workspace comes with the first implementation milestone.
 |---|---|---|
 | Specification | Draft 0.1: scope, UI, documents, features, architecture | 14.10.2026 |
 | UI design | Four HTML mockups (variants A, B, C and the secondary tabs), comparison and recommendation | 14.10.2026 |
-| Implementation | Not started | |
+| Core | Catalog model and embedded data, strict JSON reading, translations, the profile format 1, the resolver; tests on the real data; written without a local toolchain, CI is the first compiler | 14.10.2026 |
+| Executable | CLI only (`--version`, `--check-catalog`); the window, the Windows API and the MCP server not started | 14.10.2026 |
 
 Decisions awaited from the customer: the UI variant to build (`docs/design/README.md`), the file extensions
 (`docs/spec/02-documents.md` section 1), the minimum Windows version for the executable (10 1809 or 10 21H2).

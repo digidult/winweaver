@@ -1,0 +1,243 @@
+{
+  "comment": [
+    "Group tree of the interface. Ids with a dot are nested in their parent (parent is required).",
+    "order sets the position among siblings. Rules refer to a group with the field group."
+  ],
+  "groups": [
+    {
+      "id": "unattend",
+      "title": "Installation",
+      "order": 1,
+      "summary": "What the answer file does by its own means: the installation, OOBE, the accounts and the languages; the data forms are here too"
+    },
+    {
+      "id": "policies",
+      "title": "Standard policies",
+      "order": 2,
+      "summary": "Policies of Windows: the built-in rules that write policy values only, and every imported policy template"
+    },
+    {
+      "id": "other",
+      "title": "Other",
+      "order": 3,
+      "summary": "Rules outside policies: registry values, services, features, apps, scripts, the default user profile, the first sign-in and the tasks after OOBE"
+    },
+    {
+      "id": "install",
+      "title": "windowsPE and specialize",
+      "order": 10,
+      "summary": "Bypassing compatibility checks, a local account without a network connection, .NET Framework 3.5 from the media.",
+      "parent": "unattend"
+    },
+    {
+      "id": "oobe",
+      "title": "Out-of-box experience (OOBE)",
+      "order": 20,
+      "summary": "Which OOBE screens are hidden and how the privacy settings are set.",
+      "parent": "unattend"
+    },
+    {
+      "id": "update",
+      "title": "Windows Update",
+      "order": 40,
+      "summary": "Automatic updates, other Microsoft products, feature update deferral, Delivery Optimization.",
+      "parent": "policies"
+    },
+    {
+      "id": "defender",
+      "title": "Microsoft Defender and SmartScreen",
+      "order": 50,
+      "summary": "Real-time protection, cloud-delivered protection, PUA, network protection, ASR rules, SmartScreen.",
+      "parent": "policies"
+    },
+    {
+      "id": "defender.asr",
+      "parent": "defender",
+      "title": "Attack surface reduction (ASR) rules",
+      "order": 1,
+      "summary": "Each rule blocks one attack technique through Office, email, scripts, USB or drivers. Mode: block, audit, warn."
+    },
+    {
+      "id": "security",
+      "title": "Security",
+      "order": 60,
+      "summary": "UAC, accounts, credential protection, remote access, encryption.",
+      "parent": "other"
+    },
+    {"id": "security.accounts", "parent": "security", "title": "Accounts and sign-in", "order": 2},
+    {"id": "security.lsa", "parent": "security", "title": "Credential protection (LSA, NTLM)", "order": 3},
+    {"id": "security.remote", "parent": "security", "title": "Remote access", "order": 4},
+    {
+      "id": "network",
+      "title": "Network and sharing",
+      "order": 70,
+      "summary": "SMB, signing, name resolution, firewall.",
+      "parent": "other"
+    },
+    {
+      "id": "browsers",
+      "title": "Browsers",
+      "order": 85,
+      "summary": "Microsoft Edge, Google Chrome and Brave policies: security, telemetry, advertising, AI features. Part of the policies is on by default: telemetry, advertising, AI features, page translation, card autofill, the Brave wallet and VPN; sync, browser sign-in and password managers are off. Policies for a browser that is not installed have no effect.",
+      "parent": "policies"
+    },
+    {"id": "browsers.edge", "parent": "browsers", "title": "Microsoft Edge", "order": 1},
+    {"id": "browsers.chrome", "parent": "browsers", "title": "Google Chrome", "order": 2},
+    {"id": "browsers.brave", "parent": "browsers", "title": "Brave", "order": 3},
+    {
+      "id": "logging",
+      "title": "Logging for investigations",
+      "order": 90,
+      "summary": "Auditing, log sizes, PowerShell logging, disabling PowerShell 2.0.",
+      "parent": "other"
+    },
+    {
+      "id": "privacy",
+      "title": "Telemetry, ads, AI",
+      "order": 100,
+      "summary": "Minimal data sending, disabling ads and preinstalled apps, Copilot and Recall, widgets, web search.",
+      "parent": "policies"
+    },
+    {"id": "system", "title": "System", "order": 110, "summary": "Other system settings.", "parent": "other"},
+    {
+      "id": "apps",
+      "title": "Services and apps",
+      "order": 120,
+      "summary": "Disabling unnecessary services and removing apps.",
+      "parent": "other"
+    },
+    {
+      "id": "apps.remove",
+      "parent": "apps",
+      "title": "Apps to remove",
+      "order": 1,
+      "summary": "Each app is a separate rule: clear the check box to keep the app."
+    },
+    {
+      "id": "default-user",
+      "title": "Default user profile",
+      "order": 130,
+      "summary": "Values that every new user gets at first sign-in (can be changed in Settings).",
+      "parent": "other"
+    },
+    {
+      "id": "post-oobe",
+      "title": "After OOBE (scheduled task)",
+      "order": 150,
+      "summary": "Scheduled task after OOBE completes: passwords, built-in accounts, cleanup.",
+      "parent": "other"
+    },
+    {
+      "id": "privacy.ai",
+      "parent": "privacy",
+      "title": "Artificial intelligence",
+      "order": 1,
+      "summary": "Copilot, Recall, Click to Do, AI agents, Windows generative features, Paint and Notepad."
+    },
+    {
+      "id": "privacy.telemetry",
+      "parent": "privacy",
+      "title": "Telemetry and feedback",
+      "order": 2,
+      "summary": "Windows diagnostic data, reports, feedback requests, Steps Recorder."
+    },
+    {
+      "id": "privacy.office",
+      "parent": "privacy",
+      "title": "Microsoft Office",
+      "order": 6,
+      "summary": "Copilot and connected experiences in Office, diagnostic data and feedback; the settings are written to the default user profile."
+    },
+    {
+      "id": "apps.onedrive",
+      "parent": "apps.policies",
+      "title": "OneDrive",
+      "order": 2,
+      "summary": "OneDrive client policies: moving folders to the cloud, network traffic, feedback, a complete block."
+    },
+    {
+      "id": "system.explorer",
+      "parent": "system",
+      "title": "File Explorer and the desktop",
+      "order": 2,
+      "summary": "Folders in \"This PC\", items of the navigation pane and icons on the desktop. Off by default, so Windows keeps its own choice, except that \"Gallery\" is hidden."
+    },
+    {
+      "id": "system.explorer.thispc",
+      "parent": "system.explorer",
+      "title": "Folders in \"This PC\"",
+      "order": 1,
+      "summary": "User folders (hidden in Windows 11), \"3D Objects\", \"Recycle Bin\" and \"Control Panel\" above the drives. Off by default: \"This PC\" shows the drives only, as in Windows 11."
+    },
+    {
+      "id": "system.explorer.nav",
+      "parent": "system.explorer",
+      "title": "Navigation pane",
+      "order": 2,
+      "summary": "\"Home\", \"Gallery\", \"Libraries\", \"Network\", \"Recycle Bin\", the user folder and USB drives in the left pane of File Explorer, and the folder File Explorer opens to."
+    },
+    {
+      "id": "system.explorer.desktop",
+      "parent": "system.explorer",
+      "title": "Desktop icons",
+      "order": 3,
+      "summary": "\"This PC\", the user folder, \"Network\", \"Control Panel\" and \"Recycle Bin\" (the icons of the Desktop icon settings dialog), \"Libraries\" and the Windows Spotlight icon on the desktop of new accounts."
+    },
+    {
+      "id": "system.explorer.desktop.folders",
+      "parent": "system.explorer.desktop",
+      "title": "Folders on the desktop",
+      "order": 1,
+      "summary": "\"Documents\", \"Downloads\", \"Music\", \"Pictures\", \"Videos\", \"Desktop\", \"Gallery\" and \"Home\" as icons on the desktop of new accounts. Rarely needed."
+    },
+    {
+      "id": "install.other",
+      "parent": "other",
+      "title": "Installation scripts (specialize)",
+      "order": 10,
+      "summary": "Bypassing compatibility checks, a local account without a network connection, .NET Framework 3.5 from the media."
+    },
+    {
+      "id": "security.policies",
+      "parent": "policies",
+      "title": "Security",
+      "order": 60,
+      "summary": "UAC, accounts, credential protection, remote access, encryption."
+    },
+    {
+      "id": "privacy.other",
+      "parent": "other",
+      "title": "Telemetry, ads, AI",
+      "order": 100,
+      "summary": "Minimal data sending, disabling ads and preinstalled apps, Copilot and Recall, widgets, web search."
+    },
+    {
+      "id": "privacy.ads.other",
+      "parent": "privacy.other",
+      "title": "Ads and recommendations",
+      "order": 3,
+      "summary": "Advertising ID, tips and suggestions, lock screen, widgets."
+    },
+    {
+      "id": "privacy.ai.other",
+      "parent": "privacy.other",
+      "title": "Artificial intelligence",
+      "order": 1,
+      "summary": "Copilot, Recall, Click to Do, AI agents, Windows generative features, Paint and Notepad."
+    },
+    {
+      "id": "privacy.speech.other",
+      "parent": "privacy.other",
+      "title": "Speech and input",
+      "order": 5,
+      "summary": "Cloud speech recognition, handwriting and typing personalization, Narrator online services."
+    },
+    {
+      "id": "apps.policies",
+      "parent": "policies",
+      "title": "Services and apps",
+      "order": 120,
+      "summary": "Disabling unnecessary services and removing apps."
+    }
+  ]
+}

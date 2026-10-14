@@ -1,0 +1,267 @@
+{
+  "format": "winweaver-profile",
+  "version": 1,
+  "catalog": "0.11",
+  "name": "Home",
+  "author": "",
+  "comment": "A lighter setup for home PCs: the setup screens of Office (hardware checks bypassed, no Microsoft account or network screens, BitLocker prevented), extra apps, OneDrive and Quick Assist removed, ads, widgets, web search, Copilot and Recall off, minimal telemetry, file extensions shown, File Explorer opens This PC; the product key and the edition are chosen during installation. The WinKickOff protection set is not applied: the UAC, LSA, Defender (except visible notifications), ASR, SmartScreen, network, logging, update (except Delivery Optimization without the cloud), browser and post-installation rules are off and Windows keeps its defaults. Also off: .NET Framework 3.5 from the media, the automatic Print Spooler start, the user region, the input language list and the display language pin, AutoRun of removable media, and the AI settings of Notepad, Paint, Office and Edge. Check shows the baseline rules that are off. Use Office for work PCs.",
+  "created": "2026-09-25T00:00:00",
+  "modified": "2026-09-25T00:00:00",
+  "install": {
+    "edition": "Pro",
+    "product_key_mode": "ask",
+    "product_key": "",
+    "time_zone": "FLE Standard Time",
+    "account_mode": "file",
+    "computer_name_mode": "random",
+    "computer_name": "",
+    "workgroup": "",
+    "disk_mode": "ask",
+    "disk_id": "0",
+    "partition_id": "3"
+  },
+  "languages": {
+    "ui_language": "uk-UA",
+    "system_locale": "uk-UA",
+    "user_locale": "uk-UA",
+    "input": [
+      "en-US",
+      "uk-UA",
+      "ru-UA"
+    ]
+  },
+  "accounts": [
+    {
+      "name": "Admin",
+      "display_name": "Admin",
+      "group": "Administrators",
+      "description": "Local administrator (starter account)",
+      "password": ""
+    },
+    {
+      "name": "User",
+      "display_name": "User",
+      "group": "Users",
+      "description": "Standard user (starter account)",
+      "password": ""
+    }
+  ],
+  "rules": {
+    "install.bypass-tpm": {
+      "on": true
+    },
+    "install.bypass-secureboot": {
+      "on": true
+    },
+    "install.bypass-cpu": {
+      "on": true
+    },
+    "install.bypass-ram": {
+      "on": true
+    },
+    "install.bypass-storage": {
+      "on": true
+    },
+    "install.bypass-nro": {
+      "on": true
+    },
+    "oobe.hide-eula": {
+      "on": true
+    },
+    "oobe.hide-oem-registration": {
+      "on": true
+    },
+    "oobe.hide-online-account": {
+      "on": true
+    },
+    "oobe.hide-wireless": {
+      "on": true
+    },
+    "oobe.protect-your-pc": {
+      "on": true
+    },
+    "update.delivery-optimization-lan": {
+      "on": true,
+      "params": {
+        "mode": 99
+      }
+    },
+    "defender.notifications": {
+      "on": true
+    },
+    "remote.assistance-off": {
+      "on": true
+    },
+    "encryption.prevent-auto-bitlocker": {
+      "on": true
+    },
+    "accounts.block-aad-join": {
+      "on": true
+    },
+    "privacy.telemetry-minimal": {
+      "on": true,
+      "params": {
+        "level": 0
+      }
+    },
+    "privacy.consumer-content": {
+      "on": true
+    },
+    "privacy.copilot-recall-off": {
+      "on": true
+    },
+    "privacy.widgets-off": {
+      "on": true
+    },
+    "privacy.web-search-off": {
+      "on": true
+    },
+    "system.long-paths": {
+      "on": true
+    },
+    "telemetry.app-telemetry-off": {
+      "on": true
+    },
+    "ads.lock-screen-spotlight-off": {
+      "on": true
+    },
+    "ads.account-notifications-off": {
+      "on": true
+    },
+    "ads.advertising-id-user-off": {
+      "on": true
+    },
+    "search.user-cloud-off": {
+      "on": true
+    },
+    "speech.online-user-off": {
+      "on": true
+    },
+    "speech.narrator-online-off": {
+      "on": true
+    },
+    "speech.narrator-extensions-off": {
+      "on": true
+    },
+    "apps.remove-quick-assist": {
+      "on": true
+    },
+    "apps.remove.bing-search": {
+      "on": true
+    },
+    "apps.remove.bing-news": {
+      "on": true
+    },
+    "apps.remove.bing-weather": {
+      "on": true
+    },
+    "apps.remove.get-help": {
+      "on": true
+    },
+    "apps.remove.get-started": {
+      "on": true
+    },
+    "apps.remove.feedback-hub": {
+      "on": true
+    },
+    "apps.remove.3d-viewer": {
+      "on": true
+    },
+    "apps.remove.mixed-reality": {
+      "on": true
+    },
+    "apps.remove.solitaire": {
+      "on": true
+    },
+    "apps.remove.xbox-gaming-app": {
+      "on": true
+    },
+    "apps.remove.xbox-app": {
+      "on": true
+    },
+    "apps.remove.xbox-game-overlay": {
+      "on": true
+    },
+    "apps.remove.xbox-gaming-overlay": {
+      "on": true
+    },
+    "apps.remove.xbox-identity": {
+      "on": true
+    },
+    "apps.remove.xbox-tcui": {
+      "on": true
+    },
+    "apps.remove.maps": {
+      "on": true
+    },
+    "apps.remove.people": {
+      "on": true
+    },
+    "apps.remove.phone-link": {
+      "on": true
+    },
+    "apps.remove.power-automate": {
+      "on": true
+    },
+    "apps.remove.todo": {
+      "on": true
+    },
+    "apps.remove.family": {
+      "on": true
+    },
+    "apps.remove.dev-home": {
+      "on": true
+    },
+    "apps.remove.clipchamp": {
+      "on": true
+    },
+    "apps.remove.teams": {
+      "on": true
+    },
+    "apps.remove.skype": {
+      "on": true
+    },
+    "apps.remove.office-hub": {
+      "on": true
+    },
+    "apps.remove.outlook-new": {
+      "on": true
+    },
+    "apps.remove.mail-calendar": {
+      "on": true
+    },
+    "apps.remove.copilot": {
+      "on": true
+    },
+    "apps.remove.copilot-provider": {
+      "on": true
+    },
+    "apps.remove.cortana": {
+      "on": true
+    },
+    "apps.remove.onedrive": {
+      "on": true
+    },
+    "onedrive.kfm-block": {
+      "on": true
+    },
+    "default-user.show-file-extensions": {
+      "on": true
+    },
+    "default-user.no-sync-provider-ads": {
+      "on": true
+    },
+    "default-user.no-consumer-content": {
+      "on": true
+    },
+    "default-user.copilot-off": {
+      "on": true
+    },
+    "default-user.http-accept-language-optout": {
+      "on": true
+    },
+    "nav.launch-to-this-pc": {
+      "on": true
+    }
+  }
+}

@@ -1,0 +1,15 @@
+[package]
+name = "winweaver-core"
+description = "WinWeaver core: the rule catalog, profiles, the resolver, validation and rendering"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+indexmap.workspace = true
+thiserror.workspace = true

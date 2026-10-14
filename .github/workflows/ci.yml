@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Format, clippy, tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Format check
+        id: fmt
+        run: cargo fmt --all --check
+        continue-on-error: true
+      - name: Format patch
+        if: steps.fmt.outcome == 'failure'
+        run: |
+          cargo fmt --all
+          git diff > fmt.patch
+          git checkout -- .
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Tests
+        run: cargo test --workspace
+      - name: Catalog check
+        run: cargo run -p winweaver -- --check-catalog
+      - name: CI files (Cargo.lock, the format patch)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-files
+          path: |
+            Cargo.lock
+            fmt.patch
+          if-no-files-found: ignore
+      - name: Format result
+        if: steps.fmt.outcome == 'failure'
+        run: |
+          echo "::warning::cargo fmt found differences; apply fmt.patch from the ci-files artifact"
+
+  build-windows:
+    name: Build and tests (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Tests
+        run: cargo test --workspace
+      - name: Release build
+        run: cargo build --release --workspace
+      - name: Package
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path Cargo.toml -Pattern '^version = "(.*)"').Matches[0].Groups[1].Value
+          New-Item -ItemType Directory -Force dist/WinWeaver | Out-Null
+          Copy-Item target/release/winweaver.exe dist/WinWeaver/
+          Copy-Item LICENSE, README.md dist/WinWeaver/
+          Copy-Item -Recurse data/presets dist/WinWeaver/profiles
+          Compress-Archive -Path dist/WinWeaver -DestinationPath "dist/WinWeaver-$v.zip"
+          "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WinWeaver-${{ env.VERSION }}
+          path: dist/WinWeaver-*.zip
