@@ -4217,7 +4217,7 @@ dependencies = [
 
 [[package]]
 name = "winweaver"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "winweaver-core",
  "winweaver-ui",
@@ -4225,7 +4225,7 @@ dependencies = [
 
 [[package]]
 name = "winweaver-core"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "indexmap",
  "serde",
@@ -4235,7 +4235,7 @@ dependencies = [
 
 [[package]]
 name = "winweaver-ui"
-version = "0.1.0"
+version = "0.1.0-alpha.1"
 dependencies = [
  "eframe",
  "egui_commonmark",
