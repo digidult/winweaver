@@ -116,13 +116,11 @@ fn revert_action(rule: &Rule, action: &Action) -> Result<Option<Vec<String>>, Re
             Some(Value::String(s)) if s == "absent" => Some(Vec::new()),
             Some(_) => None,
         },
-        Action::Service { name, default, .. } => match default.as_ref().and_then(Value::as_u64) {
-            Some(start) => Some(vec![format!(
-                "Set-ServiceStart -Name {} -Start {start}",
-                quote(name)
-            )]),
-            None => None,
-        },
+        Action::Service { name, default, .. } => {
+            default.as_ref().and_then(Value::as_u64).map(|start| {
+                vec![format!("Set-ServiceStart -Name {} -Start {start}", quote(name))]
+            })
+        }
         Action::Feature { name, default, .. } => default
             .as_ref()
             .map(|state| vec![format!("Set-Feature -Name {} -State {state}", quote(name))]),
