@@ -20,6 +20,7 @@ use std::path::{Path, PathBuf};
 
 use eframe::egui;
 use serde_json::Value;
+use winweaver_core::admx::{self, CatalogFile};
 use winweaver_core::bookmarks::{self, Bookmark, Bookmarks};
 use winweaver_core::catalog::{Catalog, TREE_ROOTS, check};
 use winweaver_core::clock;
@@ -217,6 +218,14 @@ pub enum ScriptKind {
     Audit,
 }
 
+/// Where an import of policy templates comes from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImportSource {
+    ThisWindows,
+    Folder,
+    CatalogFile,
+}
+
 /// A change requested while a frame was drawn, applied after it.
 pub enum Act {
     Select(Sel),
@@ -243,6 +252,11 @@ pub enum Act {
     /// Compare the selected rules with this PC in the messages panel.
     CheckOnPc,
     SaveScript(ScriptKind),
+    /// Import the templates of this Windows (None), of a folder or a catalog file.
+    ImportTemplates(ImportSource),
+    ToggleImport(String),
+    RemoveImport(String),
+    ExportImport(String),
     /// Prepare the native apply (false) or the return to the defaults (true) of the selection.
     PlanNative(bool),
     PlanUndo,
@@ -276,6 +290,12 @@ pub enum Act {
 pub struct App {
     catalog: Catalog,
     texts: Vec<CatalogTexts>,
+    /// The embedded catalog and its translations, before the imports are merged.
+    base_catalog: Catalog,
+    base_texts: Vec<CatalogTexts>,
+    /// The imports of policy templates found next to the executable.
+    imports: Vec<CatalogFile>,
+    importing: Option<std::sync::mpsc::Receiver<Result<CatalogFile, String>>>,
     docs: Vec<Doc>,
     active: usize,
     settings: Settings,
@@ -290,6 +310,8 @@ pub struct App {
     drafts_dir: PathBuf,
     logs_dir: PathBuf,
     mcp: mcpview::McpPanel,
+    /// Actions requested by views that run without the list of the frame.
+    pending_acts: Vec<Act>,
     /// A plan waiting for the confirmation of the user.
     confirm: Option<winweaver_core::apply::Plan>,
     /// The helper that runs a confirmed plan, and what the plan left out.
@@ -313,6 +335,10 @@ impl App {
             ..Search::default()
         };
         Self {
+            base_catalog: catalog.clone(),
+            base_texts: texts.clone(),
+            imports: Vec::new(),
+            importing: None,
             catalog,
             texts,
             docs: vec![Doc::Profile(Box::new(doc))],
@@ -329,6 +355,7 @@ impl App {
             drafts_dir: exe_dir().join("drafts"),
             logs_dir: exe_dir().join("logs"),
             confirm: None,
+            pending_acts: Vec::new(),
             running: None,
             running_skipped: Vec::new(),
             mcp: mcpview::McpPanel {
@@ -939,6 +966,9 @@ impl App {
             &mut self.settings.restore_tabs,
             tr("Open the tabs of the last session at the start"),
         );
+        let mut acts = Vec::new();
+        self.imports_view(ui, &mut acts);
+        self.pending_acts.extend(acts);
         ui.add_space(12.0);
         ui.horizontal(|ui| {
             ui.weak(format!("Settings file: {}", Settings::path().display()));
@@ -1186,7 +1216,12 @@ impl App {
         let ids = if only_selection {
             self.selection_ids()
         } else {
-            self.catalog.rules().iter().map(|r| r.id.clone()).collect()
+            self.catalog
+                .rules()
+                .iter()
+                .filter(|r| !r.id.starts_with("admx."))
+                .map(|r| r.id.clone())
+                .collect()
         };
         let base = doc.profile.clone();
         let plan = thispc::plan(&self.catalog, &base, &ids);
@@ -1613,6 +1648,203 @@ impl App {
             });
     }
 
+    /// Reads the catalog files of the imports next to the executable; the templates of this
+    /// Windows first, so that they win a policy two imports hold.
+    fn load_imports(&mut self) {
+        let dir = imports_dir();
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            return;
+        };
+        let mut files: Vec<std::path::PathBuf> = entries
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|e| e == admx::CATALOG_EXTENSION))
+            .collect();
+        files.sort_by_key(|p| {
+            let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+            (!name.starts_with("system"), name)
+        });
+        let mut broken = 0;
+        for path in files {
+            match CatalogFile::load(&path) {
+                Ok(f) => self.imports.push(f),
+                Err(_) => broken += 1,
+            }
+        }
+        if broken > 0 {
+            self.status = trf("{n} imports of policy templates could not be read", &[("n", &broken)]);
+        }
+        self.rebuild_catalog();
+    }
+
+    /// Merges the visible imports into the catalog and brings the choices of the open profiles
+    /// in line with it.
+    fn rebuild_catalog(&mut self) {
+        let visible: Vec<CatalogFile> = self
+            .imports
+            .iter()
+            .filter(|f| !self.settings.hidden_imports.contains(&f.id))
+            .cloned()
+            .collect();
+        match admx::merge(&self.base_catalog, &visible) {
+            Ok((catalog, notes)) => {
+                self.catalog = catalog;
+                if !notes.is_empty() {
+                    self.status = notes.join("; ");
+                }
+            }
+            Err(e) => {
+                self.status = trf("The imports were not merged: {e}", &[("e", &e)]);
+                self.catalog = self.base_catalog.clone();
+            }
+        }
+        let mut texts = self.base_texts.clone();
+        admx::merge_texts(&mut texts, &visible);
+        self.texts = texts;
+        let catalog = &self.catalog;
+        for doc in &mut self.docs {
+            if let Doc::Profile(d) = doc {
+                d.profile.take_known(catalog);
+                d.profile.split_unknown(catalog);
+                d.resolution = resolver::resolve(catalog, &d.profile);
+            }
+        }
+    }
+
+    /// Starts an import in a thread: the templates of this Windows, a folder or a catalog file.
+    fn start_import(&mut self, source: ImportSource) {
+        if self.importing.is_some() {
+            return;
+        }
+        let path = match source {
+            ImportSource::ThisWindows => None,
+            ImportSource::Folder => match rfd::FileDialog::new().set_title(tr("Choose the folder of the ADMX files")).pick_folder() {
+                Some(p) => Some(p),
+                None => return,
+            },
+            ImportSource::CatalogFile => match rfd::FileDialog::new()
+                .set_title(tr("Open a catalog file"))
+                .add_filter(tr("Catalog files"), &[admx::CATALOG_EXTENSION])
+                .pick_file()
+            {
+                Some(p) => Some(p),
+                None => return,
+            },
+        };
+        let build = winweaver_win::this_pc().map(|m| m.system_info().build).unwrap_or_default();
+        let taken: Vec<String> = self.imports.iter().map(|f| f.id.clone()).collect();
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let now = clock::now_utc_iso();
+            let result = match (source, path) {
+                (ImportSource::ThisWindows, _) => {
+                    let t = admx::read_folder(std::path::Path::new("C:\\Windows\\PolicyDefinitions"));
+                    let name = if build.is_empty() { "Policy templates of this Windows".to_owned() } else { format!("Policy templates of this Windows ({build})") };
+                    Ok(admx::to_catalog_file(&t, "system", &name, &build, &now))
+                }
+                (ImportSource::Folder, Some(dir)) => {
+                    let t = admx::read_folder(&dir);
+                    let name = dir.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "Templates".to_owned());
+                    let id = format!("folder-{:08x}", session::fnv(&dir.display().to_string().to_lowercase()) as u32);
+                    Ok(admx::to_catalog_file(&t, &id, &name, "", &now))
+                }
+                (ImportSource::CatalogFile, Some(file)) => CatalogFile::load(&file).map(|mut f| {
+                    if taken.contains(&f.id) && !f.id.starts_with("package-") {
+                        f.id = format!("package-{}", f.id);
+                    }
+                    f
+                }),
+                _ => Err("nothing to import".to_owned()),
+            };
+            let _ = tx.send(result);
+        });
+        self.importing = Some(rx);
+        self.status = tr("The policy templates are being read").to_owned();
+    }
+
+    /// Takes the result of a finished import: saved next to the executable, merged.
+    fn poll_import(&mut self, ctx: &egui::Context) {
+        let Some(rx) = &self.importing else {
+            return;
+        };
+        match rx.try_recv() {
+            Ok(result) => {
+                self.importing = None;
+                match result {
+                    Ok(file) => {
+                        let dir = imports_dir();
+                        let path = dir.join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
+                        let saved = std::fs::create_dir_all(&dir).map_err(|e| e.to_string()).and_then(|()| file.save(&path));
+                        let rules = file.rules.len();
+                        let skipped = file.skipped.len();
+                        self.imports.retain(|f| f.id != file.id);
+                        self.imports.push(file);
+                        self.rebuild_catalog();
+                        self.status = match saved {
+                            Ok(()) => trf("Imported: {rules} rules, {skipped} policies skipped", &[("rules", &rules), ("skipped", &skipped)]),
+                            Err(e) => trf("Imported, but not saved: {e}", &[("e", &e)]),
+                        };
+                    }
+                    Err(e) => self.status = trf("The import failed: {e}", &[("e", &e)]),
+                }
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => ctx.request_repaint_after(std::time::Duration::from_millis(250)),
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => self.importing = None,
+        }
+    }
+
+    fn export_import(&mut self, id: &str) {
+        let Some(file) = self.imports.iter().find(|f| f.id == id) else {
+            return;
+        };
+        let Some(path) = rfd::FileDialog::new()
+            .set_title(tr("Export the catalog file"))
+            .add_filter(tr("Catalog files"), &[admx::CATALOG_EXTENSION])
+            .set_file_name(format!("{}.{}", file.id, admx::CATALOG_EXTENSION))
+            .save_file()
+        else {
+            return;
+        };
+        self.status = match file.save(&path) {
+            Ok(()) => trf("Saved {path}", &[("path", &path.display())]),
+            Err(e) => trf("Save failed: {e}", &[("e", &e)]),
+        };
+    }
+
+    /// The section of the settings that lists the imports of policy templates.
+    fn imports_view(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+        ui.add_space(12.0);
+        ui.strong(tr("Policy templates"));
+        ui.weak(tr("Imported ADMX templates become rules under Standard policies. When two imports hold a policy, the templates of this Windows win."));
+        for f in &self.imports {
+            ui.horizontal(|ui| {
+                let mut shown = !self.settings.hidden_imports.contains(&f.id);
+                if ui.checkbox(&mut shown, &f.name).changed() {
+                    acts.push(Act::ToggleImport(f.id.clone()));
+                }
+                ui.weak(trf("{rules} rules, {skipped} skipped", &[("rules", &f.rules.len()), ("skipped", &f.skipped.len())]));
+                if ui.small_button(tr("Export...")).clicked() {
+                    acts.push(Act::ExportImport(f.id.clone()));
+                }
+                if ui.small_button(tr("Remove")).clicked() {
+                    acts.push(Act::RemoveImport(f.id.clone()));
+                }
+            });
+        }
+        ui.horizontal(|ui| {
+            let busy = self.importing.is_some();
+            if ui.add_enabled(!busy, egui::Button::new(tr("Import the templates of this Windows"))).clicked() {
+                acts.push(Act::ImportTemplates(ImportSource::ThisWindows));
+            }
+            if ui.add_enabled(!busy, egui::Button::new(tr("Import a folder..."))).clicked() {
+                acts.push(Act::ImportTemplates(ImportSource::Folder));
+            }
+            if ui.add_enabled(!busy, egui::Button::new(tr("Import a catalog file..."))).clicked() {
+                acts.push(Act::ImportTemplates(ImportSource::CatalogFile));
+            }
+        });
+    }
+
     fn messages_panel(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             return;
@@ -1694,6 +1926,7 @@ impl App {
                         .catalog
                         .rules_under(&group)
                         .iter()
+                        .filter(|r| !on || !r.id.starts_with("admx."))
                         .map(|r| r.id.clone())
                         .collect();
                     if let Some(doc) = self.active_profile() {
@@ -1871,6 +2104,22 @@ impl App {
                 Act::CheckOnPc => self.check_on_pc(),
                 Act::SaveScript(kind) => self.save_script(kind),
                 Act::OpenReport => self.open_report(),
+                Act::ImportTemplates(source) => self.start_import(source),
+                Act::ToggleImport(id) => {
+                    if let Some(i) = self.settings.hidden_imports.iter().position(|h| h == &id) {
+                        self.settings.hidden_imports.remove(i);
+                    } else {
+                        self.settings.hidden_imports.push(id);
+                    }
+                    self.settings_dirty = true;
+                    self.rebuild_catalog();
+                }
+                Act::RemoveImport(id) => {
+                    let _ = std::fs::remove_file(imports_dir().join(format!("{id}.{}", admx::CATALOG_EXTENSION)));
+                    self.imports.retain(|f| f.id != id);
+                    self.rebuild_catalog();
+                }
+                Act::ExportImport(id) => self.export_import(&id),
                 Act::PlanNative(revert) => self.plan_native(revert),
                 Act::PlanUndo => self.plan_undo(),
                 Act::ConfirmPlan => self.run_plan(),
@@ -2477,8 +2726,10 @@ impl eframe::App for App {
             });
         }
         self.confirm_view(ui.ctx(), &mut acts);
+        acts.append(&mut self.pending_acts);
         self.apply(acts);
         self.poll_running(ui.ctx());
+        self.poll_import(ui.ctx());
         let closing = self.exit || ui.ctx().input(|i| i.viewport().close_requested());
         self.write_drafts(closing);
         if closing {
@@ -2502,6 +2753,11 @@ fn sel_from_item(catalog: &Catalog, item: &str) -> Sel {
     } else {
         Sel::None
     }
+}
+
+/// The folder of the imports of policy templates next to the executable.
+pub fn imports_dir() -> PathBuf {
+    exe_dir().join("imports")
 }
 
 /// The folder of the translations next to the executable.
@@ -2631,6 +2887,7 @@ pub fn run() -> Result<(), String> {
                 Ok(marks) => app.marks = marks,
                 Err(e) => app.status = format!("Bookmarks not read: {e}"),
             }
+            app.load_imports();
             app.restore_session();
             if app.settings.show_guide_at_start {
                 app.open_guide();

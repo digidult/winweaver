@@ -240,6 +240,26 @@ impl Profile {
         unknown
     }
 
+    /// The choices kept aside whose rules the catalog has again, moved back; their count.
+    pub fn take_known(&mut self, catalog: &Catalog) -> usize {
+        let known: Vec<String> = self
+            .unknown
+            .keys()
+            .filter(|id| catalog.rule(id).is_some())
+            .cloned()
+            .collect();
+        let mut n = 0;
+        for id in known {
+            if let Some(value) = self.unknown.shift_remove(&id)
+                && let Ok(choice) = serde_json::from_value::<Choice>(value)
+            {
+                self.rules.insert(id, choice);
+                n += 1;
+            }
+        }
+        n
+    }
+
     /// Reads a profile file strictly.
     pub fn load(path: &Path) -> Result<Self, ProfileError> {
         let name = jsonfile::display_name(path);

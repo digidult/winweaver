@@ -55,6 +55,8 @@ pub struct Settings {
     /// The port and the token of the MCP server of the window.
     pub mcp_port: u16,
     pub mcp_token: String,
+    /// The ids of the imports of policy templates that are hidden.
+    pub hidden_imports: Vec<String>,
 }
 
 impl Default for Settings {
@@ -74,6 +76,7 @@ impl Default for Settings {
             active_tab: 0,
             mcp_port: 8765,
             mcp_token: String::new(),
+            hidden_imports: Vec::new(),
         }
     }
 }
