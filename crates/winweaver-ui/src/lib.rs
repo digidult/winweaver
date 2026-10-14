@@ -243,6 +243,11 @@ pub enum Act {
     /// Compare the selected rules with this PC in the messages panel.
     CheckOnPc,
     SaveScript(ScriptKind),
+    /// Prepare the native apply (false) or the return to the defaults (true) of the selection.
+    PlanNative(bool),
+    PlanUndo,
+    ConfirmPlan,
+    CancelPlan,
     OpenReport,
     OpenGuide,
     OpenMarks,
@@ -285,6 +290,11 @@ pub struct App {
     drafts_dir: PathBuf,
     logs_dir: PathBuf,
     mcp: mcpview::McpPanel,
+    /// A plan waiting for the confirmation of the user.
+    confirm: Option<winweaver_core::apply::Plan>,
+    /// The helper that runs a confirmed plan, and what the plan left out.
+    running: Option<std::sync::mpsc::Receiver<Result<winweaver_core::apply::Report, String>>>,
+    running_skipped: Vec<(String, String)>,
     last_logged: String,
 }
 
@@ -318,6 +328,9 @@ impl App {
             exit: false,
             drafts_dir: exe_dir().join("drafts"),
             logs_dir: exe_dir().join("logs"),
+            confirm: None,
+            running: None,
+            running_skipped: Vec::new(),
             mcp: mcpview::McpPanel {
                 port: 8765,
                 token: String::new(),
@@ -668,6 +681,22 @@ impl App {
                 .clicked()
             {
                 acts.push(Act::SaveScript(ScriptKind::Audit));
+                ui.close();
+            }
+            ui.separator();
+            if ui.button(tr("Apply the selection to this PC...")).clicked() {
+                acts.push(Act::PlanNative(false));
+                ui.close();
+            }
+            if ui
+                .button(tr("Return the selection to Windows defaults..."))
+                .clicked()
+            {
+                acts.push(Act::PlanNative(true));
+                ui.close();
+            }
+            if ui.button(tr("Undo a change from its backup...")).clicked() {
+                acts.push(Act::PlanUndo);
                 ui.close();
             }
             ui.separator();
@@ -1384,6 +1413,206 @@ impl App {
         self.status = format!("Read the report {}: {}", path.display(), summary.line());
     }
 
+    /// Prepares the native apply or return of the selection and asks for the confirmation.
+    fn plan_native(&mut self, revert: bool) {
+        if self.running.is_some() {
+            self.status = tr("A change of this PC is running; wait for its report").to_owned();
+            return;
+        }
+        let ids = self.selection_ids();
+        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+            self.status = tr("Open a profile first").to_owned();
+            return;
+        };
+        let nonce = match winweaver_mcp::new_token() {
+            Ok(n) => n,
+            Err(e) => {
+                self.status = e;
+                return;
+            }
+        };
+        let plan = if revert {
+            winweaver_core::apply::plan_revert(&self.catalog, &ids, &nonce)
+        } else {
+            winweaver_core::apply::plan_apply(&self.catalog, &doc.profile, &ids, &nonce)
+        };
+        if plan.steps.is_empty() {
+            self.status = trf(
+                "Nothing to change natively; {n} steps are left to the stand-alone script",
+                &[("n", &plan.skipped.len())],
+            );
+            return;
+        }
+        self.confirm = Some(plan);
+    }
+
+    /// Prepares the undo of a backup file the user picks.
+    fn plan_undo(&mut self) {
+        let start = output_dir();
+        let dialog = rfd::FileDialog::new()
+            .set_title(tr("Choose the backup to restore"))
+            .add_filter(tr("Backups"), &["json"]);
+        let dialog = if start.is_dir() { dialog.set_directory(start) } else { dialog };
+        let Some(path) = dialog.pick_file() else {
+            return;
+        };
+        let entries = match winweaver_core::apply::read_backup(&path) {
+            Ok(e) => e,
+            Err(e) => {
+                self.status = trf("Backup not read: {e}", &[("e", &e)]);
+                return;
+            }
+        };
+        let nonce = match winweaver_mcp::new_token() {
+            Ok(n) => n,
+            Err(e) => {
+                self.status = e;
+                return;
+            }
+        };
+        let plan = winweaver_core::apply::plan_undo(&entries, &nonce);
+        if plan.steps.is_empty() {
+            self.status = tr("The backup holds nothing to restore").to_owned();
+            return;
+        }
+        self.confirm = Some(plan);
+    }
+
+    /// Writes the confirmed plan into the output folder and runs the elevated helper on it in a
+    /// thread; the report comes back through a channel.
+    fn run_plan(&mut self) {
+        let Some(plan) = self.confirm.take() else {
+            return;
+        };
+        let dir = output_dir();
+        if let Err(e) = std::fs::create_dir_all(&dir) {
+            self.status = trf("The plan was not written: {e}", &[("e", &e)]);
+            return;
+        }
+        let stamp = clock::now_utc_iso().replace([':', '-'], "").replace('T', "-").trim_end_matches('Z').to_owned();
+        let path = dir.join(format!("plan-{stamp}.json"));
+        if let Err(e) = write_file(&path, plan.to_json().as_bytes()) {
+            self.status = trf("The plan was not written: {e}", &[("e", &e)]);
+            return;
+        }
+        let exe = match std::env::current_exe() {
+            Ok(p) => p,
+            Err(e) => {
+                self.status = e.to_string();
+                return;
+            }
+        };
+        self.running_skipped = plan.skipped.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let nonce = plan.nonce.clone();
+        std::thread::spawn(move || {
+            let args = vec!["--elevated-apply".to_owned(), path.display().to_string(), nonce];
+            let result = winweaver_win::run_elevated(&exe, &args).and_then(|code| {
+                let report_path = path.with_file_name(format!("plan-{stamp}-report.json"));
+                let read = std::fs::read_to_string(&report_path)
+                    .map_err(|e| e.to_string())
+                    .and_then(|t| serde_json::from_str::<winweaver_core::apply::Report>(&t).map_err(|e| e.to_string()));
+                let _ = std::fs::remove_file(&report_path);
+                match (code, read) {
+                    (0, Ok(report)) => Ok(report),
+                    (0, Err(e)) => Err(e),
+                    (code, _) => Err(format!("the helper ended with the code {code}")),
+                }
+            });
+            let _ = std::fs::remove_file(&path);
+            let _ = tx.send(result);
+        });
+        self.running = Some(rx);
+        self.status = tr("Windows asks for the permission; the change of this PC runs").to_owned();
+    }
+
+    /// Takes the report of a finished helper.
+    fn poll_running(&mut self, ctx: &egui::Context) {
+        let Some(rx) = &self.running else {
+            return;
+        };
+        match rx.try_recv() {
+            Ok(result) => {
+                self.running = None;
+                let skipped = std::mem::take(&mut self.running_skipped);
+                match result {
+                    Ok(report) => {
+                        let mut issues: Vec<Issue> = report
+                            .results
+                            .iter()
+                            .filter(|r| r.status != "ok")
+                            .map(|r| Issue {
+                                severity: if r.status == "failed" { Severity::Warning } else { Severity::Info },
+                                target: Target::Rule(r.rule.clone()),
+                                text: format!("{}: {} {}", r.status, r.what, r.note),
+                            })
+                            .collect();
+                        issues.extend(skipped.into_iter().map(|(rule, why)| Issue {
+                            severity: Severity::Info,
+                            target: Target::Rule(rule),
+                            text: trf("Left to the stand-alone script: {why}", &[("why", &why)]),
+                        }));
+                        if let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) {
+                            doc.issues = issues;
+                        }
+                        self.status = trf(
+                            "This PC changed: {ok} done, {failed} failed, {skipped} skipped; backup {backup}",
+                            &[
+                                ("ok", &report.count("ok")),
+                                ("failed", &report.count("failed")),
+                                ("skipped", &report.count("skipped")),
+                                ("backup", &if report.backup.is_empty() { "-".to_owned() } else { report.backup.clone() }),
+                            ],
+                        );
+                    }
+                    Err(e) => self.status = trf("This PC was not changed: {e}", &[("e", &e)]),
+                }
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => {
+                ctx.request_repaint_after(std::time::Duration::from_millis(250));
+            }
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => self.running = None,
+        }
+    }
+
+    /// The confirmation of a plan, over the window.
+    fn confirm_view(&self, ctx: &egui::Context, acts: &mut Vec<Act>) {
+        let Some(plan) = &self.confirm else {
+            return;
+        };
+        let title = match plan.purpose.as_str() {
+            "revert" => tr("Return to Windows defaults"),
+            "undo" => tr("Undo a change"),
+            _ => tr("Apply to this PC"),
+        };
+        egui::Window::new(title)
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.label(trf(
+                    "{n} changes of this PC run as administrator; Windows asks for the permission first.",
+                    &[("n", &plan.changes())],
+                ));
+                if !plan.skipped.is_empty() {
+                    ui.label(trf(
+                        "{n} steps are left to the stand-alone script (scripts, app removals, the default user profile).",
+                        &[("n", &plan.skipped.len())],
+                    ));
+                }
+                ui.label(tr("Every registry value is saved to a backup in the output folder before its change; Undo restores it."));
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if ui.button(tr("Change this PC")).clicked() {
+                        acts.push(Act::ConfirmPlan);
+                    }
+                    if ui.button(tr("Cancel")).clicked() {
+                        acts.push(Act::CancelPlan);
+                    }
+                });
+            });
+    }
+
     fn messages_panel(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             return;
@@ -1642,6 +1871,10 @@ impl App {
                 Act::CheckOnPc => self.check_on_pc(),
                 Act::SaveScript(kind) => self.save_script(kind),
                 Act::OpenReport => self.open_report(),
+                Act::PlanNative(revert) => self.plan_native(revert),
+                Act::PlanUndo => self.plan_undo(),
+                Act::ConfirmPlan => self.run_plan(),
+                Act::CancelPlan => self.confirm = None,
                 Act::Build => self.build_active(),
                 Act::OpenGuide => self.open_guide(),
                 Act::Compare => {
@@ -2243,7 +2476,9 @@ impl eframe::App for App {
                 ui.label(tr("No document is open. Use Menu, New or Ctrl+N."));
             });
         }
+        self.confirm_view(ui.ctx(), &mut acts);
         self.apply(acts);
+        self.poll_running(ui.ctx());
         let closing = self.exit || ui.ctx().input(|i| i.viewport().close_requested());
         self.write_drafts(closing);
         if closing {

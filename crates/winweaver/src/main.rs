@@ -124,6 +124,46 @@ fn mcp(args: &[String]) -> ExitCode {
     }
 }
 
+/// The elevated helper: runs a plan file of the output folder whose nonce matches the one on the
+/// command line and writes its report next to it. It refuses any other file.
+fn elevated_apply(args: &[String]) -> ExitCode {
+    let (Some(plan_path), Some(nonce)) = (args.first(), args.get(1)) else {
+        return ExitCode::from(2);
+    };
+    let out = winweaver_ui::output_dir();
+    let plan_path = std::path::PathBuf::from(plan_path);
+    let name = plan_path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let parent = plan_path.parent().map(std::path::Path::to_path_buf).unwrap_or_default();
+    let in_output = match (std::fs::canonicalize(&parent), std::fs::canonicalize(&out)) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => false,
+    };
+    if !in_output || !name.starts_with("plan-") || !name.ends_with(".json") || name.contains("-report") {
+        return ExitCode::from(3);
+    }
+    let Ok(plan) = winweaver_core::apply::Plan::load(&plan_path) else {
+        return ExitCode::from(3);
+    };
+    if plan.nonce.len() < 32 || plan.nonce != *nonce {
+        return ExitCode::from(3);
+    }
+    let stamp = winweaver_core::clock::now_utc_iso()
+        .replace([':', '-'], "")
+        .replace('T', "-")
+        .trim_end_matches('Z')
+        .to_owned();
+    let report = winweaver_win::execute_plan(&plan, &out, &stamp);
+    let report_path = plan_path.with_file_name(name.replace(".json", "-report.json"));
+    let text = serde_json::to_string_pretty(&report).unwrap_or_default();
+    match std::fs::write(&report_path, text) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(_) => ExitCode::FAILURE,
+    }
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
@@ -135,6 +175,7 @@ fn main() -> ExitCode {
             }
         },
         Some("--mcp") => mcp(&args[1..]),
+        Some("--elevated-apply") => elevated_apply(&args[1..]),
         Some("--version") => {
             attach_console();
             println!("WinWeaver {}", winweaver_core::APP_VERSION);

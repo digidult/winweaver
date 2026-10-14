@@ -5,6 +5,8 @@
 use winweaver_core::thispc::Machine;
 
 #[cfg(windows)]
+mod execute;
+#[cfg(windows)]
 mod native;
 
 #[cfg(windows)]
@@ -31,5 +33,39 @@ pub fn ui_language() -> Option<String> {
     #[cfg(not(windows))]
     {
         None
+    }
+}
+
+/// Runs an apply plan with the Windows API (in the elevated helper), backing up into `out_dir`.
+pub fn execute_plan(
+    plan: &winweaver_core::apply::Plan,
+    out_dir: &std::path::Path,
+    stamp: &str,
+) -> winweaver_core::apply::Report {
+    #[cfg(windows)]
+    {
+        execute::execute(plan, out_dir, stamp)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (out_dir, stamp);
+        winweaver_core::apply::Report {
+            purpose: plan.purpose.clone(),
+            error: "the plan runs on Windows only".to_owned(),
+            ..Default::default()
+        }
+    }
+}
+
+/// Starts the executable as administrator with the arguments and waits for it.
+pub fn run_elevated(exe: &std::path::Path, args: &[String]) -> Result<u32, String> {
+    #[cfg(windows)]
+    {
+        execute::run_elevated(exe, args)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = (exe, args);
+        Err("elevation exists on Windows only".to_owned())
     }
 }

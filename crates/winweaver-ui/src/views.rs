@@ -374,6 +374,12 @@ fn this_pc_card(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         {
             acts.push(Act::SaveScript(ScriptKind::Revert));
         }
+        if ui.button(tr("Apply to this PC...")).clicked() {
+            acts.push(Act::PlanNative(false));
+        }
+        if ui.button(tr("Return to Windows defaults...")).clicked() {
+            acts.push(Act::PlanNative(true));
+        }
     });
 }
 
