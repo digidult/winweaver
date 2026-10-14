@@ -84,7 +84,8 @@ off at every start.
 | Alt+Left, Alt+Right | Back, Forward |
 | Ctrl+B | Bookmark the position |
 | Ctrl+D | Fold or show the description |
-| Ctrl+W, Ctrl+Tab | Close the tab, next tab |
+| Ctrl+W, Ctrl+Tab, Ctrl+Shift+Tab | Close the tab, next tab, previous tab |
+| Esc | Cancel the confirmation of a change of this PC |
 | Ctrl+, | Settings |
 | F1 | This guide |
 

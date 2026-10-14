@@ -439,6 +439,7 @@ impl App {
         let mut acts = Vec::new();
         let active = self.active;
         let count = self.docs.len();
+        let confirming = self.confirm.is_some();
         ctx.input_mut(|i| {
             let sc = |m, k| KeyboardShortcut::new(m, k);
             if i.consume_shortcut(&sc(Modifiers::CTRL, Key::F)) {
@@ -484,8 +485,14 @@ impl App {
             if i.consume_shortcut(&sc(Modifiers::ALT, Key::ArrowRight)) {
                 acts.push(Act::Forward);
             }
+            if count > 1 && i.consume_shortcut(&sc(Modifiers::CTRL | Modifiers::SHIFT, Key::Tab)) {
+                acts.push(Act::Activate((active + count - 1) % count));
+            }
             if count > 1 && i.consume_shortcut(&sc(Modifiers::CTRL, Key::Tab)) {
                 acts.push(Act::Activate((active + 1) % count));
+            }
+            if confirming && i.consume_key(Modifiers::NONE, Key::Escape) {
+                acts.push(Act::CancelPlan);
             }
             for file in &i.raw.dropped_files {
                 acts.push(Act::OpenPath(file.path().to_path_buf()));
