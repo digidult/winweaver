@@ -1,10 +1,12 @@
 {
   "_language": "Українська",
+  "_disabled": "вимкнено",
   "_comment": [
     "Ukrainian texts of the rule catalog (rules/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
+    "_disabled: the word after the title of the Disabled rule of an imported policy (<title>: <word>).",
     "Fields of a rule: title, summary, effect, risk, versions, verify, rollback (strings), tags (a list of strings),",
     "params {\"<name>\": text}, values {\"<name>\": {\"<value>\": text}}; any other field is an error.",
-    "A missing text falls back to the English source; tests/test_docs.py checks that these files are complete."
+    "A missing text falls back to the English source; tests/catalog.rs checks that these files are complete."
   ],
   "install.bypass-tpm": {
     "title": "Обхід перевірки TPM 2.0",
