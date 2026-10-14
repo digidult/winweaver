@@ -231,6 +231,9 @@ pub enum ImportSource {
     CatalogFile,
 }
 
+/// The colours of the title bar: dark, caption, text, border.
+type TitleColors = (bool, [u8; 3], [u8; 3], [u8; 3]);
+
 /// A change requested while a frame was drawn, applied after it.
 pub enum Act {
     Select(Sel),
@@ -320,8 +323,8 @@ pub struct App {
     marks: Bookmarks,
     marks_path: PathBuf,
     theme_applied: bool,
-    /// The colours given to the title bar last: dark, caption, text, border.
-    title_colors: Option<(bool, [u8; 3], [u8; 3], [u8; 3])>,
+    /// The colours given to the title bar last.
+    title_colors: Option<TitleColors>,
     last_title: String,
     exit: bool,
     drafts_dir: PathBuf,
