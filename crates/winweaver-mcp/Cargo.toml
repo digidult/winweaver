@@ -1,0 +1,16 @@
+[package]
+name = "winweaver-mcp"
+description = "WinWeaver MCP server: JSON-RPC over stdio and loopback HTTP, a workspace of profiles"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[dependencies]
+winweaver-core = { path = "../winweaver-core" }
+winweaver-win = { path = "../winweaver-win" }
+serde_json.workspace = true
+indexmap.workspace = true
+getrandom = "0.4"

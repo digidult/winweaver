@@ -3,6 +3,7 @@ resolver = "3"
 members = [
     "crates/winweaver-core",
     "crates/winweaver-win",
+    "crates/winweaver-mcp",
     "crates/winweaver-ui",
     "crates/winweaver",
 ]
