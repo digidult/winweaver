@@ -99,6 +99,7 @@ pub fn tree_view(
         });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn group_rows(
     ui: &mut egui::Ui,
     catalog: &Catalog,
