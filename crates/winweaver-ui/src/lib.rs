@@ -1892,7 +1892,12 @@ impl App {
             if !due {
                 continue;
             }
-            match session::write_draft(&self.drafts_dir, &d.draft_key, d.path.as_deref(), &d.profile) {
+            match session::write_draft(
+                &self.drafts_dir,
+                &d.draft_key,
+                d.path.as_deref(),
+                &d.profile,
+            ) {
                 Ok(()) => d.changed = None,
                 Err(e) => {
                     d.changed = None;
@@ -1932,7 +1937,8 @@ impl App {
 
     /// Opens the tabs of the last close and the drafts of unsaved changes.
     fn restore_session(&mut self) {
-        let start_tab_untouched = matches!(self.docs.first(), Some(Doc::Profile(d)) if !d.dirty && d.path.is_none());
+        let start_tab_untouched =
+            matches!(self.docs.first(), Some(Doc::Profile(d)) if !d.dirty && d.path.is_none());
         let before = self.docs.len();
         let mut missing = 0;
         if self.settings.restore_tabs {
@@ -1975,7 +1981,8 @@ impl App {
             doc.issues.push(Issue {
                 severity: Severity::Info,
                 target: Target::Profile,
-                text: tr("The unsaved changes of the last session were restored from a draft").to_owned(),
+                text: tr("The unsaved changes of the last session were restored from a draft")
+                    .to_owned(),
             });
             self.docs.push(Doc::Profile(doc));
             restored += 1;
@@ -1984,7 +1991,10 @@ impl App {
             self.docs.remove(0);
         }
         if restored_tabs > 0 {
-            self.active = self.settings.active_tab.min(self.docs.len().saturating_sub(1));
+            self.active = self
+                .settings
+                .active_tab
+                .min(self.docs.len().saturating_sub(1));
         }
         if restored > 0 {
             self.active = self.docs.len() - 1;
@@ -1994,7 +2004,10 @@ impl App {
             notes.push(trf("{n} drafts restored", &[("n", &restored)]));
         }
         if missing > 0 {
-            notes.push(trf("{n} files of the last session are missing", &[("n", &missing)]));
+            notes.push(trf(
+                "{n} files of the last session are missing",
+                &[("n", &missing)],
+            ));
         }
         if !broken.is_empty() {
             notes.push(trf("{n} drafts could not be read", &[("n", &broken.len())]));
@@ -2375,13 +2388,20 @@ mod tests {
         next.drafts_dir = app.drafts_dir.clone();
         next.logs_dir = app.logs_dir.clone();
         next.restore_session();
-        assert_eq!(next.docs.len(), 1, "the untouched start tab gives way to the draft");
+        assert_eq!(
+            next.docs.len(),
+            1,
+            "the untouched start tab gives way to the draft"
+        );
         let Doc::Profile(doc) = &next.docs[0] else {
             panic!("a profile");
         };
         assert!(doc.dirty && !doc.profile.is_on("install.bypass-tpm"));
         next.apply(vec![Act::CloseTab(0, true)]);
-        assert!(session::read_drafts(&next.drafts_dir).0.is_empty(), "discarding deletes the draft");
+        assert!(
+            session::read_drafts(&next.drafts_dir).0.is_empty(),
+            "discarding deletes the draft"
+        );
         next.log_status();
         assert!(dir.join("logs").is_dir());
         std::fs::remove_dir_all(&dir).unwrap();

@@ -59,7 +59,12 @@ fn draft_file(dir: &Path, key: &str) -> PathBuf {
 }
 
 /// Writes the draft of a profile through a temporary file.
-pub fn write_draft(dir: &Path, key: &str, path: Option<&Path>, profile: &Profile) -> Result<(), String> {
+pub fn write_draft(
+    dir: &Path,
+    key: &str,
+    path: Option<&Path>,
+    profile: &Profile,
+) -> Result<(), String> {
     std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let draft = Draft {
         format: DRAFT_FORMAT.to_owned(),
@@ -149,8 +154,17 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         let profile = Profile::new("Draft", "0.11");
         let key = key_for_path(Path::new("C:\\Profiles\\Office.wwprofile"));
-        assert_eq!(key, key_for_path(Path::new("c:\\profiles\\office.wwprofile")));
-        write_draft(&dir, &key, Some(Path::new("C:\\Profiles\\Office.wwprofile")), &profile).unwrap();
+        assert_eq!(
+            key,
+            key_for_path(Path::new("c:\\profiles\\office.wwprofile"))
+        );
+        write_draft(
+            &dir,
+            &key,
+            Some(Path::new("C:\\Profiles\\Office.wwprofile")),
+            &profile,
+        )
+        .unwrap();
         let other = new_key();
         assert_ne!(other, new_key());
         write_draft(&dir, &other, None, &profile).unwrap();
@@ -158,7 +172,11 @@ mod tests {
         let (drafts, broken) = read_drafts(&dir);
         assert_eq!(drafts.len(), 2);
         assert_eq!(broken.len(), 1);
-        assert!(drafts.iter().any(|(k, d)| k == &key && d.path.ends_with("Office.wwprofile")));
+        assert!(
+            drafts
+                .iter()
+                .any(|(k, d)| k == &key && d.path.ends_with("Office.wwprofile"))
+        );
         remove_draft(&dir, &key);
         remove_draft(&dir, &other);
         assert_eq!(read_drafts(&dir).0.len(), 0);
