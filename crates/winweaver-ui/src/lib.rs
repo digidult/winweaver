@@ -295,9 +295,7 @@ impl App {
                 acts.push(Act::Activate((active + 1) % count));
             }
             for file in &i.raw.dropped_files {
-                if let Some(path) = &file.path {
-                    acts.push(Act::OpenPath(path.clone()));
-                }
+                acts.push(Act::OpenPath(file.path().to_path_buf()));
             }
         });
         acts
