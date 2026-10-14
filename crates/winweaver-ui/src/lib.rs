@@ -1648,9 +1648,12 @@ impl App {
                 ));
                 if !plan.skipped.is_empty() {
                     ui.label(trf(
-                        "{n} steps are left to the stand-alone script (scripts, app removals, the default user profile).",
+                        "{n} steps are left to the stand-alone script (scripts, app removals, values without a known Windows default).",
                         &[("n", &plan.skipped.len())],
                     ));
+                }
+                if plan.uses_default_user() {
+                    ui.label(tr("The default user profile changes too: accounts created from now on get its settings."));
                 }
                 ui.label(tr("Every registry value is saved to a backup in the output folder before its change; Undo restores it."));
                 ui.add_space(8.0);

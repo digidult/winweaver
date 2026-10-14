@@ -3,8 +3,10 @@
 //! before every change. The backup has the format of the stand-alone apply script, so that the
 //! program and `Undo-Apply.ps1` both restore it.
 //!
-//! What the plan cannot do natively (scripts of the rules, app and capability removals, the
-//! default user profile) is listed as skipped: the stand-alone apply script does it.
+//! The default user profile (`DU:` paths) is written at `HKU:\UnattendDefault`, where the helper
+//! loads its hive: the key of the stand-alone apply script too. What the plan cannot do natively
+//! (scripts of the rules, app and capability removals, the profiles of other users) is listed as
+//! skipped: the stand-alone apply script does it.
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -41,6 +43,16 @@ pub enum Op {
     ServiceStart { name: String, start: u32 },
     /// Runs a program of the system folder with arguments; nothing to back up.
     Run { file: String, args: Vec<String> },
+}
+
+impl Op {
+    /// Whether the operation writes the default user profile, which the helper loads first.
+    pub fn in_default_user(&self) -> bool {
+        match self {
+            Op::SetValue { path, .. } | Op::DeleteValue { path, .. } => in_default_user(path),
+            Op::ServiceStart { .. } | Op::Run { .. } => false,
+        }
+    }
 }
 
 /// A change and the rule it belongs to.
@@ -96,14 +108,31 @@ impl Plan {
     pub fn changes(&self) -> usize {
         self.steps.len()
     }
+
+    /// Whether a step writes the default user profile.
+    pub fn uses_default_user(&self) -> bool {
+        self.steps.iter().any(|s| s.op.in_default_user())
+    }
 }
 
-/// Where a registry action of the catalog can be written natively.
+/// Where the helper loads the hive of the default user profile: the key of the stand-alone apply
+/// script, so that the backups of both name the same keys and `Undo-Apply.ps1` restores either.
+pub const DEFAULT_USER_KEY: &str = "HKU:\\UnattendDefault";
+
+/// Whether a registry path is in the default user profile the helper loads.
+pub fn in_default_user(path: &str) -> bool {
+    let path = path.to_ascii_lowercase();
+    let key = DEFAULT_USER_KEY.to_ascii_lowercase();
+    path == key || path.starts_with(&format!("{key}\\"))
+}
+
+/// Where a registry action of the catalog is written natively: a `DU:` path in the loaded hive of
+/// the default user profile; the profiles of other users are left to the stand-alone script.
 fn native_path(path: &str) -> Result<String, &'static str> {
-    if path.starts_with("DU:") {
-        return Err("the default user profile is written by the stand-alone apply script");
+    if let Some(rest) = path.strip_prefix("DU:\\") {
+        return Ok(format!("{DEFAULT_USER_KEY}\\{rest}"));
     }
-    if path.to_ascii_uppercase().starts_with("HKU:") {
+    if path.starts_with("DU:") || path.to_ascii_uppercase().starts_with("HKU:") {
         return Err("the profiles of other users are written by the stand-alone apply script");
     }
     Ok(path.to_owned())
@@ -416,7 +445,16 @@ mod tests {
         assert!(plan.steps.iter().any(|s| matches!(&s.op, Op::ServiceStart { name, start: 2 } if name == "Spooler")));
         assert!(plan.steps.iter().any(|s| matches!(&s.op, Op::Run { file, .. } if file == "net.exe")));
         assert!(plan.skipped.iter().any(|(id, why)| id == "apps.remove-quick-assist" && why.contains("app")));
-        assert!(plan.skipped.iter().any(|(_, why)| why.contains("default user")));
+        assert!(plan.uses_default_user(), "the default user profile is written natively");
+        assert!(plan.steps.iter().any(|s| matches!(&s.op,
+            Op::SetValue { path, .. } if path.starts_with("HKU:\\UnattendDefault\\Software\\"))));
+        assert_eq!(
+            native_path("DU:\\Software\\X"),
+            Ok("HKU:\\UnattendDefault\\Software\\X".to_owned())
+        );
+        assert!(native_path("HKU:\\.DEFAULT\\X").is_err());
+        assert!(in_default_user("hku:\\unattenddefault\\x"));
+        assert!(!in_default_user("HKU:\\UnattendDefaultX"));
         let text = plan.to_json();
         let back: Plan = serde_json::from_str(&text).unwrap();
         assert_eq!(back, plan);

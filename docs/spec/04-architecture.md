@@ -82,6 +82,11 @@ native writes -> report.
   reports per action. The non-elevated process shows the report.
 - The helper refuses a plan file it did not get from its own folder, checks its signature (a random
   nonce of the session stored in the plan and passed on the command line) and never runs scripts.
+- The default user profile: the plan writes the `DU:` values at `HKU:\UnattendDefault`, the key of the
+  stand-alone apply script; the helper enables its backup and restore privileges, loads `NTUSER.DAT` of
+  the default profile (`GetDefaultUserProfileDirectoryW`) there with `RegLoadKeyW` for the steps that
+  write it and unloads it after the last step. A hive already loaded at that key is used and left
+  loaded. A backup names the same keys as one of the script, so either restores the other.
 - No PowerShell anywhere in this path (principle P2).
 
 ## 6. Answer file rendering

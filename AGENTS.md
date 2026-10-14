@@ -1,8 +1,8 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 14.10.2026 (the local
-accounts read natively, the colour themes; before it the map rewritten after the first day: the core, the
+Updated with every change of structure, commands or task status. Last update: 14.10.2026 (the default
+user profile applied natively, the local accounts read natively, the colour themes; before it the map rewritten after the first day: the core, the
 window, This PC, the scripts, the translations, the session and the MCP server).
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
@@ -191,7 +191,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   itself with `--elevated-apply` through ShellExecuteEx runas; the helper refuses any other file or nonce,
   backs up every registry value into `output/backup-<stamp>.json` (the format of the apply script, so
   `Undo-Apply.ps1` restores it too) and writes `plan-<stamp>-report.json`. Script steps, app and capability
-  removals and the default user profile stay with the stand-alone script.
+  removals and the profiles of other users stay with the stand-alone script. The default user profile is
+  written natively: `DU:` paths become `HKU:\UnattendDefault\...` (the key of the apply script), and the
+  helper loads the hive there with the backup and restore privileges and unloads it after the last step;
+  its test runs only on the CI runner as administrator (`GITHUB_ACTIONS`).
 - Imports: a policy is `admx.<prefix>.<name>` with `<id>.off`; groups `admx.<import>` under `policies`; a catalog
   file brings only Reg and RegRemove actions under `HKLM:\` or `DU:\` (checked at every load). Turning a group
   on skips imported policies; the read of the whole PC leaves them out.
@@ -209,9 +212,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Windows API | Reading the registry, the elevation, the locales, the Windows language and the local accounts with their groups; the native read of the whole catalog is tested on the Windows runner | 14.10.2026 |
 | Window | Tabs, menu, command bar (icons, compact below 1100 px), navigation, search, tree with row switches, detail panel, forms, check, build, diff tab, bookmarks, Markdown tabs, This PC (read, check, scripts, reports), MCP tab, settings, translations uk and ru, drafts, restored tabs, log, colour themes (Latte and Matrix, more as files) | 14.10.2026 |
 | MCP server | stdio and HTTP, 19 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
-| Native apply | Plans, the elevated helper, the backup and undo (pull request #2); tested in a test key of HKCU on the runner | 14.10.2026 |
+| Native apply | Plans, the elevated helper, the backup and undo (pull request #2), the default user profile loaded and unloaded by the helper; tested in a test key of HKCU and of the default profile on the runner | 14.10.2026 |
 | Policy templates | ADMX import, catalog files, the settings section (pull request #3); lists and multi-line texts not yet | 14.10.2026 |
-| Not yet | Lists of values in imports, links of imported policies to built-in rules, features and capabilities read natively, the default user profile applied natively, egui_kittest tests | |
+| Not yet | Lists of values in imports, links of imported policies to built-in rules, features and capabilities read natively, egui_kittest tests | |
 | Acceptance | Nothing of WinWeaver has been tried in a VM yet: the build of the answer file, the read of a PC and the scripts need the acceptance the predecessor had | |
 
 Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and

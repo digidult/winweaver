@@ -137,6 +137,132 @@ fn delete_value(path: &str, name: &str) -> Result<bool, String> {
     }
 }
 
+fn wide(text: &str) -> Vec<u16> {
+    text.encode_utf16().chain([0]).collect()
+}
+
+/// The key of the default user profile under HKEY_USERS (`UnattendDefault`).
+fn default_user_subkey() -> &'static str {
+    apply::DEFAULT_USER_KEY
+        .strip_prefix("HKU:\\")
+        .unwrap_or(apply::DEFAULT_USER_KEY)
+}
+
+/// Enables a privilege the token of the process holds, such as `SeRestorePrivilege`.
+fn enable_privilege(name: &str) -> Result<(), String> {
+    use windows_sys::Win32::Foundation::{
+        CloseHandle, ERROR_NOT_ALL_ASSIGNED, GetLastError, HANDLE, LUID,
+    };
+    use windows_sys::Win32::Security::{
+        AdjustTokenPrivileges, LUID_AND_ATTRIBUTES, LookupPrivilegeValueW, SE_PRIVILEGE_ENABLED,
+        TOKEN_ADJUST_PRIVILEGES, TOKEN_PRIVILEGES, TOKEN_QUERY,
+    };
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+    let mut luid = LUID {
+        LowPart: 0,
+        HighPart: 0,
+    };
+    let name_w = wide(name);
+    // SAFETY: the name is null-terminated and the LUID is written by the call.
+    if unsafe { LookupPrivilegeValueW(std::ptr::null(), name_w.as_ptr(), &mut luid) } == 0 {
+        return Err(format!("the privilege {name} is not known"));
+    }
+    let mut token: HANDLE = std::ptr::null_mut();
+    let access = TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY;
+    // SAFETY: the pseudo handle of the process is always valid; the token handle is closed below.
+    if unsafe { OpenProcessToken(GetCurrentProcess(), access, &mut token) } == 0 {
+        return Err("the token of the process cannot be opened".to_owned());
+    }
+    let state = TOKEN_PRIVILEGES {
+        PrivilegeCount: 1,
+        Privileges: [LUID_AND_ATTRIBUTES {
+            Luid: luid,
+            Attributes: SE_PRIVILEGE_ENABLED,
+        }],
+    };
+    let none = std::ptr::null_mut();
+    // SAFETY: the state holds one privilege; the previous state is not asked for.
+    let ok = unsafe { AdjustTokenPrivileges(token, 0, &state, 0, none, std::ptr::null_mut()) };
+    // SAFETY: the error of the call above, read before any other call of the thread.
+    let error = unsafe { GetLastError() };
+    // SAFETY: the token handle came from OpenProcessToken and is closed once.
+    unsafe { CloseHandle(token) };
+    if ok == 0 || error == ERROR_NOT_ALL_ASSIGNED {
+        return Err(format!("the process does not hold the privilege {name}"));
+    }
+    Ok(())
+}
+
+/// The hive file of the default user profile, such as `C:\Users\Default\NTUSER.DAT`.
+fn default_user_hive() -> Result<PathBuf, String> {
+    use windows_sys::Win32::UI::Shell::GetDefaultUserProfileDirectoryW;
+    let mut buffer = [0u16; 512];
+    let mut size = buffer.len() as u32;
+    // SAFETY: the buffer is valid for the size passed, in characters.
+    if unsafe { GetDefaultUserProfileDirectoryW(buffer.as_mut_ptr(), &mut size) } == 0 {
+        return Err("the folder of the default user profile is not known".to_owned());
+    }
+    let end = buffer.iter().position(|&c| c == 0).unwrap_or(buffer.len());
+    Ok(PathBuf::from(String::from_utf16_lossy(&buffer[..end])).join("NTUSER.DAT"))
+}
+
+/// The hive of the default user profile, loaded at the key of the stand-alone apply script while
+/// a plan writes it.
+struct DefaultUser {
+    /// Whether this process loaded the hive; a hive loaded before stays loaded.
+    loaded_here: bool,
+}
+
+impl DefaultUser {
+    /// Loads the hive with the backup and restore privileges, or takes the one already loaded
+    /// at the key.
+    fn mount() -> Result<Self, String> {
+        use windows_sys::Win32::System::Registry::{HKEY_USERS as USERS, RegLoadKeyW};
+        let sub = default_user_subkey();
+        if RegKey::predef(HKEY_USERS).open_subkey(sub).is_ok() {
+            return Ok(Self { loaded_here: false });
+        }
+        enable_privilege("SeRestorePrivilege")?;
+        enable_privilege("SeBackupPrivilege")?;
+        let file = default_user_hive()?;
+        let (sub_w, file_w) = (wide(sub), wide(&file.display().to_string()));
+        // SAFETY: both texts are null-terminated and HKEY_USERS is a predefined key.
+        let status = unsafe { RegLoadKeyW(USERS, sub_w.as_ptr(), file_w.as_ptr()) };
+        if status != 0 {
+            let file = file.display();
+            return Err(format!("the default user profile {file} was not loaded (error {status})"));
+        }
+        Ok(Self { loaded_here: true })
+    }
+
+    /// Unloads the hive when this process loaded it; every key of the hive must be closed.
+    fn unload(&mut self) -> Result<(), String> {
+        use windows_sys::Win32::System::Registry::{HKEY_USERS as USERS, RegUnLoadKeyW};
+        if !self.loaded_here {
+            return Ok(());
+        }
+        self.loaded_here = false;
+        let sub_w = wide(default_user_subkey());
+        // SAFETY: the text is null-terminated and HKEY_USERS is a predefined key.
+        let status = unsafe { RegUnLoadKeyW(USERS, sub_w.as_ptr()) };
+        if status == 0 {
+            Ok(())
+        } else {
+            Err(format!("the default user profile was not unloaded (error {status})"))
+        }
+    }
+
+    fn unmount(mut self) -> Result<(), String> {
+        self.unload()
+    }
+}
+
+impl Drop for DefaultUser {
+    fn drop(&mut self) {
+        let _ = self.unload();
+    }
+}
+
 /// The program of the system folder a plan may run: a bare file name of letters, digits, dots,
 /// hyphens and underscores that ends with `.exe`.
 pub fn system_program(file: &str) -> Result<PathBuf, String> {
@@ -187,7 +313,8 @@ fn describe(op: &Op) -> String {
 }
 
 /// Runs a plan: every registry value is saved to `backup-<stamp>.json` in `out_dir` before its
-/// first change. Programs and unknown services are reported, never fatal.
+/// first change. Programs and unknown services are reported, never fatal. The hive of the default
+/// user profile is loaded for the steps that write it and unloaded after the last step.
 pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
     let machine = NativeMachine;
     let mut backup: Vec<BackupEntry> = Vec::new();
@@ -201,7 +328,19 @@ pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
         purpose: plan.purpose.clone(),
         ..Report::default()
     };
+    let hive = plan.uses_default_user().then(DefaultUser::mount);
     for step in &plan.steps {
+        if let Some(Err(why)) = &hive
+            && step.op.in_default_user()
+        {
+            report.results.push(StepResult {
+                rule: step.rule.clone(),
+                what: describe(&step.op),
+                status: "failed".to_owned(),
+                note: why.clone(),
+            });
+            continue;
+        }
         let (status, note) = match &step.op {
             Op::SetValue { path, name, kind, data } => {
                 remember(path, name, &mut backup);
@@ -244,6 +383,16 @@ pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
             note,
         });
     }
+    if let Some(Ok(hive)) = hive
+        && let Err(e) = hive.unmount()
+    {
+        report.results.push(StepResult {
+            rule: "default-user".to_owned(),
+            what: "the unload of the default user profile".to_owned(),
+            status: "failed".to_owned(),
+            note: e,
+        });
+    }
     if !backup.is_empty() {
         let name = format!("backup-{stamp}.json");
         let text = serde_json::to_string_pretty(&backup).unwrap_or_else(|_| "[]".to_owned());
@@ -262,7 +411,6 @@ pub fn run_elevated(exe: &Path, args: &[String]) -> Result<u32, String> {
     use windows_sys::Win32::System::Threading::{GetExitCodeProcess, INFINITE, WaitForSingleObject};
     use windows_sys::Win32::UI::Shell::{SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW, ShellExecuteExW};
     use windows_sys::Win32::UI::WindowsAndMessaging::SW_HIDE;
-    let wide = |s: &str| s.encode_utf16().chain([0]).collect::<Vec<u16>>();
     let params = args
         .iter()
         .map(|a| format!("\"{}\"", a.replace('"', "")))
@@ -346,5 +494,56 @@ mod tests {
         root.delete_subkey_all(&sub).unwrap();
         std::fs::remove_dir_all(&out).unwrap();
         assert!(system_program("..\\x.exe").is_err() && system_program("cmd").is_err());
+    }
+
+    #[test]
+    fn the_default_user_profile_is_loaded_written_and_unloaded() {
+        // It writes the default user profile: only on the build machine of CI, as administrator.
+        if std::env::var_os("GITHUB_ACTIONS").is_none() || !crate::native::elevated() {
+            return;
+        }
+        let users = RegKey::predef(HKEY_USERS);
+        let loaded_before = users.open_subkey(default_user_subkey()).is_ok();
+        let key = format!(
+            "{}\\Software\\WinWeaverTest-{}",
+            apply::DEFAULT_USER_KEY,
+            std::process::id()
+        );
+        let plan = Plan {
+            format: apply::PLAN_FORMAT.to_owned(),
+            version: apply::PLAN_VERSION,
+            nonce: "n".to_owned(),
+            purpose: "apply".to_owned(),
+            steps: vec![Step {
+                rule: "test".to_owned(),
+                op: Op::SetValue {
+                    path: key.clone(),
+                    name: "D".into(),
+                    kind: RegKind::DWord,
+                    data: Value::from(7),
+                },
+            }],
+            skipped: vec![],
+        };
+        assert!(plan.uses_default_user());
+        let out = std::env::temp_dir().join(format!("winweaver-du-{}", std::process::id()));
+        let report = execute(&plan, &out, "du");
+        assert_eq!(report.count("failed"), 0, "{report:?}");
+        assert_eq!(
+            users.open_subkey(default_user_subkey()).is_ok(),
+            loaded_before,
+            "the hive is unloaded again"
+        );
+        let entries = apply::read_backup(&out.join(&report.backup)).unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].path, key);
+        let undo = execute(&plan_undo(&entries, "n"), &out, "du-undo");
+        assert_eq!(undo.count("failed"), 0, "{undo:?}");
+        let hive = DefaultUser::mount().unwrap();
+        assert_eq!(NativeMachine.value(&key, "D"), Ok(None));
+        let sub = key.strip_prefix("HKU:\\").unwrap();
+        users.delete_subkey_all(sub).unwrap();
+        hive.unmount().unwrap();
+        std::fs::remove_dir_all(&out).unwrap();
     }
 }

@@ -110,7 +110,7 @@ pub fn ui_language() -> Option<String> {
 }
 
 /// Whether the process runs elevated.
-fn elevated() -> bool {
+pub(crate) fn elevated() -> bool {
     use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
     use windows_sys::Win32::Security::{
         GetTokenInformation, TOKEN_ELEVATION, TOKEN_QUERY, TokenElevation,
