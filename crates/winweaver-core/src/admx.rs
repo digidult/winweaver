@@ -1145,7 +1145,7 @@ mod windows_tests {
 
     #[test]
     fn the_templates_of_this_windows_import_check_and_merge() {
-        let dir = std::path::Path::new("C:\Windows\PolicyDefinitions");
+        let dir = std::path::Path::new(r"C:\Windows\PolicyDefinitions");
         if !dir.is_dir() {
             return;
         }
