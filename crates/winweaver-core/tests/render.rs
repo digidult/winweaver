@@ -66,14 +66,17 @@ fn office_builds_like_the_reference() {
     assert!(system.contains("Unattend-PostOOBE"));
     assert!(system.ends_with("exit 0\n"));
     assert!(!system.contains("{{"));
-    let expected: Vec<&str> = catalog
-        .rules()
-        .iter()
-        .filter(|r| b.rule_ids.contains(&r.id))
-        .filter(|r| matches!(r.phase, Phase::Specialize | Phase::DefaultUser))
-        .filter(|r| r.actions.iter().any(|a| !a.is_xml()))
-        .map(|r| r.id.as_str())
-        .collect();
+    let with_blocks = |phase: Phase| -> Vec<&str> {
+        catalog
+            .rules()
+            .iter()
+            .filter(|r| b.rule_ids.contains(&r.id) && r.phase == phase)
+            .filter(|r| r.actions.iter().any(|a| !a.is_xml()))
+            .map(|r| r.id.as_str())
+            .collect()
+    };
+    let mut expected = with_blocks(Phase::Specialize);
+    expected.extend(with_blocks(Phase::DefaultUser));
     let markers: Vec<&str> = system
         .lines()
         .filter_map(|l| l.trim().strip_prefix("# [").and_then(|s| s.strip_suffix(']')))
