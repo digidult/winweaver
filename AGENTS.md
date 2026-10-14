@@ -209,6 +209,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   profile wants ASCII items and refuses a pair without `=` or a name twice. An ADMX `list` element becomes
   such a rule (the Disabled rule clears a list that is not additive), `multiText` a MultiString value; lists
   come before the other values of a policy. The read of this PC checks lists but reads no list parameters.
+- Window tests: `App::new` and `App::apply` test the logic without frames; `egui_kittest` (a dev-dependency
+  with its eframe feature) draws whole frames without a screen and clicks by the labels of AccessKit, so no
+  window ever opens. A test that needs a label finds it with `query_all_by_label`, since a text can appear
+  twice (a tab and a breadcrumb).
 - The tab of an import (`Doc::Catalog`, "Open" in Settings, Policy templates) shows its tree without check boxes
   and the policy with its parameters and registry values; "Show in the profile tree" shows a hidden import
   again, brings the first profile tab to the front, opens the groups above the policy and selects it.
@@ -239,7 +243,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | MCP server | stdio and HTTP, 19 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
 | Native apply | Plans, the elevated helper, the backup and undo (pull request #2), the default user profile loaded and unloaded by the helper; tested in a test key of HKCU and of the default profile on the runner | 14.10.2026 |
 | Policy templates | ADMX import, catalog files, the settings section (pull request #3), lists and multi-line texts (`reg-list`, list parameters), policies linked to built-in rules | 14.10.2026 |
-| Not yet | Features and capabilities read natively, egui_kittest tests | |
+| Not yet | Features and capabilities read natively (they need DISM and administrator rights) | |
 | Acceptance | Nothing of WinWeaver has been tried in a VM yet: the build of the answer file, the read of a PC and the scripts need the acceptance the predecessor had | |
 
 Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and

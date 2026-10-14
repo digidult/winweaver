@@ -3216,6 +3216,54 @@ mod tests {
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
+    /// Draws frames of the whole window without a screen (egui_kittest): every kind of tab is
+    /// drawn and shows its texts, and a click on a rule of the tree selects it.
+    #[test]
+    fn every_kind_of_tab_draws_without_a_screen() {
+        use egui_kittest::kittest::Queryable;
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(catalog, CatalogTexts::embedded().unwrap(), Settings::default());
+        let empty = admx::to_catalog_file(&admx::Templates::default(), "empty", "Empty templates", "", "now");
+        app.imports.push(empty);
+        app.rebuild_catalog();
+        let mut harness = egui_kittest::Harness::new_eframe(|_| app);
+        harness.step();
+        let has = |h: &egui_kittest::Harness<'_, App>, label: &str| h.query_all_by_label(label).next().is_some();
+        assert!(has(&harness, "Menu"));
+        for (act, label) in [
+            (Act::OpenSettings, Some("General")),
+            (Act::OpenCatalog("empty".to_owned()), Some("Select a policy in the tree.")),
+            (Act::OpenMarks, None),
+            (Act::OpenMcp, None),
+            (Act::OpenGuide, None),
+            (Act::Activate(0), None),
+        ] {
+            harness.state_mut().apply(vec![act]);
+            harness.step();
+            harness.step();
+            if let Some(label) = label {
+                assert!(has(&harness, label), "{label} is not drawn");
+            }
+        }
+        assert_eq!(harness.state().docs.len(), 6);
+        assert_eq!(harness.state().docs[harness.state().active].title(), "Office.wwprofile");
+        harness.state_mut().apply(vec![
+            Act::Expand("unattend".to_owned(), true),
+            Act::Expand("install".to_owned(), true),
+        ]);
+        harness.step();
+        harness.step();
+        let title = "Bypass the TPM 2.0 check";
+        assert!(has(&harness, title), "the rules of an open group are drawn");
+        harness.query_all_by_label(title).next().unwrap().click();
+        harness.step();
+        harness.step();
+        assert!(
+            matches!(harness.state().docs[0], Doc::Profile(ref d) if d.sel == Sel::Rule("install.bypass-tpm".into())),
+            "a click on a rule selects it"
+        );
+    }
+
     #[test]
     fn bookmarks_toggle_and_lead_back() {
         let catalog = Catalog::embedded().unwrap();
