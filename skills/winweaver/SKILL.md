@@ -50,6 +50,8 @@ An error text starts with its kind:
 - Change one thing, then `check_profile`. Errors stop the build; warnings name what to look at (a baseline
   rule of the protection that is off, a blocked rule, the disk mode partition).
 - A rule may be blocked: it is chosen on but needs another rule that is off (`blocked_by` in `get_rule`).
+- An imported policy may be linked: a built-in rule in effect writes its values (`linked_by` in
+  `get_rule`). It stays off and needs no change; the built-in rule is the one to switch.
 - Parameters: an enum takes one of its `options` values, an int a whole number in its range, a string a
   line of text (ASCII where it reaches the scripts).
 - Compare before you save: `compare_profiles` with a preset (Office, Strict, Laptop, Home) shows what a

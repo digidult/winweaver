@@ -269,5 +269,7 @@
   "Check": "Проверить",
   "Build": "Собрать",
   "Compare": "Сравнить",
-  "Select a form, a group or a rule in the tree.": "Выберите в дереве форму, группу или правило."
+  "Select a form, a group or a rule in the tree.": "Выберите в дереве форму, группу или правило.",
+  "Set by the built-in rule {rule}": "Задано встроенным правилом {rule}",
+  "set by the built-in rule": "задано встроенным правилом"
 }

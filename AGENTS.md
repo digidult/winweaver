@@ -1,8 +1,8 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 14.10.2026 (the default
-user profile applied natively, the local accounts read natively, the colour themes; before it the map rewritten after the first day: the core, the
+Updated with every change of structure, commands or task status. Last update: 14.10.2026 (imported
+policies linked to built-in rules, the default user profile applied natively, the local accounts read natively, the colour themes; before it the map rewritten after the first day: the core, the
 window, This PC, the scripts, the translations, the session and the MCP server).
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
@@ -198,6 +198,11 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - Imports: a policy is `admx.<prefix>.<name>` with `<id>.off`; groups `admx.<import>` under `policies`; a catalog
   file brings only Reg and RegRemove actions under `HKLM:\` or `DU:\` (checked at every load). Turning a group
   on skips imported policies; the read of the whole PC leaves them out.
+- Linked policies (`resolver::links`): an imported policy without parameters whose every Reg or RegRemove
+  action one built-in rule in effect has too (path and value name ignoring case, the same kind and value)
+  is linked to it: the tree and the group counts show it on (`Resolution::shown_on`), its check box is
+  disabled with the built-in rule in the tip, the profile keeps it off, and `get_rule` names it in
+  `linked_by`. A policy chosen on stays a normal rule.
 - Pull requests: the CI of a pull request is read with the app's PR tools (`get_status`), not by polling with gh.
 - Drafts: `drafts/<key>.json`, key `p-<fnv of the path>` or `n-<time>-<n>`; written 2 s after the last change
   and at the close; a save or a discard deletes them.
@@ -214,7 +219,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | MCP server | stdio and HTTP, 19 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
 | Native apply | Plans, the elevated helper, the backup and undo (pull request #2), the default user profile loaded and unloaded by the helper; tested in a test key of HKCU and of the default profile on the runner | 14.10.2026 |
 | Policy templates | ADMX import, catalog files, the settings section (pull request #3); lists and multi-line texts not yet | 14.10.2026 |
-| Not yet | Lists of values in imports, links of imported policies to built-in rules, features and capabilities read natively, egui_kittest tests | |
+| Not yet | Lists of values in imports, features and capabilities read natively, egui_kittest tests | |
 | Acceptance | Nothing of WinWeaver has been tried in a VM yet: the build of the answer file, the read of a PC and the scripts need the acceptance the predecessor had | |
 
 Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and

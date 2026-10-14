@@ -151,7 +151,7 @@ fn group_rows(
     let total = rules.len();
     let on = rules
         .iter()
-        .filter(|r| doc.resolution.in_effect(&r.id))
+        .filter(|r| doc.resolution.shown_on(&r.id))
         .count();
     let expanded = !words.is_empty() || doc.expanded.contains(gid);
     ui.horizontal(|ui| {
@@ -193,15 +193,47 @@ fn group_rows(
             }
             for rule in catalog.rules_in(gid) {
                 if matches(texts, rule, words) {
-                    rule_row(ui, texts, doc, rule, inline, acts);
+                    rule_row(ui, catalog, texts, doc, rule, inline, acts);
                 }
             }
         });
     }
 }
 
+/// The built-in rule that writes the values of an imported policy chosen off, when one does.
+fn linked_rule<'a>(doc: &'a ProfileDoc, rule: &Rule) -> Option<&'a str> {
+    doc.resolution
+        .linked_by(&rule.id)
+        .filter(|_| !doc.profile.is_on(&rule.id))
+}
+
+/// The check box of a rule. A linked policy (a built-in rule in effect writes its values) is drawn
+/// checked and cannot be changed here; its tip names the built-in rule.
+fn rule_checkbox(
+    ui: &mut egui::Ui,
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    doc: &ProfileDoc,
+    rule: &Rule,
+    label: &str,
+    acts: &mut Vec<Act>,
+) {
+    if let Some(by) = linked_rule(doc, rule) {
+        let by_title = catalog.rule(by).map_or(by, |r| rtitle(texts, r));
+        let mut shown = true;
+        ui.add_enabled(false, egui::Checkbox::new(&mut shown, label))
+            .on_disabled_hover_text(trf("Set by the built-in rule {rule}", &[("rule", &by_title)]));
+        return;
+    }
+    let mut on = doc.profile.is_on(&rule.id);
+    if ui.checkbox(&mut on, label).changed() {
+        acts.push(Act::Toggle(rule.id.clone(), on));
+    }
+}
+
 fn rule_row(
     ui: &mut egui::Ui,
+    catalog: &Catalog,
     texts: Option<&CatalogTexts>,
     doc: &ProfileDoc,
     rule: &Rule,
@@ -210,10 +242,7 @@ fn rule_row(
 ) {
     ui.horizontal(|ui| {
         ui.add_space(14.0);
-        let mut on = doc.profile.is_on(&rule.id);
-        if ui.checkbox(&mut on, tr("")).changed() {
-            acts.push(Act::Toggle(rule.id.clone(), on));
-        }
+        rule_checkbox(ui, catalog, texts, doc, rule, tr(""), acts);
         let state = doc.resolution.state(&rule.id);
         let title = rtitle(texts, rule);
         let text = match state {
@@ -231,7 +260,10 @@ fn rule_row(
         }
         if !rule.params.is_empty() {
             ui.weak(trf("{n} parameters", &[("n", &rule.params.len())]));
-        } else if inline && matches!(&doc.sel, Sel::Group(g) if g == &rule.group) {
+        } else if inline
+            && linked_rule(doc, rule).is_none()
+            && matches!(&doc.sel, Sel::Group(g) if g == &rule.group)
+        {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let mut on = doc.profile.is_on(&rule.id);
                 if switch(ui, &mut on).on_hover_text(tr("On or off")).changed() {
@@ -297,9 +329,7 @@ fn profile_detail(ui: &mut egui::Ui, doc: &ProfileDoc) {
         ui.label(format!("{} ({})", a.name, a.group));
     }
     ui.add_space(8.0);
-    ui.weak(
-        "The forms become editable with the next milestone. Select a group or a rule in the tree.",
-    );
+    ui.weak(tr("Select a form, a group or a rule in the tree."));
 }
 
 fn group_detail(
@@ -318,7 +348,7 @@ fn group_detail(
     let rules = catalog.rules_under(id);
     let on = rules
         .iter()
-        .filter(|r| doc.resolution.in_effect(&r.id))
+        .filter(|r| doc.resolution.shown_on(&r.id))
         .count();
     ui.weak(trf(
         "{n} rules, {on} in effect",
@@ -343,10 +373,7 @@ fn group_detail(
     ui.strong(tr("Rules of this group"));
     for rule in catalog.rules_in(id) {
         ui.horizontal(|ui| {
-            let mut on = doc.profile.is_on(&rule.id);
-            if ui.checkbox(&mut on, rtitle(texts, rule)).changed() {
-                acts.push(Act::Toggle(rule.id.clone(), on));
-            }
+            rule_checkbox(ui, catalog, texts, doc, rule, rtitle(texts, rule), acts);
             if ui.small_button(tr("open")).clicked() {
                 acts.push(Act::Select(Sel::Rule(rule.id.clone())));
             }
@@ -442,7 +469,17 @@ fn rule_detail(
         }
         match doc.resolution.state(&rule.id) {
             State::On => ui.weak(tr("in effect")),
-            State::Off => ui.weak(tr("off")),
+            State::Off => match doc.resolution.linked_by(&rule.id) {
+                Some(by) => {
+                    ui.weak(tr("set by the built-in rule"));
+                    let title = catalog.rule(by).map_or(by, |r| rtitle(texts, r));
+                    if ui.link(title).clicked() {
+                        acts.push(Act::Select(Sel::Rule(by.to_owned())));
+                    }
+                    ui.weak(tr(""))
+                }
+                None => ui.weak(tr("off")),
+            },
             State::Blocked { by } => {
                 ui.weak(tr("blocked: needs"));
                 let title = catalog.rule(by).map_or(by.as_str(), |r| rtitle(texts, r));

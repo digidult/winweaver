@@ -269,5 +269,7 @@
   "Check": "Перевірити",
   "Build": "Зібрати",
   "Compare": "Порівняти",
-  "Select a form, a group or a rule in the tree.": "Виберіть у дереві форму, групу або правило."
+  "Select a form, a group or a rule in the tree.": "Виберіть у дереві форму, групу або правило.",
+  "Set by the built-in rule {rule}": "Задано вбудованим правилом {rule}",
+  "set by the built-in rule": "задано вбудованим правилом"
 }

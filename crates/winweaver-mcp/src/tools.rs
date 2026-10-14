@@ -619,6 +619,7 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
                 "state": state_text(resolution.state(&id)),
                 "chosen_on": doc.profile.is_on(&id),
                 "blocked_by": blocked_by,
+                "linked_by": resolution.linked_by(&id),
                 "params": rule.params.iter().map(|(n, p)| param_json(catalog, &doc.profile, rule, n, p)).collect::<Vec<_>>(),
                 "requires": rule.requires,
                 "conflicts": rule.conflicts,

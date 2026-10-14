@@ -23,6 +23,8 @@ use crate::jsonfile;
 pub const CATALOG_FORMAT: &str = "winweaver-catalog";
 pub const CATALOG_VERSION: u32 = 1;
 pub const CATALOG_EXTENSION: &str = "wwcatalog";
+/// The prefix of the ids of the rules and groups an import brings.
+pub const RULE_PREFIX: &str = "admx.";
 const FILE_MAX: u64 = 8 * 1024 * 1024;
 const CATALOG_MAX: u64 = 64 * 1024 * 1024;
 const DEPTH_MAX: usize = 64;
@@ -1138,6 +1140,39 @@ mod tests {
             *value = Value::from("x]]>y");
         }
         assert!(bad.check().is_err(), "nothing that closes a CDATA section");
+    }
+
+    #[test]
+    fn a_policy_a_built_in_rule_writes_is_linked_to_it() {
+        let f = sample();
+        let base = Catalog::embedded().unwrap();
+        let mut builtin = base.rules()[0].clone();
+        builtin.id = "test.turn-off".to_owned();
+        builtin.requires.clear();
+        builtin.conflicts.clear();
+        builtin.params.clear();
+        builtin.actions = vec![Action::Reg {
+            path: "HKLM:\\SOFTWARE\\Policies\\Test".to_owned(),
+            name: "off".to_owned(),
+            kind: RegKind::DWord,
+            value: Value::from(1),
+            default: None,
+            why: String::new(),
+        }];
+        let mut rules = base.rules().to_vec();
+        rules.push(builtin.clone());
+        let with_rule = Catalog::from_parts(base.version(), base.groups().to_vec(), rules).unwrap();
+        let (catalog, _) = merge(&with_rule, &[f]).unwrap();
+        let mut profile = crate::profile::Profile::from_defaults("test", &catalog);
+        profile.set_on("test.turn-off", true);
+        let r = crate::resolver::resolve(&catalog, &profile);
+        assert_eq!(r.linked_by("admx.sample.turnoff"), Some("test.turn-off"));
+        assert!(r.shown_on("admx.sample.turnoff") && !r.in_effect("admx.sample.turnoff"));
+        assert_eq!(r.linked_by("admx.sample.turnoff.off"), None, "it writes 0");
+        assert_eq!(r.linked_by("admx.sample.level"), None, "a policy with parameters");
+        profile.set_on("test.turn-off", false);
+        let r = crate::resolver::resolve(&catalog, &profile);
+        assert_eq!(r.linked_by("admx.sample.turnoff"), None, "the built-in rule is off");
     }
 
     #[test]
