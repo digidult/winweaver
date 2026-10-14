@@ -16,7 +16,7 @@ use quick_xml::reader::Reader;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::catalog::{Action, Catalog, CatalogError, EnumValue, Group, Level, Param, Phase, RegKind, Rule, ROOT_POLICIES, check};
+use crate::catalog::{Action, Catalog, CatalogError, EnumValue, Group, Level, ListNames, Param, Phase, RegKind, Rule, ROOT_POLICIES, check};
 use crate::i18n::{CatalogTexts, GroupText, RuleText};
 use crate::jsonfile;
 
@@ -167,6 +167,11 @@ enum Element {
     Decimal { id: String, key: Option<String>, value_name: String, min: u64, max: u64, text: bool, long: bool },
     Boolean { id: String, key: Option<String>, value_name: String, on: Val, off: Val },
     Text { id: String, key: Option<String>, value_name: String, expandable: bool, required: bool },
+    /// The values of a key; `prefix` absent: the items name the values, empty or set: the prefix
+    /// and a number; `explicit`: `name=value` items.
+    List { id: String, key: Option<String>, prefix: Option<String>, additive: bool, expandable: bool, explicit: bool },
+    /// The lines of one multi-line value.
+    MultiText { id: String, key: Option<String>, value_name: String },
 }
 
 #[derive(Debug, Clone)]
@@ -357,6 +362,19 @@ fn elements_of(node: Option<&Node>, res: &[(String, Resources)]) -> Result<Vec<E
                 value_name: value_name()?,
                 expandable: e.attr("expandable") == Some("true"),
                 required: e.attr("required") == Some("true"),
+                id,
+            },
+            "list" => Element::List {
+                key,
+                prefix: e.attr("valuePrefix").map(str::to_owned),
+                additive: e.attr("additive") == Some("true"),
+                expandable: e.attr("expandable") == Some("true"),
+                explicit: e.attr("explicitValue") == Some("true"),
+                id,
+            },
+            "multiText" => Element::MultiText {
+                key,
+                value_name: value_name()?,
                 id,
             },
             other => return Err(format!("the element {id} is a {other}, which the program does not import yet")),
@@ -609,20 +627,52 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
         off_actions.push(reg_of(&path_of(&item.key)?, &item.value_name, &item.value)?);
     }
     let mut params = IndexMap::new();
+    // A list that is not additive deletes the other values of its key, so the lists come first.
+    let mut list_on = Vec::new();
+    let mut list_off = Vec::new();
     for (n, e) in p.elements.iter().enumerate() {
         let pname = format!("e{}", n + 1);
         let placeholder = Value::from(format!("{{{pname}}}"));
-        let (key, value_name, eid) = match e {
-            Element::Enum { key, value_name, id, .. }
-            | Element::Decimal { key, value_name, id, .. }
-            | Element::Boolean { key, value_name, id, .. }
-            | Element::Text { key, value_name, id, .. } => (key, value_name, id),
+        let (key, eid) = match e {
+            Element::Enum { key, id, .. }
+            | Element::Decimal { key, id, .. }
+            | Element::Boolean { key, id, .. }
+            | Element::Text { key, id, .. }
+            | Element::List { key, id, .. }
+            | Element::MultiText { key, id, .. } => (key, id),
         };
         let path = path_of(key)?;
+        let label = p.labels.get(eid).map(en).filter(|l| !l.is_empty()).unwrap_or_else(|| eid.clone());
+        let value_name = match e {
+            Element::List { prefix, additive, expandable, explicit, .. } => {
+                if prefix.as_deref().is_some_and(|x| !safe_text(x, NAME_MAX) || x.contains('{')) {
+                    return Err("a list prefix with unsafe characters".to_owned());
+                }
+                let names = if *explicit {
+                    ListNames::Pairs
+                } else if prefix.is_some() {
+                    ListNames::Numbered
+                } else {
+                    ListNames::Items
+                };
+                let kind = if *expandable { RegKind::ExpandString } else { RegKind::String };
+                let prefix = prefix.clone().unwrap_or_default();
+                if !*additive {
+                    list_off.push(Action::RegList { path: path.clone(), param: String::new(), names, prefix: prefix.clone(), additive: false, kind });
+                }
+                list_on.push(Action::RegList { path, param: pname.clone(), names, prefix, additive: *additive, kind });
+                params.insert(pname, Param::List { title: cut(&label, 200), default: Vec::new() });
+                continue;
+            }
+            Element::Enum { value_name, .. }
+            | Element::Decimal { value_name, .. }
+            | Element::Boolean { value_name, .. }
+            | Element::Text { value_name, .. }
+            | Element::MultiText { value_name, .. } => value_name,
+        };
         if !safe_text(value_name, 16383) {
             return Err("a value name with unsafe characters".to_owned());
         }
-        let label = p.labels.get(eid).map(en).filter(|l| !l.is_empty()).unwrap_or_else(|| eid.clone());
         let (kind, param) = match e {
             Element::Enum { items, .. } => {
                 let decimal = items.iter().all(|(_, v)| matches!(v, Val::Decimal(_)));
@@ -697,11 +747,17 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
                     Param::Text { title: cut(&label, 200), default: default.clone(), required: *required && !default.is_empty() },
                 )
             }
+            Element::MultiText { .. } => (RegKind::MultiString, Param::List { title: cut(&label, 200), default: Vec::new() }),
+            Element::List { .. } => continue,
         };
         on_actions.push(Action::Reg { path: path.clone(), name: value_name.clone(), kind, value: placeholder, default: None, why: String::new() });
         off_actions.push(Action::RegRemove { path, name: value_name.clone(), default: None });
         params.insert(pname, param);
     }
+    list_on.append(&mut on_actions);
+    on_actions = list_on;
+    list_off.append(&mut off_actions);
+    off_actions = list_off;
     if on_actions.is_empty() {
         return Err("the policy writes nothing".to_owned());
     }
@@ -920,6 +976,13 @@ impl CatalogFile {
                         (path, name)
                     }
                     Action::RegRemove { path, name, .. } => (path, name),
+                    Action::RegList { path, param, kind, prefix, .. } => {
+                        let list = param.is_empty() || matches!(r.params.get(param), Some(Param::List { .. }));
+                        if !list || !matches!(kind, RegKind::String | RegKind::ExpandString) || prefix.contains('{') {
+                            return Err(format!("the rule {} has a list of an unknown shape", r.id));
+                        }
+                        (path, prefix)
+                    }
                     _ => return Err(format!("the rule {} has an action an import cannot have", r.id)),
                 };
                 let key = path.strip_prefix("HKLM:\\").or_else(|| path.strip_prefix("DU:\\"));
@@ -931,6 +994,7 @@ impl CatalogFile {
                 let texts: Vec<&str> = match p {
                     Param::Enum { values, .. } => values.iter().filter_map(|v| v.value.as_str()).collect(),
                     Param::Text { default, .. } => vec![default.as_str()],
+                    Param::List { default, .. } => default.iter().map(String::as_str).collect(),
                     Param::Int { .. } => Vec::new(),
                 };
                 if texts.iter().any(|t| !safe_text(t, 16383) || t.contains('{')) {
@@ -1052,6 +1116,12 @@ mod tests {
     <policy name="Listed" class="Machine" displayName="$(string.Listed)" key="Software\Policies\Test">
       <elements><list id="L" key="Software\Policies\Test\L" /></elements>
     </policy>
+    <policy name="Lines" class="Machine" displayName="$(string.Listed)" key="Software\Policies\Test">
+      <elements>
+        <multiText id="M" valueName="Lines" />
+        <list id="N" key="Software\Policies\Test\N" valuePrefix="" />
+      </elements>
+    </policy>
     <policy name="Unsafe" class="Machine" displayName="$(string.Listed)" key="Software\Policies\..\Test" valueName="X" />
   </policies>
 </policyDefinitions>"#;
@@ -1097,7 +1167,19 @@ mod tests {
         assert_eq!(f.groups[0].parent.as_deref(), Some(ROOT_POLICIES));
         assert_eq!(f.groups[1].title, "Sample & tests");
         let ids: Vec<&str> = f.rules.iter().map(|r| r.id.as_str()).collect();
-        assert_eq!(ids, vec!["admx.sample.turnoff", "admx.sample.turnoff.off", "admx.sample.level", "admx.sample.level.off"]);
+        assert_eq!(
+            ids,
+            vec![
+                "admx.sample.turnoff",
+                "admx.sample.turnoff.off",
+                "admx.sample.level",
+                "admx.sample.level.off",
+                "admx.sample.listed",
+                "admx.sample.listed.off",
+                "admx.sample.lines",
+                "admx.sample.lines.off",
+            ]
+        );
         let off = &f.rules[0];
         assert_eq!(off.summary, "Explains A lot.");
         assert!(matches!(&off.actions[0], Action::Reg { path, name, value, .. } if path == "HKLM:\\Software\\Policies\\Test" && name == "Off" && value == &Value::from(1)));
@@ -1107,7 +1189,12 @@ mod tests {
         assert!(matches!(&level.actions[0], Action::Reg { path, value, .. } if path.starts_with("DU:\\") && value == &Value::from("{e1}")));
         assert!(matches!(&level.params["e1"], Param::Enum { default, values, .. } if default == &Value::from(2) && values.len() == 2));
         assert!(matches!(&level.params["e2"], Param::Int { default: 10, min: 1, max: 50, .. }));
-        assert!(f.skipped.iter().any(|(p, why)| p == "sample:Listed" && why.contains("list")));
+        let listed = f.rules.iter().find(|r| r.id == "admx.sample.listed").unwrap();
+        assert!(matches!(&listed.actions[0],
+            Action::RegList { param, names: ListNames::Items, additive: false, kind: RegKind::String, .. } if param == "e1"));
+        assert!(matches!(&listed.params["e1"], Param::List { .. }));
+        let off = f.rules.iter().find(|r| r.id == "admx.sample.listed.off").unwrap();
+        assert!(matches!(&off.actions[0], Action::RegList { param, .. } if param.is_empty()), "Disabled clears the list");
         assert!(f.skipped.iter().any(|(p, why)| p == "sample:Unsafe" && why.contains("unsafe")));
         assert_eq!(f.texts["uk"].rules["admx.sample.turnoff"].0, "Вимкнути зразок");
         f.check().unwrap();
@@ -1118,7 +1205,7 @@ mod tests {
         let f = sample();
         let base = Catalog::embedded().unwrap();
         let (merged, notes) = merge(&base, &[f.clone(), f.clone()]).unwrap();
-        assert_eq!(merged.rules().len(), base.rules().len() + 4);
+        assert_eq!(merged.rules().len(), base.rules().len() + 8);
         assert_eq!(notes.len(), 1, "the second copy is left out");
         assert_eq!(merged.root_of("admx.test"), Some(ROOT_POLICIES));
         let mut texts = CatalogTexts::embedded().unwrap();
@@ -1173,6 +1260,68 @@ mod tests {
         profile.set_on("test.turn-off", false);
         let r = crate::resolver::resolve(&catalog, &profile);
         assert_eq!(r.linked_by("admx.sample.turnoff"), None, "the built-in rule is off");
+    }
+
+    #[test]
+    fn lists_of_templates_are_built_applied_and_checked() {
+        let base = Catalog::embedded().unwrap();
+        let (catalog, _) = merge(&base, &[sample()]).unwrap();
+        let mut profile = crate::profile::Profile::from_defaults("test", &catalog);
+        let set = |profile: &mut crate::profile::Profile, id: &str, name: &str, items: &[&str]| {
+            profile.set_on(id, true);
+            let choice = profile.rules.entry(id.to_owned()).or_default();
+            choice.params.insert(name.to_owned(), Value::from(items.to_vec()));
+        };
+        set(&mut profile, "admx.sample.listed", "e1", &["a.example", " ", "b.example"]);
+        set(&mut profile, "admx.sample.lines", "e1", &["one", "two"]);
+        set(&mut profile, "admx.sample.lines", "e2", &["x", "y"]);
+        let listed = catalog.rule("admx.sample.listed").unwrap();
+        let params = crate::render::params_of(&catalog, &profile, listed);
+        let line = crate::render::script_lines(listed, &listed.actions[0], &params, listed.phase).unwrap();
+        assert_eq!(
+            line,
+            vec![
+                "Set-RegList -Path 'HKLM:\\Software\\Policies\\Test\\L' -Type String -Names @('a.example','b.example') -Values @('a.example','b.example')"
+                    .to_owned()
+            ]
+        );
+        let lines = catalog.rule("admx.sample.lines").unwrap();
+        let params = crate::render::params_of(&catalog, &profile, lines);
+        let list = crate::render::script_lines(lines, &lines.actions[0], &params, lines.phase).unwrap();
+        assert_eq!(
+            list[0],
+            "Set-RegList -Path 'HKLM:\\Software\\Policies\\Test\\N' -Type String -Names @('1','2') -Values @('x','y')"
+        );
+        let multi = crate::render::script_lines(lines, &lines.actions[1], &params, lines.phase).unwrap();
+        assert!(multi[0].contains("-Name 'Lines' -Type MultiString") && multi[0].contains("'one'"), "{multi:?}");
+        let ids = vec!["admx.sample.lines".to_owned()];
+        let plan = crate::apply::plan_apply(&catalog, &profile, &ids, "n");
+        assert!(plan.steps.iter().any(|s| matches!(&s.op,
+            crate::apply::Op::SetList { names, values, additive: false, .. } if names == &["1", "2"] && values == &["x", "y"])));
+        let checks = crate::thispc::plan(&catalog, &profile, &ids);
+        let key = "HKLM:\\Software\\Policies\\Test\\N";
+        let mut m = crate::thispc::MemoryMachine::default();
+        m.set(key, "1", crate::thispc::RegData::Str("x".into()));
+        m.set(key, "2", crate::thispc::RegData::Str("y".into()));
+        let status = |m: &crate::thispc::MemoryMachine| {
+            let report = crate::thispc::run(m, &checks, false, "now");
+            report.results.iter().find(|r| r.check.ends_with("(list)")).map(|r| r.status)
+        };
+        assert_eq!(status(&m), Some(crate::thispc::Status::Ok));
+        m.set(key, "3", crate::thispc::RegData::Str("z".into()));
+        assert_eq!(status(&m), Some(crate::thispc::Status::Differs), "a value outside the list");
+        let word = format!("caf{}", char::from_u32(0xe9).unwrap());
+        set(&mut profile, "admx.sample.lines", "e2", &[word.as_str()]);
+        let resolution = crate::resolver::resolve(&catalog, &profile);
+        let issues = crate::validate::check(&catalog, &profile, &resolution);
+        assert!(issues.iter().any(|i| i.text.contains("ASCII")), "{issues:?}");
+        let items = |list: &[&str]| list.iter().map(|t| (*t).to_owned()).collect::<Vec<_>>();
+        assert!(crate::render::list_entries(ListNames::Pairs, "", &items(&["a=1", "b"])).is_err());
+        assert!(crate::render::list_entries(ListNames::Items, "", &items(&["a", "A"])).is_err());
+        assert_eq!(
+            crate::render::list_entries(ListNames::Numbered, "item", &items(&["x"])).unwrap(),
+            (vec!["item1".to_owned()], vec!["x".to_owned()])
+        );
     }
 
     #[test]

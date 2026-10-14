@@ -263,6 +263,21 @@ impl Drop for DefaultUser {
     }
 }
 
+/// The names of the values of a key, `(Default)` for the default value; none when the key does
+/// not exist.
+fn value_names(path: &str) -> Result<Vec<String>, String> {
+    let (root, sub) = split(path)?;
+    let key = match root.open_subkey_with_flags(&sub, KEY_READ) {
+        Ok(k) => k,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(e.to_string()),
+    };
+    key.enum_values()
+        .map(|v| v.map(|(name, _)| if name.is_empty() { "(Default)".to_owned() } else { name }))
+        .collect::<io::Result<Vec<_>>>()
+        .map_err(|e| e.to_string())
+}
+
 /// The program of the system folder a plan may run: a bare file name of letters, digits, dots,
 /// hyphens and underscores that ends with `.exe`.
 pub fn system_program(file: &str) -> Result<PathBuf, String> {
@@ -307,6 +322,15 @@ fn describe(op: &Op) -> String {
     match op {
         Op::SetValue { path, name, data, .. } => format!("{path}\\{name} = {data}"),
         Op::DeleteValue { path, name } => format!("{path}\\{name} removed"),
+        Op::SetList {
+            path,
+            names,
+            additive,
+            ..
+        } => {
+            let how = if *additive { "added to" } else { "the list of" };
+            format!("{} values {how} {path}", names.len())
+        }
         Op::ServiceStart { name, start } => format!("service {name} start type {start}"),
         Op::Run { file, args } => format!("{file} {}", args.join(" ")),
     }
@@ -357,6 +381,38 @@ pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
                     Err(e) => ("failed", e),
                 }
             }
+            Op::SetList {
+                path,
+                kind,
+                names,
+                values,
+                additive,
+            } => match value_names(path) {
+                Err(e) => ("failed", e),
+                Ok(present) => {
+                    for n in present.iter().chain(names) {
+                        remember(path, n, &mut backup);
+                    }
+                    let mut failed = Vec::new();
+                    if !*additive {
+                        for n in present.iter().filter(|n| !names.iter().any(|x| x.eq_ignore_ascii_case(n))) {
+                            if let Err(e) = delete_value(path, n) {
+                                failed.push(e);
+                            }
+                        }
+                    }
+                    for (n, v) in names.iter().zip(values) {
+                        if let Err(e) = write_value(path, n, *kind, &Value::from(v.as_str())) {
+                            failed.push(e);
+                        }
+                    }
+                    if failed.is_empty() {
+                        ("ok", String::new())
+                    } else {
+                        ("failed", failed.join("; "))
+                    }
+                }
+            },
             Op::ServiceStart { name, start } => {
                 let key = apply::service_key(name);
                 match machine.value(&key, "Start") {
@@ -469,6 +525,14 @@ mod tests {
                 step(Op::SetValue { path: key.clone(), name: "B".into(), kind: RegKind::Binary, data: serde_json::json!([1, 2, 255]) }),
                 step(Op::SetValue { path: key.clone(), name: "Q".into(), kind: RegKind::QWord, data: Value::from("5") }),
                 step(Op::DeleteValue { path: key.clone(), name: "Absent".into() }),
+                step(Op::SetValue { path: format!("{key}\\L"), name: "old".into(), kind: RegKind::String, data: Value::from("o") }),
+                step(Op::SetList {
+                    path: format!("{key}\\L"),
+                    kind: RegKind::String,
+                    names: vec!["1".into(), "2".into()],
+                    values: vec!["a".into(), "b".into()],
+                    additive: false,
+                }),
                 step(Op::ServiceStart { name: "WinWeaverNoSuchService".into(), start: 4 }),
                 step(Op::Run { file: "hostname.exe".into(), args: vec![] }),
             ],
@@ -484,8 +548,11 @@ mod tests {
         assert_eq!(m.value(&key, "M"), Ok(Some(RegData::Multi(vec!["a".into(), "b".into()]))));
         assert_eq!(m.value(&key, "B"), Ok(Some(RegData::Binary(vec![1, 2, 255]))));
         assert_eq!(m.value(&key, "Q"), Ok(Some(RegData::Qword(5))));
+        let list = format!("{key}\\L");
+        assert_eq!(m.value(&list, "old"), Ok(None), "the list deletes the other values");
+        assert_eq!(m.value(&list, "2"), Ok(Some(RegData::Str("b".into()))));
         let entries = apply::read_backup(&out.join(&report.backup)).unwrap();
-        assert_eq!(entries.len(), 6);
+        assert_eq!(entries.len(), 9);
         assert!(entries.iter().all(|e| !e.existed));
         let undo = execute(&plan_undo(&entries, "n"), &out, "undo");
         assert_eq!(undo.count("failed"), 0, "{undo:?}");

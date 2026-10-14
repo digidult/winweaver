@@ -3,7 +3,9 @@
 //! An error stops the build; a warning names something the user should look at; an info is a
 //! fact worth knowing. The checks follow `docs/spec/03-features.md` section 3.
 
-use crate::catalog::{Catalog, Level, Param, check::same_value};
+use serde_json::Value;
+
+use crate::catalog::{Action, Catalog, Level, Param, check::same_value};
 use crate::profile::Profile;
 use crate::resolver::{Resolution, State};
 
@@ -422,6 +424,49 @@ fn check_rules(
                             target(),
                             format!("Parameter {name}: {value} is outside {min}..{max}"),
                         );
+                    }
+                }
+                Param::List { .. } => {
+                    let texts = value
+                        .as_array()
+                        .is_some_and(|items| items.iter().all(Value::is_string));
+                    if !texts {
+                        push(
+                            issues,
+                            Severity::Error,
+                            target(),
+                            format!("Parameter {name}: a list of texts is needed"),
+                        );
+                        continue;
+                    }
+                    let items = crate::render::list_items(Some(&value));
+                    if items.iter().any(|t| !t.is_ascii() || t.chars().any(char::is_control)) {
+                        push(
+                            issues,
+                            Severity::Error,
+                            target(),
+                            format!(
+                                "Parameter {name}: every item must be ASCII text, the embedded scripts are read without a code page"
+                            ),
+                        );
+                    }
+                    for action in &rule.actions {
+                        if let Action::RegList {
+                            param,
+                            names,
+                            prefix,
+                            ..
+                        } = action
+                            && param == name
+                            && let Err(e) = crate::render::list_entries(*names, prefix, &items)
+                        {
+                            push(
+                                issues,
+                                Severity::Error,
+                                target(),
+                                format!("Parameter {name}: {e}"),
+                            );
+                        }
                     }
                 }
                 Param::Text { required, .. } => {

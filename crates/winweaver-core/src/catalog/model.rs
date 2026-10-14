@@ -119,6 +119,14 @@ pub enum Param {
         #[serde(default = "yes")]
         required: bool,
     },
+    /// A list of texts: the items of a `reg-list`, or the lines of a multi-line value written by a
+    /// `reg` action whose value is the parameter alone. Empty items are left out.
+    #[serde(rename = "list")]
+    List {
+        title: String,
+        #[serde(default)]
+        default: Vec<String>,
+    },
 }
 
 fn yes() -> bool {
@@ -128,9 +136,10 @@ fn yes() -> bool {
 impl Param {
     pub fn title(&self) -> &str {
         match self {
-            Param::Enum { title, .. } | Param::Int { title, .. } | Param::Text { title, .. } => {
-                title
-            }
+            Param::Enum { title, .. }
+            | Param::Int { title, .. }
+            | Param::Text { title, .. }
+            | Param::List { title, .. } => title,
         }
     }
 
@@ -140,6 +149,7 @@ impl Param {
             Param::Enum { default, .. } => default.clone(),
             Param::Int { default, .. } => Value::from(*default),
             Param::Text { default, .. } => Value::from(default.as_str()),
+            Param::List { default, .. } => Value::from(default.clone()),
         }
     }
 }
@@ -170,6 +180,19 @@ impl Lines {
             Lines::Many(v) => v.iter().map(String::as_str).collect(),
         }
     }
+}
+
+/// How a `reg-list` names the values of its items.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ListNames {
+    /// Every item is the name and the data of its value.
+    #[default]
+    Items,
+    /// The prefix and a number from 1 name the values (`prefix` may be empty: 1, 2, 3).
+    Numbered,
+    /// Every item is `name=value`.
+    Pairs,
 }
 
 /// What a rule does when it is on. The `default` fields hold the Windows default for the return
@@ -219,6 +242,20 @@ pub enum Action {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         default: Option<Value>,
     },
+    /// The values of a key from the items of a list parameter (`param`; empty for no items).
+    /// Without `additive` the other values of the key are deleted first, as Group Policy does.
+    RegList {
+        path: String,
+        #[serde(default)]
+        param: String,
+        #[serde(default)]
+        names: ListNames,
+        #[serde(default)]
+        prefix: String,
+        #[serde(default)]
+        additive: bool,
+        kind: RegKind,
+    },
     /// The start type of a service (2 automatic, 3 manual, 4 disabled).
     Service {
         name: String,
@@ -256,6 +293,7 @@ impl Action {
             Action::Ps { .. } => "ps",
             Action::Reg { .. } => "reg",
             Action::RegRemove { .. } => "reg-remove",
+            Action::RegList { .. } => "reg-list",
             Action::Service { .. } => "service",
             Action::Exe { .. } => "exe",
             Action::Feature { .. } => "feature",
@@ -272,7 +310,9 @@ impl Action {
     /// The registry key the action writes or removes, if any.
     pub fn registry_path(&self) -> Option<&str> {
         match self {
-            Action::Reg { path, .. } | Action::RegRemove { path, .. } => Some(path),
+            Action::Reg { path, .. }
+            | Action::RegRemove { path, .. }
+            | Action::RegList { path, .. } => Some(path),
             _ => None,
         }
     }
@@ -306,6 +346,9 @@ impl Action {
         match self {
             Action::Reg { path, name, .. } | Action::RegRemove { path, name, .. } => {
                 vec![("path", path.as_str()), ("name", name.as_str())]
+            }
+            Action::RegList { path, prefix, .. } => {
+                vec![("path", path.as_str()), ("prefix", prefix.as_str())]
             }
             Action::XmlSetting {
                 pass,

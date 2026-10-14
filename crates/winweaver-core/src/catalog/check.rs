@@ -3,7 +3,7 @@
 
 use serde_json::Value;
 
-use super::{Catalog, Param, Rule};
+use super::{Action, Catalog, Param, RegKind, Rule};
 
 /// The problems found in the catalog, one line each; empty when the catalog is sound.
 pub fn check(catalog: &Catalog) -> Vec<String> {
@@ -51,7 +51,19 @@ fn check_rule(catalog: &Catalog, rule: &Rule, problems: &mut Vec<String>) {
                 ));
             }
         }
-        if let super::Action::XmlSetting { pass, .. } = action
+        if let Action::RegList { param, kind, .. } = action {
+            if !param.is_empty() && !matches!(rule.params.get(param), Some(Param::List { .. })) {
+                problems.push(format!(
+                    "rule {id}: reg-list takes {param}, which is not a list parameter of the rule"
+                ));
+            }
+            if !matches!(kind, RegKind::String | RegKind::ExpandString) {
+                problems.push(format!(
+                    "rule {id}: reg-list writes {kind:?}, not String or ExpandString"
+                ));
+            }
+        }
+        if let Action::XmlSetting { pass, .. } = action
             && !matches!(pass.as_str(), "windowsPE" | "specialize" | "oobeSystem")
         {
             problems.push(format!("rule {id}: xml-setting pass {pass} is unknown"));
@@ -114,12 +126,15 @@ fn check_param(id: &str, name: &str, param: &Param, rule: &Rule, problems: &mut 
                 ));
             }
         }
+        Param::List { .. } => {}
     }
-    let used = rule
-        .actions
-        .iter()
-        .flat_map(|a| a.placeholder_fields())
-        .any(|(_, text)| placeholders(&text).contains(&name));
+    let used = rule.actions.iter().any(|a| match a {
+        Action::RegList { param, .. } => param == name,
+        other => other
+            .placeholder_fields()
+            .iter()
+            .any(|(_, text)| placeholders(text).contains(&name)),
+    });
     if !used {
         problems.push(format!(
             "rule {id}: parameter {name} is not used by any action"

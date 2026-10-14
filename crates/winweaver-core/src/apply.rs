@@ -41,6 +41,15 @@ pub enum Op {
     },
     /// Deletes a registry value when it exists.
     DeleteValue { path: String, name: String },
+    /// Writes the values of a list key; without `additive` the other values of the key are
+    /// deleted first. Every value it touches is backed up.
+    SetList {
+        path: String,
+        kind: RegKind,
+        names: Vec<String>,
+        values: Vec<String>,
+        additive: bool,
+    },
     /// Sets the start type of a service that exists (2 automatic, 3 manual, 4 disabled).
     ServiceStart { name: String, start: u32 },
     /// Runs a program of the system folder with arguments; nothing to back up.
@@ -51,7 +60,9 @@ impl Op {
     /// Whether the operation writes the default user profile, which the helper loads first.
     pub fn in_default_user(&self) -> bool {
         match self {
-            Op::SetValue { path, .. } | Op::DeleteValue { path, .. } => in_default_user(path),
+            Op::SetValue { path, .. } | Op::DeleteValue { path, .. } | Op::SetList { path, .. } => {
+                in_default_user(path)
+            }
             Op::ServiceStart { .. } | Op::Run { .. } => false,
         }
     }
@@ -166,13 +177,6 @@ fn native_path(path: &str) -> Result<String, &'static str> {
     Ok(path.to_owned())
 }
 
-fn substitute_value(value: &Value, params: &std::collections::BTreeMap<String, Value>) -> Value {
-    match value {
-        Value::String(s) => Value::String(render::substitute(s, params)),
-        Value::Array(items) => Value::Array(items.iter().map(|v| substitute_value(v, params)).collect()),
-        other => other.clone(),
-    }
-}
 
 /// The program a rule runs, with the switches of DISM for an optional feature.
 fn feature_run(name: &str, state: &str) -> Op {
@@ -202,12 +206,30 @@ fn apply_ops(action: &Action, params: &std::collections::BTreeMap<String, Value>
             path: native_path(path)?,
             name: name.clone(),
             kind: *kind,
-            data: substitute_value(value, params),
+            data: render::fill_value(value, params),
         }],
         Action::RegRemove { path, name, .. } => vec![Op::DeleteValue {
             path: native_path(path)?,
             name: name.clone(),
         }],
+        Action::RegList {
+            path,
+            param,
+            names,
+            prefix,
+            additive,
+            kind,
+        } => {
+            let items = render::list_values(params, param);
+            let (names, values) = render::list_entries(*names, prefix, &items)?;
+            vec![Op::SetList {
+                path: native_path(path)?,
+                kind: *kind,
+                names,
+                values,
+                additive: *additive,
+            }]
+        }
         Action::Service { name, start, .. } => vec![Op::ServiceStart {
             name: name.clone(),
             start: *start,
@@ -256,6 +278,24 @@ fn revert_ops(action: &Action) -> Result<Option<Vec<Op>>, String> {
             Some(Value::String(s)) if s == "absent" => Some(Vec::new()),
             Some(_) => None,
         },
+        Action::RegList {
+            path,
+            additive,
+            kind,
+            ..
+        } => {
+            let path = native_path(path)?;
+            let policy = path.to_ascii_lowercase().contains("\\policies\\");
+            (policy && !*additive).then(|| {
+                vec![Op::SetList {
+                    path,
+                    kind: *kind,
+                    names: Vec::new(),
+                    values: Vec::new(),
+                    additive: false,
+                }]
+            })
+        }
         Action::Service { name, default, .. } => default
             .as_ref()
             .and_then(Value::as_u64)

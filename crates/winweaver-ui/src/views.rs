@@ -2,7 +2,9 @@
 
 use eframe::egui::{self, RichText};
 use serde_json::Value;
-use winweaver_core::catalog::{Action, Catalog, Group, Param, ROOT_UNATTEND, Rule, check};
+use winweaver_core::catalog::{
+    Action, Catalog, Group, ListNames, Param, ROOT_UNATTEND, Rule, check,
+};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::resolver::State;
 
@@ -420,6 +422,16 @@ fn describe(action: &Action) -> String {
             ..
         } => format!("reg  {path}\\{name} = {value} ({kind:?})"),
         Action::RegRemove { path, name, .. } => format!("reg-remove  {path}\\{name}"),
+        Action::RegList {
+            path,
+            param,
+            names,
+            additive,
+            ..
+        } => {
+            let add = if *additive { ", additive" } else { "" };
+            format!("reg-list  {path} from {param} ({names:?}{add})")
+        }
         Action::Service { name, start, .. } => format!("service  {name}: start type {start}"),
         Action::Exe { file, args } => format!("exe  {file} {}", args.join(" ")),
         Action::Feature { name, state, .. } => format!("feature  {name}: {state}"),
@@ -618,6 +630,47 @@ fn param_editor(
                         rule.id.clone(),
                         name.to_owned(),
                         Value::from(v),
+                    ));
+                }
+            }
+            Param::List { .. } => {
+                let pairs = rule.actions.iter().any(|a| {
+                    matches!(a, Action::RegList { param, names: ListNames::Pairs, .. } if param == name)
+                });
+                let mut text = current
+                    .as_array()
+                    .map(|items| {
+                        items
+                            .iter()
+                            .map(|v| v.as_str().unwrap_or_default())
+                            .collect::<Vec<_>>()
+                            .join("\n")
+                    })
+                    .unwrap_or_default();
+                let hint = if pairs {
+                    tr("One name=value per line")
+                } else {
+                    tr("One item per line")
+                };
+                if ui
+                    .add(
+                        egui::TextEdit::multiline(&mut text)
+                            .id_salt(format!("{}.{name}", rule.id))
+                            .desired_rows(4)
+                            .desired_width(320.0)
+                            .hint_text(hint),
+                    )
+                    .changed()
+                {
+                    let items: Vec<Value> = if text.is_empty() {
+                        Vec::new()
+                    } else {
+                        text.split('\n').map(|l| Value::from(l.trim_end_matches('\r'))).collect()
+                    };
+                    acts.push(Act::SetParam(
+                        rule.id.clone(),
+                        name.to_owned(),
+                        Value::Array(items),
                     ));
                 }
             }

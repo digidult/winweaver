@@ -105,7 +105,7 @@ pub(crate) fn definitions() -> Vec<Value> {
                 json!({
                     "id": s("A rule id"),
                     "name": s("The parameter name"),
-                    "value": { "description": "An option of an enum, a whole number in range, or a text" },
+                    "value": { "description": "An option of an enum, a whole number in range, a text, or for a list an array of texts" },
                 }),
                 &["id", "name", "value"],
             ),
@@ -364,6 +364,15 @@ fn describe(action: &Action) -> String {
             ..
         } => format!("registry {path}\\{name} = {value} ({kind:?})"),
         Action::RegRemove { path, name, .. } => format!("registry {path}\\{name} removed"),
+        Action::RegList {
+            path,
+            param,
+            additive,
+            ..
+        } => {
+            let how = if *additive { "added to" } else { "replacing" };
+            format!("registry list {path} from the parameter {param}, {how} its values")
+        }
         Action::Service { name, start, .. } => format!("service {name} start type {start}"),
         Action::Exe { file, args } => format!("runs {file} {}", args.join(" ")),
         Action::Feature { name, state, .. } => format!("optional feature {name} {state}"),
@@ -409,6 +418,9 @@ fn param_json(catalog: &Catalog, p: &Profile, rule: &Rule, name: &str, param: &P
             required,
         } => json!({
             "name": name, "type": "string", "title": title, "default": default, "value": value, "required": required,
+        }),
+        Param::List { title, default } => json!({
+            "name": name, "type": "list", "title": title, "default": default, "value": value,
         }),
     }
 }
@@ -745,6 +757,25 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
                         .as_str()
                         .ok_or_else(|| fail("invalid", "a text is needed"))?;
                     Value::from(one_line(t, 500)?)
+                }
+                Param::List { .. } => {
+                    let items = value
+                        .as_array()
+                        .ok_or_else(|| fail("invalid", "a list of texts is needed"))?;
+                    if items.len() > 1000 {
+                        return Err(fail("invalid", "a list of at most 1000 items"));
+                    }
+                    let mut texts = Vec::new();
+                    for item in items {
+                        let t = item
+                            .as_str()
+                            .ok_or_else(|| fail("invalid", "every item of a list is a text"))?;
+                        let t = one_line(t, 500)?;
+                        if !t.is_empty() {
+                            texts.push(Value::from(t));
+                        }
+                    }
+                    Value::Array(texts)
                 }
             };
             let default = param.default_value();

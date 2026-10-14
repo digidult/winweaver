@@ -1,8 +1,8 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 14.10.2026 (imported
-policies linked to built-in rules, the default user profile applied natively, the local accounts read natively, the colour themes; before it the map rewritten after the first day: the core, the
+Updated with every change of structure, commands or task status. Last update: 14.10.2026 (lists of
+values, imported policies linked to built-in rules, the default user profile applied natively, the local accounts read natively, the colour themes; before it the map rewritten after the first day: the core, the
 window, This PC, the scripts, the translations, the session and the MCP server).
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
@@ -200,6 +200,14 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - Imports: a policy is `admx.<prefix>.<name>` with `<id>.off`; groups `admx.<import>` under `policies`; a catalog
   file brings only Reg and RegRemove actions under `HKLM:\` or `DU:\` (checked at every load). Turning a group
   on skips imported policies; the read of the whole PC leaves them out.
+- Lists (`Param::List`, `Action::RegList`): a `reg-list` writes the items of its list parameter as the values
+  of a key, named by the items, a prefix and a number from 1 (an empty prefix gives 1, 2, 3), or `name=value`
+  items (`ListNames`); without `additive` the other values of the key go first (`Set-RegList`, `Test-RegList`
+  of the runtime, `Op::SetList` of the helper, which backs up every value of the key). A `reg` action whose
+  value is a list parameter alone writes its lines (MultiString). Empty items are left out; the check of a
+  profile wants ASCII items and refuses a pair without `=` or a name twice. An ADMX `list` element becomes
+  such a rule (the Disabled rule clears a list that is not additive), `multiText` a MultiString value; lists
+  come before the other values of a policy. The read of this PC checks lists but reads no list parameters.
 - Linked policies (`resolver::links`): an imported policy without parameters whose every Reg or RegRemove
   action one built-in rule in effect has too (path and value name ignoring case, the same kind and value)
   is linked to it: the tree and the group counts show it on (`Resolution::shown_on`), its check box is
@@ -220,8 +228,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Window | Tabs, menu, command bar (icons, compact below 1100 px), navigation, search, tree with row switches, detail panel, forms, check, build, diff tab, bookmarks, Markdown tabs, This PC (read, check, scripts, reports), MCP tab, settings, translations uk and ru, drafts, restored tabs, log, colour themes (Latte and Matrix, more as files) | 14.10.2026 |
 | MCP server | stdio and HTTP, 19 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
 | Native apply | Plans, the elevated helper, the backup and undo (pull request #2), the default user profile loaded and unloaded by the helper; tested in a test key of HKCU and of the default profile on the runner | 14.10.2026 |
-| Policy templates | ADMX import, catalog files, the settings section (pull request #3); lists and multi-line texts not yet | 14.10.2026 |
-| Not yet | Lists of values in imports, features and capabilities read natively, egui_kittest tests | |
+| Policy templates | ADMX import, catalog files, the settings section (pull request #3), lists and multi-line texts (`reg-list`, list parameters), policies linked to built-in rules | 14.10.2026 |
+| Not yet | Features and capabilities read natively, egui_kittest tests | |
 | Acceptance | Nothing of WinWeaver has been tried in a VM yet: the build of the answer file, the read of a PC and the scripts need the acceptance the predecessor had | |
 
 Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and

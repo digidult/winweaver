@@ -53,7 +53,8 @@ An error text starts with its kind:
 - An imported policy may be linked: a built-in rule in effect writes its values (`linked_by` in
   `get_rule`). It stays off and needs no change; the built-in rule is the one to switch.
 - Parameters: an enum takes one of its `options` values, an int a whole number in its range, a string a
-  line of text (ASCII where it reaches the scripts).
+  line of text (ASCII where it reaches the scripts), a list a JSON array of texts (for a list of value
+  names, `name=value` items).
 - Compare before you save: `compare_profiles` with a preset (Office, Strict, Laptop, Home) shows what a
   profile changes.
 - The starter accounts Admin and User have no passwords by the decision of the customer; do not propose to

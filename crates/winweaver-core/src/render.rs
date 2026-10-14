@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use crate::catalog::{Action, Catalog, Phase, RegKind, Rule};
+use crate::catalog::{Action, Catalog, ListNames, Phase, RegKind, Rule};
 use crate::profile::{Account, Profile};
 use crate::resolver;
 use crate::resources;
@@ -184,6 +184,74 @@ pub fn substitute(text: &str, params: &BTreeMap<String, Value>) -> String {
     out
 }
 
+/// The items of a list value: the texts of an array, trimmed, without the empty ones.
+pub(crate) fn list_items(value: Option<&Value>) -> Vec<String> {
+    value
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .map(str::trim)
+                .filter(|t| !t.is_empty())
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// The items of the list parameter of a `reg-list`; none for an empty parameter name.
+pub(crate) fn list_values(params: &BTreeMap<String, Value>, param: &str) -> Vec<String> {
+    if param.is_empty() {
+        return Vec::new();
+    }
+    list_items(params.get(param))
+}
+
+/// The value names and the data a `reg-list` writes for its items; an error for a pair without
+/// `=` or a name that comes twice (Windows compares value names without regard to case).
+pub(crate) fn list_entries(
+    names: ListNames,
+    prefix: &str,
+    items: &[String],
+) -> Result<(Vec<String>, Vec<String>), String> {
+    let mut out_names: Vec<String> = Vec::new();
+    let mut out_values = Vec::new();
+    for (i, item) in items.iter().enumerate() {
+        let (name, value) = match names {
+            ListNames::Items => (item.clone(), item.clone()),
+            ListNames::Numbered => (format!("{prefix}{}", i + 1), item.clone()),
+            ListNames::Pairs => match item.split_once('=') {
+                Some((n, v)) if !n.trim().is_empty() => (n.trim().to_owned(), v.trim().to_owned()),
+                _ => return Err(format!("the item {item} is not name=value")),
+            },
+        };
+        if out_names.iter().any(|n| n.eq_ignore_ascii_case(&name)) {
+            return Err(format!("the value name {name} comes twice"));
+        }
+        out_names.push(name);
+        out_values.push(value);
+    }
+    Ok((out_names, out_values))
+}
+
+/// A value of an action with its placeholders filled in: a value that is one list parameter
+/// alone becomes the list of its items (the lines of a multi-line value).
+pub(crate) fn fill_value(value: &Value, params: &BTreeMap<String, Value>) -> Value {
+    match value {
+        Value::String(text) => {
+            if let Some(inner) = text.strip_prefix('{').and_then(|t| t.strip_suffix('}'))
+                && let Some(list @ Value::Array(_)) = params.get(inner)
+            {
+                return Value::from(list_items(Some(list)));
+            }
+            Value::String(substitute(text, params))
+        }
+        Value::Array(items) => Value::Array(items.iter().map(|v| fill_value(v, params)).collect()),
+        other => other.clone(),
+    }
+}
+
 pub(crate) fn fill(template: &str, slots: &[(&str, &str)]) -> Result<String, RenderError> {
     let mut text = template.replace("\r\n", "\n");
     for (name, value) in slots {
@@ -261,19 +329,7 @@ pub(crate) fn script_lines(
             why,
             ..
         } => {
-            let value = match value {
-                Value::String(text) => Value::String(s(text)),
-                Value::Array(items) => Value::Array(
-                    items
-                        .iter()
-                        .map(|v| match v {
-                            Value::String(t) => Value::String(s(t)),
-                            other => other.clone(),
-                        })
-                        .collect(),
-                ),
-                other => other.clone(),
-            };
+            let value = fill_value(value, params);
             let mut text = format!(
                 "Set-Reg -Path {} -Name {} -Type {kind:?} -Value {}",
                 reg_path(path),
@@ -304,6 +360,18 @@ pub(crate) fn script_lines(
                 ),
             ));
         }
+        Action::RegList {
+            path,
+            param,
+            names,
+            prefix,
+            additive,
+            kind,
+        } => {
+            let items = list_values(params, param);
+            let (n, v) = list_entries(*names, prefix, &items).map_err(|e| err(rule, e))?;
+            reg_list_line(path, *kind, &n, &v, *additive)
+        }
         Action::Service { name, start, .. } => {
             format!("Set-ServiceStart -Name {} -Start {start}", ps_quote(name))
         }
@@ -330,6 +398,30 @@ pub(crate) fn script_lines(
 }
 
 /// The parameter values of a rule in the profile (the defaults where the profile has none).
+/// The `Set-RegList` line of a list of values.
+pub(crate) fn reg_list_line(
+    path: &str,
+    kind: RegKind,
+    names: &[String],
+    values: &[String],
+    additive: bool,
+) -> String {
+    let list = |items: &[String]| {
+        items
+            .iter()
+            .map(|t| ps_quote(t))
+            .collect::<Vec<_>>()
+            .join(",")
+    };
+    format!(
+        "Set-RegList -Path {} -Type {kind:?} -Names @({}) -Values @({}){}",
+        reg_path(path),
+        list(names),
+        list(values),
+        if additive { " -Additive" } else { "" }
+    )
+}
+
 pub(crate) fn params_of(
     catalog: &Catalog,
     profile: &Profile,

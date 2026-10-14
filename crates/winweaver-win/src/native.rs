@@ -353,6 +353,17 @@ impl Machine for NativeMachine {
             .map_err(|e| e.to_string())
     }
 
+    fn values(&self, path: &str) -> Result<Option<Vec<(String, RegData)>>, String> {
+        let Some(key) = open(path)? else {
+            return Ok(None);
+        };
+        key.enum_values()
+            .map(|v| v.map(|(name, value)| (name, convert(&value.vtype, &value.bytes))))
+            .collect::<io::Result<Vec<_>>>()
+            .map(Some)
+            .map_err(|e| e.to_string())
+    }
+
     fn is_admin(&self) -> bool {
         elevated()
     }

@@ -119,6 +119,15 @@ fn revert_action(rule: &Rule, action: &Action) -> Result<Option<Vec<String>>, Re
             Some(Value::String(s)) if s == "absent" => Some(Vec::new()),
             Some(_) => None,
         },
+        Action::RegList {
+            path,
+            additive,
+            kind,
+            ..
+        } => {
+            let policy = path.to_ascii_lowercase().contains("\\policies\\");
+            (policy && !*additive).then(|| vec![render::reg_list_line(path, *kind, &[], &[], false)])
+        }
         Action::Service { name, default, .. } => {
             default.as_ref().and_then(Value::as_u64).map(|start| {
                 vec![format!(
@@ -395,6 +404,23 @@ fn audit_line(rule: &Rule, check: &thispc::Check) -> Result<String, RenderError>
             q(name),
             q(&check.note)
         ),
+        Probe::RegList {
+            path,
+            kind,
+            names,
+            values,
+            additive,
+        } => {
+            let list = |items: &[String]| items.iter().map(|t| q(t)).collect::<Vec<_>>().join(",");
+            format!(
+                "Test-RegList -Rule {r} -Path {} -Type {kind:?} -Names @({}) -Values @({}){} -Note {}",
+                q(path),
+                list(names),
+                list(values),
+                if *additive { " -Additive" } else { "" },
+                q(&check.note)
+            )
+        }
         Probe::Service { name, start, .. } => {
             format!(
                 "Test-ServiceStart -Rule {r} -Name {} -Start {start}",

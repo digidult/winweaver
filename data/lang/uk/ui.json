@@ -271,5 +271,7 @@
   "Compare": "Порівняти",
   "Select a form, a group or a rule in the tree.": "Виберіть у дереві форму, групу або правило.",
   "Set by the built-in rule {rule}": "Задано вбудованим правилом {rule}",
-  "set by the built-in rule": "задано вбудованим правилом"
+  "set by the built-in rule": "задано вбудованим правилом",
+  "One item per line": "Один елемент у рядку",
+  "One name=value per line": "Одна пара ім'я=значення в рядку"
 }
