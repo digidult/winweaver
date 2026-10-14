@@ -133,7 +133,7 @@ impl CatalogTexts {
     }
 
     /// The title of a parameter of a rule.
-    pub fn param_title<'a>(&'a self, rule: &'a Rule, name: &str) -> &'a str {
+    pub fn param_title<'a>(&'a self, rule: &'a Rule, name: &'a str) -> &'a str {
         self.rules
             .get(&rule.id)
             .and_then(|t| t.params.get(name))
