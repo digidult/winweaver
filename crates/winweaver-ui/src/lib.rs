@@ -16,7 +16,8 @@ use serde_json::Value;
 use winweaver_core::catalog::{Catalog, TREE_ROOTS, check};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::profile::{self, Profile};
-use winweaver_core::resolver::{self, Resolution, State};
+use winweaver_core::resolver::{self, Resolution};
+use winweaver_core::validate::{self, Issue, Severity, Target};
 
 pub use settings::{Settings, ThemeChoice, exe_dir};
 
@@ -57,6 +58,7 @@ pub struct ProfileDoc {
     pos: usize,
     pub expanded: HashSet<String>,
     pub resolution: Resolution,
+    pub issues: Vec<Issue>,
 }
 
 impl ProfileDoc {
@@ -72,6 +74,7 @@ impl ProfileDoc {
             pos: 0,
             expanded,
             resolution,
+            issues: Vec::new(),
         }
     }
 
@@ -183,6 +186,7 @@ pub enum Act {
     ToggleBookmark,
     Fold,
     Check,
+    ClearMessages,
     Exit,
     Message(String),
 }
@@ -736,20 +740,64 @@ impl App {
     }
 
     fn check_active(&mut self) {
+        let catalog = &self.catalog;
+        let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
+            self.status = "Nothing to check: the active tab is not a profile".to_owned();
+            return;
+        };
+        doc.issues = validate::check(catalog, &doc.profile, &doc.resolution);
+        self.status = validate::summary(&doc.issues);
+    }
+
+    fn messages_panel(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             return;
         };
-        let blocked = doc
-            .resolution
-            .states
-            .values()
-            .filter(|s| matches!(s, State::Blocked { .. }))
-            .count();
-        let conflicts = doc.resolution.conflicts.len();
-        let problems = check::check(&self.catalog).len();
-        self.status = format!(
-            "Check: {conflicts} conflicts, {blocked} rules blocked by their dependencies, {problems} catalog problems"
-        );
+        if doc.issues.is_empty() {
+            return;
+        }
+        let texts = texts_for(&self.texts, &self.settings.language);
+        egui::Panel::top("messages").show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.strong(validate::summary(&doc.issues));
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.small_button("x").on_hover_text("Hide the messages").clicked() {
+                        acts.push(Act::ClearMessages);
+                    }
+                });
+            });
+            egui::ScrollArea::vertical()
+                .id_salt("messages")
+                .max_height(140.0)
+                .show(ui, |ui| {
+                    for issue in &doc.issues {
+                        ui.horizontal(|ui| {
+                            let tag = match issue.severity {
+                                Severity::Error => "Error",
+                                Severity::Warning => "Warning",
+                                Severity::Info => "Info",
+                            };
+                            ui.weak(tag);
+                            let (label, sel) = match &issue.target {
+                                Target::Rule(id) => (
+                                    self.catalog
+                                        .rule(id)
+                                        .map_or_else(|| id.clone(), |r| views::rtitle(texts, r).to_owned()),
+                                    Sel::Rule(id.clone()),
+                                ),
+                                Target::Install => ("Installation".to_owned(), Sel::None),
+                                Target::Accounts => ("Accounts".to_owned(), Sel::None),
+                                Target::Languages => ("Languages".to_owned(), Sel::None),
+                                Target::Profile => (doc.profile.name.clone(), Sel::None),
+                            };
+                            if ui.link(label).clicked() {
+                                acts.push(Act::Select(sel));
+                            }
+                            ui.label(&issue.text);
+                        });
+                    }
+                });
+        });
     }
 
     fn apply(&mut self, acts: Vec<Act>) {
@@ -878,6 +926,11 @@ impl App {
                     self.settings_dirty = true;
                 }
                 Act::Check => self.check_active(),
+                Act::ClearMessages => {
+                    if let Some(doc) = self.active_profile() {
+                        doc.issues.clear();
+                    }
+                }
                 Act::Exit => self.exit = true,
                 Act::Message(text) => self.status = text,
             }
@@ -921,6 +974,7 @@ impl eframe::App for App {
         egui::Panel::top("tabs").show(ui, |ui| self.tabs_row(ui, &mut acts));
         egui::Panel::top("toolbar").show(ui, |ui| self.toolbar(ui, &mut acts));
         egui::Panel::top("nav").show(ui, |ui| self.nav_row(ui, &mut acts));
+        self.messages_panel(ui, &mut acts);
         egui::Panel::bottom("status").show(ui, |ui| self.status_bar(ui));
         let kind = match self.docs.get(self.active) {
             Some(Doc::Profile(_)) => 0,

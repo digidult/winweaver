@@ -8,6 +8,7 @@ pub mod i18n;
 pub mod jsonfile;
 pub mod profile;
 pub mod resolver;
+pub mod validate;
 
 /// The version of the program, taken from the workspace.
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
