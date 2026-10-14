@@ -7,6 +7,7 @@
 
 mod diffview;
 mod forms;
+mod marksview;
 mod mdview;
 mod settings;
 mod views;
@@ -16,7 +17,9 @@ use std::path::{Path, PathBuf};
 
 use eframe::egui;
 use serde_json::Value;
+use winweaver_core::bookmarks::{self, Bookmark, Bookmarks};
 use winweaver_core::catalog::{Catalog, TREE_ROOTS, check};
+use winweaver_core::clock;
 use winweaver_core::diff::{self, Diff};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::profile::{self, Account, Install, Languages, Profile};
@@ -131,6 +134,7 @@ pub enum Doc {
     Profile(Box<ProfileDoc>),
     Diff(Box<DiffDoc>),
     Markdown(Box<MdDoc>),
+    Bookmarks,
     Settings,
 }
 
@@ -140,6 +144,7 @@ impl Doc {
             Doc::Profile(d) => d.title(),
             Doc::Diff(d) => d.title(),
             Doc::Markdown(d) => d.title.clone(),
+            Doc::Bookmarks => "Bookmarks".to_owned(),
             Doc::Settings => "Settings".to_owned(),
         }
     }
@@ -200,6 +205,10 @@ pub enum Act {
     ToggleBookmark,
     Fold,
     OpenGuide,
+    OpenMarks,
+    GoToMark(usize),
+    SetMarkComment(usize, String),
+    RemoveMark(usize),
     Compare,
     CompareWith(&'static str),
     ApplyDiff,
@@ -222,7 +231,8 @@ pub struct App {
     settings_dirty: bool,
     search: Search,
     status: String,
-    bookmarks: HashSet<String>,
+    marks: Bookmarks,
+    marks_path: PathBuf,
     theme_applied: bool,
     last_title: String,
     exit: bool,
@@ -251,7 +261,8 @@ impl App {
             settings_dirty: false,
             search,
             status: "Ready".to_owned(),
-            bookmarks: HashSet::new(),
+            marks: Bookmarks::default(),
+            marks_path: exe_dir().join(bookmarks::DEFAULT_FILE),
             theme_applied: false,
             last_title: String::new(),
             exit: false,
@@ -272,18 +283,50 @@ impl App {
         }
     }
 
-    fn bookmark_key(&self) -> Option<String> {
-        match self.docs.get(self.active) {
+    /// The current position of the active tab as a bookmark, without a comment. The path of an
+    /// unsaved document is its tab title, so that the bookmark finds the tab again.
+    fn current_bookmark(&self) -> Option<Bookmark> {
+        let (document, path, item, title) = match self.docs.get(self.active) {
             Some(Doc::Profile(doc)) => {
                 let item = match &doc.sel {
                     Sel::None => String::new(),
                     Sel::Group(id) | Sel::Rule(id) => id.clone(),
                     Sel::Form(f) => f.id().to_owned(),
                 };
-                Some(format!("{}:{item}", doc.title()))
+                let title = self
+                    .crumbs()
+                    .last()
+                    .map(|c| c.0.clone())
+                    .unwrap_or_else(|| doc.profile.name.clone());
+                let path = doc
+                    .path
+                    .as_ref()
+                    .map_or_else(|| doc.title(), |p| p.display().to_string());
+                ("profile", path, item, title)
             }
-            _ => None,
-        }
+            Some(Doc::Markdown(doc)) => {
+                let path = doc
+                    .path
+                    .as_ref()
+                    .map_or_else(|| doc.title.clone(), |p| p.display().to_string());
+                ("markdown", path, String::new(), doc.title.clone())
+            }
+            Some(Doc::Diff(doc)) => {
+                let path = doc
+                    .path
+                    .as_ref()
+                    .map_or_else(|| doc.title(), |p| p.display().to_string());
+                ("diff", path, String::new(), doc.title())
+            }
+            _ => return None,
+        };
+        Some(Bookmark {
+            document: document.to_owned(),
+            path,
+            item,
+            title,
+            ..Bookmark::default()
+        })
     }
 
     fn shortcuts(&mut self, ctx: &egui::Context) -> Vec<Act> {
@@ -426,6 +469,10 @@ impl App {
                     acts.push(Act::OpenGuide);
                     ui.close();
                 }
+                if ui.button("Bookmarks").clicked() {
+                    acts.push(Act::OpenMarks);
+                    ui.close();
+                }
                 if ui
                     .add(egui::Button::new("Settings").shortcut_text("Ctrl+,"))
                     .clicked()
@@ -553,8 +600,8 @@ impl App {
         };
         let crumbs = self.crumbs();
         let marked = self
-            .bookmark_key()
-            .is_some_and(|k| self.bookmarks.contains(&k));
+            .current_bookmark()
+            .is_some_and(|b| self.marks.find(&b).is_some());
         ui.horizontal(|ui| {
             if ui
                 .add_enabled(can_back, egui::Button::new("<").frame(false))
@@ -791,6 +838,10 @@ impl App {
         let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
             return;
         };
+        if doc.profile.created.is_empty() {
+            doc.profile.created = clock::now_utc_iso();
+        }
+        doc.profile.modified = clock::now_utc_iso();
         match doc.profile.save(&path) {
             Ok(()) => {
                 doc.path = Some(path.clone());
@@ -985,14 +1036,39 @@ impl App {
                     }
                 }
                 Act::ToggleBookmark => {
-                    if let Some(key) = self.bookmark_key() {
-                        if !self.bookmarks.remove(&key) {
-                            self.bookmarks.insert(key);
+                    if let Some(mut mark) = self.current_bookmark() {
+                        mark.created = clock::now_utc_iso();
+                        let added = self.marks.toggle(mark);
+                        if self.save_marks() {
+                            self.status = format!(
+                                "{} ({} bookmarks in {})",
+                                if added { "Bookmark added" } else { "Bookmark removed" },
+                                self.marks.items.len(),
+                                self.marks_path.display()
+                            );
                         }
-                        self.status = format!(
-                            "{} bookmarks (kept in memory for now)",
-                            self.bookmarks.len()
-                        );
+                    }
+                }
+                Act::OpenMarks => {
+                    match self.docs.iter().position(|d| matches!(d, Doc::Bookmarks)) {
+                        Some(i) => self.active = i,
+                        None => {
+                            self.docs.push(Doc::Bookmarks);
+                            self.active = self.docs.len() - 1;
+                        }
+                    }
+                }
+                Act::GoToMark(i) => self.go_to_mark(i),
+                Act::SetMarkComment(i, text) => {
+                    if let Some(b) = self.marks.items.get_mut(i) {
+                        b.comment = text;
+                        self.save_marks();
+                    }
+                }
+                Act::RemoveMark(i) => {
+                    if i < self.marks.items.len() {
+                        self.marks.items.remove(i);
+                        self.save_marks();
                     }
                 }
                 Act::Fold => {
@@ -1044,6 +1120,59 @@ impl App {
                 }
                 Act::Exit => self.exit = true,
                 Act::Message(text) => self.status = text,
+            }
+        }
+    }
+
+    /// Writes the bookmark file; `false` (and a status message) when it cannot be written.
+    fn save_marks(&mut self) -> bool {
+        if let Some(parent) = self.marks_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        match self.marks.save(&self.marks_path) {
+            Ok(()) => true,
+            Err(e) => {
+                self.status = format!("Bookmarks not saved: {e}");
+                false
+            }
+        }
+    }
+
+    fn open_marks_path(&mut self, path: PathBuf) {
+        match Bookmarks::load(&path) {
+            Ok(marks) => {
+                self.marks = marks;
+                self.marks_path = path.clone();
+                self.status = format!("Opened {}: the star now writes there", path.display());
+                self.remember_recent(&path);
+                self.apply(vec![Act::OpenMarks]);
+            }
+            Err(e) => self.status = format!("Open failed: {e}"),
+        }
+    }
+
+    /// Opens the document of a bookmark (a file, or the tab of an unsaved document by its
+    /// title) and selects its item.
+    fn go_to_mark(&mut self, i: usize) {
+        let Some(mark) = self.marks.items.get(i).cloned() else {
+            return;
+        };
+        let path = PathBuf::from(&mark.path);
+        if path.is_file() {
+            self.open_path(path);
+        } else {
+            match self.docs.iter().position(|d| d.title() == mark.path) {
+                Some(j) => self.active = j,
+                None => {
+                    self.status = format!("The document of the bookmark is not open: {}", mark.path);
+                    return;
+                }
+            }
+        }
+        if mark.document == "profile" && !mark.item.is_empty() {
+            let sel = sel_from_item(&self.catalog, &mark.item);
+            if let Some(doc) = self.active_profile() {
+                doc.select(sel);
             }
         }
     }
@@ -1229,6 +1358,7 @@ impl eframe::App for App {
             Some(Doc::Settings) => 1,
             Some(Doc::Diff(_)) => 3,
             Some(Doc::Markdown(_)) => 4,
+            Some(Doc::Bookmarks) => 5,
             None => 2,
         };
         if kind == 0 {
@@ -1261,6 +1391,12 @@ impl eframe::App for App {
             if let Some(Doc::Markdown(doc)) = self.docs.get_mut(self.active) {
                 egui::CentralPanel::default().show(ui, |ui| mdview::md_view(ui, doc));
             }
+        } else if kind == 5 {
+            let marks = &self.marks;
+            let path = &self.marks_path;
+            egui::CentralPanel::default().show(ui, |ui| {
+                marksview::marks_view(ui, marks, path, &mut acts);
+            });
         } else if kind == 1 {
             egui::CentralPanel::default().show(ui, |ui| self.settings_view(ui));
         } else {
@@ -1270,6 +1406,21 @@ impl eframe::App for App {
         }
         self.apply(acts);
         self.persist_settings();
+    }
+}
+
+/// The selection a bookmark item names: a form id, a rule id or a group id.
+fn sel_from_item(catalog: &Catalog, item: &str) -> Sel {
+    if item.is_empty() {
+        Sel::None
+    } else if let Some(f) = Form::ALL.iter().find(|f| f.id() == item) {
+        Sel::Form(*f)
+    } else if catalog.rule(item).is_some() {
+        Sel::Rule(item.to_owned())
+    } else if catalog.group(item).is_some() {
+        Sel::Group(item.to_owned())
+    } else {
+        Sel::None
     }
 }
 
@@ -1356,6 +1507,10 @@ pub fn run() -> Result<(), String> {
             if let Some(w) = warning {
                 app.status = format!("Settings not read, the defaults are used: {w}");
             }
+            match Bookmarks::load_or_default(&app.marks_path) {
+                Ok(marks) => app.marks = marks,
+                Err(e) => app.status = format!("Bookmarks not read: {e}"),
+            }
             if app.settings.show_guide_at_start {
                 app.open_guide();
                 app.settings.show_guide_at_start = false;
@@ -1414,6 +1569,29 @@ mod tests {
         app.open_path(path.clone());
         assert_eq!(app.docs.len(), 3);
         assert!(matches!(&app.docs[2], Doc::Markdown(m) if m.text.starts_with("# Notes")));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn bookmarks_toggle_and_lead_back() {
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        let dir = std::env::temp_dir().join(format!("winweaver-marks-ui-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        app.marks_path = dir.join(bookmarks::DEFAULT_FILE);
+        app.apply(vec![
+            Act::Select(Sel::Rule("install.bypass-tpm".into())),
+            Act::ToggleBookmark,
+        ]);
+        assert_eq!(app.marks.items.len(), 1, "{}", app.status);
+        assert_eq!(app.marks.items[0].item, "install.bypass-tpm");
+        assert_eq!(app.marks.items[0].path, "Office.wwprofile");
+        assert!(app.marks_path.exists(), "the default file is created at the first bookmark");
+        app.apply(vec![Act::Select(Sel::None), Act::OpenMarks, Act::GoToMark(0)]);
+        assert_eq!(app.active, 0, "{}", app.status);
+        assert_eq!(app.active_profile().unwrap().sel, Sel::Rule("install.bypass-tpm".into()));
+        app.apply(vec![Act::ToggleBookmark]);
+        assert!(app.marks.items.is_empty());
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

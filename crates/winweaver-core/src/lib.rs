@@ -3,7 +3,9 @@
 //! Pure Rust without any Windows API, so it compiles and is tested on every platform.
 //! The specification is in `docs/spec/` of the repository.
 
+pub mod bookmarks;
 pub mod catalog;
+pub mod clock;
 pub mod diff;
 pub mod i18n;
 pub mod jsonfile;
