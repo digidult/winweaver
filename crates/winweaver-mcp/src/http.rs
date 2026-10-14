@@ -47,10 +47,10 @@ impl HttpServer {
                                 continue;
                             }
                             active.fetch_add(1, Ordering::Relaxed);
-                            let (server, token, active) = (server.clone(), token.clone(), active.clone());
+                            let (srv, tok, act) = (server.clone(), token.clone(), active.clone());
                             let spawned = std::thread::Builder::new().name("mcp-request".to_owned()).spawn(move || {
-                                let _ = handle(&server, stream, peer, port, &token);
-                                active.fetch_sub(1, Ordering::Relaxed);
+                                let _ = handle(&srv, stream, peer, port, &tok);
+                                act.fetch_sub(1, Ordering::Relaxed);
                             });
                             if spawned.is_err() {
                                 active.fetch_sub(1, Ordering::Relaxed);
