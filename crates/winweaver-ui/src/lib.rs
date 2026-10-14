@@ -5,6 +5,7 @@
 //! tree with the detail panel, the Settings tab and the status bar. Every change of the profile
 //! is collected as an [`Act`] while the frame is drawn and applied afterwards.
 
+mod diffview;
 mod forms;
 mod settings;
 mod views;
@@ -15,11 +16,13 @@ use std::path::{Path, PathBuf};
 use eframe::egui;
 use serde_json::Value;
 use winweaver_core::catalog::{Catalog, TREE_ROOTS, check};
+use winweaver_core::diff::{self, Diff};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::profile::{self, Account, Install, Languages, Profile};
 use winweaver_core::resolver::{self, Resolution};
 use winweaver_core::validate::{self, Issue, Severity, Target};
 
+pub use diffview::DiffDoc;
 pub use forms::Form;
 pub use settings::{Settings, ThemeChoice, exe_dir};
 
@@ -122,6 +125,7 @@ impl ProfileDoc {
 /// A tab of the window.
 pub enum Doc {
     Profile(Box<ProfileDoc>),
+    Diff(Box<DiffDoc>),
     Settings,
 }
 
@@ -129,12 +133,13 @@ impl Doc {
     pub fn title(&self) -> String {
         match self {
             Doc::Profile(d) => d.title(),
+            Doc::Diff(d) => d.title(),
             Doc::Settings => "Settings".to_owned(),
         }
     }
 
     pub fn dirty(&self) -> bool {
-        matches!(self, Doc::Profile(d) if d.dirty)
+        matches!(self, Doc::Profile(d) if d.dirty) || matches!(self, Doc::Diff(d) if d.dirty)
     }
 }
 
@@ -188,6 +193,10 @@ pub enum Act {
     Forward,
     ToggleBookmark,
     Fold,
+    Compare,
+    CompareWith(&'static str),
+    ApplyDiff,
+    SaveDiffAs,
     SetInstall(Install),
     SetAccounts(Vec<Account>),
     SetLanguages(Languages),
@@ -381,6 +390,20 @@ impl App {
                     acts.push(Act::CloseTab(self.active, false));
                     ui.close();
                 }
+                ui.separator();
+                if ui.button("Compare with a file...").clicked() {
+                    acts.push(Act::Compare);
+                    ui.close();
+                }
+                ui.menu_button("Compare with a preset", |ui| {
+                    for (name, _) in PRESETS {
+                        if ui.button(name).clicked() {
+                            acts.push(Act::CompareWith(name));
+                            ui.close();
+                        }
+                    }
+                });
+                ui.separator();
                 if ui.button("Close tab, discard changes").clicked() {
                     acts.push(Act::CloseTab(self.active, true));
                     ui.close();
@@ -469,9 +492,7 @@ impl App {
                 ));
             }
             if ui.button("Compare").clicked() {
-                acts.push(Act::Message(
-                    "Compare: the diff view comes with the next milestone".into(),
-                ));
+                acts.push(Act::Compare);
             }
         });
     }
@@ -688,6 +709,10 @@ impl App {
     }
 
     fn open_path(&mut self, path: PathBuf) {
+        if path.extension().is_some_and(|e| e == diff::EXTENSION) {
+            self.open_diff_path(path);
+            return;
+        }
         if let Some(i) = self
             .docs
             .iter()
@@ -947,6 +972,24 @@ impl App {
                     self.settings_dirty = true;
                 }
                 Act::Check => self.check_active(),
+                Act::Compare => {
+                    if let Some(path) = pick_profile() {
+                        match Profile::load(&path) {
+                            Ok(other) => self.compare_active(other, Some(&path)),
+                            Err(e) => self.status = format!("Compare: {e}"),
+                        }
+                    }
+                }
+                Act::CompareWith(name) => {
+                    if let Some((name, text)) = PRESETS.iter().find(|p| p.0 == name) {
+                        match Profile::parse(text, name) {
+                            Ok(other) => self.compare_active(other, None),
+                            Err(e) => self.status = format!("Compare: {e}"),
+                        }
+                    }
+                }
+                Act::ApplyDiff => self.apply_active_diff(),
+                Act::SaveDiffAs => self.save_active_diff(),
                 Act::SetInstall(install) => {
                     if let Some(doc) = self.active_profile() {
                         doc.profile.install = install;
@@ -973,6 +1016,109 @@ impl App {
                 Act::Exit => self.exit = true,
                 Act::Message(text) => self.status = text,
             }
+        }
+    }
+
+    fn open_diff_path(&mut self, path: PathBuf) {
+        match Diff::load(&path) {
+            Ok(diff) => {
+                self.docs.push(Doc::Diff(Box::new(DiffDoc {
+                    diff,
+                    path: Some(path.clone()),
+                    dirty: false,
+                })));
+                self.active = self.docs.len() - 1;
+                self.status = format!("Opened {}", path.display());
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = format!("Open failed: {e}"),
+        }
+    }
+
+    fn compare_active(&mut self, other: Profile, other_path: Option<&Path>) {
+        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+            self.status = "Compare: the active tab is not a profile".to_owned();
+            return;
+        };
+        let base_side = diff::Side::of(&doc.profile, doc.path.as_deref());
+        let other_side = diff::Side::of(&other, other_path);
+        let diff = Diff::between(&doc.profile, &other, base_side, other_side);
+        self.status = format!("{} differences", diff.count());
+        self.docs.push(Doc::Diff(Box::new(DiffDoc {
+            diff,
+            path: None,
+            dirty: false,
+        })));
+        self.active = self.docs.len() - 1;
+    }
+
+    /// The profile tab a diff belongs to: the one with the path of its base, else the one with
+    /// its name, else the first profile tab.
+    fn diff_target(&self, diff: &Diff) -> Option<usize> {
+        let by_path = |d: &Doc| {
+            matches!(d, Doc::Profile(p) if !diff.base.path.is_empty()
+                && p.path.as_ref().is_some_and(|x| x.display().to_string() == diff.base.path))
+        };
+        let by_name = |d: &Doc| matches!(d, Doc::Profile(p) if p.profile.name == diff.base.name);
+        self.docs
+            .iter()
+            .position(by_path)
+            .or_else(|| self.docs.iter().position(by_name))
+            .or_else(|| self.docs.iter().position(|d| matches!(d, Doc::Profile(_))))
+    }
+
+    fn apply_active_diff(&mut self) {
+        let Some(Doc::Diff(d)) = self.docs.get(self.active) else {
+            return;
+        };
+        let diff = d.diff.clone();
+        let Some(i) = self.diff_target(&diff) else {
+            self.status = "Apply: open the profile to change first".to_owned();
+            return;
+        };
+        let catalog = &self.catalog;
+        if let Some(Doc::Profile(p)) = self.docs.get_mut(i) {
+            diff.apply_to(&mut p.profile);
+            p.refresh(catalog);
+            self.status = format!("Applied {} differences to {}", diff.count(), p.title());
+        }
+        self.active = i;
+    }
+
+    fn save_active_diff(&mut self) {
+        let Some(Doc::Diff(d)) = self.docs.get(self.active) else {
+            self.status = "Save as a diff file: the active tab is not a diff".to_owned();
+            return;
+        };
+        let proposed = format!(
+            "{}-vs-{}.{}",
+            file_stem(&d.diff.base.name),
+            file_stem(&d.diff.other.name),
+            diff::EXTENSION
+        );
+        let Some(path) = file_dialog("WinWeaver diff", diff::EXTENSION)
+            .set_title("Save the diff as")
+            .set_file_name(proposed)
+            .save_file()
+        else {
+            return;
+        };
+        let path = if path.extension().is_some() {
+            path
+        } else {
+            path.with_extension(diff::EXTENSION)
+        };
+        let Some(Doc::Diff(d)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        match d.diff.save(&path) {
+            Ok(()) => {
+                d.path = Some(path.clone());
+                d.dirty = false;
+                self.status = format!("Saved {}", path.display());
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = format!("Save failed: {e}"),
         }
     }
 
@@ -1018,6 +1164,7 @@ impl eframe::App for App {
         let kind = match self.docs.get(self.active) {
             Some(Doc::Profile(_)) => 0,
             Some(Doc::Settings) => 1,
+            Some(Doc::Diff(_)) => 3,
             None => 2,
         };
         if kind == 0 {
@@ -1035,6 +1182,15 @@ impl eframe::App for App {
                     });
                 egui::CentralPanel::default().show(ui, |ui| {
                     views::detail_view(ui, catalog, texts, doc, settings, &mut acts);
+                });
+            }
+        } else if kind == 3 {
+            let catalog = &self.catalog;
+            let texts = texts_for(&self.texts, &self.settings.language);
+            if let Some(Doc::Diff(doc)) = self.docs.get(self.active) {
+                let doc: &DiffDoc = doc;
+                egui::CentralPanel::default().show(ui, |ui| {
+                    diffview::diff_view(ui, catalog, texts, doc, &mut acts);
                 });
             }
         } else if kind == 1 {
@@ -1083,14 +1239,18 @@ fn with_extension(path: PathBuf) -> PathBuf {
     }
 }
 
-fn profile_dialog() -> rfd::FileDialog {
+fn file_dialog(kind: &str, extension: &str) -> rfd::FileDialog {
     let dir = profiles_dir();
-    let dialog = rfd::FileDialog::new().add_filter("WinWeaver profile", &[profile::EXTENSION]);
+    let dialog = rfd::FileDialog::new().add_filter(kind, &[extension]);
     if dir.is_dir() {
         dialog.set_directory(dir)
     } else {
         dialog
     }
+}
+
+fn profile_dialog() -> rfd::FileDialog {
+    file_dialog("WinWeaver profile", profile::EXTENSION)
 }
 
 fn pick_profile() -> Option<PathBuf> {
@@ -1178,6 +1338,24 @@ mod tests {
         assert_eq!(doc.sel, Sel::Group("policies".into()));
         doc.go(1);
         assert_eq!(doc.sel, Sel::Rule("install.bypass-tpm".into()));
+    }
+
+    #[test]
+    fn comparing_with_a_preset_opens_a_diff_tab_that_applies() {
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        app.apply(vec![Act::CompareWith("Strict")]);
+        assert_eq!(app.docs.len(), 2);
+        assert!(matches!(&app.docs[1], Doc::Diff(d) if !d.diff.is_empty()));
+        assert_eq!(app.docs[1].title(), "Office vs Strict.wwdiff");
+        app.apply(vec![Act::ApplyDiff]);
+        assert_eq!(app.active, 0);
+        let Doc::Profile(office) = &app.docs[0] else {
+            panic!("the first tab is the profile");
+        };
+        assert!(office.dirty);
+        let strict = Profile::parse(PRESETS[1].1, "Strict").unwrap();
+        assert_eq!(office.profile.rules, strict.rules);
     }
 
     #[test]

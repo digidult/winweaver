@@ -4,6 +4,7 @@
 //! The specification is in `docs/spec/` of the repository.
 
 pub mod catalog;
+pub mod diff;
 pub mod i18n;
 pub mod jsonfile;
 pub mod profile;
