@@ -1,0 +1,18 @@
+{
+  "name": "Latte",
+  "dark": false,
+  "colors": {
+    "background": "#efe4d2",
+    "foreground": "#3e2c1f",
+    "field": "#fbf6ee",
+    "select": "#8c5e3c",
+    "select_foreground": "#fff8ef",
+    "border": "#c8b394",
+    "button": "#e3d2b8",
+    "button_active": "#d6bf9c",
+    "muted": "#76614d",
+    "link": "#8a4b1c",
+    "error": "#a4262c",
+    "warning": "#8a5a00"
+  }
+}

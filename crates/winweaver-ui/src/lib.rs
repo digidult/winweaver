@@ -12,6 +12,7 @@ mod marksview;
 mod mcpview;
 mod mdview;
 mod session;
+mod themes;
 mod settings;
 mod views;
 
@@ -950,6 +951,22 @@ impl App {
             ui.radio_value(&mut self.settings.theme, ThemeChoice::Light, tr("Light"));
             ui.radio_value(&mut self.settings.theme, ThemeChoice::Dark, tr("Dark"));
         });
+        ui.horizontal(|ui| {
+            ui.label(tr("Colours"));
+            let list = themes::themes(&themes_dir());
+            let current = list
+                .iter()
+                .find(|t| t.id == self.settings.custom_theme)
+                .map_or_else(|| tr("Those of the theme").to_owned(), |t| t.name.clone());
+            egui::ComboBox::from_id_salt("colours")
+                .selected_text(current)
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.settings.custom_theme, String::new(), tr("Those of the theme"));
+                    for t in &list {
+                        ui.selectable_value(&mut self.settings.custom_theme, t.id.clone(), &t.name);
+                    }
+                });
+        });
         ui.checkbox(
             &mut self.settings.desc_open,
             tr("Show the description panel (Ctrl+D)"),
@@ -980,7 +997,7 @@ impl App {
         });
         if before != self.settings {
             self.settings_dirty = true;
-            if before.theme != self.settings.theme {
+            if before.theme != self.settings.theme || before.custom_theme != self.settings.custom_theme {
                 self.theme_applied = false;
             }
             if before.language != self.settings.language {
@@ -2614,6 +2631,29 @@ impl App {
         }
     }
 
+    /// The theme of the settings: a colour theme over its light or dark base, or the plain theme.
+    fn apply_theme(&self, ctx: &egui::Context) {
+        let custom = if self.settings.custom_theme.is_empty() {
+            None
+        } else {
+            themes::themes(&themes_dir())
+                .into_iter()
+                .find(|t| t.id == self.settings.custom_theme)
+        };
+        match custom {
+            Some(t) => {
+                let base = if t.dark { egui::Theme::Dark } else { egui::Theme::Light };
+                ctx.set_visuals_of(base, themes::visuals(&t));
+                ctx.set_theme(base);
+            }
+            None => {
+                ctx.set_visuals_of(egui::Theme::Light, egui::Visuals::light());
+                ctx.set_visuals_of(egui::Theme::Dark, egui::Visuals::dark());
+                ctx.set_theme(self.settings.theme.preference());
+            }
+        }
+    }
+
     fn persist_settings(&mut self) {
         if !self.settings_dirty {
             return;
@@ -2638,7 +2678,7 @@ impl eframe::App for App {
             ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
         }
         if !self.theme_applied {
-            ui.ctx().set_theme(self.settings.theme.preference());
+            self.apply_theme(ui.ctx());
             self.theme_applied = true;
         }
         let title = self.window_title();
@@ -2758,6 +2798,11 @@ fn sel_from_item(catalog: &Catalog, item: &str) -> Sel {
 /// The folder of the imports of policy templates next to the executable.
 pub fn imports_dir() -> PathBuf {
     exe_dir().join("imports")
+}
+
+/// The folder of the colour themes next to the executable.
+pub fn themes_dir() -> PathBuf {
+    exe_dir().join("themes")
 }
 
 /// The folder of the translations next to the executable.
