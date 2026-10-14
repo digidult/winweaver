@@ -781,6 +781,10 @@ impl App {
             self.open_diff_path(path);
             return;
         }
+        if path.extension().is_some_and(|e| e == bookmarks::EXTENSION) {
+            self.open_marks_path(path);
+            return;
+        }
         if path
             .extension()
             .is_some_and(|e| e.eq_ignore_ascii_case("md"))

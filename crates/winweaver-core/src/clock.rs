@@ -45,7 +45,7 @@ mod tests {
     fn known_dates() {
         assert_eq!(iso_from_unix(0), "1970-01-01T00:00:00Z");
         assert_eq!(iso_from_unix(951_782_400), "2000-02-29T00:00:00Z");
-        assert_eq!(iso_from_unix(1_792_000_000), "2026-10-14T06:26:40Z");
+        assert_eq!(iso_from_unix(1_792_000_000), "2026-10-14T17:46:40Z");
         assert!(now_utc_iso().starts_with("20"));
     }
 }
