@@ -43,6 +43,8 @@ pub struct Settings {
     /// The recently opened or saved profiles, the newest first.
     pub recent: Vec<PathBuf>,
     pub search_history: Vec<String>,
+    /// The guide opens at the start; the window clears it after the first start.
+    pub show_guide_at_start: bool,
 }
 
 impl Default for Settings {
@@ -55,6 +57,7 @@ impl Default for Settings {
             desc_open: true,
             recent: Vec::new(),
             search_history: Vec::new(),
+            show_guide_at_start: true,
         }
     }
 }

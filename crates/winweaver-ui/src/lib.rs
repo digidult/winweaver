@@ -7,6 +7,7 @@
 
 mod diffview;
 mod forms;
+mod mdview;
 mod settings;
 mod views;
 
@@ -24,6 +25,7 @@ use winweaver_core::validate::{self, Issue, Severity, Target};
 
 pub use diffview::DiffDoc;
 pub use forms::Form;
+pub use mdview::MdDoc;
 pub use settings::{Settings, ThemeChoice, exe_dir};
 
 /// The presets embedded in the executable: the name and the profile text.
@@ -44,6 +46,8 @@ pub const PRESETS: [(&str, &str); 4] = [
 ];
 
 const SEARCH_HISTORY: usize = 20;
+/// The largest Markdown file a tab shows.
+const MARKDOWN_MAX_BYTES: u64 = 4 * 1024 * 1024;
 
 /// The selected item of a profile document.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -126,6 +130,7 @@ impl ProfileDoc {
 pub enum Doc {
     Profile(Box<ProfileDoc>),
     Diff(Box<DiffDoc>),
+    Markdown(Box<MdDoc>),
     Settings,
 }
 
@@ -134,6 +139,7 @@ impl Doc {
         match self {
             Doc::Profile(d) => d.title(),
             Doc::Diff(d) => d.title(),
+            Doc::Markdown(d) => d.title.clone(),
             Doc::Settings => "Settings".to_owned(),
         }
     }
@@ -193,6 +199,7 @@ pub enum Act {
     Forward,
     ToggleBookmark,
     Fold,
+    OpenGuide,
     Compare,
     CompareWith(&'static str),
     ApplyDiff,
@@ -314,6 +321,9 @@ impl App {
             if i.consume_shortcut(&sc(Modifiers::CTRL, Key::Comma)) {
                 acts.push(Act::OpenSettings);
             }
+            if i.consume_shortcut(&sc(Modifiers::NONE, Key::F1)) {
+                acts.push(Act::OpenGuide);
+            }
             if i.consume_shortcut(&sc(Modifiers::NONE, Key::F7)) {
                 acts.push(Act::Check);
             }
@@ -409,6 +419,13 @@ impl App {
                     ui.close();
                 }
                 ui.separator();
+                if ui
+                    .add(egui::Button::new("Guide").shortcut_text("F1"))
+                    .clicked()
+                {
+                    acts.push(Act::OpenGuide);
+                    ui.close();
+                }
                 if ui
                     .add(egui::Button::new("Settings").shortcut_text("Ctrl+,"))
                     .clicked()
@@ -687,6 +704,7 @@ impl App {
             &mut self.settings.desc_open,
             "Show the description panel (Ctrl+D)",
         );
+        ui.checkbox(&mut self.settings.show_guide_at_start, "Open the guide at the next start");
         ui.add_space(12.0);
         ui.horizontal(|ui| {
             ui.weak(format!("Settings file: {}", Settings::path().display()));
@@ -711,6 +729,10 @@ impl App {
     fn open_path(&mut self, path: PathBuf) {
         if path.extension().is_some_and(|e| e == diff::EXTENSION) {
             self.open_diff_path(path);
+            return;
+        }
+        if path.extension().is_some_and(|e| e.eq_ignore_ascii_case("md")) {
+            self.open_md_path(path);
             return;
         }
         if let Some(i) = self
@@ -972,6 +994,7 @@ impl App {
                     self.settings_dirty = true;
                 }
                 Act::Check => self.check_active(),
+                Act::OpenGuide => self.open_guide(),
                 Act::Compare => {
                     if let Some(path) = pick_profile() {
                         match Profile::load(&path) {
@@ -1016,6 +1039,37 @@ impl App {
                 Act::Exit => self.exit = true,
                 Act::Message(text) => self.status = text,
             }
+        }
+    }
+
+    fn open_guide(&mut self) {
+        match self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Markdown(m) if m.is_guide()))
+        {
+            Some(i) => self.active = i,
+            None => {
+                self.docs.push(Doc::Markdown(Box::new(MdDoc::guide())));
+                self.active = self.docs.len() - 1;
+            }
+        }
+    }
+
+    fn open_md_path(&mut self, path: PathBuf) {
+        match winweaver_core::jsonfile::read_text(&path, MARKDOWN_MAX_BYTES) {
+            Ok(text) => {
+                let title = path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "page.md".to_owned());
+                self.docs
+                    .push(Doc::Markdown(Box::new(MdDoc::new(title, Some(path.clone()), text))));
+                self.active = self.docs.len() - 1;
+                self.status = format!("Opened {}", path.display());
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = format!("Open failed: {e}"),
         }
     }
 
@@ -1165,6 +1219,7 @@ impl eframe::App for App {
             Some(Doc::Profile(_)) => 0,
             Some(Doc::Settings) => 1,
             Some(Doc::Diff(_)) => 3,
+            Some(Doc::Markdown(_)) => 4,
             None => 2,
         };
         if kind == 0 {
@@ -1192,6 +1247,10 @@ impl eframe::App for App {
                 egui::CentralPanel::default().show(ui, |ui| {
                     diffview::diff_view(ui, catalog, texts, doc, &mut acts);
                 });
+            }
+        } else if kind == 4 {
+            if let Some(Doc::Markdown(doc)) = self.docs.get_mut(self.active) {
+                egui::CentralPanel::default().show(ui, |ui| mdview::md_view(ui, doc));
             }
         } else if kind == 1 {
             egui::CentralPanel::default().show(ui, |ui| self.settings_view(ui));
@@ -1288,6 +1347,11 @@ pub fn run() -> Result<(), String> {
             if let Some(w) = warning {
                 app.status = format!("Settings not read, the defaults are used: {w}");
             }
+            if app.settings.show_guide_at_start {
+                app.open_guide();
+                app.settings.show_guide_at_start = false;
+                app.settings_dirty = true;
+            }
             Ok(Box::new(app))
         }),
     )
@@ -1325,6 +1389,23 @@ mod tests {
         assert_eq!(app.docs[0].title(), "Office.wwprofile");
         assert!(!app.docs[0].dirty());
         assert_eq!(app.window_title(), "Office.wwprofile - WinWeaver");
+    }
+
+    #[test]
+    fn the_guide_opens_once_and_markdown_files_open() {
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        app.apply(vec![Act::OpenGuide, Act::OpenGuide]);
+        assert_eq!(app.docs.len(), 2, "the guide tab exists once");
+        assert_eq!(app.docs[1].title(), "Guide.md");
+        let dir = std::env::temp_dir().join(format!("winweaver-md-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("notes.md");
+        std::fs::write(&path, "# Notes\n\nA line.\n").unwrap();
+        app.open_path(path.clone());
+        assert_eq!(app.docs.len(), 3);
+        assert!(matches!(&app.docs[2], Doc::Markdown(m) if m.text.starts_with("# Notes")));
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
