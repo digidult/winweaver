@@ -273,5 +273,16 @@
   "Set by the built-in rule {rule}": "Задано встроенным правилом {rule}",
   "set by the built-in rule": "задано встроенным правилом",
   "One item per line": "Один элемент в строке",
-  "One name=value per line": "Одна пара имя=значение в строке"
+  "One name=value per line": "Одна пара имя=значение в строке",
+  "General": "Общие",
+  "Files": "Файлы",
+  "Settings file: {path}": "Файл настроек: {path}",
+  "Profiles folder: {path}": "Папка профилей: {path}",
+  "Output folder: {path}": "Папка результатов: {path}",
+  "Policy templates folder: {path}": "Папка шаблонов политик: {path}",
+  "Rename": "Переименовать",
+  "OK": "OK",
+  "A name of 1 to 120 characters without control characters is needed": "Нужно имя от 1 до 120 символов без управляющих символов",
+  "Renamed to {name}": "Переименовано в {name}",
+  "Renamed, but not saved: {e}": "Переименовано, но не сохранено: {e}"
 }

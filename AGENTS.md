@@ -208,6 +208,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   profile wants ASCII items and refuses a pair without `=` or a name twice. An ADMX `list` element becomes
   such a rule (the Disabled rule clears a list that is not additive), `multiText` a MultiString value; lists
   come before the other values of a policy. The read of this PC checks lists but reads no list parameters.
+- The settings tab has the sections General, Policy templates (show, export, rename, remove, import) and Files
+  (the folders next to the executable, the recent files); a rename changes the name of the catalog file and
+  the title of its tree and saves the file.
 - The title bar takes the colours of the theme (`winweaver_win::color_title_bar`: DwmSetWindowAttribute 20 for
   the dark frame, 34 to 36 for the border, caption and text on Windows 11), only for the window of this
   process and again whenever the visuals change; the system theme is never written.

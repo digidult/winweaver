@@ -258,6 +258,10 @@ pub enum Act {
     ToggleImport(String),
     RemoveImport(String),
     ExportImport(String),
+    /// Starts to rename an import: its id and its name now.
+    StartRename(String, String),
+    CancelRename,
+    RenameImport(String, String),
     /// Prepare the native apply (false) or the return to the defaults (true) of the selection.
     PlanNative(bool),
     PlanUndo,
@@ -315,6 +319,10 @@ pub struct App {
     mcp: mcpview::McpPanel,
     /// Actions requested by views that run without the list of the frame.
     pending_acts: Vec<Act>,
+    /// The section of the settings tab: general, policy templates, files.
+    settings_section: usize,
+    /// The import being renamed and the name typed so far.
+    renaming: Option<(String, String)>,
     /// A plan waiting for the confirmation of the user.
     confirm: Option<winweaver_core::apply::Plan>,
     /// The helper that runs a confirmed plan, and what the plan left out.
@@ -360,6 +368,8 @@ impl App {
             logs_dir: exe_dir().join("logs"),
             confirm: None,
             pending_acts: Vec::new(),
+            settings_section: 0,
+            renaming: None,
             running: None,
             running_skipped: Vec::new(),
             mcp: mcpview::McpPanel {
@@ -927,6 +937,55 @@ impl App {
         let before = self.settings.clone();
         ui.heading(tr("Settings"));
         ui.add_space(8.0);
+        ui.horizontal_top(|ui| {
+            ui.vertical(|ui| {
+                ui.set_width(170.0);
+                let sections = [tr("General"), tr("Policy templates"), tr("Files")];
+                for (i, title) in sections.into_iter().enumerate() {
+                    if ui
+                        .selectable_label(self.settings_section == i, title)
+                        .clicked()
+                    {
+                        self.settings_section = i;
+                    }
+                }
+            });
+            ui.separator();
+            ui.vertical(|ui| match self.settings_section {
+                1 => {
+                    let mut acts = Vec::new();
+                    self.imports_view(ui, &mut acts);
+                    self.pending_acts.extend(acts);
+                }
+                2 => self.files_settings(ui),
+                _ => self.general_settings(ui),
+            });
+        });
+        if before != self.settings {
+            self.settings_dirty = true;
+            if before.theme != self.settings.theme || before.custom_theme != self.settings.custom_theme {
+                self.theme_applied = false;
+            }
+            if before.language != self.settings.language {
+                self.apply_language();
+            }
+        }
+    }
+
+    /// The folders next to the executable and the recent files.
+    fn files_settings(&mut self, ui: &mut egui::Ui) {
+        ui.label(trf("Settings file: {path}", &[("path", &Settings::path().display())]));
+        ui.label(trf("Profiles folder: {path}", &[("path", &profiles_dir().display())]));
+        ui.label(trf("Output folder: {path}", &[("path", &output_dir().display())]));
+        ui.label(trf("Policy templates folder: {path}", &[("path", &imports_dir().display())]));
+        ui.add_space(8.0);
+        if !self.settings.recent.is_empty() && ui.button(tr("Forget recent files")).clicked() {
+            self.settings.recent.clear();
+        }
+    }
+
+    /// Language, theme and the behaviour of the window.
+    fn general_settings(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.label(tr("Language"));
             let langs = i18n::languages(&lang_dir());
@@ -993,27 +1052,6 @@ impl App {
             &mut self.settings.restore_tabs,
             tr("Open the tabs of the last session at the start"),
         );
-        let mut acts = Vec::new();
-        self.imports_view(ui, &mut acts);
-        self.pending_acts.extend(acts);
-        ui.add_space(12.0);
-        ui.horizontal(|ui| {
-            ui.weak(format!("Settings file: {}", Settings::path().display()));
-            if !self.settings.recent.is_empty()
-                && ui.small_button(tr("Forget recent files")).clicked()
-            {
-                self.settings.recent.clear();
-            }
-        });
-        if before != self.settings {
-            self.settings_dirty = true;
-            if before.theme != self.settings.theme || before.custom_theme != self.settings.custom_theme {
-                self.theme_applied = false;
-            }
-            if before.language != self.settings.language {
-                self.apply_language();
-            }
-        }
     }
 
     /// The language the window shows: the setting, or the language of Windows when it says to
@@ -1824,6 +1862,32 @@ impl App {
         }
     }
 
+    /// Gives an import another name, in the settings and as the title of its tree.
+    fn rename_import(&mut self, id: &str, name: &str) {
+        self.renaming = None;
+        let name = name.trim();
+        if name.is_empty() || name.chars().count() > 120 || name.chars().any(char::is_control) {
+            self.status =
+                tr("A name of 1 to 120 characters without control characters is needed").to_owned();
+            return;
+        }
+        let Some(file) = self.imports.iter_mut().find(|f| f.id == id) else {
+            return;
+        };
+        file.name = name.to_owned();
+        let root = Some(winweaver_core::catalog::ROOT_POLICIES);
+        for group in file.groups.iter_mut().filter(|g| g.parent.as_deref() == root) {
+            group.title = name.to_owned();
+        }
+        let path = imports_dir().join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
+        let saved = file.save(&path);
+        self.rebuild_catalog();
+        self.status = match saved {
+            Ok(()) => trf("Renamed to {name}", &[("name", &name)]),
+            Err(e) => trf("Renamed, but not saved: {e}", &[("e", &e)]),
+        };
+    }
+
     fn export_import(&mut self, id: &str) {
         let Some(file) = self.imports.iter().find(|f| f.id == id) else {
             return;
@@ -1843,8 +1907,7 @@ impl App {
     }
 
     /// The section of the settings that lists the imports of policy templates.
-    fn imports_view(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
-        ui.add_space(12.0);
+    fn imports_view(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         ui.strong(tr("Policy templates"));
         ui.weak(tr("Imported ADMX templates become rules under Standard policies. When two imports hold a policy, the templates of this Windows win."));
         for f in &self.imports {
@@ -1857,10 +1920,27 @@ impl App {
                 if ui.small_button(tr("Export...")).clicked() {
                     acts.push(Act::ExportImport(f.id.clone()));
                 }
+                if ui.small_button(tr("Rename")).clicked() {
+                    acts.push(Act::StartRename(f.id.clone(), f.name.clone()));
+                }
                 if ui.small_button(tr("Remove")).clicked() {
                     acts.push(Act::RemoveImport(f.id.clone()));
                 }
             });
+            if let Some((id, name)) = &mut self.renaming
+                && id == &f.id
+            {
+                ui.horizontal(|ui| {
+                    let edit = ui.text_edit_singleline(name);
+                    let enter = edit.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                    if ui.small_button(tr("OK")).clicked() || enter {
+                        acts.push(Act::RenameImport(id.clone(), name.clone()));
+                    }
+                    if ui.small_button(tr("Cancel")).clicked() {
+                        acts.push(Act::CancelRename);
+                    }
+                });
+            }
         }
         ui.horizontal(|ui| {
             let busy = self.importing.is_some();
@@ -2151,6 +2231,9 @@ impl App {
                     self.rebuild_catalog();
                 }
                 Act::ExportImport(id) => self.export_import(&id),
+                Act::StartRename(id, name) => self.renaming = Some((id, name)),
+                Act::CancelRename => self.renaming = None,
+                Act::RenameImport(id, name) => self.rename_import(&id, &name),
                 Act::PlanNative(revert) => self.plan_native(revert),
                 Act::PlanUndo => self.plan_undo(),
                 Act::ConfirmPlan => self.run_plan(),
