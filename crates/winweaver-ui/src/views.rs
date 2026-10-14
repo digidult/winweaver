@@ -2,7 +2,7 @@
 
 use eframe::egui::{self, RichText};
 use serde_json::Value;
-use winweaver_core::catalog::{Action, Catalog, Group, Param, Rule, check};
+use winweaver_core::catalog::{Action, Catalog, Group, Param, ROOT_UNATTEND, Rule, check};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::resolver::State;
 
@@ -119,6 +119,17 @@ fn group_rows(
     });
     if expanded {
         ui.indent(gid, |ui| {
+            if gid == ROOT_UNATTEND && words.is_empty() {
+                for form in crate::forms::Form::ALL {
+                    ui.horizontal(|ui| {
+                        ui.add_space(14.0);
+                        let selected = matches!(&doc.sel, Sel::Form(f) if *f == form);
+                        if ui.selectable_label(selected, form.title()).clicked() {
+                            acts.push(Act::Select(Sel::Form(form)));
+                        }
+                    });
+                }
+            }
             for child in catalog.child_groups(Some(gid)) {
                 group_rows(ui, catalog, texts, doc, words, &child.id, acts);
             }
@@ -179,6 +190,9 @@ pub fn detail_view(
             Sel::None => profile_detail(ui, doc),
             Sel::Group(id) => group_detail(ui, catalog, texts, doc, id, acts),
             Sel::Rule(id) => rule_detail(ui, catalog, texts, doc, settings, id, acts),
+            Sel::Form(form) => {
+                crate::forms::form_view(ui, doc, *form, &settings.language, acts);
+            }
         });
 }
 

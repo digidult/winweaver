@@ -5,6 +5,7 @@
 //! tree with the detail panel, the Settings tab and the status bar. Every change of the profile
 //! is collected as an [`Act`] while the frame is drawn and applied afterwards.
 
+mod forms;
 mod settings;
 mod views;
 
@@ -15,10 +16,11 @@ use eframe::egui;
 use serde_json::Value;
 use winweaver_core::catalog::{Catalog, TREE_ROOTS, check};
 use winweaver_core::i18n::CatalogTexts;
-use winweaver_core::profile::{self, Profile};
+use winweaver_core::profile::{self, Account, Install, Languages, Profile};
 use winweaver_core::resolver::{self, Resolution};
 use winweaver_core::validate::{self, Issue, Severity, Target};
 
+pub use forms::Form;
 pub use settings::{Settings, ThemeChoice, exe_dir};
 
 /// The presets embedded in the executable: the name and the profile text.
@@ -46,6 +48,7 @@ pub enum Sel {
     None,
     Group(String),
     Rule(String),
+    Form(Form),
 }
 
 /// An open profile with its view state.
@@ -185,6 +188,9 @@ pub enum Act {
     Forward,
     ToggleBookmark,
     Fold,
+    SetInstall(Install),
+    SetAccounts(Vec<Account>),
+    SetLanguages(Languages),
     Check,
     ClearMessages,
     Exit,
@@ -256,6 +262,7 @@ impl App {
                 let item = match &doc.sel {
                     Sel::None => String::new(),
                     Sel::Group(id) | Sel::Rule(id) => id.clone(),
+                    Sel::Form(f) => f.id().to_owned(),
                 };
                 Some(format!("{}:{item}", doc.title()))
             }
@@ -476,7 +483,7 @@ impl App {
         let texts = texts_for(&self.texts, &self.settings.language);
         let mut crumbs = vec![(doc.profile.name.clone(), Sel::None)];
         let group = match &doc.sel {
-            Sel::None => None,
+            Sel::None | Sel::Form(_) => None,
             Sel::Group(id) => Some(id.clone()),
             Sel::Rule(id) => self.catalog.rule(id).map(|r| r.group.clone()),
         };
@@ -494,6 +501,9 @@ impl App {
             && let Some(rule) = self.catalog.rule(id)
         {
             crumbs.push((views::rtitle(texts, rule).to_owned(), Sel::Rule(id.clone())));
+        }
+        if let Sel::Form(f) = &doc.sel {
+            crumbs.push((f.title().to_owned(), Sel::Form(*f)));
         }
         crumbs
     }
@@ -790,9 +800,9 @@ impl App {
                                     ),
                                     Sel::Rule(id.clone()),
                                 ),
-                                Target::Install => ("Installation".to_owned(), Sel::None),
-                                Target::Accounts => ("Accounts".to_owned(), Sel::None),
-                                Target::Languages => ("Languages".to_owned(), Sel::None),
+                                Target::Install => ("Installation".to_owned(), Sel::Form(Form::Install)),
+                                Target::Accounts => ("Accounts".to_owned(), Sel::Form(Form::Accounts)),
+                                Target::Languages => ("Languages".to_owned(), Sel::Form(Form::Languages)),
                                 Target::Profile => (doc.profile.name.clone(), Sel::None),
                             };
                             if ui.link(label).clicked() {
@@ -931,6 +941,24 @@ impl App {
                     self.settings_dirty = true;
                 }
                 Act::Check => self.check_active(),
+                Act::SetInstall(install) => {
+                    if let Some(doc) = self.active_profile() {
+                        doc.profile.install = install;
+                    }
+                    self.refresh_active();
+                }
+                Act::SetAccounts(accounts) => {
+                    if let Some(doc) = self.active_profile() {
+                        doc.profile.accounts = accounts;
+                    }
+                    self.refresh_active();
+                }
+                Act::SetLanguages(languages) => {
+                    if let Some(doc) = self.active_profile() {
+                        doc.profile.languages = languages;
+                    }
+                    self.refresh_active();
+                }
                 Act::ClearMessages => {
                     if let Some(doc) = self.active_profile() {
                         doc.issues.clear();

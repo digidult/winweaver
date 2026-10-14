@@ -8,6 +8,7 @@ pub mod i18n;
 pub mod jsonfile;
 pub mod profile;
 pub mod resolver;
+pub mod resources;
 pub mod validate;
 
 /// The version of the program, taken from the workspace.
