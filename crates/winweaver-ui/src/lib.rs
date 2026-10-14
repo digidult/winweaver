@@ -5,6 +5,7 @@
 //! tree with the detail panel, the Settings tab and the status bar. Every change of the profile
 //! is collected as an [`Act`] while the frame is drawn and applied afterwards.
 
+mod settings;
 mod views;
 
 use std::collections::HashSet;
@@ -14,23 +15,16 @@ use eframe::egui;
 use serde_json::Value;
 use winweaver_core::catalog::{Catalog, TREE_ROOTS, check};
 use winweaver_core::i18n::CatalogTexts;
-use winweaver_core::profile::Profile;
+use winweaver_core::profile::{self, Profile};
 use winweaver_core::resolver::{self, Resolution, State};
+
+pub use settings::{Settings, ThemeChoice, exe_dir};
 
 /// The presets embedded in the executable: the name and the profile text.
 pub const PRESETS: [(&str, &str); 4] = [
-    (
-        "Office",
-        include_str!("../../../data/presets/office.wwprofile"),
-    ),
-    (
-        "Strict",
-        include_str!("../../../data/presets/strict.wwprofile"),
-    ),
-    (
-        "Laptop",
-        include_str!("../../../data/presets/laptop.wwprofile"),
-    ),
+    ("Office", include_str!("../../../data/presets/office.wwprofile")),
+    ("Strict", include_str!("../../../data/presets/strict.wwprofile")),
+    ("Laptop", include_str!("../../../data/presets/laptop.wwprofile")),
     ("Home", include_str!("../../../data/presets/home.wwprofile")),
 ];
 
@@ -78,7 +72,7 @@ impl ProfileDoc {
                 .file_name()
                 .map(|n| n.to_string_lossy().into_owned())
                 .unwrap_or_default(),
-            None => format!("{}.wwprofile", self.profile.name),
+            None => format!("{}.{}", self.profile.name, profile::EXTENSION),
         }
     }
 
@@ -141,55 +135,19 @@ pub struct Search {
 impl Search {
     /// The lower case words of the search text.
     pub fn words(&self) -> Vec<String> {
-        self.text
-            .split_whitespace()
-            .map(str::to_lowercase)
-            .collect()
+        self.text.split_whitespace().map(str::to_lowercase).collect()
     }
 
-    fn remember(&mut self) {
+    /// Puts the current text first in the history; `true` when the history changed.
+    fn remember(&mut self) -> bool {
         let text = self.text.trim().to_owned();
-        if text.is_empty() {
-            return;
+        if text.is_empty() || self.history.first() == Some(&text) {
+            return false;
         }
         self.history.retain(|h| h != &text);
         self.history.insert(0, text);
         self.history.truncate(SEARCH_HISTORY);
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ThemeChoice {
-    System,
-    Light,
-    Dark,
-}
-
-impl ThemeChoice {
-    fn preference(self) -> egui::ThemePreference {
-        match self {
-            ThemeChoice::System => egui::ThemePreference::System,
-            ThemeChoice::Light => egui::ThemePreference::Light,
-            ThemeChoice::Dark => egui::ThemePreference::Dark,
-        }
-    }
-}
-
-pub struct Settings {
-    /// The language code of the catalog texts: `en` or a code of the translations.
-    pub language: String,
-    pub theme: ThemeChoice,
-    /// Whether the description panel is shown.
-    pub desc_open: bool,
-}
-
-impl Default for Settings {
-    fn default() -> Self {
-        Self {
-            language: "en".to_owned(),
-            theme: ThemeChoice::System,
-            desc_open: true,
-        }
+        true
     }
 }
 
@@ -203,8 +161,11 @@ pub enum Act {
     Activate(usize),
     CloseTab(usize, bool),
     NewProfile(Option<&'static str>),
+    Open,
+    OpenPath(PathBuf),
     OpenSettings,
     Save,
+    SaveAs,
     Back,
     Forward,
     ToggleBookmark,
@@ -220,10 +181,12 @@ pub struct App {
     docs: Vec<Doc>,
     active: usize,
     settings: Settings,
+    settings_dirty: bool,
     search: Search,
     status: String,
     bookmarks: HashSet<String>,
     theme_applied: bool,
+    last_title: String,
     exit: bool,
 }
 
@@ -233,20 +196,26 @@ pub fn texts_for<'a>(texts: &'a [CatalogTexts], code: &str) -> Option<&'a Catalo
 }
 
 impl App {
-    pub fn new(catalog: Catalog, texts: Vec<CatalogTexts>) -> Self {
+    pub fn new(catalog: Catalog, texts: Vec<CatalogTexts>, settings: Settings) -> Self {
         let profile = Profile::parse(PRESETS[0].1, PRESETS[0].0)
             .unwrap_or_else(|_| Profile::from_defaults(PRESETS[0].0, &catalog));
         let doc = ProfileDoc::new(profile, None, &catalog);
+        let search = Search {
+            history: settings.search_history.clone(),
+            ..Search::default()
+        };
         Self {
             catalog,
             texts,
             docs: vec![Doc::Profile(Box::new(doc))],
             active: 0,
-            settings: Settings::default(),
-            search: Search::default(),
+            settings,
+            settings_dirty: false,
+            search,
             status: "Ready".to_owned(),
             bookmarks: HashSet::new(),
             theme_applied: false,
+            last_title: String::new(),
             exit: false,
         }
     }
@@ -292,8 +261,14 @@ impl App {
             if i.consume_shortcut(&sc(Modifiers::CTRL, Key::D)) {
                 acts.push(Act::Fold);
             }
+            if i.consume_shortcut(&sc(Modifiers::CTRL | Modifiers::SHIFT, Key::S)) {
+                acts.push(Act::SaveAs);
+            }
             if i.consume_shortcut(&sc(Modifiers::CTRL, Key::S)) {
                 acts.push(Act::Save);
+            }
+            if i.consume_shortcut(&sc(Modifiers::CTRL, Key::O)) {
+                acts.push(Act::Open);
             }
             if i.consume_shortcut(&sc(Modifiers::CTRL, Key::N)) {
                 acts.push(Act::NewProfile(None));
@@ -319,6 +294,11 @@ impl App {
             if count > 1 && i.consume_shortcut(&sc(Modifiers::CTRL, Key::Tab)) {
                 acts.push(Act::Activate((active + 1) % count));
             }
+            for file in &i.raw.dropped_files {
+                if let Some(path) = &file.path {
+                    acts.push(Act::OpenPath(path.clone()));
+                }
+            }
         });
         acts
     }
@@ -333,20 +313,41 @@ impl App {
                     }
                     ui.separator();
                     for (name, _) in PRESETS {
-                        if ui
-                            .button(format!("Profile from the preset {name}"))
-                            .clicked()
-                        {
+                        if ui.button(format!("Profile from the preset {name}")).clicked() {
                             acts.push(Act::NewProfile(Some(name)));
                             ui.close();
                         }
                     }
                 });
                 if ui
+                    .add(egui::Button::new("Open...").shortcut_text("Ctrl+O"))
+                    .clicked()
+                {
+                    acts.push(Act::Open);
+                    ui.close();
+                }
+                ui.add_enabled_ui(!self.settings.recent.is_empty(), |ui| {
+                    ui.menu_button("Open recent", |ui| {
+                        for path in &self.settings.recent {
+                            if ui.button(path.display().to_string()).clicked() {
+                                acts.push(Act::OpenPath(path.clone()));
+                                ui.close();
+                            }
+                        }
+                    });
+                });
+                if ui
                     .add(egui::Button::new("Save").shortcut_text("Ctrl+S"))
                     .clicked()
                 {
                     acts.push(Act::Save);
+                    ui.close();
+                }
+                if ui
+                    .add(egui::Button::new("Save as...").shortcut_text("Ctrl+Shift+S"))
+                    .clicked()
+                {
+                    acts.push(Act::SaveAs);
                     ui.close();
                 }
                 if ui
@@ -370,9 +371,10 @@ impl App {
                 }
                 if ui.button("About").clicked() {
                     acts.push(Act::Message(format!(
-                        "WinWeaver {}, catalog {}",
+                        "WinWeaver {}, catalog {}, settings {}",
                         winweaver_core::APP_VERSION,
-                        self.catalog.version()
+                        self.catalog.version(),
+                        Settings::path().display()
                     )));
                     ui.close();
                 }
@@ -385,23 +387,24 @@ impl App {
             for (i, doc) in self.docs.iter().enumerate() {
                 let mark = if doc.dirty() { "* " } else { "" };
                 let label = format!("{mark}{}", doc.title());
-                if ui.selectable_label(i == self.active, label).clicked() {
+                let response = ui.selectable_label(i == self.active, label);
+                if response.clicked() {
                     acts.push(Act::Activate(i));
                 }
-                if ui
-                    .small_button("x")
-                    .on_hover_text("Close (Ctrl+W)")
-                    .clicked()
+                if response.middle_clicked() {
+                    acts.push(Act::CloseTab(i, false));
+                }
+                if let Doc::Profile(d) = doc
+                    && let Some(p) = &d.path
                 {
+                    response.on_hover_text(p.display().to_string());
+                }
+                if ui.small_button("x").on_hover_text("Close (Ctrl+W)").clicked() {
                     acts.push(Act::CloseTab(i, false));
                 }
                 ui.add_space(4.0);
             }
-            if ui
-                .button("+")
-                .on_hover_text("New profile (Ctrl+N)")
-                .clicked()
-            {
+            if ui.button("+").on_hover_text("New profile (Ctrl+N)").clicked() {
                 acts.push(Act::NewProfile(None));
             }
         });
@@ -409,13 +412,11 @@ impl App {
 
     fn toolbar(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         ui.horizontal(|ui| {
-            if ui.button("New").clicked() {
+            if ui.button("New").on_hover_text("Ctrl+N").clicked() {
                 acts.push(Act::NewProfile(None));
             }
-            if ui.button("Open").clicked() {
-                acts.push(Act::Message(
-                    "Open: the file dialog comes with the next milestone".into(),
-                ));
+            if ui.button("Open").on_hover_text("Ctrl+O").clicked() {
+                acts.push(Act::Open);
             }
             if ui.button("Save").on_hover_text("Ctrl+S").clicked() {
                 acts.push(Act::Save);
@@ -457,10 +458,7 @@ impl App {
         if let Some(group) = group {
             for id in self.catalog.path_of(&group) {
                 if let Some(g) = self.catalog.group(id) {
-                    crumbs.push((
-                        views::gtitle(texts, g).to_owned(),
-                        Sel::Group(id.to_owned()),
-                    ));
+                    crumbs.push((views::gtitle(texts, g).to_owned(), Sel::Group(id.to_owned())));
                 }
             }
         }
@@ -522,11 +520,7 @@ impl App {
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if self.search.open {
-                    if ui
-                        .button("x")
-                        .on_hover_text("Clear and close (Esc)")
-                        .clicked()
-                    {
+                    if ui.button("x").on_hover_text("Clear and close (Esc)").clicked() {
                         self.search.text.clear();
                         self.search.open = false;
                     }
@@ -545,8 +539,11 @@ impl App {
                         if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
                             self.search.text.clear();
                             self.search.open = false;
-                        } else if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                            self.search.remember();
+                        } else if ui.input(|i| i.key_pressed(egui::Key::Enter))
+                            && self.search.remember()
+                        {
+                            self.settings.search_history = self.search.history.clone();
+                            self.settings_dirty = true;
                         }
                     }
                     if !self.search.history.is_empty() {
@@ -571,7 +568,8 @@ impl App {
         ui.horizontal(|ui| {
             let state = match self.docs.get(self.active) {
                 Some(Doc::Profile(d)) if d.dirty => "Modified",
-                Some(Doc::Profile(_)) => "Saved",
+                Some(Doc::Profile(d)) if d.path.is_some() => "Saved",
+                Some(Doc::Profile(_)) => "Not saved yet",
                 _ => "",
             };
             ui.weak(state);
@@ -587,6 +585,7 @@ impl App {
     }
 
     fn settings_view(&mut self, ui: &mut egui::Ui) {
+        let before = self.settings.clone();
         ui.heading("Settings");
         ui.add_space(8.0);
         ui.horizontal(|ui| {
@@ -613,43 +612,92 @@ impl App {
         });
         ui.horizontal(|ui| {
             ui.label("Theme");
-            let before = self.settings.theme;
-            ui.radio_value(
-                &mut self.settings.theme,
-                ThemeChoice::System,
-                "Follow Windows",
-            );
+            ui.radio_value(&mut self.settings.theme, ThemeChoice::System, "Follow Windows");
             ui.radio_value(&mut self.settings.theme, ThemeChoice::Light, "Light");
             ui.radio_value(&mut self.settings.theme, ThemeChoice::Dark, "Dark");
-            if before != self.settings.theme {
-                self.theme_applied = false;
-            }
         });
         ui.checkbox(
             &mut self.settings.desc_open,
             "Show the description panel (Ctrl+D)",
         );
         ui.add_space(12.0);
-        ui.weak("Settings are not saved yet; settings.json next to the executable comes with the next milestone.");
+        ui.horizontal(|ui| {
+            ui.weak(format!("Settings file: {}", Settings::path().display()));
+            if !self.settings.recent.is_empty() && ui.small_button("Forget recent files").clicked()
+            {
+                self.settings.recent.clear();
+            }
+        });
+        if before != self.settings {
+            self.settings_dirty = true;
+            if before.theme != self.settings.theme {
+                self.theme_applied = false;
+            }
+        }
     }
 
-    fn save_active(&mut self) {
-        let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
-            self.status = "Nothing to save".to_owned();
+    fn remember_recent(&mut self, path: &Path) {
+        self.settings.remember(path);
+        self.settings_dirty = true;
+    }
+
+    fn open_path(&mut self, path: PathBuf) {
+        if let Some(i) = self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Profile(p) if p.path.as_ref() == Some(&path)))
+        {
+            self.active = i;
+            return;
+        }
+        match Profile::load(&path) {
+            Ok(mut profile) => {
+                let unknown = profile.split_unknown(&self.catalog);
+                let doc = ProfileDoc::new(profile, Some(path.clone()), &self.catalog);
+                self.docs.push(Doc::Profile(Box::new(doc)));
+                self.active = self.docs.len() - 1;
+                self.status = if unknown.is_empty() {
+                    format!("Opened {}", path.display())
+                } else {
+                    format!(
+                        "Opened {} ({} choices of rules this catalog does not have are kept aside)",
+                        path.display(),
+                        unknown.len()
+                    )
+                };
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = format!("Open failed: {e}"),
+        }
+    }
+
+    fn save_active(&mut self, ask: bool) {
+        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+            self.status = "Nothing to save: the active tab is not a profile".to_owned();
             return;
         };
-        let path = match &doc.path {
-            Some(p) => p.clone(),
-            None => profiles_dir().join(format!("{}.wwprofile", file_stem(&doc.profile.name))),
+        let path = match (&doc.path, ask) {
+            (Some(p), false) => p.clone(),
+            _ => {
+                let proposed = format!("{}.{}", file_stem(&doc.profile.name), profile::EXTENSION);
+                match ask_save_path(&proposed) {
+                    Some(p) => with_extension(p),
+                    None => return,
+                }
+            }
         };
         if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
+        let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
+            return;
+        };
         match doc.profile.save(&path) {
             Ok(()) => {
                 doc.path = Some(path.clone());
                 doc.dirty = false;
                 self.status = format!("Saved {}", path.display());
+                self.remember_recent(&path);
             }
             Err(e) => self.status = format!("Save failed: {e}"),
         }
@@ -736,8 +784,7 @@ impl App {
                 Act::CloseTab(i, force) => {
                     if i < self.docs.len() {
                         if self.docs[i].dirty() && !force {
-                            self.status =
-                                "The tab has unsaved changes: save it (Ctrl+S) or close it from the menu discarding them".to_owned();
+                            self.status = "The tab has unsaved changes: save it (Ctrl+S) or close it from the menu discarding them".to_owned();
                         } else {
                             self.docs.remove(i);
                             if self.active >= self.docs.len() {
@@ -756,6 +803,12 @@ impl App {
                     self.docs.push(Doc::Profile(Box::new(doc)));
                     self.active = self.docs.len() - 1;
                 }
+                Act::Open => {
+                    if let Some(path) = pick_profile() {
+                        self.open_path(path);
+                    }
+                }
+                Act::OpenPath(path) => self.open_path(path),
                 Act::OpenSettings => {
                     match self.docs.iter().position(|d| matches!(d, Doc::Settings)) {
                         Some(i) => self.active = i,
@@ -765,7 +818,8 @@ impl App {
                         }
                     }
                 }
-                Act::Save => self.save_active(),
+                Act::Save => self.save_active(false),
+                Act::SaveAs => self.save_active(true),
                 Act::Back => {
                     if let Some(doc) = self.active_profile() {
                         doc.go(-1);
@@ -781,17 +835,35 @@ impl App {
                         if !self.bookmarks.remove(&key) {
                             self.bookmarks.insert(key);
                         }
-                        self.status = format!(
-                            "{} bookmarks (kept in memory for now)",
-                            self.bookmarks.len()
-                        );
+                        self.status =
+                            format!("{} bookmarks (kept in memory for now)", self.bookmarks.len());
                     }
                 }
-                Act::Fold => self.settings.desc_open = !self.settings.desc_open,
+                Act::Fold => {
+                    self.settings.desc_open = !self.settings.desc_open;
+                    self.settings_dirty = true;
+                }
                 Act::Check => self.check_active(),
                 Act::Exit => self.exit = true,
                 Act::Message(text) => self.status = text,
             }
+        }
+    }
+
+    fn persist_settings(&mut self) {
+        if !self.settings_dirty {
+            return;
+        }
+        self.settings_dirty = false;
+        if let Err(e) = self.settings.save_to(&Settings::path()) {
+            self.status = format!("Settings not saved: {e}");
+        }
+    }
+
+    fn window_title(&self) -> String {
+        match self.docs.get(self.active) {
+            Some(doc) => format!("{} - WinWeaver", doc.title()),
+            None => "WinWeaver".to_owned(),
         }
     }
 }
@@ -804,6 +876,12 @@ impl eframe::App for App {
         if !self.theme_applied {
             ui.ctx().set_theme(self.settings.theme.preference());
             self.theme_applied = true;
+        }
+        let title = self.window_title();
+        if title != self.last_title {
+            ui.ctx()
+                .send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
+            self.last_title = title;
         }
         let mut acts = self.shortcuts(ui.ctx());
         egui::Panel::top("tabs").show(ui, |ui| self.tabs_row(ui, &mut acts));
@@ -826,7 +904,7 @@ impl eframe::App for App {
                     .resizable(true)
                     .default_size(380.0)
                     .show(ui, |ui| {
-                        views::tree_view(ui, catalog, texts, doc, search, &mut acts)
+                        views::tree_view(ui, catalog, texts, doc, search, &mut acts);
                     });
                 egui::CentralPanel::default().show(ui, |ui| {
                     views::detail_view(ui, catalog, texts, doc, settings, &mut acts);
@@ -840,16 +918,13 @@ impl eframe::App for App {
             });
         }
         self.apply(acts);
+        self.persist_settings();
     }
 }
 
 /// The folder of the user's profiles next to the executable.
 pub fn profiles_dir() -> PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(Path::to_path_buf))
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("profiles")
+    exe_dir().join("profiles")
 }
 
 /// A file name stem made of a profile name.
@@ -872,10 +947,45 @@ pub fn file_stem(name: &str) -> String {
     }
 }
 
+/// The path with the profile extension when it has none.
+fn with_extension(path: PathBuf) -> PathBuf {
+    if path.extension().is_some() {
+        path
+    } else {
+        path.with_extension(profile::EXTENSION)
+    }
+}
+
+fn profile_dialog() -> rfd::FileDialog {
+    let dir = profiles_dir();
+    let dialog = rfd::FileDialog::new().add_filter("WinWeaver profile", &[profile::EXTENSION]);
+    if dir.is_dir() {
+        dialog.set_directory(dir)
+    } else {
+        dialog
+    }
+}
+
+fn pick_profile() -> Option<PathBuf> {
+    profile_dialog().set_title("Open a profile").pick_file()
+}
+
+fn ask_save_path(proposed: &str) -> Option<PathBuf> {
+    let _ = std::fs::create_dir_all(profiles_dir());
+    profile_dialog()
+        .set_title("Save the profile as")
+        .set_file_name(proposed)
+        .save_file()
+}
+
 /// Opens the window; returns the error text when the catalog or the window cannot start.
 pub fn run() -> Result<(), String> {
     let catalog = Catalog::embedded().map_err(|e| format!("catalog: {e}"))?;
     let texts = CatalogTexts::embedded().map_err(|e| format!("translations: {e}"))?;
+    let (settings, warning) = match Settings::load_from(&Settings::path()) {
+        Ok(s) => (s, None),
+        Err(e) => (Settings::default(), Some(e)),
+    };
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("WinWeaver")
@@ -886,7 +996,13 @@ pub fn run() -> Result<(), String> {
     eframe::run_native(
         "WinWeaver",
         options,
-        Box::new(move |_cc| Ok(Box::new(App::new(catalog, texts)))),
+        Box::new(move |_cc| {
+            let mut app = App::new(catalog, texts, settings);
+            if let Some(w) = warning {
+                app.status = format!("Settings not read, the defaults are used: {w}");
+            }
+            Ok(Box::new(app))
+        }),
     )
     .map_err(|e| e.to_string())
 }
@@ -900,15 +1016,21 @@ mod tests {
         assert_eq!(file_stem("Office 2026"), "Office 2026");
         assert_eq!(file_stem("a/b:c"), "a_b_c");
         assert_eq!(file_stem("   "), "profile");
+        assert_eq!(
+            with_extension(PathBuf::from("x")),
+            PathBuf::from("x.wwprofile")
+        );
+        assert_eq!(with_extension(PathBuf::from("x.json")), PathBuf::from("x.json"));
     }
 
     #[test]
     fn app_starts_with_the_office_preset() {
         let catalog = Catalog::embedded().unwrap();
-        let app = App::new(catalog, CatalogTexts::embedded().unwrap());
+        let app = App::new(catalog, CatalogTexts::embedded().unwrap(), Settings::default());
         assert_eq!(app.docs.len(), 1);
         assert_eq!(app.docs[0].title(), "Office.wwprofile");
         assert!(!app.docs[0].dirty());
+        assert_eq!(app.window_title(), "Office.wwprofile - WinWeaver");
     }
 
     #[test]
@@ -922,5 +1044,24 @@ mod tests {
         assert_eq!(doc.sel, Sel::Group("policies".into()));
         doc.go(1);
         assert_eq!(doc.sel, Sel::Rule("install.bypass-tpm".into()));
+    }
+
+    #[test]
+    fn opening_a_file_adds_a_tab_and_remembers_it() {
+        let catalog = Catalog::embedded().unwrap();
+        let dir = std::env::temp_dir().join(format!("winweaver-ui-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("strict.wwprofile");
+        std::fs::write(&path, PRESETS[1].1).unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        app.open_path(path.clone());
+        assert_eq!(app.docs.len(), 2);
+        assert_eq!(app.active, 1);
+        assert_eq!(app.settings.recent, vec![path.clone()]);
+        app.open_path(path.clone());
+        assert_eq!(app.docs.len(), 2, "the same file activates its tab");
+        app.open_path(dir.join("missing.wwprofile"));
+        assert!(app.status.starts_with("Open failed"), "{}", app.status);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }
