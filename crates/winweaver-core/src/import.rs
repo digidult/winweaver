@@ -86,10 +86,15 @@ pub fn from_winkickoff(value: &Value, name: &str) -> Result<(Profile, Vec<String
                 _ => false,
             };
             let params: IndexMap<String, Value> = match entry.get("params") {
-                Some(Value::Object(map)) => map.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
+                Some(Value::Object(map)) => {
+                    map.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+                }
                 _ => IndexMap::new(),
             };
-            let source = entry.get("source").and_then(Value::as_str).map(str::to_owned);
+            let source = entry
+                .get("source")
+                .and_then(Value::as_str)
+                .map(str::to_owned);
             if on || !params.is_empty() || source.is_some() {
                 rules.insert(id.clone(), Choice { on, params, source });
             }
@@ -149,7 +154,10 @@ mod tests {
         assert_eq!(p.format, profile::FORMAT);
         assert_eq!(p.name, "Old");
         assert_eq!(p.install.workgroup, "LAB");
-        assert_eq!(p.install.disk_mode, "ask", "missing fields take the defaults");
+        assert_eq!(
+            p.install.disk_mode, "ask",
+            "missing fields take the defaults"
+        );
         assert_eq!(p.languages.input, vec!["en-US".to_owned()]);
         assert_eq!(p.accounts.len(), 1);
         assert!(p.is_on("a.b") && !p.is_on("c.d") && !p.rules.contains_key("c.d"));

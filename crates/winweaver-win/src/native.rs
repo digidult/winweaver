@@ -95,7 +95,9 @@ fn locale_name(lcid: u32) -> Option<String> {
 
 /// A locale id written in hexadecimal, such as `00000422` or `0422`.
 fn hex_locale(text: &str) -> Option<String> {
-    u32::from_str_radix(text.trim(), 16).ok().and_then(locale_name)
+    u32::from_str_radix(text.trim(), 16)
+        .ok()
+        .and_then(locale_name)
 }
 
 /// Whether the process runs elevated.
@@ -219,16 +221,27 @@ mod tests {
             "CurrentBuild",
         );
         assert!(matches!(build, Ok(Some(RegData::Str(_)))), "{build:?}");
-        assert_eq!(m.value("HKLM:\\SOFTWARE\\WinWeaverNoSuchKey", "x"), Ok(None));
         assert_eq!(
-            m.value("HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "NoSuchValue"),
+            m.value("HKLM:\\SOFTWARE\\WinWeaverNoSuchKey", "x"),
             Ok(None)
         );
-        let services = m.subkeys("HKLM:\\SYSTEM\\CurrentControlSet\\Services").unwrap();
+        assert_eq!(
+            m.value(
+                "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion",
+                "NoSuchValue"
+            ),
+            Ok(None)
+        );
+        let services = m
+            .subkeys("HKLM:\\SYSTEM\\CurrentControlSet\\Services")
+            .unwrap();
         assert!(services.is_some_and(|s| s.len() > 10));
         assert!(m.value("XX:\\a", "b").is_err());
         let info = m.system_info();
-        assert!(!info.build.is_empty() && !info.edition_id.is_empty(), "{info:?}");
+        assert!(
+            !info.build.is_empty() && !info.edition_id.is_empty(),
+            "{info:?}"
+        );
         assert_eq!(locale_name(0x0409).as_deref(), Some("en-US"));
         assert_eq!(hex_locale("00000422").as_deref(), Some("uk-UA"));
     }
@@ -243,8 +256,7 @@ mod tests {
         assert_eq!(report.results.len(), plan.checks.len());
         let readings = thispc::judge(&catalog, &plan, &report.results);
         assert_eq!(readings.len(), plan.rules.len());
-        let (_, summary) =
-            thispc::capture(&catalog, &profile, &readings, report.system.as_ref());
+        let (_, summary) = thispc::capture(&catalog, &profile, &readings, report.system.as_ref());
         assert!(!summary.line().is_empty());
     }
 }

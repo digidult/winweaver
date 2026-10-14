@@ -12,9 +12,9 @@ pub mod import;
 pub mod jsonfile;
 pub mod profile;
 pub mod render;
-pub mod scripts;
 pub mod resolver;
 pub mod resources;
+pub mod scripts;
 pub mod thispc;
 pub mod validate;
 

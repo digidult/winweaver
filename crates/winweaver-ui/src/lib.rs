@@ -22,13 +22,13 @@ use winweaver_core::catalog::{Catalog, TREE_ROOTS, check};
 use winweaver_core::clock;
 use winweaver_core::diff::{self, Diff};
 use winweaver_core::i18n::CatalogTexts;
-use winweaver_core::profile::{self, Account, Install, Languages, Profile};
 use winweaver_core::import;
 use winweaver_core::jsonfile;
+use winweaver_core::profile::{self, Account, Install, Languages, Profile};
 use winweaver_core::render;
+use winweaver_core::resolver::{self, Resolution};
 use winweaver_core::scripts;
 use winweaver_core::thispc::{self, Report, Verdict};
-use winweaver_core::resolver::{self, Resolution};
 use winweaver_core::validate::{self, Issue, Severity, Target};
 
 pub use diffview::DiffDoc;
@@ -604,7 +604,10 @@ impl App {
                 ui.close();
             }
             ui.separator();
-            if ui.button("Save an apply script for the selection...").clicked() {
+            if ui
+                .button("Save an apply script for the selection...")
+                .clicked()
+            {
                 acts.push(Act::SaveScript(ScriptKind::Apply));
                 ui.close();
             }
@@ -615,7 +618,10 @@ impl App {
                 acts.push(Act::SaveScript(ScriptKind::Revert));
                 ui.close();
             }
-            if ui.button("Save an audit script for the selection...").clicked() {
+            if ui
+                .button("Save an audit script for the selection...")
+                .clicked()
+            {
                 acts.push(Act::SaveScript(ScriptKind::Audit));
                 ui.close();
             }
@@ -1046,7 +1052,8 @@ impl App {
             return;
         };
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
-            self.status = "Read this PC: open a profile first; its rules and forms are the base".to_owned();
+            self.status =
+                "Read this PC: open a profile first; its rules and forms are the base".to_owned();
             return;
         };
         let ids = if only_selection {
@@ -1056,7 +1063,12 @@ impl App {
         };
         let base = doc.profile.clone();
         let plan = thispc::plan(&self.catalog, &base, &ids);
-        let report = thispc::run(machine.as_ref(), &plan, !only_selection, &clock::now_utc_iso());
+        let report = thispc::run(
+            machine.as_ref(),
+            &plan,
+            !only_selection,
+            &clock::now_utc_iso(),
+        );
         let readings = thispc::judge(&self.catalog, &plan, &report.results);
         let (mut profile, summary) =
             thispc::capture(&self.catalog, &base, &readings, report.system.as_ref());
@@ -1137,7 +1149,11 @@ impl App {
                 differ += 1;
             }
             issues.push(Issue {
-                severity: if agrees { Severity::Info } else { Severity::Warning },
+                severity: if agrees {
+                    Severity::Info
+                } else {
+                    Severity::Warning
+                },
                 target: Target::Rule(r.rule.clone()),
                 text: format!(
                     "This PC: {} ({} in the profile)",
@@ -1167,8 +1183,10 @@ impl App {
         let made = match kind {
             ScriptKind::Apply => scripts::apply_script(&self.catalog, &doc.profile, &ids, version)
                 .map(|(t, p)| (t, p.summary(), format!("Apply-{stem}.ps1"), true)),
-            ScriptKind::Revert => scripts::revert_script(&self.catalog, &doc.profile, &ids, version)
-                .map(|(t, p)| (t, p.summary(), format!("Revert-{stem}.ps1"), true)),
+            ScriptKind::Revert => {
+                scripts::revert_script(&self.catalog, &doc.profile, &ids, version)
+                    .map(|(t, p)| (t, p.summary(), format!("Revert-{stem}.ps1"), true))
+            }
             ScriptKind::Audit => scripts::audit_script(&self.catalog, &doc.profile, &ids, version)
                 .map(|(t, p)| {
                     (
@@ -1199,7 +1217,11 @@ impl App {
         };
         let start = output_dir();
         let dialog = rfd::FileDialog::new().set_title("Choose the folder for the script");
-        let dialog = if start.is_dir() { dialog.set_directory(start) } else { dialog };
+        let dialog = if start.is_dir() {
+            dialog.set_directory(start)
+        } else {
+            dialog
+        };
         let Some(dir) = dialog.pick_folder() else {
             return;
         };
@@ -1214,7 +1236,10 @@ impl App {
             self.status = format!("Undo script not saved: {e}");
             return;
         }
-        self.status = format!("Saved {} ({summary}); run it as administrator, first on a test PC", path.display());
+        self.status = format!(
+            "Saved {} ({summary}); run it as administrator, first on a test PC",
+            path.display()
+        );
     }
 
     /// Opens the report of an audit script made on another PC and reads it into a new profile.
@@ -1977,7 +2002,11 @@ fn pick_any() -> Option<PathBuf> {
         .add_filter("Answer files (the profile they embed)", &["xml"])
         .add_filter("WinKickOff profiles and audit reports", &["json"])
         .add_filter("Markdown pages", &["md"]);
-    let dialog = if dir.is_dir() { dialog.set_directory(dir) } else { dialog };
+    let dialog = if dir.is_dir() {
+        dialog.set_directory(dir)
+    } else {
+        dialog
+    };
     dialog.pick_file()
 }
 

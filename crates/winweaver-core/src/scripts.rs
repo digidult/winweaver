@@ -43,7 +43,10 @@ impl ScriptPlan {
             parts.push(format!("{} rules applied", self.applied.len()));
         }
         if !self.reverted.is_empty() {
-            parts.push(format!("{} returned to Windows defaults", self.reverted.len()));
+            parts.push(format!(
+                "{} returned to Windows defaults",
+                self.reverted.len()
+            ));
         }
         if !self.added.is_empty() {
             parts.push(format!("{} added as dependencies", self.added.len()));
@@ -118,7 +121,10 @@ fn revert_action(rule: &Rule, action: &Action) -> Result<Option<Vec<String>>, Re
         },
         Action::Service { name, default, .. } => {
             default.as_ref().and_then(Value::as_u64).map(|start| {
-                vec![format!("Set-ServiceStart -Name {} -Start {start}", quote(name))]
+                vec![format!(
+                    "Set-ServiceStart -Name {} -Start {start}",
+                    quote(name)
+                )]
             })
         }
         Action::Feature { name, default, .. } => default
@@ -128,9 +134,10 @@ fn revert_action(rule: &Rule, action: &Action) -> Result<Option<Vec<String>>, Re
         | Action::XmlSpecializeCommand { .. }
         | Action::XmlSetting { .. }
         | Action::XmlOobe { .. } => Some(Vec::new()),
-        Action::Ps { .. } | Action::Exe { .. } | Action::Capability { .. } | Action::Appx { .. } => {
-            None
-        }
+        Action::Ps { .. }
+        | Action::Exe { .. }
+        | Action::Capability { .. }
+        | Action::Appx { .. } => None,
     })
 }
 
@@ -304,7 +311,12 @@ pub fn apply_script(
         &[
             (
                 "build_label",
-                label(profile, app_version, " (rules that are off return to Windows defaults)").as_str(),
+                label(
+                    profile,
+                    app_version,
+                    " (rules that are off return to Windows defaults)",
+                )
+                .as_str(),
             ),
             ("accounts", accounts(profile).as_str()),
             ("blocks", blocks.assemble("# (nothing to apply)").as_str()),
@@ -384,7 +396,10 @@ fn audit_line(rule: &Rule, check: &thispc::Check) -> Result<String, RenderError>
             q(&check.note)
         ),
         Probe::Service { name, start, .. } => {
-            format!("Test-ServiceStart -Rule {r} -Name {} -Start {start}", q(name))
+            format!(
+                "Test-ServiceStart -Rule {r} -Name {} -Start {start}",
+                q(name)
+            )
         }
         Probe::Feature { name, state, .. } => {
             format!("Test-Feature -Rule {r} -Name {} -State {state}", q(name))
@@ -437,7 +452,10 @@ pub fn audit_script(
 
 /// The undo script that restores the backup an apply or revert script saved next to itself.
 pub fn undo_script(profile: &Profile, app_version: &str) -> Result<String, RenderError> {
-    render::fill(UNDO, &[("build_label", label(profile, app_version, "").as_str())])
+    render::fill(
+        UNDO,
+        &[("build_label", label(profile, app_version, "").as_str())],
+    )
 }
 
 /// A script as a file: CRLF line endings and a UTF-8 byte order mark, which Windows PowerShell

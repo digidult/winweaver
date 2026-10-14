@@ -31,14 +31,26 @@ fn the_apply_script_applies_and_returns() {
         "# WinWeaver test, profile: Office (rules that are off return to Windows defaults)"
     ));
     assert!(text.contains("$accounts = @('Admin','User')"));
-    assert!(text.contains("if (Mount-DefaultUser) {") && text.contains("    Dismount-DefaultUser\n}"));
+    assert!(
+        text.contains("if (Mount-DefaultUser) {") && text.contains("    Dismount-DefaultUser\n}")
+    );
     assert!(text.trim_end().ends_with("exit 0"));
     let marks = markers(&text);
-    let reverts = marks.iter().filter(|m| m.ends_with("] Windows defaults")).count();
+    let reverts = marks
+        .iter()
+        .filter(|m| m.ends_with("] Windows defaults"))
+        .count();
     assert_eq!(reverts, plan.reverted.len());
     assert!(!plan.applied.is_empty() && !plan.reverted.is_empty());
-    assert!(!marks.iter().any(|m| m.starts_with("install.bypass-tpm")), "installation rules stay out");
-    assert!(plan.excluded.iter().any(|(id, _)| id == "install.bypass-tpm"));
+    assert!(
+        !marks.iter().any(|m| m.starts_with("install.bypass-tpm")),
+        "installation rules stay out"
+    );
+    assert!(
+        plan.excluded
+            .iter()
+            .any(|(id, _)| id == "install.bypass-tpm")
+    );
     assert!(text.contains(
         "Set-Reg -Path 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\Printers\\PointAndPrint' -Name 'RestrictDriverInstallationToAdministrators' -Type DWord -Value 1 -Why 'PrintNightmare'"
     ));
@@ -63,8 +75,15 @@ fn the_revert_script_uses_the_windows_defaults() {
     assert!(text.contains(
         "    # [default-user.show-file-extensions] Windows defaults\n    Remove-Reg -Path ($du + '\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced') -Name 'HideFileExt'\n"
     ));
-    assert!(!text.contains("# [apps.remove-quick-assist]"), "a removed app cannot come back");
-    assert!(plan.partial.iter().any(|(id, _)| id == "printing.spooler-automatic"));
+    assert!(
+        !text.contains("# [apps.remove-quick-assist]"),
+        "a removed app cannot come back"
+    );
+    assert!(
+        plan.partial
+            .iter()
+            .any(|(id, _)| id == "printing.spooler-automatic")
+    );
     assert!(plan.applied.is_empty());
 }
 
@@ -91,7 +110,11 @@ fn the_audit_script_checks_what_the_rules_write() {
         .lines()
         .filter(|l| l.starts_with("Test-") || l.starts_with("Add-Unknown"))
         .count();
-    assert_eq!(tests, plan.checks.len(), "one line per check, so a report pairs with the plan");
+    assert_eq!(
+        tests,
+        plan.checks.len(),
+        "one line per check, so a report pairs with the plan"
+    );
 }
 
 #[test]
@@ -103,5 +126,8 @@ fn undo_and_file_bytes() {
     let mut named = office();
     named.name = "Офіс\nтест".into();
     let undo = scripts::undo_script(&named, "test").unwrap();
-    assert!(undo.contains("# WinWeaver test, profile: ?????????\n"), "the label stays one ASCII line");
+    assert!(
+        undo.contains("# WinWeaver test, profile: ?????????\n"),
+        "the label stays one ASCII line"
+    );
 }

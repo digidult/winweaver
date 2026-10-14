@@ -59,7 +59,10 @@ fn data_of(value: &Value) -> RegData {
 fn exclusions_follow_the_phase_and_the_sign_in_screen() {
     let catalog = Catalog::embedded().unwrap();
     let plan = thispc::plan(&catalog, &office(), &all_ids(&catalog));
-    assert_eq!(plan.rules.len() + plan.excluded.len(), catalog.rules().len());
+    assert_eq!(
+        plan.rules.len() + plan.excluded.len(),
+        catalog.rules().len()
+    );
     let reason = |id: &str| plan.excluded.iter().find(|(r, _)| r == id).map(|(_, w)| *w);
     assert_eq!(reason("install.bypass-tpm"), Some(ONLY_DURING_INSTALL));
     let first_logon = catalog
@@ -77,7 +80,10 @@ fn exclusions_follow_the_phase_and_the_sign_in_screen() {
     if let Some(r) = sign_in {
         assert_eq!(reason(&r.id), Some(SIGN_IN_SCREEN));
     }
-    assert!(plan.rules.contains(&"install.netfx3".to_owned()), "a script rule is checked as unknown");
+    assert!(
+        plan.rules.contains(&"install.netfx3".to_owned()),
+        "a script rule is checked as unknown"
+    );
     let du = plan
         .checks
         .iter()
@@ -100,17 +106,29 @@ fn a_rule_is_judged_by_its_values() {
     };
     let mut m = MemoryMachine::default();
     m.set(&path, &name, data_of(&wanted));
-    assert_eq!(reading(&catalog, &m, "defender.pua").verdict, Verdict::InEffect);
+    assert_eq!(
+        reading(&catalog, &m, "defender.pua").verdict,
+        Verdict::InEffect
+    );
     let mut other = MemoryMachine::default();
     other.set(&path, &name, RegData::Dword(77));
-    assert_eq!(reading(&catalog, &other, "defender.pua").verdict, Verdict::NotInEffect);
+    assert_eq!(
+        reading(&catalog, &other, "defender.pua").verdict,
+        Verdict::NotInEffect
+    );
     let empty = MemoryMachine::default();
-    assert_eq!(reading(&catalog, &empty, "defender.pua").verdict, Verdict::NotInEffect);
+    assert_eq!(
+        reading(&catalog, &empty, "defender.pua").verdict,
+        Verdict::NotInEffect
+    );
     let denied = MemoryMachine {
         denied: vec![path.to_lowercase()],
         ..MemoryMachine::default()
     };
-    assert_eq!(reading(&catalog, &denied, "defender.pua").verdict, Verdict::NotReadable);
+    assert_eq!(
+        reading(&catalog, &denied, "defender.pua").verdict,
+        Verdict::NotReadable
+    );
 }
 
 #[test]
@@ -124,7 +142,9 @@ fn a_partly_applied_rule_is_partly_in_effect() {
             let regs = reg_actions(r);
             regs.len() >= 2
                 && r.actions.len() == regs.len()
-                && regs.iter().all(|(p, _, v)| p.to_lowercase().contains("\\policies\\") && !v.is_string())
+                && regs
+                    .iter()
+                    .all(|(p, _, v)| p.to_lowercase().contains("\\policies\\") && !v.is_string())
         })
         .expect("a rule with two policy values");
     let regs = reg_actions(rule);
@@ -166,12 +186,21 @@ fn a_parameter_is_read_from_its_value() {
                     path, name, value, ..
                 } => {
                     let inner = value.as_str()?.strip_prefix('{')?.strip_suffix('}')?;
-                    let Param::Enum { values, default, .. } = r.params.get(inner)? else {
+                    let Param::Enum {
+                        values, default, ..
+                    } = r.params.get(inner)?
+                    else {
                         return None;
                     };
                     let other = values.iter().find(|v| &v.value != default)?;
                     (r.actions.len() == 1).then(|| {
-                        (r, path.replace("DU:", "HKCU:"), name.clone(), inner.to_owned(), other.value.clone())
+                        (
+                            r,
+                            path.replace("DU:", "HKCU:"),
+                            name.clone(),
+                            inner.to_owned(),
+                            other.value.clone(),
+                        )
                     })
                 }
                 _ => None,
@@ -197,7 +226,10 @@ fn apps_are_read_from_the_package_lists() {
     let rule = catalog
         .rules()
         .iter()
-        .find(|r| r.actions.len() == 1 && matches!(&r.actions[0], Action::Appx { names } if names.len() == 1))
+        .find(|r| {
+            r.actions.len() == 1
+                && matches!(&r.actions[0], Action::Appx { names } if names.len() == 1)
+        })
         .expect("a rule that removes one app");
     let Action::Appx { names } = &rule.actions[0] else {
         unreachable!()
@@ -207,9 +239,15 @@ fn apps_are_read_from_the_package_lists() {
         "hkcu:\\software\\classes\\local settings\\software\\microsoft\\windows\\currentversion\\appmodel\\repository\\packages".to_owned(),
         vec![format!("{}_1.0.0.0_x64__8wekyb3d8bbwe", names[0])],
     );
-    assert_eq!(reading(&catalog, &present, &rule.id).verdict, Verdict::NotInEffect);
+    assert_eq!(
+        reading(&catalog, &present, &rule.id).verdict,
+        Verdict::NotInEffect
+    );
     let absent = MemoryMachine::default();
-    assert_eq!(reading(&catalog, &absent, &rule.id).verdict, Verdict::InEffect);
+    assert_eq!(
+        reading(&catalog, &absent, &rule.id).verdict,
+        Verdict::InEffect
+    );
 }
 
 #[test]
@@ -258,11 +296,18 @@ fn the_forms_take_what_a_profile_can_hold() {
 #[test]
 fn a_report_of_the_audit_script_is_judged_like_a_native_read() {
     let catalog = Catalog::embedded().unwrap();
-    let ids = vec!["defender.pua".to_owned(), "printing.spooler-automatic".to_owned()];
+    let ids = vec![
+        "defender.pua".to_owned(),
+        "printing.spooler-automatic".to_owned(),
+    ];
     let plan = thispc::plan(&catalog, &office(), &ids);
     let mut rows = Vec::new();
     for c in &plan.checks {
-        let status = if c.rule == "defender.pua" { "ok" } else { "unknown" };
+        let status = if c.rule == "defender.pua" {
+            "ok"
+        } else {
+            "unknown"
+        };
         rows.push(format!(
             r#"{{"rule": "{}", "check": "x", "status": "{status}", "current": "1", "expected": "1", "note": ""}}"#,
             c.rule
@@ -283,6 +328,9 @@ fn a_report_of_the_audit_script_is_judged_like_a_native_read() {
     let readings = thispc::judge(&catalog, &plan, &report.results);
     let verdict = |id: &str| readings.iter().find(|r| r.rule == id).unwrap().verdict;
     assert_eq!(verdict("printing.spooler-automatic"), Verdict::NotReadable);
-    assert!(matches!(verdict("defender.pua"), Verdict::InEffect | Verdict::AsDefault));
+    assert!(matches!(
+        verdict("defender.pua"),
+        Verdict::InEffect | Verdict::AsDefault
+    ));
     assert!(Report::parse("{\"a\": 1}", "x.json").is_err());
 }

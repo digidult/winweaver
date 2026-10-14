@@ -330,7 +330,11 @@ pub(crate) fn script_lines(
 }
 
 /// The parameter values of a rule in the profile (the defaults where the profile has none).
-pub(crate) fn params_of(catalog: &Catalog, profile: &Profile, rule: &Rule) -> BTreeMap<String, Value> {
+pub(crate) fn params_of(
+    catalog: &Catalog,
+    profile: &Profile,
+    rule: &Rule,
+) -> BTreeMap<String, Value> {
     rule.params
         .keys()
         .filter_map(|n| profile.param(catalog, &rule.id, n).map(|v| (n.clone(), v)))

@@ -163,12 +163,9 @@ fn single_placeholder(rule: &Rule, value: &Value) -> Option<String> {
 fn substitute_value(value: &Value, params: &std::collections::BTreeMap<String, Value>) -> Value {
     match value {
         Value::String(s) => Value::String(render::substitute(s, params)),
-        Value::Array(items) => Value::Array(
-            items
-                .iter()
-                .map(|v| substitute_value(v, params))
-                .collect(),
-        ),
+        Value::Array(items) => {
+            Value::Array(items.iter().map(|v| substitute_value(v, params)).collect())
+        }
         other => other.clone(),
     }
 }
@@ -604,7 +601,10 @@ fn evaluate(machine: &dyn Machine, check: &Check) -> CheckResult {
             let mut found = Vec::new();
             let mut readable = 0;
             let mut notes = Vec::new();
-            for (where_, path) in [("current user", USER_PACKAGES), ("provisioned", PROVISIONED_PACKAGES)] {
+            for (where_, path) in [
+                ("current user", USER_PACKAGES),
+                ("provisioned", PROVISIONED_PACKAGES),
+            ] {
                 match machine.subkeys(path) {
                     Ok(keys) => {
                         readable += 1;
@@ -793,9 +793,7 @@ pub fn judge(catalog: &Catalog, plan: &Plan, results: &[CheckResult]) -> Vec<Rea
             };
             let mut status = res.status;
             let mut read = None;
-            if let Probe::Reg {
-                param: Some(p), ..
-            } = &check.probe
+            if let Probe::Reg { param: Some(p), .. } = &check.probe
                 && status != Status::Unknown
                 && let Some(param) = rule.params.get(p)
                 && let Some(v) = param_value(param, &res.current)
@@ -925,9 +923,21 @@ fn capture_forms(profile: &mut Profile, info: &SystemInfo, summary: &mut Capture
         summary.forms.push(format!("time zone {}", info.time_zone));
     }
     for (value, target, what) in [
-        (&info.ui_language, &mut profile.languages.ui_language, "display language"),
-        (&info.system_locale, &mut profile.languages.system_locale, "system locale"),
-        (&info.user_locale, &mut profile.languages.user_locale, "user locale"),
+        (
+            &info.ui_language,
+            &mut profile.languages.ui_language,
+            "display language",
+        ),
+        (
+            &info.system_locale,
+            &mut profile.languages.system_locale,
+            "system locale",
+        ),
+        (
+            &info.user_locale,
+            &mut profile.languages.user_locale,
+            "user locale",
+        ),
     ] {
         if crate::validate::is_culture(value) {
             *target = value.clone();
@@ -953,7 +963,9 @@ fn capture_forms(profile: &mut Profile, info: &SystemInfo, summary: &mut Capture
         ));
     }
     if !known.is_empty() {
-        summary.forms.push(format!("input languages {}", known.join(", ")));
+        summary
+            .forms
+            .push(format!("input languages {}", known.join(", ")));
         profile.languages.input = known;
     }
     let accounts: Vec<Account> = info
@@ -973,7 +985,9 @@ fn capture_forms(profile: &mut Profile, info: &SystemInfo, summary: &mut Capture
             .notes
             .push("the accounts of the profile were kept".to_owned());
     } else {
-        summary.forms.push(format!("{} accounts (no passwords)", accounts.len()));
+        summary
+            .forms
+            .push(format!("{} accounts (no passwords)", accounts.len()));
         profile.accounts = accounts;
     }
 }
