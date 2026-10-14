@@ -63,6 +63,6 @@ file that applies later to any profile.
 
 ## Not there yet
 
-This build is an early one. Build, This PC (read, apply, return to defaults), imported policy
+This build is an early one. This PC (read, apply, return to defaults), imported policy
 templates, the MCP server, bookmark files and the translations of the interface come with the next
 milestones; the commands say so when you use them.
