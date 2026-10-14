@@ -1046,7 +1046,11 @@ impl App {
                         if self.save_marks() {
                             self.status = format!(
                                 "{} ({} bookmarks in {})",
-                                if added { "Bookmark added" } else { "Bookmark removed" },
+                                if added {
+                                    "Bookmark added"
+                                } else {
+                                    "Bookmark removed"
+                                },
                                 self.marks.items.len(),
                                 self.marks_path.display()
                             );
@@ -1168,7 +1172,8 @@ impl App {
             match self.docs.iter().position(|d| d.title() == mark.path) {
                 Some(j) => self.active = j,
                 None => {
-                    self.status = format!("The document of the bookmark is not open: {}", mark.path);
+                    self.status =
+                        format!("The document of the bookmark is not open: {}", mark.path);
                     return;
                 }
             }
@@ -1590,10 +1595,20 @@ mod tests {
         assert_eq!(app.marks.items.len(), 1, "{}", app.status);
         assert_eq!(app.marks.items[0].item, "install.bypass-tpm");
         assert_eq!(app.marks.items[0].path, "Office.wwprofile");
-        assert!(app.marks_path.exists(), "the default file is created at the first bookmark");
-        app.apply(vec![Act::Select(Sel::None), Act::OpenMarks, Act::GoToMark(0)]);
+        assert!(
+            app.marks_path.exists(),
+            "the default file is created at the first bookmark"
+        );
+        app.apply(vec![
+            Act::Select(Sel::None),
+            Act::OpenMarks,
+            Act::GoToMark(0),
+        ]);
         assert_eq!(app.active, 0, "{}", app.status);
-        assert_eq!(app.active_profile().unwrap().sel, Sel::Rule("install.bypass-tpm".into()));
+        assert_eq!(
+            app.active_profile().unwrap().sel,
+            Sel::Rule("install.bypass-tpm".into())
+        );
         app.apply(vec![Act::ToggleBookmark]);
         assert!(app.marks.items.is_empty());
         std::fs::remove_dir_all(&dir).unwrap();

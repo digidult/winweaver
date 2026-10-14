@@ -161,7 +161,10 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("winweaver-marks-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join(DEFAULT_FILE);
-        assert_eq!(Bookmarks::load_or_default(&path).unwrap(), Bookmarks::default());
+        assert_eq!(
+            Bookmarks::load_or_default(&path).unwrap(),
+            Bookmarks::default()
+        );
         marks.save(&path).unwrap();
         assert_eq!(Bookmarks::load(&path).unwrap(), marks);
         std::fs::remove_dir_all(&dir).unwrap();
