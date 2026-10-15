@@ -668,7 +668,8 @@ fn writes(ui: &mut egui::Ui, rule: &Rule) {
         }
     }
     if !rows.is_empty() {
-        let key_width = (ui.available_width() * 0.45).max(160.0);
+        let room = (ui.available_width() - 3.0 * 16.0).max(240.0);
+        let widths = [room * 0.4, room * 0.22, room * 0.22, room * 0.16];
         let cell = |ui: &mut egui::Ui, text: &str, mono: bool, muted: bool, width: f32| {
             ui.scope(|ui| {
                 ui.set_max_width(width);
@@ -688,15 +689,23 @@ fn writes(ui: &mut egui::Ui, rule: &Rule) {
             .num_columns(4)
             .spacing([16.0, 6.0])
             .show(ui, |ui| {
-                for title in [tr("Key"), tr("Name"), tr("Value"), tr("Windows default")] {
-                    ui.label(style::strong(ui, title, 12.0).color(p.muted));
+                for (title, width) in [tr("Key"), tr("Name"), tr("Value"), tr("Windows default")]
+                    .into_iter()
+                    .zip(widths)
+                {
+                    ui.scope(|ui| {
+                        ui.set_max_width(width);
+                        ui.add(
+                            egui::Label::new(style::strong(ui, title, 12.0).color(p.muted)).wrap(),
+                        );
+                    });
                 }
                 ui.end_row();
                 for (path, name, value, default) in &rows {
-                    cell(ui, path, true, false, key_width);
-                    cell(ui, name, false, false, 220.0);
-                    cell(ui, value, false, false, 220.0);
-                    cell(ui, default, false, true, 160.0);
+                    cell(ui, path, true, false, widths[0]);
+                    cell(ui, name, false, false, widths[1]);
+                    cell(ui, value, false, false, widths[2]);
+                    cell(ui, default, false, true, widths[3]);
                     ui.end_row();
                 }
             });

@@ -254,6 +254,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - Lists (`list::show`, item 5): one stop of Tab like the tree; the arrows, Home, End and the page keys move
   the selection and set `follow`, Enter or a double click opens, Delete removes where the tab allows it,
   the widths of the columns change by dragging the lines between their titles (kept in the memory of egui).
+  In the diff and bookmark tabs the list is the resizable side panel and the item on the right is the
+  central panel: a side panel grows with what it holds, so a detail there moved the divider.
 - Diffs keep comments by the key of an item (`Diff::keys`: `install:<field>`, `languages:<field>`,
   `accounts`, `rule:<id>`); `Diff::apply_item` applies one. The diff tab shows the item on the right and
   leads to it in the profile of either side, opening the file or the preset of that name.

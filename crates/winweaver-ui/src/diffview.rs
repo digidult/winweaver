@@ -349,9 +349,9 @@ pub fn diff_detail(
         .auto_shrink(false)
         .show(ui, |ui| {
             views::header(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(style::strong(ui, &item.title, 18.0));
-                    if item.key.starts_with("rule:") {
+                ui.label(style::strong(ui, &item.title, 18.0));
+                if let Some(id) = item.key.strip_prefix("rule:") {
+                    ui.horizontal(|ui| {
                         let p = style::palette(ui);
                         let (icon, hint) = if marked {
                             ("\u{2605}", tr("Remove the bookmark (Ctrl+B)"))
@@ -361,10 +361,8 @@ pub fn diff_detail(
                         if style::icon_button(ui, icon, hint, true, Some(p.accent)).clicked() {
                             acts.push(Act::ToggleBookmark);
                         }
-                    }
-                });
-                if let Some(id) = item.key.strip_prefix("rule:") {
-                    views::id_line(ui, id);
+                        views::id_line(ui, id);
+                    });
                 }
                 if !item.group.is_empty() {
                     ui.horizontal_wrapped(|ui| {

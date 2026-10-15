@@ -3399,18 +3399,19 @@ impl eframe::App for App {
             if let Some(Doc::Diff(doc)) = self.docs.get(self.active) {
                 let doc: &DiffDoc = doc;
                 let p = style::palette(ui);
-                egui::Panel::right("diff-detail")
+                let (default, range) = list_split(ui);
+                egui::Panel::left("diff-list")
                     .resizable(true)
-                    .default_size(420.0)
-                    .size_range(260.0..=900.0)
-                    .frame(egui::Frame::new().fill(p.bg))
-                    .show(ui, |ui| {
-                        diffview::diff_detail(ui, catalog, texts, doc, settings, marked, &mut acts);
-                    });
-                egui::CentralPanel::default()
+                    .default_size(default)
+                    .size_range(range)
                     .frame(egui::Frame::new().fill(p.card))
                     .show(ui, |ui| {
                         diffview::diff_view(ui, catalog, texts, doc, &mut acts);
+                    });
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::new().fill(p.bg))
+                    .show(ui, |ui| {
+                        diffview::diff_detail(ui, catalog, texts, doc, settings, marked, &mut acts);
                     });
             }
         } else if kind == 4 {
@@ -3456,21 +3457,22 @@ impl eframe::App for App {
             let search = &self.marks_search;
             let tab = &self.marks_tab;
             let p = style::palette(ui);
-            egui::Panel::right("marks-detail")
+            let (default, range) = list_split(ui);
+            egui::Panel::left("marks-list")
                 .resizable(true)
-                .default_size(420.0)
-                .size_range(260.0..=900.0)
-                .frame(egui::Frame::new().fill(p.bg))
-                .show(ui, |ui| {
-                    marksview::marks_detail(
-                        ui, catalog, texts, imports, marks, tab, settings, &mut acts,
-                    );
-                });
-            egui::CentralPanel::default()
+                .default_size(default)
+                .size_range(range)
                 .frame(egui::Frame::new().fill(p.card))
                 .show(ui, |ui| {
                     marksview::marks_view(
                         ui, catalog, texts, imports, marks, path, search, tab, &mut acts,
+                    );
+                });
+            egui::CentralPanel::default()
+                .frame(egui::Frame::new().fill(p.bg))
+                .show(ui, |ui| {
+                    marksview::marks_detail(
+                        ui, catalog, texts, imports, marks, tab, settings, &mut acts,
                     );
                 });
         } else if kind == 7 {
@@ -3544,6 +3546,14 @@ fn is_doc_link(url: &str) -> bool {
 }
 
 /// The selection a bookmark item names: a form id, a rule id or a group id.
+/// The first width of the list of a diff or of the bookmarks and the widths its divider may take:
+/// the detail on the right keeps at least 300 points.
+fn list_split(ui: &egui::Ui) -> (f32, std::ops::RangeInclusive<f32>) {
+    let width = ui.available_width();
+    let max = (width - 300.0).max(320.0);
+    ((width * 0.55).clamp(320.0, max), 320.0..=max)
+}
+
 /// What a profile tab selects for an item of a diff ([`Diff::keys`]).
 fn sel_from_diff_key(catalog: &Catalog, key: &str) -> Sel {
     if let Some(id) = key.strip_prefix("rule:") {
@@ -3865,6 +3875,40 @@ mod tests {
         match app.docs.last() {
             Some(Doc::Diff(d)) => d.diff.keys().into_iter().find(|k| k.starts_with("rule:")),
             _ => None,
+        }
+    }
+
+    /// The divider between the differences and the item on the right stays where it is whatever
+    /// item is selected: the item never widens the list or pushes into it.
+    #[test]
+    fn the_divider_of_a_diff_stays_put_whatever_item_is_shown() {
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(
+            catalog,
+            CatalogTexts::embedded().unwrap(),
+            Settings::default(),
+        );
+        app.apply(vec![Act::CompareWith("Strict")]);
+        let keys = match app.docs.last() {
+            Some(Doc::Diff(d)) => d.diff.keys(),
+            _ => Vec::new(),
+        };
+        assert!(keys.len() > 3, "{keys:?}");
+        let mut harness = egui_kittest::Harness::builder()
+            .with_size(egui::vec2(1200.0, 800.0))
+            .build_eframe(|_| app);
+        let list = egui::Id::new(("diff-list", "Office", "Strict"));
+        let width = |h: &egui_kittest::Harness<'_, App>| {
+            h.ctx.read_response(list).map(|r| r.rect.width())
+        };
+        harness.step();
+        harness.step();
+        let first = width(&harness).expect("the list is drawn");
+        for key in keys {
+            harness.state_mut().apply(vec![Act::DiffSelect(key.clone())]);
+            harness.step();
+            harness.step();
+            assert_eq!(width(&harness), Some(first), "the divider moved for {key}");
         }
     }
 

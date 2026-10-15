@@ -263,8 +263,8 @@ pub fn marks_detail(
         .auto_shrink(false)
         .show(ui, |ui| {
             views::header(ui, |ui| {
+                ui.label(style::strong(ui, &t.title, 18.0));
                 ui.horizontal(|ui| {
-                    ui.label(style::strong(ui, &t.title, 18.0));
                     let p = style::palette(ui);
                     if style::icon_button(
                         ui,
@@ -277,10 +277,10 @@ pub fn marks_detail(
                     {
                         acts.push(Act::RemoveMarkAsk(i));
                     }
+                    if !b.item.is_empty() {
+                        views::id_line(ui, &b.item);
+                    }
                 });
-                if !b.item.is_empty() {
-                    views::id_line(ui, &b.item);
-                }
                 ui.horizontal_wrapped(|ui| {
                     if !t.group.is_empty() {
                         style::chip(ui, &t.group, false);

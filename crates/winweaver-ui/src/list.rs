@@ -165,7 +165,7 @@ pub fn show<K: Clone>(
         let galley =
             painter.layout_no_wrap(column.title.clone(), style::strong_font(ui, 12.0), p.muted);
         painter
-            .with_clip_rect(cell.shrink2(egui::vec2(PAD, 0.0)))
+            .with_clip_rect(cell.shrink2(egui::vec2(PAD, 0.0)).intersect(area))
             .galley(
                 egui::pos2(x + PAD, cell.center().y - galley.size().y / 2.0),
                 galley,
