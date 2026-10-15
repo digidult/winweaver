@@ -220,7 +220,6 @@ impl Search {
             .map(str::to_lowercase)
             .collect()
     }
-
 }
 
 /// Puts a search first in the history of the searches; `true` when the history changed.
@@ -1022,7 +1021,10 @@ impl App {
             self.open_marks_path(path);
             return;
         }
-        if path.extension().is_some_and(|e| e == admx::CATALOG_EXTENSION) {
+        if path
+            .extension()
+            .is_some_and(|e| e == admx::CATALOG_EXTENSION)
+        {
             self.open_catalog_path(path);
             return;
         }
@@ -3017,9 +3019,11 @@ impl eframe::App for App {
             .show(ui, |ui| self.tabs_row(ui, &mut acts));
         let compact = ui.available_width() < COMPACT_WIDTH;
         if !compact && self.has_tools() {
-            egui::Panel::top("toolbar").frame(tool_frame).show(ui, |ui| {
-                ui.horizontal(|ui| self.toolbar(ui, &mut acts, false));
-            });
+            egui::Panel::top("toolbar")
+                .frame(tool_frame)
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| self.toolbar(ui, &mut acts, false));
+                });
         }
         if self.has_nav() || (compact && self.has_tools()) {
             egui::Panel::top("nav")
@@ -3542,7 +3546,11 @@ mod tests {
         let dir = PathBuf::from(dir);
         std::fs::create_dir_all(&dir).unwrap();
         let catalog = Catalog::embedded().unwrap();
-        let app = App::new(catalog, CatalogTexts::embedded().unwrap(), Settings::default());
+        let app = App::new(
+            catalog,
+            CatalogTexts::embedded().unwrap(),
+            Settings::default(),
+        );
         let mut harness = egui_kittest::Harness::builder()
             .with_size(egui::vec2(1440.0, 900.0))
             .with_pixels_per_point(1.0)
