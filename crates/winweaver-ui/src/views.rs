@@ -813,26 +813,32 @@ pub(crate) fn rule_description(
         writes(ui, rule)
     });
     if !rule.requires.is_empty() || !rule.conflicts.is_empty() {
-        section(ui, "desc-deps", tr("Dependencies and conflicts"), false, |ui| {
-            for (label, list) in [
-                (tr("Needs"), &rule.requires),
-                (tr("Conflicts with"), &rule.conflicts),
-            ] {
-                for other in list {
-                    ui.horizontal(|ui| {
-                        ui.weak(label);
-                        let title = catalog
-                            .rule(other)
-                            .map_or(other.as_str(), |r| rtitle(texts, r));
-                        if !links {
-                            ui.label(title);
-                        } else if ui.link(title).clicked() {
-                            acts.push(Act::Select(Sel::Rule(other.clone())));
-                        }
-                    });
+        section(
+            ui,
+            "desc-deps",
+            tr("Dependencies and conflicts"),
+            false,
+            |ui| {
+                for (label, list) in [
+                    (tr("Needs"), &rule.requires),
+                    (tr("Conflicts with"), &rule.conflicts),
+                ] {
+                    for other in list {
+                        ui.horizontal(|ui| {
+                            ui.weak(label);
+                            let title = catalog
+                                .rule(other)
+                                .map_or(other.as_str(), |r| rtitle(texts, r));
+                            if !links {
+                                ui.label(title);
+                            } else if ui.link(title).clicked() {
+                                acts.push(Act::Select(Sel::Rule(other.clone())));
+                            }
+                        });
+                    }
                 }
-            }
-        });
+            },
+        );
     }
     if !rule.versions.is_empty() || !rule.rollback.is_empty() || !rule.verify.is_empty() {
         section(

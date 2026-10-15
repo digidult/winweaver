@@ -168,7 +168,11 @@ impl Diff {
     /// The keys of the items in their order: `install:<field>`, `languages:<field>`, `accounts`
     /// and `rule:<id>`.
     pub fn keys(&self) -> Vec<String> {
-        let mut keys: Vec<String> = self.install.keys().map(|k| format!("install:{k}")).collect();
+        let mut keys: Vec<String> = self
+            .install
+            .keys()
+            .map(|k| format!("install:{k}"))
+            .collect();
         keys.extend(self.languages.keys().map(|k| format!("languages:{k}")));
         if self.accounts.is_some() {
             keys.push("accounts".to_owned());

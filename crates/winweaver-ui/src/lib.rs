@@ -2478,7 +2478,8 @@ impl App {
         let other_side = diff::Side::of(&other, other_path);
         let diff = Diff::between(&doc.profile, &other, base_side, other_side);
         self.status = format!("{} differences", diff.count());
-        self.docs.push(Doc::Diff(Box::new(DiffDoc::new(diff, None))));
+        self.docs
+            .push(Doc::Diff(Box::new(DiffDoc::new(diff, None))));
         self.active = self.docs.len() - 1;
     }
 
@@ -3375,7 +3376,10 @@ mod tests {
         harness.state_mut().apply(vec![Act::DiffSelect(key)]);
         harness.step();
         harness.step();
-        assert!(has(&harness, "Apply this difference"), "the item is shown on the right");
+        assert!(
+            has(&harness, "Apply this difference"),
+            "the item is shown on the right"
+        );
     }
 
     /// The key of the first rule of the diff in the last tab.
@@ -3569,15 +3573,22 @@ mod tests {
         let id = key.trim_start_matches("rule:").to_owned();
         app.apply(vec![
             Act::DiffSelect(key.clone()),
-            Act::DiffComment(key.clone(), "Checked with the lab
-and kept".into()),
+            Act::DiffComment(
+                key.clone(),
+                "Checked with the lab
+and kept"
+                    .into(),
+            ),
         ]);
         let Doc::Diff(d) = &app.docs[1] else {
             panic!("the second tab is the diff");
         };
         assert_eq!(d.sel.as_deref(), Some(key.as_str()));
-        assert_eq!(d.diff.comments[&key], "Checked with the lab
-and kept");
+        assert_eq!(
+            d.diff.comments[&key],
+            "Checked with the lab
+and kept"
+        );
         assert!(d.dirty);
         app.apply(vec![Act::DiffComment(key.clone(), "  ".into())]);
         assert!(matches!(&app.docs[1], Doc::Diff(d) if d.diff.comments.is_empty()));

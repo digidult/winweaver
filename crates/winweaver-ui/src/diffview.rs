@@ -189,7 +189,11 @@ fn shown<'a>(catalog: &'a Catalog, texts: Option<&CatalogTexts>, doc: &DiffDoc) 
 }
 
 fn side_path(path: &str) -> &str {
-    if path.is_empty() { tr("not saved") } else { path }
+    if path.is_empty() {
+        tr("not saved")
+    } else {
+        path
+    }
 }
 
 /// The list of the differences in the middle of the tab.
@@ -202,7 +206,11 @@ pub fn diff_view(
 ) {
     let d = &doc.diff;
     views::header(ui, |ui| {
-        ui.label(style::strong(ui, format!("{} vs {}", d.base.name, d.other.name), 18.0));
+        ui.label(style::strong(
+            ui,
+            format!("{} vs {}", d.base.name, d.other.name),
+            18.0,
+        ));
         ui.label(style::muted(
             ui,
             trf(
@@ -237,8 +245,14 @@ pub fn diff_view(
                 list::Cell::new(&item.group).muted(),
                 list::Cell::new(item.base.join(", ")),
                 list::Cell::new(item.other.join(", ")).strong(),
-                list::Cell::new(doc.diff.comments.get(&item.key).cloned().unwrap_or_default())
-                    .muted(),
+                list::Cell::new(
+                    doc.diff
+                        .comments
+                        .get(&item.key)
+                        .cloned()
+                        .unwrap_or_default(),
+                )
+                .muted(),
             ],
         })
         .collect();
@@ -255,7 +269,11 @@ pub fn diff_view(
     };
     let out = list::show(
         ui,
-        egui::Id::new(("diff-list", doc.diff.base.name.as_str(), doc.diff.other.name.as_str())),
+        egui::Id::new((
+            "diff-list",
+            doc.diff.base.name.as_str(),
+            doc.diff.other.name.as_str(),
+        )),
         tr("Differences"),
         &columns,
         &rows,
@@ -308,7 +326,11 @@ pub fn diff_detail(
         egui::Frame::new()
             .inner_margin(Margin::same(18))
             .show(ui, |ui| {
-                ui.label(style::muted(ui, tr("Select a difference to see it here."), 13.0));
+                ui.label(style::muted(
+                    ui,
+                    tr("Select a difference to see it here."),
+                    13.0,
+                ));
             });
         return;
     };
