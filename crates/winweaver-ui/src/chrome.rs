@@ -404,6 +404,12 @@ impl App {
                     return Vec::new();
                 };
                 let mut out = vec![(file.name.clone(), Some(Act::CatalogSelect(String::new())))];
+                if c.sel.is_none()
+                    && let Some(g) = c.group.as_deref().and_then(|g| file.groups.iter().find(|x| x.id == g))
+                {
+                    let lang = crate::i18n::current();
+                    out.push((crate::catalogview::group_title(file, &lang, g).to_owned(), None));
+                }
                 if let Some(rule) = c
                     .sel
                     .as_deref()
@@ -565,11 +571,6 @@ impl App {
             self.settings.search_history = self.search_history.clone();
             self.settings_dirty = true;
         }
-    }
-
-    /// Whether the message bar has anything to show for the active tab.
-    pub(crate) fn has_messages(&self) -> bool {
-        matches!(self.docs.get(self.active), Some(Doc::Profile(d)) if !d.issues.is_empty())
     }
 
     /// The message bar of the checks and warnings, folded to one line or open with its own

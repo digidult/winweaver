@@ -11,7 +11,7 @@ use winweaver_core::admx::CatalogFile;
 use winweaver_core::catalog::{Group, Rule};
 
 use crate::i18n::{tr, trf};
-use crate::{Act, Search, style};
+use crate::{Act, Search, style, tree};
 
 /// An open tab of a catalog.
 pub struct CatalogDoc {
@@ -24,10 +24,14 @@ pub struct CatalogDoc {
     pub path: Option<PathBuf>,
     /// The selected rule.
     pub sel: Option<String>,
+    /// The selected group, when no rule is.
+    pub group: Option<String>,
     pub expanded: HashSet<String>,
     pub search: Search,
-    /// The selected row is scrolled into view at the next frame.
+    /// The selected row is scrolled to the middle at the next frame.
     pub reveal: bool,
+    /// The selected row follows into view at the next frame.
+    pub follow: bool,
 }
 
 impl CatalogDoc {
@@ -39,9 +43,11 @@ impl CatalogDoc {
             file: None,
             path: None,
             sel: None,
+            group: None,
             expanded: roots(file).map(|g| g.id.clone()).collect(),
             search: Search::default(),
             reveal: false,
+            follow: false,
         }
     }
 
@@ -123,48 +129,15 @@ struct Filter {
     groups: HashSet<String>,
 }
 
-/// The tab: the tree on the left, the selected policy on the right.
-pub fn catalog_view(ui: &mut egui::Ui, file: &CatalogFile, doc: &CatalogDoc, acts: &mut Vec<Act>) {
-    let lang = crate::i18n::current();
-    let words = doc.search.words();
-    let (rules, groups) = matches(file, &lang, &words);
-    let filter = Filter {
-        words: !words.is_empty(),
-        rules,
-        groups,
-    };
-    let p = style::palette(ui);
-    egui::Panel::left("catalog-tree")
-        .resizable(true)
-        .default_size(380.0)
-        .frame(egui::Frame::new().fill(p.card).inner_margin(egui::Margin::symmetric(6, 4)))
-        .show(ui, |ui| {
-            egui::ScrollArea::vertical()
-                .auto_shrink(false)
-                .show(ui, |ui| {
-                    if filter.words && filter.rules.is_empty() {
-                        ui.weak(tr("Nothing matches the search."));
-                    }
-                    for root in roots(file) {
-                        group_rows(ui, file, &lang, doc, &filter, root, acts);
-                    }
-                });
-        });
-    egui::CentralPanel::default().show(ui, |ui| {
-        egui::ScrollArea::vertical()
-            .auto_shrink(false)
-            .show(ui, |ui| detail(ui, file, &lang, doc, acts));
-    });
-}
-
-fn group_rows(
-    ui: &mut egui::Ui,
+/// The rows of the tree under a group: groups as `g:<id>`, policies as `r:<id>`.
+fn catalog_rows(
+    rows: &mut Vec<tree::Row<String>>,
     file: &CatalogFile,
     lang: &str,
     doc: &CatalogDoc,
     filter: &Filter,
     group: &Group,
-    acts: &mut Vec<Act>,
+    depth: usize,
 ) {
     if filter.words && !filter.groups.contains(&group.id) {
         return;
@@ -176,40 +149,108 @@ fn group_rows(
         .filter(|r| r.group == group.id)
         .filter(|r| !filter.words || filter.rules.contains(&r.id))
         .collect();
-    ui.horizontal(|ui| {
-        let twisty = if open { "\u{25BE}" } else { "\u{25B8}" };
-        if ui
-            .add(egui::Button::new(style::muted(ui, twisty, 11.0)).frame(false))
-            .clicked()
-        {
-            acts.push(Act::CatalogExpand(group.id.clone(), !open));
-        }
-        ui.label(group_title(file, lang, group));
-        ui.label(style::muted(ui, rules.len().to_string(), 11.0));
+    rows.push(tree::Row {
+        key: format!("g:{}", group.id),
+        depth,
+        title: group_title(file, lang, group).to_owned(),
+        right: rules.len().to_string(),
+        check: tree::Check::None,
+        open: Some(open),
+        muted: false,
+        icon: None,
+        switch: None,
     });
     if !open {
         return;
     }
-    ui.indent(&group.id, |ui| {
-        for child in file
-            .groups
-            .iter()
-            .filter(|g| g.parent.as_deref() == Some(group.id.as_str()))
-        {
-            group_rows(ui, file, lang, doc, filter, child, acts);
-        }
-        for rule in rules {
-            let selected = doc.sel.as_deref() == Some(rule.id.as_str());
-            let (title, _) = rule_texts(file, lang, rule);
-            let response = ui.selectable_label(selected, title);
-            if selected && doc.reveal {
-                response.scroll_to_me(Some(egui::Align::Center));
+    for child in file
+        .groups
+        .iter()
+        .filter(|g| g.parent.as_deref() == Some(group.id.as_str()))
+    {
+        catalog_rows(rows, file, lang, doc, filter, child, depth + 1);
+    }
+    for rule in rules {
+        rows.push(tree::Row {
+            key: format!("r:{}", rule.id),
+            depth: depth + 1,
+            title: rule_texts(file, lang, rule).0.to_owned(),
+            right: String::new(),
+            check: tree::Check::None,
+            open: None,
+            muted: false,
+            icon: None,
+            switch: None,
+        });
+    }
+}
+
+/// The tab: the tree on the left, the selected policy on the right.
+pub fn catalog_view(ui: &mut egui::Ui, file: &CatalogFile, doc: &CatalogDoc, acts: &mut Vec<Act>) {
+    let lang = crate::i18n::current();
+    let words = doc.search.words();
+    let (rules, groups) = matches(file, &lang, &words);
+    let filter = Filter {
+        words: !words.is_empty(),
+        rules,
+        groups,
+    };
+    let mut rows = Vec::new();
+    for root in roots(file) {
+        catalog_rows(&mut rows, file, &lang, doc, &filter, root, 0);
+    }
+    let key = match (&doc.sel, &doc.group) {
+        (Some(r), _) => Some(format!("r:{r}")),
+        (None, Some(g)) => Some(format!("g:{g}")),
+        _ => None,
+    };
+    let selected = key.and_then(|k| rows.iter().position(|r| r.key == k));
+    let scroll = if doc.reveal {
+        tree::Scroll::Center
+    } else if doc.follow {
+        tree::Scroll::Near
+    } else {
+        tree::Scroll::None
+    };
+    if selected.is_none() && scroll != tree::Scroll::None {
+        acts.push(Act::Revealed);
+    }
+    let p = style::palette(ui);
+    egui::Panel::left("catalog-tree")
+        .resizable(true)
+        .default_size(380.0)
+        .frame(egui::Frame::new().fill(p.card).inner_margin(egui::Margin::symmetric(0, 4)))
+        .show(ui, |ui| {
+            if filter.words && filter.rules.is_empty() {
+                ui.weak(tr("Nothing matches the search."));
+            }
+            let id = egui::Id::new(("catalog-tree", doc.id.as_str()));
+            let out = tree::show(ui, id, &rows, selected, scroll);
+            for event in out.events {
+                match event {
+                    tree::Event::Select(k) => {
+                        let key = k.strip_prefix("r:").map_or(k.clone(), str::to_owned);
+                        acts.push(Act::CatalogSelect(key));
+                    }
+                    tree::Event::Expand(k, open) => {
+                        if let Some(g) = k.strip_prefix("g:") {
+                            acts.push(Act::CatalogExpand(g.to_owned(), open));
+                        }
+                    }
+                    tree::Event::Toggle(_) | tree::Event::Switch(..) => {}
+                }
+            }
+            if out.moved {
+                acts.push(Act::Follow);
+            }
+            if out.scrolled {
                 acts.push(Act::Revealed);
             }
-            if response.clicked() {
-                acts.push(Act::CatalogSelect(rule.id.clone()));
-            }
-        }
+        });
+    egui::CentralPanel::default().show(ui, |ui| {
+        egui::ScrollArea::vertical()
+            .auto_shrink(false)
+            .show(ui, |ui| detail(ui, file, &lang, doc, acts));
     });
 }
 
@@ -225,6 +266,19 @@ fn detail(
         .as_deref()
         .and_then(|id| file.rules.iter().find(|r| r.id == id))
     else {
+        if let Some(group) = doc
+            .group
+            .as_deref()
+            .and_then(|g| file.groups.iter().find(|x| x.id == g))
+        {
+            ui.heading(group_title(file, lang, group));
+            crate::views::id_line(ui, &group.id);
+            ui.weak(trf(
+                "{n} policies",
+                &[("n", &file.rules.iter().filter(|r| r.group == group.id).count())],
+            ));
+            return;
+        }
         ui.heading(&file.name);
         ui.weak(trf(
             "{rules} rules, {skipped} skipped",
@@ -242,7 +296,7 @@ fn detail(
     };
     let (title, summary) = rule_texts(file, lang, rule);
     ui.label(RichText::new(title).size(18.0).strong());
-    ui.monospace(&rule.id);
+    crate::views::id_line(ui, &rule.id);
     ui.add_space(6.0);
     if doc.file.is_none() && ui.button(tr("Show in the profile tree")).clicked() {
         acts.push(Act::ShowInProfile(file.id.clone(), rule.id.clone()));

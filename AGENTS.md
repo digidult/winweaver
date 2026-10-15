@@ -72,10 +72,13 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      boxes, a policy), chrome.rs (the tab row, the command bar of the active tab, the
 │   │                      navigation row with the search of the tab, the message bar, the status bar),
 │   │                      style.rs (the palette of the mockups, Segoe UI and Consolas, the painted buttons,
-│   │                      cards and chips)
+│   │                      cards and chips), tree.rs (the painted tree of a profile and of a catalog tab: one
+│   │                      stop of Tab, the keys inside)
 │   └── winweaver/         the executable: the window, --mcp stdio, --mcp http, --elevated-apply <plan> <digest>
 │                          (the helper: only a plan-*.json of output/ with that SHA-256), --version, --check-catalog
 ├── data/                  embedded into the executable at build time
+│   ├── reference/         the parameter reference of the predecessor (00-20 and README), carried over with the
+│   │                      catalog data; the `doc` field of a rule links into it with a heading anchor
 │   ├── catalog/           groups.json, 00-17 rules files, lang/ru.json and lang/uk.json (catalog 0.11 of the
 │   │                      predecessor)
 │   ├── presets/           office, strict, laptop, home .wwprofile (converted once from the predecessor)
@@ -232,6 +235,16 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   colour theme overrides its tokens, also with the names of the first version), Segoe UI, its semibold cut
   and Consolas read from the fonts folder of Windows before the first frame (`install_fonts`), egui's fonts
   as the fallback for symbols. `style::strong` uses the semibold family only once it is installed.
+- Keyboard (items 2 and 5 of the list): a tree is one stop of Tab (`tree::show` makes a focusable area,
+  the rows sense clicks only); a click on a row gives it the focus, so the keys go on from the clicked
+  row: arrows, Home, End, Page Up and Down, Left and Right fold and go to the parent or child, Space
+  toggles, Enter opens a group. A move with the keys sets `follow`, and the row comes into view at the next
+  frame; the detail panel shows the new selection at once.
+- The detail panel has the cards of the mockups: the head with the title, the id with a copy button
+  (`views::id_line`), chips and the switch; Parameters, This PC and the folding Description, whose texts
+  are `style::selectable_text` (a menu on the right button: copy, select all, copy all). A `doc` link
+  opens the reference page in a Markdown tab at its heading (`Act::OpenDoc`, `mdview::slug`); links to
+  `.md` pages inside Markdown tabs are taken from the output of egui instead of the browser.
 - A catalog file (`.wwcatalog`) opens like any document, without importing it (`CatalogDoc::from_file`);
   its command bar offers Import.
 - The tab of an import (`Doc::Catalog`, "Open" in Settings, Policy templates) shows its tree without check boxes

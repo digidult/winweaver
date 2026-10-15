@@ -455,6 +455,54 @@ pub fn chip(ui: &mut egui::Ui, text: &str, accent: bool) -> egui::Response {
         .inner
 }
 
+/// Text the reader can select, with a menu on the right button: copy the selection, select all,
+/// copy all. It wraps at the width of the panel and never changes.
+pub fn selectable_text(ui: &mut egui::Ui, id: impl std::hash::Hash, text: &str) {
+    let id = ui.make_persistent_id(id);
+    let mut shown = text;
+    let output = egui::TextEdit::multiline(&mut shown)
+        .id(id)
+        .frame(false)
+        .desired_width(f32::INFINITY)
+        .desired_rows(1)
+        .margin(Margin::ZERO)
+        .show(ui);
+    let selected: String = output
+        .cursor_range
+        .map(|r| {
+            let r = r.as_sorted_char_range();
+            text.chars()
+                .skip(r.start.0)
+                .take(r.end.0.saturating_sub(r.start.0))
+                .collect()
+        })
+        .unwrap_or_default();
+    let galley = output.galley.clone();
+    output.response.context_menu(|ui| {
+        if ui
+            .add_enabled(!selected.is_empty(), egui::Button::new(crate::i18n::tr("Copy")))
+            .clicked()
+        {
+            ui.ctx().copy_text(selected.clone());
+            ui.close();
+        }
+        if ui.button(crate::i18n::tr("Select all")).clicked() {
+            if let Some(mut state) = egui::TextEdit::load_state(ui.ctx(), id) {
+                state
+                    .cursor
+                    .set_char_range(Some(egui::text_selection::CCursorRange::select_all(&galley)));
+                state.store(ui.ctx(), id);
+            }
+            ui.memory_mut(|m| m.request_focus(id));
+            ui.close();
+        }
+        if ui.button(crate::i18n::tr("Copy all")).clicked() {
+            ui.ctx().copy_text(text.to_owned());
+            ui.close();
+        }
+    });
+}
+
 /// Muted text of a size.
 pub fn muted(ui: &egui::Ui, text: impl Into<String>, size: f32) -> RichText {
     RichText::new(text).size(size).color(palette(ui).muted)

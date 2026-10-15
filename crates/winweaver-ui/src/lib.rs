@@ -17,6 +17,7 @@ mod session;
 mod settings;
 mod style;
 mod themes;
+mod tree;
 mod views;
 
 use std::collections::HashSet;
@@ -93,8 +94,10 @@ pub struct ProfileDoc {
     /// When the profile last changed and has no draft yet.
     changed: Option<std::time::Instant>,
     pub search: Search,
-    /// The selected row is scrolled into view at the next frame.
+    /// The selected row is scrolled to the middle at the next frame (after a search).
     pub reveal: bool,
+    /// The selected row follows into view at the next frame (after a move with the keys).
+    pub follow: bool,
 }
 
 impl ProfileDoc {
@@ -119,6 +122,7 @@ impl ProfileDoc {
             changed: None,
             search: Search::default(),
             reveal: false,
+            follow: false,
         }
     }
 
@@ -314,6 +318,10 @@ pub enum Act {
     SearchCleared,
     /// The selected row was scrolled into view.
     Revealed,
+    /// The selection moved with the keys: it follows into view.
+    Follow,
+    /// Opens a page of the documentation, `name.md#heading`.
+    OpenDoc(String),
     /// Opens the settings at a section (0 general, 1 policy templates, 2 files).
     OpenSettingsSection(usize),
     /// Imports the catalog file of the active tab.
@@ -490,6 +498,59 @@ impl App {
                 self.docs.push(Doc::Settings);
                 self.active = self.docs.len() - 1;
             }
+        }
+    }
+
+    /// Opens a page of the documentation a link names, such as
+    /// `docs/technical/reference/18-browsers.md#microsoft-edge`, at the heading of its anchor; a
+    /// link `#heading` goes to a heading of the Markdown tab that is open.
+    fn open_doc(&mut self, link: &str) {
+        let (file, anchor) = match link.split_once('#') {
+            Some((f, a)) => (f, Some(a.to_owned())),
+            None => (link, None),
+        };
+        let name = file.rsplit(['/', '\\']).next().unwrap_or(file);
+        if name.is_empty() {
+            if let Some(Doc::Markdown(m)) = self.docs.get_mut(self.active) {
+                m.jump = anchor.is_some();
+                m.anchor = anchor;
+            }
+            return;
+        }
+        let (title, text) = if name.eq_ignore_ascii_case("guide.md") {
+            (
+                mdview::GUIDE_TITLE.to_owned(),
+                Some(mdview::guide_text(&i18n::current())),
+            )
+        } else {
+            (
+                name.to_owned(),
+                mdview::REFERENCE
+                    .iter()
+                    .find(|(n, _)| n.eq_ignore_ascii_case(name))
+                    .map(|(_, t)| (*t).to_owned()),
+            )
+        };
+        let Some(text) = text else {
+            self.status = trf("No page {name} in the documentation", &[("name", &name)]);
+            return;
+        };
+        let i = match self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Markdown(m) if m.path.is_none() && m.title == title))
+        {
+            Some(i) => i,
+            None => {
+                self.docs
+                    .push(Doc::Markdown(Box::new(MdDoc::new(title, None, text))));
+                self.docs.len() - 1
+            }
+        };
+        self.active = i;
+        if let Some(Doc::Markdown(m)) = self.docs.get_mut(i) {
+            m.jump = anchor.is_some();
+            m.anchor = anchor;
         }
     }
 
@@ -2118,9 +2179,18 @@ impl App {
                 Act::ExportImport(id) => self.export_import(&id),
                 Act::StartRename(id, name) => self.renaming = Some((id, name)),
                 Act::OpenCatalog(id) => self.open_catalog(&id),
-                Act::CatalogSelect(id) => {
+                Act::CatalogSelect(key) => {
                     if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) {
-                        c.sel = Some(id);
+                        if let Some(group) = key.strip_prefix("g:") {
+                            c.group = Some(group.to_owned());
+                            c.sel = None;
+                        } else if key.is_empty() {
+                            c.group = None;
+                            c.sel = None;
+                        } else {
+                            c.group = None;
+                            c.sel = Some(key);
+                        }
                     }
                 }
                 Act::CatalogExpand(gid, open) => {
@@ -2185,10 +2255,22 @@ impl App {
                 Act::ToggleMessages => self.messages_open = !self.messages_open,
                 Act::SearchCleared => self.reveal_selection(),
                 Act::Revealed => match self.docs.get_mut(self.active) {
-                    Some(Doc::Profile(doc)) => doc.reveal = false,
-                    Some(Doc::Catalog(c)) => c.reveal = false,
+                    Some(Doc::Profile(doc)) => {
+                        doc.reveal = false;
+                        doc.follow = false;
+                    }
+                    Some(Doc::Catalog(c)) => {
+                        c.reveal = false;
+                        c.follow = false;
+                    }
                     _ => {}
                 },
+                Act::Follow => match self.docs.get_mut(self.active) {
+                    Some(Doc::Profile(doc)) => doc.follow = true,
+                    Some(Doc::Catalog(c)) => c.follow = true,
+                    _ => {}
+                },
+                Act::OpenDoc(link) => self.open_doc(&link),
                 Act::Exit => self.exit = true,
                 Act::Message(text) => self.status = text,
             }
@@ -2760,9 +2842,15 @@ impl eframe::App for App {
             let settings = &self.settings;
             if let Some(Doc::Profile(doc)) = self.docs.get(self.active) {
                 let doc: &ProfileDoc = doc;
+                let p = style::palette(ui);
                 egui::Panel::left("tree")
                     .resizable(true)
                     .default_size(380.0)
+                    .frame(
+                        egui::Frame::new()
+                            .fill(p.card)
+                            .inner_margin(egui::Margin::symmetric(0, 4)),
+                    )
                     .show(ui, |ui| {
                         views::tree_view(
                             ui,
@@ -2774,9 +2862,11 @@ impl eframe::App for App {
                             &mut acts,
                         );
                     });
-                egui::CentralPanel::default().show(ui, |ui| {
-                    views::detail_view(ui, catalog, texts, doc, settings, &mut acts);
-                });
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::new().fill(p.bg))
+                    .show(ui, |ui| {
+                        views::detail_view(ui, catalog, texts, doc, settings, &mut acts);
+                    });
             }
         } else if kind == 3 {
             let catalog = &self.catalog;
@@ -2829,6 +2919,18 @@ impl eframe::App for App {
             });
         }
         self.confirm_view(ui.ctx(), &mut acts);
+        let links: Vec<String> = ui.ctx().output_mut(|o| {
+            let mut found = Vec::new();
+            o.commands.retain(|c| match c {
+                egui::OutputCommand::OpenUrl(u) if is_doc_link(&u.url) => {
+                    found.push(u.url.clone());
+                    false
+                }
+                _ => true,
+            });
+            found
+        });
+        acts.extend(links.into_iter().map(Act::OpenDoc));
         acts.append(&mut self.pending_acts);
         self.apply(acts);
         self.poll_running(ui.ctx());
@@ -2841,6 +2943,15 @@ impl eframe::App for App {
         self.persist_settings();
         self.log_status();
     }
+}
+
+/// Whether a link points into the documentation of the program (a Markdown page or a heading)
+/// rather than to the web.
+fn is_doc_link(url: &str) -> bool {
+    !url.contains("://")
+        && (url.starts_with('#')
+            || url.to_ascii_lowercase().ends_with(".md")
+            || url.to_ascii_lowercase().contains(".md#"))
 }
 
 /// The selection a bookmark item names: a form id, a rule id or a group id.
