@@ -165,7 +165,7 @@ fn keys<K: Clone>(ui: &mut egui::Ui, rows: &[Row<K>], selected: Option<usize>, o
         return;
     }
     let page = ((ui.available_height() / ROW_HEIGHT) as usize).max(2) - 1;
-    let mut pressed = |key: Key| ui.input_mut(|i| i.consume_key(Modifiers::NONE, key));
+    let pressed = |key: Key| ui.input_mut(|i| i.consume_key(Modifiers::NONE, key));
     let cur = selected.unwrap_or(0);
     let target = if pressed(Key::ArrowDown) {
         Some(if selected.is_none() { 0 } else { (cur + 1).min(n - 1) })

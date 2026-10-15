@@ -457,12 +457,12 @@ pub fn chip(ui: &mut egui::Ui, text: &str, accent: bool) -> egui::Response {
 
 /// Text the reader can select, with a menu on the right button: copy the selection, select all,
 /// copy all. It wraps at the width of the panel and never changes.
-pub fn selectable_text(ui: &mut egui::Ui, id: impl std::hash::Hash, text: &str) {
+pub fn selectable_text(ui: &mut egui::Ui, id: impl std::hash::Hash + std::fmt::Debug, text: &str) {
     let id = ui.make_persistent_id(id);
     let mut shown = text;
     let output = egui::TextEdit::multiline(&mut shown)
         .id(id)
-        .frame(false)
+        .frame(egui::Frame::NONE)
         .desired_width(f32::INFINITY)
         .desired_rows(1)
         .margin(Margin::ZERO)
