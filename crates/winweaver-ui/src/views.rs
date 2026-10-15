@@ -284,10 +284,11 @@ pub fn tree_view(
         match event {
             tree::Event::Select(sel) => acts.push(Act::Select(sel)),
             tree::Event::Expand(Sel::Group(g), open) => acts.push(Act::Expand(g, open)),
-            tree::Event::Toggle(Sel::Rule(id)) | tree::Event::Switch(Sel::Rule(id), _) => {
+            tree::Event::Toggle(Sel::Rule(id)) => {
                 let on = !doc.profile.is_on(&id);
                 acts.push(Act::Toggle(id, on));
             }
+            tree::Event::Switch(Sel::Rule(id), on) => acts.push(Act::Toggle(id, on)),
             tree::Event::Toggle(Sel::Group(g)) => {
                 let rules = catalog.rules_under(&g);
                 let all = !rules.is_empty() && rules.iter().all(|r| doc.resolution.shown_on(&r.id));
