@@ -6,7 +6,7 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-use eframe::egui::{self, RichText};
+use eframe::egui;
 use winweaver_core::admx::CatalogFile;
 use winweaver_core::catalog::{Group, Rule};
 
@@ -295,7 +295,7 @@ fn detail(
         return;
     };
     let (title, summary) = rule_texts(file, lang, rule);
-    ui.label(RichText::new(title).size(18.0).strong());
+    ui.label(style::strong(ui, title, 18.0));
     crate::views::id_line(ui, &rule.id);
     ui.add_space(6.0);
     if doc.file.is_none() && ui.button(tr("Show in the profile tree")).clicked() {

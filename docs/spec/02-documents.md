@@ -137,7 +137,7 @@ WinWeaver/
 ├── settings.json          written by the window
 ├── bookmarks.wwmarks      created at the first bookmark
 ├── lang/<code>/           ui.json, catalog.json, docs/*.md (a language is a folder; en is embedded)
-├── themes/*.json          colour themes (light and dark are embedded)
+├── themes/*.wwtheme       themes: colours and fonts (Light, Dark, Latte and Matrix are embedded)
 ├── catalogs/*.wwcatalog   catalog files shipped with the program (none until the licence check)
 ├── imports/<id>/          saved imports of policy templates (created by the program)
 ├── profiles/              the user's profiles (the default folder of Open and Save)
@@ -147,7 +147,7 @@ WinWeaver/
 └── output/                autounattend.xml and the generated scripts
 ```
 
-Everything embedded (the catalog, English texts, presets, the two base themes, the guide) is in the
+Everything embedded (the catalog, English texts, presets, the four themes, the guide) is in the
 executable, so a bare `winweaver.exe` runs; the folders add languages, themes, catalogs and persistence.
 
 ## Open questions

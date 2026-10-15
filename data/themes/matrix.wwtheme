@@ -1,0 +1,29 @@
+{
+  "format": "winweaver-theme",
+  "version": 1,
+  "name": "Matrix",
+  "dark": true,
+  "font": "Consolas",
+  "font_size": 13.0,
+  "mono_font": "Consolas",
+  "colors": {
+    "accent": "#39ff14",
+    "bg": "#000000",
+    "border": "#00551a",
+    "card": "#050d05",
+    "card2": "#001a08",
+    "check": "#00b32d",
+    "check_mark": "#000000",
+    "hover": "#002a0d",
+    "msg_bg": "#1a1a00",
+    "msg_border": "#4d4000",
+    "msg_fg": "#ffd700",
+    "muted": "#00b32d",
+    "off": "#007a1f",
+    "ok": "#39ff14",
+    "sel": "#003b00",
+    "sel_text": "#b6ffb6",
+    "text": "#00ff41",
+    "warn": "#ffd700"
+  }
+}

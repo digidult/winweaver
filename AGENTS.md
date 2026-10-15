@@ -1,9 +1,11 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 14.10.2026 (lists of
-values, imported policies linked to built-in rules, the default user profile applied natively, the local accounts read natively, the colour themes; before it the map rewritten after the first day: the core, the
-window, This PC, the scripts, the translations, the session and the MCP server).
+Updated with every change of structure, commands or task status. Last update: 15.10.2026 (the list of
+the customer of 15.10.2026: the chrome of each tab, the painted tree and lists with the keyboard, the
+diff tab with comments, bookmarks of options, theme files with fonts and their editor; before it on
+14.10.2026 lists of values, linked policies, the default user profile applied natively, the local
+accounts read natively, the colour themes, and the map rewritten after the first day).
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -67,13 +69,15 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      each frame), views.rs (tree, detail panel), forms.rs (Installation, Accounts,
 │   │                      Languages), diffview.rs, mdview.rs (Markdown tabs, the guide), marksview.rs,
 │   │                      mcpview.rs (the MCP tab), session.rs (drafts, the log), settings.rs (settings.json),
-│   │                      i18n.rs (tr and trf, the translations of the interface), themes.rs (colour themes),
+│   │                      i18n.rs (tr and trf, the translations of the interface), themes.rs (theme files:
+│   │                      colours and fonts), themeview.rs (the editor of a theme as a tab),
 │   │                      catalogview.rs (the tab of an import or of a catalog file: its tree without check
 │   │                      boxes, a policy), chrome.rs (the tab row, the command bar of the active tab, the
 │   │                      navigation row with the search of the tab, the message bar, the status bar),
 │   │                      style.rs (the palette of the mockups, Segoe UI and Consolas, the painted buttons,
 │   │                      cards and chips), tree.rs (the painted tree of a profile and of a catalog tab: one
-│   │                      stop of Tab, the keys inside)
+│   │                      stop of Tab, the keys inside), list.rs (the painted list with columns of the
+│   │                      diff, the bookmarks and the MCP journal: widths by drag, the keys, a mini button)
 │   └── winweaver/         the executable: the window, --mcp stdio, --mcp http, --elevated-apply <plan> <digest>
 │                          (the helper: only a plan-*.json of output/ with that SHA-256), --version, --check-catalog
 ├── data/                  embedded into the executable at build time
@@ -86,7 +90,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   ├── templates/         the runtime templates of the predecessor carried over as data: the answer file
 │   │                      skeleton and the scripts with {{slot}}s (they name WinWeaver now), VERSION 0.11
 │   ├── lang/<code>/       ui.json: the translations of the interface (uk, ru); guide.md: the guide translated
-│   ├── themes/            latte.json, matrix.json: the embedded colour themes (a base and the colours it changes)
+│   ├── themes/            light, dark, latte, matrix .wwtheme: the embedded themes (a base, the colours it
+│   │                      changes, the fonts); Latte and Matrix are the colours of the predecessor
 │   └── docs/              guide.md, the English guide shown at the first start
 ├── skills/winweaver/      the Agent Skill for AI agents that use WinWeaver over MCP
 └── docs/
@@ -98,8 +103,8 @@ functionality carry over; the file formats are new and no program code is ported
 Next to the executable at run time (never versioned): `settings.json`, `bookmarks.wwmarks`, `profiles/`,
 `output/` (the answer file, the scripts, plan and backup files of the native apply), `imports/` (catalog files of
 the imported policy templates), `drafts/` (unsaved profiles), `logs/` (winweaver-<date>.log),
-`lang/<code>/` (more or overriding translations), `themes/` (more colour themes, `<id>.json`; the id of an
-embedded theme replaces it).
+`lang/<code>/` (more or overriding translations), `themes/` (more themes, `<id>.wwtheme`, also `<id>.json`
+of the predecessor; the id of an embedded theme replaces it).
 
 ## 4. Project rules
 
@@ -232,9 +237,28 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   a search opens the groups above the selection and scrolls it into view (`Act::SearchCleared`,
   `reveal`). The message bar folds to one line or opens with a height the user drags.
 - The look comes from `style.rs`: the palette of `docs/design/mockups/common.css` for light and dark (a
-  colour theme overrides its tokens, also with the names of the first version), Segoe UI, its semibold cut
-  and Consolas read from the fonts folder of Windows before the first frame (`install_fonts`), egui's fonts
-  as the fallback for symbols. `style::strong` uses the semibold family only once it is installed.
+  theme overrides its tokens, `style::COLOR_NAMES`, also with the names of the first version) and the
+  fonts of the theme. `install_fonts` (before the first frame) names the families `light`, `light-strong`,
+  `light-mono` and the same for `dark`; `style::apply` loads the files of the families of the two themes
+  into them (`style::FAMILIES`, `MONO_FAMILIES` in the fonts folder of Windows, egui's fonts as the
+  fallback) and scales the text styles by the size of the theme. Painted widgets take their fonts and
+  sizes from `style::font`, `strong_font`, `mono`, `size` and `row_height`, never `FontId::proportional`;
+  without `install_fonts` (tests) the families of egui are used.
+- Themes (`themes.rs`, item 4 of the list): a `.wwtheme` file is a name, a base, colours and fonts; the
+  window keeps the list in `App::themes` (read at the start, when the settings open and after a save) and
+  applies `wanted_theme` whenever it changes: the theme of an editor tab in front (a live preview), else
+  the one of the settings, else Light and Dark as Windows shows its apps. A change of a font in the
+  settings saves the file of the shown theme (`Theme::file_in`: an embedded theme gets
+  `themes/<id>.wwtheme`).
+- Lists (`list::show`, item 5): one stop of Tab like the tree; the arrows, Home, End and the page keys move
+  the selection and set `follow`, Enter or a double click opens, Delete removes where the tab allows it,
+  the widths of the columns change by dragging the lines between their titles (kept in the memory of egui).
+- Diffs keep comments by the key of an item (`Diff::keys`: `install:<field>`, `languages:<field>`,
+  `accounts`, `rule:<id>`); `Diff::apply_item` applies one. The diff tab shows the item on the right and
+  leads to it in the profile of either side, opening the file or the preset of that name.
+- Bookmarks are options (`Bookmark::option`, `is_option`): the id and the profile as a link, no title; one
+  option is one bookmark in every profile. Removing one with a comment asks first (`App::ask`, a question
+  over the window, Escape says no).
 - Keyboard (items 2 and 5 of the list): a tree is one stop of Tab (`tree::show` makes a focusable area,
   the rows sense clicks only); a click on a row gives it the focus, so the keys go on from the clicked
   row: arrows, Home, End, Page Up and Down, Left and Right fold and go to the parent or child, Space
@@ -273,7 +297,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | UI design | Variant A with the compact layout and the row switches of C and the secondary tabs of D (decided) | 14.10.2026 |
 | Core | Catalog, profiles, resolver, check, diff, bookmarks, build of the answer file, This PC (plan, judgement, capture, reports), stand-alone scripts, import of answer files and WinKickOff profiles; tests on the real data | 14.10.2026 |
 | Windows API | Reading the registry, the elevation, the locales, the Windows language and the local accounts with their groups; the native read of the whole catalog is tested on the Windows runner | 14.10.2026 |
-| Window | Tabs, menu, command bar (icons, compact below 1100 px), navigation, search, tree with row switches, detail panel, forms, check, build, diff tab, bookmarks, Markdown tabs, This PC (read, check, scripts, reports), MCP tab, settings, translations uk and ru, drafts, restored tabs, log, colour themes (Latte and Matrix, more as files) with the title bar in their colours | 14.10.2026 |
+| Window | Tabs, menu, command bar of each tab (icons above labels), navigation, search per tab, the painted tree and lists with the keyboard, detail panel with copy and selectable texts, forms, check, build, diff tab with comments, bookmarks of options, Markdown tabs with anchors, This PC (read, check, scripts, reports), MCP tab with its journal, settings, translations uk and ru, drafts, restored tabs, log, themes with fonts (Light, Dark, Latte, Matrix, more as files) and their editor, the title bar in their colours; pull requests #13 to #17 for the list of 15.10.2026 | 15.10.2026 |
 | MCP server | stdio and HTTP, 19 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
 | Native apply | Plans, the elevated helper, the backup and undo (pull request #2), the default user profile loaded and unloaded by the helper; tested in a test key of HKCU and of the default profile on the runner | 14.10.2026 |
 | Policy templates | ADMX import, catalog files, the settings section (pull request #3), lists and multi-line texts (`reg-list`, list parameters), policies linked to built-in rules | 14.10.2026 |

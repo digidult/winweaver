@@ -3,7 +3,7 @@
 //! the labels), the navigation row where it means something (back and forward, the breadcrumb,
 //! the star, the search of the tab), the message bar with its own height, and the status bar.
 
-use eframe::egui::{self, Align, Align2, CornerRadius, FontId, Layout, Margin, RichText, Sense, Stroke};
+use eframe::egui::{self, Align, Align2, CornerRadius, Layout, Margin, RichText, Sense, Stroke};
 
 use crate::i18n::{tr, trf};
 use crate::style::{self, Palette};
@@ -20,6 +20,7 @@ fn doc_icon(doc: &Doc) -> &'static str {
         Doc::Mcp => "\u{1F517}",
         Doc::Settings => "\u{2699}",
         Doc::Catalog(_) => "\u{1F4E6}",
+        Doc::Theme(_) => "\u{1F3A8}",
     }
 }
 
@@ -32,7 +33,7 @@ fn search_hint(doc: &Doc) -> &'static str {
         Doc::Bookmarks => "Search the bookmarks (Ctrl+F)",
         Doc::Mcp => "Filter the journal (Ctrl+F)",
         Doc::Catalog(_) => "Search policies (Ctrl+F)",
-        Doc::Settings => "",
+        Doc::Settings | Doc::Theme(_) => "",
     }
 }
 
@@ -70,7 +71,7 @@ impl App {
     fn tab(&self, ui: &mut egui::Ui, p: &Palette, i: usize, doc: &Doc, acts: &mut Vec<Act>) {
         let active = i == self.active;
         let title = doc.title();
-        let font = FontId::proportional(12.5);
+        let font = style::font(ui, 12.5);
         let text_w = ui
             .painter()
             .layout_no_wrap(title.clone(), font.clone(), p.text)
@@ -104,7 +105,7 @@ impl App {
                 egui::pos2(x + 6.0, rect.center().y),
                 Align2::CENTER_CENTER,
                 doc_icon(doc),
-                FontId::proportional(12.0),
+                style::font(ui, 12.0),
                 color,
             );
             x += 18.0;
@@ -129,7 +130,7 @@ impl App {
                 close_rect.center(),
                 Align2::CENTER_CENTER,
                 "\u{2715}",
-                FontId::proportional(10.0),
+                style::font(ui, 10.0),
                 if active || response.hovered() {
                     p.muted
                 } else {
@@ -318,6 +319,17 @@ impl App {
                     acts.push(Act::Open);
                 }
             }
+            Some(Doc::Theme(_)) => {
+                if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
+                    acts.push(Act::OpenThemeFile);
+                }
+                if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
+                    acts.push(Act::Save);
+                }
+                if tool(ui, "\u{1F4BE}", tr("Save as"), "Ctrl+Shift+S", true) {
+                    acts.push(Act::SaveAs);
+                }
+            }
             Some(Doc::Catalog(c)) if c.file.is_some() => {
                 if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
                     acts.push(Act::Open);
@@ -439,7 +451,10 @@ impl App {
 
     /// Whether the active tab has a navigation row: a history, a breadcrumb or a search.
     pub(crate) fn has_nav(&self) -> bool {
-        !matches!(self.docs.get(self.active), Some(Doc::Settings) | None)
+        !matches!(
+            self.docs.get(self.active),
+            Some(Doc::Settings) | Some(Doc::Theme(_)) | None
+        )
     }
 
     /// The navigation row of the active tab.
@@ -632,7 +647,7 @@ impl App {
                                     Severity::Warning => (tr("Warning"), p.warn),
                                     Severity::Info => (tr("Info"), p.muted),
                                 };
-                                ui.label(RichText::new(tag).color(color).size(12.0));
+                                ui.label(RichText::new(tag).color(color).size(style::size(ui, 12.0)));
                                 let (label, sel) = match &issue.target {
                                     Target::Rule(id) => (
                                         self.catalog.rule(id).map_or_else(
@@ -697,7 +712,7 @@ impl App {
                                 ("mode", &run.server.options().mode.name()),
                             ],
                         ))
-                        .size(11.0)
+                        .size(style::size(ui, 11.0))
                         .color(p.ok),
                     );
                 }

@@ -4,15 +4,12 @@
 //! a group. A click on a row gives the tree the keyboard focus, so the keys go on from there.
 
 use eframe::egui::{
-    self, Align, Align2, Color32, CornerRadius, FontId, Key, Modifiers, Rect, Sense, Shape, Stroke,
+    self, Align, Align2, Color32, CornerRadius, Key, Modifiers, Rect, Sense, Shape, Stroke,
     StrokeKind,
 };
 
 use crate::i18n::trf;
 use crate::style::{self, Palette};
-
-/// The height of a row.
-pub const ROW_HEIGHT: f32 = 28.0;
 
 /// The check box of a row.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -74,7 +71,6 @@ pub struct Output<K> {
 
 fn paint_check(painter: &egui::Painter, rect: Rect, check: Check, p: &Palette) {
     let r = CornerRadius::same(4);
-    let white = Color32::WHITE;
     let mark = |painter: &egui::Painter, color: Color32| {
         let points = vec![
             rect.left_top() + egui::vec2(3.8, 8.2),
@@ -91,21 +87,21 @@ fn paint_check(painter: &egui::Painter, rect: Rect, check: Check, p: &Palette) {
         }
         Check::On | Check::Blocked => {
             let fill = if check == Check::Blocked {
-                p.accent.gamma_multiply(0.45)
+                p.check.gamma_multiply(0.45)
             } else {
-                p.accent
+                p.check
             };
             painter.rect_filled(rect, r, fill);
-            mark(painter, white);
+            mark(painter, p.check_mark);
         }
         Check::Mixed => {
-            painter.rect_filled(rect, r, p.accent);
+            painter.rect_filled(rect, r, p.check);
             painter.line_segment(
                 [
                     egui::pos2(rect.center().x - 4.0, rect.center().y),
                     egui::pos2(rect.center().x + 4.0, rect.center().y),
                 ],
-                Stroke::new(2.0, white),
+                Stroke::new(2.0, p.check_mark),
             );
         }
         Check::Linked => {
@@ -226,7 +222,7 @@ fn keys<K: Clone>(ui: &mut egui::Ui, rows: &[Row<K>], selected: Option<usize>, o
     if n == 0 {
         return;
     }
-    let page = ((ui.available_height() / ROW_HEIGHT) as usize).max(2) - 1;
+    let page = ((ui.available_height() / style::row_height(ui)) as usize).max(2) - 1;
     let pressed = |key: Key| ui.input_mut(|i| i.consume_key(Modifiers::NONE, key));
     if let Some(t) = move_target(ui, n, selected, page) {
         if Some(t) != selected {
@@ -288,6 +284,7 @@ pub fn show<K: Clone>(
         keys(ui, rows, selected, &mut out);
     }
     let mut take_focus = false;
+    let row_height = style::row_height(ui);
     egui::ScrollArea::vertical()
         .id_salt(id.with("scroll"))
         .auto_shrink(false)
@@ -295,7 +292,7 @@ pub fn show<K: Clone>(
             ui.spacing_mut().item_spacing.y = 0.0;
             for (i, row) in rows.iter().enumerate() {
                 let (rect, response) = ui.allocate_exact_size(
-                    egui::vec2(ui.available_width(), ROW_HEIGHT),
+                    egui::vec2(ui.available_width(), row_height),
                     Sense::CLICK,
                 );
                 let is_selected = Some(i) == selected;
@@ -333,7 +330,7 @@ pub fn show<K: Clone>(
                                 check_rect.center(),
                                 Align2::CENTER_CENTER,
                                 icon,
-                                FontId::proportional(13.0),
+                                style::font(ui, 13.0),
                                 p.text,
                             );
                         }
@@ -346,7 +343,7 @@ pub fn show<K: Clone>(
                     } else if !row.right.is_empty() {
                         let galley = painter.layout_no_wrap(
                             row.right.clone(),
-                            FontId::proportional(11.0),
+                            style::font(ui, 11.0),
                             p.muted,
                         );
                         let w = galley.size().x;
@@ -362,9 +359,15 @@ pub fn show<K: Clone>(
                     } else {
                         left + 40.0
                     };
-                    let color = if row.muted { p.muted } else { p.text };
+                    let color = if row.muted {
+                        p.muted
+                    } else if is_selected {
+                        p.sel_text
+                    } else {
+                        p.text
+                    };
                     let galley =
-                        painter.layout_no_wrap(row.title.clone(), FontId::proportional(13.0), color);
+                        painter.layout_no_wrap(row.title.clone(), style::font(ui, 13.0), color);
                     let clip = Rect::from_min_max(egui::pos2(x, rect.top()), egui::pos2(right_edge, rect.bottom()));
                     painter.with_clip_rect(clip.intersect(painter.clip_rect())).galley(
                         egui::pos2(x, cy - galley.size().y / 2.0),

@@ -18,6 +18,7 @@ mod session;
 mod settings;
 mod style;
 mod themes;
+mod themeview;
 mod tree;
 mod views;
 
@@ -184,6 +185,8 @@ pub enum Doc {
     Settings,
     /// The tree of an import of policy templates.
     Catalog(Box<catalogview::CatalogDoc>),
+    /// The editor of a theme.
+    Theme(Box<themeview::ThemeDoc>),
 }
 
 impl Doc {
@@ -196,11 +199,14 @@ impl Doc {
             Doc::Mcp => "MCP".to_owned(),
             Doc::Settings => tr("Settings").to_owned(),
             Doc::Catalog(d) => d.name.clone(),
+            Doc::Theme(d) => d.title(),
         }
     }
 
     pub fn dirty(&self) -> bool {
-        matches!(self, Doc::Profile(d) if d.dirty) || matches!(self, Doc::Diff(d) if d.dirty)
+        matches!(self, Doc::Profile(d) if d.dirty)
+            || matches!(self, Doc::Diff(d) if d.dirty)
+            || matches!(self, Doc::Theme(d) if d.dirty)
     }
 }
 
@@ -350,6 +356,12 @@ pub enum Act {
     OpenSettingsSection(usize),
     /// Imports the catalog file of the active tab.
     ImportOpenCatalog,
+    /// Opens the editor of a theme by its id.
+    EditTheme(String),
+    /// Opens a theme file in its editor.
+    OpenThemeFile,
+    /// Makes a theme the theme of the window.
+    UseTheme(String),
     Exit,
     Message(String),
 }
@@ -380,7 +392,11 @@ pub struct App {
     status: String,
     marks: Bookmarks,
     marks_path: PathBuf,
-    theme_applied: bool,
+    /// The themes of the folder and the embedded ones, read at the start, when the settings
+    /// open and after a theme is saved.
+    themes: Vec<themes::Theme>,
+    /// The themes the window shows now: light, dark and the preference.
+    applied_theme: Option<(themes::Theme, themes::Theme, egui::ThemePreference)>,
     /// The colours given to the title bar last.
     title_colors: Option<TitleColors>,
     last_title: String,
@@ -433,7 +449,8 @@ impl App {
             status: "Ready".to_owned(),
             marks: Bookmarks::default(),
             marks_path: exe_dir().join(bookmarks::DEFAULT_FILE),
-            theme_applied: false,
+            themes: themes::themes(&themes_dir()),
+            applied_theme: None,
             title_colors: None,
             last_title: String::new(),
             exit: false,
@@ -876,11 +893,6 @@ impl App {
         });
         if before != self.settings {
             self.settings_dirty = true;
-            if before.theme != self.settings.theme
-                || before.custom_theme != self.settings.custom_theme
-            {
-                self.theme_applied = false;
-            }
             if before.language != self.settings.language {
                 self.apply_language();
             }
@@ -937,36 +949,81 @@ impl App {
                     }
                 });
         });
+        let shown = self.shown_theme_id(ui.visuals().dark_mode);
         ui.horizontal(|ui| {
             ui.label(tr("Theme"));
-            ui.radio_value(
-                &mut self.settings.theme,
-                ThemeChoice::System,
-                tr("Follow Windows"),
-            );
-            ui.radio_value(&mut self.settings.theme, ThemeChoice::Light, tr("Light"));
-            ui.radio_value(&mut self.settings.theme, ThemeChoice::Dark, tr("Dark"));
-        });
-        ui.horizontal(|ui| {
-            ui.label(tr("Colours"));
-            let list = themes::themes(&themes_dir());
-            let current = list
-                .iter()
-                .find(|t| t.id == self.settings.custom_theme)
-                .map_or_else(|| tr("Those of the theme").to_owned(), |t| t.name.clone());
-            egui::ComboBox::from_id_salt("colours")
+            let current = if self.settings.custom_theme.is_empty()
+                && self.settings.theme == ThemeChoice::System
+            {
+                tr("Follow Windows").to_owned()
+            } else {
+                themes::find(&self.themes, &shown).name
+            };
+            let mut choice = if self.settings.theme == ThemeChoice::System
+                && self.settings.custom_theme.is_empty()
+            {
+                String::new()
+            } else {
+                shown.clone()
+            };
+            let before = choice.clone();
+            egui::ComboBox::from_id_salt("theme")
                 .selected_text(current)
+                .width(200.0)
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        &mut self.settings.custom_theme,
-                        String::new(),
-                        tr("Those of the theme"),
-                    );
-                    for t in &list {
-                        ui.selectable_value(&mut self.settings.custom_theme, t.id.clone(), &t.name);
+                    ui.selectable_value(&mut choice, String::new(), tr("Follow Windows"))
+                        .on_hover_text(tr("Light or Dark, as Windows shows its apps"));
+                    for t in &self.themes {
+                        ui.selectable_value(&mut choice, t.id.clone(), &t.name);
                     }
                 });
+            if choice != before {
+                if choice.is_empty() {
+                    self.settings.theme = ThemeChoice::System;
+                    self.settings.custom_theme.clear();
+                } else {
+                    let dark = themes::find(&self.themes, &choice).dark;
+                    self.settings.theme = if dark {
+                        ThemeChoice::Dark
+                    } else {
+                        ThemeChoice::Light
+                    };
+                    self.settings.custom_theme = choice;
+                }
+            }
+            if ui
+                .button(tr("Edit the theme"))
+                .on_hover_text(tr("Opens the theme file in its editor: colours, fonts, Save as"))
+                .clicked()
+            {
+                self.pending_acts.push(Act::EditTheme(shown.clone()));
+            }
+            if ui.button(tr("Open a theme file...")).clicked() {
+                self.pending_acts.push(Act::OpenThemeFile);
+            }
         });
+        let mut theme = themes::find(&self.themes, &shown);
+        let families = style::installed_families();
+        ui.add_space(4.0);
+        if themeview::fonts_grid(ui, "settings-fonts", &mut theme, &families) {
+            let path = theme.file_in(&themes_dir());
+            match theme.save(&path) {
+                Ok(()) => {
+                    self.themes = themes::themes(&themes_dir());
+                    self.status = trf("Saved {path}", &[("path", &path.display())]);
+                }
+                Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+            }
+        }
+        ui.label(style::muted(
+            ui,
+            trf(
+                "The fonts belong to the theme {name}: a change is saved in its file in the themes folder.",
+                &[("name", &theme.name)],
+            ),
+            12.0,
+        ));
+        ui.add_space(6.0);
         ui.checkbox(
             &mut self.settings.desc_open,
             tr("Show the description panel (Ctrl+D)"),
@@ -1024,6 +1081,10 @@ impl App {
         }
         if path.extension().is_some_and(|e| e == admx::CATALOG_EXTENSION) {
             self.open_catalog_path(path);
+            return;
+        }
+        if path.extension().is_some_and(|e| e == themes::EXTENSION) {
+            self.open_theme_path(path);
             return;
         }
         let ext = path
@@ -2116,20 +2177,53 @@ impl App {
                     }
                 }
                 Act::OpenPath(path) => self.open_path(path),
-                Act::OpenSettings => self.open_settings(),
+                Act::OpenSettings => {
+                    self.themes = themes::themes(&themes_dir());
+                    self.open_settings();
+                }
                 Act::ImportOpenCatalog => self.import_open_catalog(),
                 Act::OpenSettingsSection(section) => {
                     self.settings_section = section;
                     self.open_settings();
                 }
-                Act::Save => {
-                    if matches!(self.docs.get(self.active), Some(Doc::Diff(_))) {
-                        self.save_diff();
+                Act::Save => match self.docs.get(self.active) {
+                    Some(Doc::Diff(_)) => self.save_diff(),
+                    Some(Doc::Theme(_)) => self.save_theme(false),
+                    _ => self.save_active(false),
+                },
+                Act::SaveAs => match self.docs.get(self.active) {
+                    Some(Doc::Diff(_)) => self.save_active_diff(),
+                    Some(Doc::Theme(_)) => self.save_theme(true),
+                    _ => self.save_active(true),
+                },
+                Act::EditTheme(id) => {
+                    let theme = themes::find(&self.themes, &id);
+                    self.edit_theme(theme);
+                }
+                Act::OpenThemeFile => {
+                    let dir = themes_dir();
+                    let dialog = rfd::FileDialog::new()
+                        .add_filter(tr("WinWeaver theme"), &[themes::EXTENSION, "json"])
+                        .set_title(tr("Open a theme file"));
+                    let dialog = if dir.is_dir() {
+                        dialog.set_directory(dir)
                     } else {
-                        self.save_active(false);
+                        dialog
+                    };
+                    if let Some(path) = dialog.pick_file() {
+                        self.open_theme_path(path);
                     }
                 }
-                Act::SaveAs => self.save_active(true),
+                Act::UseTheme(id) => {
+                    let dark = themes::find(&self.themes, &id).dark;
+                    self.settings.theme = if dark {
+                        ThemeChoice::Dark
+                    } else {
+                        ThemeChoice::Light
+                    };
+                    self.settings.custom_theme = id;
+                    self.settings_dirty = true;
+                }
                 Act::Back => {
                     if let Some(doc) = self.active_profile() {
                         doc.go(-1);
@@ -2777,6 +2871,7 @@ impl App {
                 Doc::Diff(d) => d.path.clone(),
                 Doc::Markdown(d) => d.path.clone(),
                 Doc::Catalog(c) => c.path.clone(),
+                Doc::Theme(t) => t.theme.path.clone(),
                 Doc::Bookmarks | Doc::Mcp | Doc::Settings => None,
             };
             if let Some(p) = path {
@@ -2926,29 +3021,120 @@ impl App {
     }
 
     /// The theme of the settings: a colour theme over its light or dark base, or the plain theme.
-    fn apply_theme(&self, ctx: &egui::Context) {
-        let custom = if self.settings.custom_theme.is_empty() {
-            None
-        } else {
-            themes::themes(&themes_dir())
-                .into_iter()
-                .find(|t| t.id == self.settings.custom_theme)
+    /// The id of the theme the settings choose for a side when they follow Windows.
+    fn shown_theme_id(&self, dark_mode: bool) -> String {
+        if !self.settings.custom_theme.is_empty() {
+            return self.settings.custom_theme.clone();
+        }
+        let dark = match self.settings.theme {
+            ThemeChoice::System => dark_mode,
+            ThemeChoice::Light => false,
+            ThemeChoice::Dark => true,
         };
-        match custom {
-            Some(t) => {
-                let p = style::Palette::from_colors(t.dark, &t.colors);
-                let (base, light, dark) = if t.dark {
-                    (egui::Theme::Dark, style::Palette::LIGHT, p)
-                } else {
-                    (egui::Theme::Light, p, style::Palette::DARK)
-                };
-                style::apply(ctx, light, dark);
-                ctx.set_theme(base);
+        if dark { "dark" } else { "light" }.to_owned()
+    }
+
+    /// The light and dark themes of the window and the preference: the theme in the editor in
+    /// front, else the one of the settings, else Light and Dark as Windows shows its apps.
+    fn wanted_theme(&self) -> (themes::Theme, themes::Theme, egui::ThemePreference) {
+        let light = themes::find(&self.themes, "light");
+        let dark = themes::find(&self.themes, "dark");
+        let chosen = match self.docs.get(self.active) {
+            Some(Doc::Theme(d)) => Some(d.theme.clone()),
+            _ => (!self.settings.custom_theme.is_empty())
+                .then(|| themes::find(&self.themes, &self.settings.custom_theme)),
+        };
+        match chosen {
+            Some(t) if t.dark => (light, t, egui::ThemePreference::Dark),
+            Some(t) => (t, dark, egui::ThemePreference::Light),
+            None => (light, dark, self.settings.theme.preference()),
+        }
+    }
+
+    fn apply_theme(&mut self, ctx: &egui::Context) {
+        let wanted = self.wanted_theme();
+        if self.applied_theme.as_ref() == Some(&wanted) {
+            return;
+        }
+        let (light, dark, preference) = &wanted;
+        style::apply(
+            ctx,
+            (light.palette(), light.fonts()),
+            (dark.palette(), dark.fonts()),
+        );
+        ctx.set_theme(*preference);
+        self.applied_theme = Some(wanted);
+    }
+
+    /// Opens the editor of a theme, or brings its tab to the front.
+    fn edit_theme(&mut self, theme: themes::Theme) {
+        if let Some(i) = self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Theme(t) if t.theme.id == theme.id))
+        {
+            self.active = i;
+            return;
+        }
+        self.docs
+            .push(Doc::Theme(Box::new(themeview::ThemeDoc::new(theme))));
+        self.active = self.docs.len() - 1;
+    }
+
+    fn open_theme_path(&mut self, path: PathBuf) {
+        match themes::Theme::load(&path) {
+            Ok(theme) => {
+                self.edit_theme(theme);
+                self.remember_recent(&path);
             }
-            None => {
-                style::apply(ctx, style::Palette::LIGHT, style::Palette::DARK);
-                ctx.set_theme(self.settings.theme.preference());
+            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+        }
+    }
+
+    /// Writes the theme of the active tab to its file, or to one the user names.
+    fn save_theme(&mut self, ask: bool) {
+        let Some(Doc::Theme(d)) = self.docs.get(self.active) else {
+            return;
+        };
+        let dir = themes_dir();
+        let path = if ask {
+            let proposed = format!("{}.{}", file_stem(&d.theme.name), themes::EXTENSION);
+            let dialog = rfd::FileDialog::new()
+                .add_filter(tr("WinWeaver theme"), &[themes::EXTENSION])
+                .set_title(tr("Save the theme as"))
+                .set_file_name(proposed);
+            let dialog = if std::fs::create_dir_all(&dir).is_ok() {
+                dialog.set_directory(&dir)
+            } else {
+                dialog
+            };
+            let Some(path) = dialog.save_file() else {
+                return;
+            };
+            if path.extension().is_some() {
+                path
+            } else {
+                path.with_extension(themes::EXTENSION)
             }
+        } else {
+            d.theme.file_in(&dir)
+        };
+        let Some(Doc::Theme(d)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        match d.theme.save(&path) {
+            Ok(()) => {
+                d.theme.id = path
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                d.theme.path = Some(path.clone());
+                d.dirty = false;
+                self.status = trf("Saved {path}", &[("path", &path.display())]);
+                self.themes = themes::themes(&dir);
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
         }
     }
 
@@ -2998,10 +3184,7 @@ impl eframe::App for App {
         if self.exit {
             ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
         }
-        if !self.theme_applied {
-            self.apply_theme(ui.ctx());
-            self.theme_applied = true;
-        }
+        self.apply_theme(ui.ctx());
         self.color_title_bar(ui, frame);
         let title = self.window_title();
         if title != self.last_title {
@@ -3038,6 +3221,7 @@ impl eframe::App for App {
             Some(Doc::Bookmarks) => 5,
             Some(Doc::Mcp) => 6,
             Some(Doc::Catalog(_)) => 7,
+            Some(Doc::Theme(_)) => 8,
             None => 2,
         };
         if kind == 0 {
@@ -3167,6 +3351,16 @@ impl eframe::App for App {
                         ui.label(tr("This import is no longer there."));
                     });
                 }
+            }
+        } else if kind == 8 {
+            let families = style::installed_families();
+            let p = style::palette(ui);
+            if let Some(Doc::Theme(doc)) = self.docs.get_mut(self.active) {
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::new().fill(p.bg))
+                    .show(ui, |ui| {
+                        themeview::theme_view(ui, doc, &families, &mut acts);
+                    });
             }
         } else if kind == 1 {
             egui::CentralPanel::default().show(ui, |ui| self.settings_view(ui));
@@ -3333,6 +3527,7 @@ fn pick_any() -> Option<PathBuf> {
                 diff::EXTENSION,
                 bookmarks::EXTENSION,
                 admx::CATALOG_EXTENSION,
+                themes::EXTENSION,
             ],
         )
         .add_filter(tr("Answer files (the profile they embed)"), &["xml"])
@@ -3483,6 +3678,7 @@ mod tests {
             (Act::OpenMarks, None),
             (Act::OpenMcp, None),
             (Act::OpenGuide, None),
+            (Act::EditTheme("matrix".to_owned()), Some("Use this theme")),
             (Act::Activate(0), None),
         ] {
             harness.state_mut().apply(vec![act]);
@@ -3492,7 +3688,7 @@ mod tests {
                 assert!(has(&harness, label), "{label} is not drawn");
             }
         }
-        assert_eq!(harness.state().docs.len(), 6);
+        assert_eq!(harness.state().docs.len(), 7);
         assert_eq!(
             harness.state().docs[harness.state().active].title(),
             "Office.wwprofile"
@@ -3589,9 +3785,43 @@ mod tests {
             harness.state_mut().apply(vec![act]);
             shot(&mut harness, name);
         }
+        harness.state_mut().apply(vec![Act::EditTheme("latte".to_owned())]);
+        shot(&mut harness, "10-theme-editor");
+        harness.state_mut().apply(vec![Act::UseTheme("matrix".to_owned()), Act::Activate(0)]);
+        shot(&mut harness, "11-matrix");
+        harness.state_mut().apply(vec![Act::UseTheme("light".to_owned())]);
         harness.set_size(egui::vec2(1000.0, 700.0));
-        harness.state_mut().apply(vec![Act::Activate(0)]);
         shot(&mut harness, "09-compact");
+    }
+
+    #[test]
+    fn a_theme_tab_previews_its_theme_and_a_theme_can_be_chosen() {
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        let (light, _, preference) = app.wanted_theme();
+        assert_eq!(light.id, "light");
+        assert_eq!(preference, egui::ThemePreference::System);
+        app.apply(vec![Act::EditTheme("matrix".into())]);
+        assert!(matches!(&app.docs[1], Doc::Theme(t) if t.theme.id == "matrix"));
+        assert_eq!(app.docs[1].title(), "matrix.wwtheme");
+        if let Some(Doc::Theme(t)) = app.docs.get_mut(1) {
+            t.theme.font_size = 16.0;
+        }
+        let (_, dark, preference) = app.wanted_theme();
+        assert_eq!(dark.id, "matrix", "the edited theme shows while its tab is in front");
+        assert_eq!(dark.font_size, 16.0);
+        assert_eq!(preference, egui::ThemePreference::Dark);
+        app.apply(vec![Act::EditTheme("matrix".into())]);
+        assert_eq!(app.docs.len(), 2, "one tab per theme");
+        app.apply(vec![Act::Activate(0)]);
+        assert_eq!(app.wanted_theme().0.id, "light", "the settings theme again");
+        app.apply(vec![Act::UseTheme("latte".into())]);
+        assert_eq!(app.settings.custom_theme, "latte");
+        assert_eq!(app.settings.theme, ThemeChoice::Light);
+        let (light, _, preference) = app.wanted_theme();
+        assert_eq!(light.name, "Latte");
+        assert_eq!(preference, egui::ThemePreference::Light);
+        assert_eq!(app.shown_theme_id(true), "latte");
     }
 
     #[test]

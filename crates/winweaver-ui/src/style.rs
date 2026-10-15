@@ -1,6 +1,7 @@
-//! The look of variant A (`docs/design/mockups/common.css`): the palette of light and dark, Segoe
-//! UI and Consolas from the fonts of Windows, the spacing, and the small painted widgets egui has
-//! no style for: the buttons of the command bar, icon buttons, cards, section titles and chips.
+//! The look of variant A (`docs/design/mockups/common.css`): the palette of light and dark, the
+//! fonts of the theme from the fonts of Windows (Segoe UI and Consolas by default), the spacing,
+//! and the small painted widgets egui has no style for: the buttons of the command bar, icon
+//! buttons, cards, section titles and chips.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -26,6 +27,11 @@ pub struct Palette {
     pub hover: Color32,
     /// The selected row.
     pub sel: Color32,
+    /// The text of the selected row.
+    pub sel_text: Color32,
+    /// A check box that is on, and its mark.
+    pub check: Color32,
+    pub check_mark: Color32,
     /// Disabled items and the frame of an empty check box.
     pub off: Color32,
     pub warn: Color32,
@@ -40,6 +46,29 @@ const fn hex(v: u32) -> Color32 {
     Color32::from_rgb((v >> 16) as u8, (v >> 8) as u8, v as u8)
 }
 
+/// The names of the colours of a theme file, in the order of the theme editor, with the names of
+/// the first version each one also takes.
+pub const COLOR_NAMES: [(&str, &[&str]); 18] = [
+    ("bg", &["background"]),
+    ("card", &["field"]),
+    ("card2", &["button", "field"]),
+    ("border", &[]),
+    ("text", &["foreground"]),
+    ("muted", &[]),
+    ("accent", &["link"]),
+    ("hover", &["button_active", "button"]),
+    ("sel", &["select"]),
+    ("sel_text", &["select_foreground"]),
+    ("check", &["check_on"]),
+    ("check_mark", &[]),
+    ("off", &["check_border", "disabled"]),
+    ("warn", &["warning"]),
+    ("ok", &[]),
+    ("msg_bg", &[]),
+    ("msg_fg", &[]),
+    ("msg_border", &[]),
+];
+
 impl Palette {
     pub const LIGHT: Palette = Palette {
         dark: false,
@@ -52,6 +81,9 @@ impl Palette {
         accent: hex(0x0067c0),
         hover: hex(0xececec),
         sel: hex(0xd9e7f5),
+        sel_text: hex(0x1b1b1b),
+        check: hex(0x0067c0),
+        check_mark: hex(0xffffff),
         off: hex(0x8d8d8d),
         warn: hex(0xc66900),
         ok: hex(0x0f7b0f),
@@ -71,6 +103,9 @@ impl Palette {
         accent: hex(0x4cc2ff),
         hover: hex(0x353535),
         sel: hex(0x2f4257),
+        sel_text: hex(0xf0f0f0),
+        check: hex(0x4cc2ff),
+        check_mark: hex(0xffffff),
         off: hex(0x7a7a7a),
         warn: hex(0xffb15c),
         ok: hex(0x6ccb5f),
@@ -79,39 +114,123 @@ impl Palette {
         msg_border: hex(0x5c4620),
     };
 
+    fn slot(&mut self, name: &str) -> Option<&mut Color32> {
+        Some(match name {
+            "bg" => &mut self.bg,
+            "card" => &mut self.card,
+            "card2" => &mut self.card2,
+            "border" => &mut self.border,
+            "text" => &mut self.text,
+            "muted" => &mut self.muted,
+            "accent" => &mut self.accent,
+            "hover" => &mut self.hover,
+            "sel" => &mut self.sel,
+            "sel_text" => &mut self.sel_text,
+            "check" => &mut self.check,
+            "check_mark" => &mut self.check_mark,
+            "off" => &mut self.off,
+            "warn" => &mut self.warn,
+            "ok" => &mut self.ok,
+            "msg_bg" => &mut self.msg_bg,
+            "msg_fg" => &mut self.msg_fg,
+            "msg_border" => &mut self.msg_border,
+            _ => return None,
+        })
+    }
+
+    /// A colour by its name in [`COLOR_NAMES`].
+    pub fn get(&self, name: &str) -> Option<Color32> {
+        let mut copy = *self;
+        copy.slot(name).map(|c| *c)
+    }
+
     /// The palette of a colour theme: its light or dark base with the colours it names. The
     /// names of the first version (background, foreground, field, select...) are understood too.
     pub fn from_colors(dark: bool, colors: &std::collections::BTreeMap<String, String>) -> Self {
         let mut p = if dark { Self::DARK } else { Self::LIGHT };
-        let get = |names: &[&str]| {
-            names
-                .iter()
-                .find_map(|n| colors.get(*n).and_then(|t| crate::themes::color(t)))
-        };
-        let slots: [(&mut Color32, &[&str]); 15] = [
-            (&mut p.bg, &["bg", "background"]),
-            (&mut p.card, &["card", "field"]),
-            (&mut p.card2, &["card2", "field"]),
-            (&mut p.border, &["border"]),
-            (&mut p.text, &["text", "foreground"]),
-            (&mut p.muted, &["muted"]),
-            (&mut p.accent, &["accent", "link"]),
-            (&mut p.hover, &["hover", "button_active", "button"]),
-            (&mut p.sel, &["sel", "select"]),
-            (&mut p.off, &["off", "disabled"]),
-            (&mut p.warn, &["warn", "warning"]),
-            (&mut p.ok, &["ok"]),
-            (&mut p.msg_bg, &["msg_bg"]),
-            (&mut p.msg_fg, &["msg_fg"]),
-            (&mut p.msg_border, &["msg_border"]),
-        ];
-        for (slot, names) in slots {
-            if let Some(c) = get(names) {
+        let base_text = p.text;
+        let base_sel_text = p.sel_text;
+        for (name, old) in COLOR_NAMES {
+            let found = std::iter::once(name)
+                .chain(old.iter().copied())
+                .find_map(|n| colors.get(n).and_then(|t| crate::themes::color(t)));
+            if let (Some(c), Some(slot)) = (found, p.slot(name)) {
                 *slot = c;
             }
         }
+        if p.sel_text == base_sel_text && p.text != base_text {
+            p.sel_text = p.text;
+        }
         p
     }
+}
+
+/// The fonts of a theme: the family of the texts, its size, the family of code and values.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Fonts {
+    pub family: String,
+    pub size: f32,
+    pub mono: String,
+}
+
+impl Default for Fonts {
+    fn default() -> Self {
+        Self {
+            family: String::new(),
+            size: BASE_SIZE,
+            mono: String::new(),
+        }
+    }
+}
+
+/// The text size the layout is drawn for; a theme with another size scales the texts.
+pub const BASE_SIZE: f32 = 13.0;
+/// The sizes a theme may have.
+pub const SIZES: std::ops::RangeInclusive<f32> = 10.0..=20.0;
+
+/// The families of texts the program knows in the fonts folder of Windows: the name, the file
+/// of the regular cut and the file of the bold or semibold cut for titles.
+pub const FAMILIES: [(&str, &str, &str); 8] = [
+    ("Segoe UI", "segoeui.ttf", "seguisb.ttf"),
+    ("Arial", "arial.ttf", "arialbd.ttf"),
+    ("Calibri", "calibri.ttf", "calibrib.ttf"),
+    ("Georgia", "georgia.ttf", "georgiab.ttf"),
+    ("Tahoma", "tahoma.ttf", "tahomabd.ttf"),
+    ("Trebuchet MS", "trebuc.ttf", "trebucbd.ttf"),
+    ("Verdana", "verdana.ttf", "verdanab.ttf"),
+    ("Consolas", "consola.ttf", "consolab.ttf"),
+];
+
+/// The families of code and values: the name and the file.
+pub const MONO_FAMILIES: [(&str, &str); 4] = [
+    ("Consolas", "consola.ttf"),
+    ("Cascadia Mono", "CascadiaMono.ttf"),
+    ("Courier New", "cour.ttf"),
+    ("Lucida Console", "lucon.ttf"),
+];
+
+fn fonts_dir() -> PathBuf {
+    std::env::var_os("WINDIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from("C:\\Windows"))
+        .join("Fonts")
+}
+
+/// The families of texts and of code this Windows has.
+pub fn installed_families() -> (Vec<&'static str>, Vec<&'static str>) {
+    let dir = fonts_dir();
+    (
+        FAMILIES
+            .iter()
+            .filter(|f| dir.join(f.1).is_file())
+            .map(|f| f.0)
+            .collect(),
+        MONO_FAMILIES
+            .iter()
+            .filter(|f| dir.join(f.1).is_file())
+            .map(|f| f.0)
+            .collect(),
+    )
 }
 
 /// The visuals of egui from a palette.
@@ -133,7 +252,7 @@ pub fn visuals(p: &Palette) -> egui::Visuals {
     v.menu_corner_radius = CornerRadius::same(8);
     v.hyperlink_color = p.accent;
     v.selection.bg_fill = p.sel;
-    v.selection.stroke = Stroke::new(1.0, p.text);
+    v.selection.stroke = Stroke::new(1.0, p.sel_text);
     v.warn_fg_color = p.warn;
     v.widgets.noninteractive.bg_fill = p.card;
     v.widgets.noninteractive.weak_bg_fill = p.card;
@@ -173,28 +292,151 @@ fn fonts_id() -> egui::Id {
     egui::Id::new("winweaver-fonts")
 }
 
-/// Sets the visuals of both themes, the spacing and the text sizes, and remembers the palettes
-/// for the painted widgets.
-pub fn apply(ctx: &egui::Context, light: Palette, dark: Palette) {
-    ctx.set_visuals_of(egui::Theme::Light, visuals(&light));
-    ctx.set_visuals_of(egui::Theme::Dark, visuals(&dark));
-    ctx.all_styles_mut(|s| {
-        s.spacing.item_spacing = egui::vec2(6.0, 4.0);
-        s.spacing.button_padding = egui::vec2(10.0, 4.0);
-        s.spacing.interact_size.y = 24.0;
-        s.spacing.menu_margin = Margin::same(6);
-        s.spacing.window_margin = Margin::same(10);
-        for (style, size, family) in [
-            (egui::TextStyle::Body, 13.0, FontFamily::Proportional),
-            (egui::TextStyle::Button, 13.0, FontFamily::Proportional),
-            (egui::TextStyle::Small, 11.0, FontFamily::Proportional),
-            (egui::TextStyle::Heading, 18.0, FontFamily::Proportional),
-            (egui::TextStyle::Monospace, 12.0, FontFamily::Monospace),
-        ] {
-            s.text_styles.insert(style, FontId::new(size, family));
+/// The fonts in use for light and dark, once [`install_fonts`] ran.
+fn installed_id() -> egui::Id {
+    egui::Id::new("winweaver-fonts-installed")
+}
+
+/// The name of the family of texts of a side: `light` or `dark`, with `-strong` for titles and
+/// `-mono` for code.
+fn family_name(dark: bool, kind: &str) -> FontFamily {
+    let side = if dark { "dark" } else { "light" };
+    FontFamily::Name(format!("{side}{kind}").into())
+}
+
+/// The font definitions for the fonts of both sides; the fonts of egui stay as the fallback
+/// (symbols, emoji).
+fn definitions(light: &Fonts, dark: &Fonts) -> egui::FontDefinitions {
+    let dir = fonts_dir();
+    let read = |name: &str| {
+        std::fs::read(dir.join(name))
+            .ok()
+            .filter(|b| b.len() < 32 * 1024 * 1024)
+    };
+    let mut defs = egui::FontDefinitions::default();
+    let proportional = defs
+        .families
+        .get(&FontFamily::Proportional)
+        .cloned()
+        .unwrap_or_default();
+    let monospace = defs
+        .families
+        .get(&FontFamily::Monospace)
+        .cloned()
+        .unwrap_or_default();
+    let mut loaded: std::collections::BTreeSet<String> = Default::default();
+    let mut load = |defs: &mut egui::FontDefinitions, file: &str| -> Option<String> {
+        let key = format!("file:{}", file.to_ascii_lowercase());
+        if loaded.contains(&key) {
+            return Some(key);
         }
+        let bytes = read(file)?;
+        defs.font_data
+            .insert(key.clone(), Arc::new(egui::FontData::from_owned(bytes)));
+        loaded.insert(key.clone());
+        Some(key)
+    };
+    for (dark, fonts) in [(false, light), (true, dark)] {
+        let family = FAMILIES
+            .iter()
+            .find(|f| f.0.eq_ignore_ascii_case(&fonts.family))
+            .unwrap_or(&FAMILIES[0]);
+        let mono = MONO_FAMILIES
+            .iter()
+            .find(|f| f.0.eq_ignore_ascii_case(&fonts.mono))
+            .map(|f| f.1)
+            .or_else(|| {
+                FAMILIES
+                    .iter()
+                    .find(|f| f.0.eq_ignore_ascii_case(&fonts.mono))
+                    .map(|f| f.1)
+            })
+            .unwrap_or(MONO_FAMILIES[0].1);
+        let mut body = proportional.clone();
+        let mut strong = proportional.clone();
+        let mut code = monospace.clone();
+        let regular = load(&mut defs, family.1).or_else(|| load(&mut defs, FAMILIES[0].1));
+        let bold = load(&mut defs, family.2).or_else(|| load(&mut defs, FAMILIES[0].2));
+        if let Some(k) = &regular {
+            body.insert(0, k.clone());
+            strong.insert(0, k.clone());
+        }
+        if let Some(k) = bold {
+            strong.insert(0, k);
+        }
+        if let Some(k) = load(&mut defs, mono) {
+            code.insert(0, k);
+        }
+        defs.families.insert(family_name(dark, ""), body);
+        defs.families.insert(family_name(dark, "-strong"), strong);
+        defs.families.insert(family_name(dark, "-mono"), code);
+    }
+    if let Some(k) = loaded.iter().find(|k| k.as_str() == "file:segoeui.ttf") {
+        defs.families
+            .entry(FontFamily::Proportional)
+            .or_default()
+            .insert(0, k.clone());
+    }
+    defs
+}
+
+/// Loads the default fonts of the theme (Segoe UI and Consolas) from the fonts folder of Windows
+/// when they are there, and gives the families of both sides their names. Call it before the
+/// first frame; without it the window keeps the fonts of egui and the sizes of the layout.
+pub fn install_fonts(ctx: &egui::Context) {
+    let fonts = Fonts::default();
+    ctx.set_fonts(definitions(&fonts, &fonts));
+    ctx.data_mut(|d| {
+        d.insert_temp(installed_id(), (fonts.clone(), fonts.clone()));
+        d.insert_temp(fonts_id(), (fonts.clone(), fonts));
     });
-    ctx.data_mut(|d| d.insert_temp(palettes_id(), (light, dark)));
+}
+
+/// Sets the visuals of both themes, their fonts and text sizes and the spacing, and remembers the
+/// palettes for the painted widgets. The fonts change only after [`install_fonts`].
+pub fn apply(ctx: &egui::Context, light: (Palette, Fonts), dark: (Palette, Fonts)) {
+    ctx.set_visuals_of(egui::Theme::Light, visuals(&light.0));
+    ctx.set_visuals_of(egui::Theme::Dark, visuals(&dark.0));
+    let installed = ctx.data(|d| d.get_temp::<(Fonts, Fonts)>(installed_id()));
+    let named = installed.is_some();
+    if let Some(now) = installed
+        && (now.0 != light.1 || now.1 != dark.1)
+    {
+        ctx.set_fonts(definitions(&light.1, &dark.1));
+        ctx.data_mut(|d| d.insert_temp(installed_id(), (light.1.clone(), dark.1.clone())));
+    }
+    for (theme, is_dark, fonts) in [
+        (egui::Theme::Light, false, &light.1),
+        (egui::Theme::Dark, true, &dark.1),
+    ] {
+        let scale = fonts.size / BASE_SIZE;
+        let (body, mono) = if named {
+            (family_name(is_dark, ""), family_name(is_dark, "-mono"))
+        } else {
+            (FontFamily::Proportional, FontFamily::Monospace)
+        };
+        ctx.style_mut_of(theme, |s| {
+            s.spacing.item_spacing = egui::vec2(6.0, 4.0);
+            s.spacing.button_padding = egui::vec2(10.0, 4.0);
+            s.spacing.interact_size.y = (24.0 * scale).max(24.0);
+            s.spacing.menu_margin = Margin::same(6);
+            s.spacing.window_margin = Margin::same(10);
+            for (style, size, family) in [
+                (egui::TextStyle::Body, 13.0, &body),
+                (egui::TextStyle::Button, 13.0, &body),
+                (egui::TextStyle::Small, 11.0, &body),
+                (egui::TextStyle::Heading, 18.0, &body),
+                (egui::TextStyle::Monospace, 12.0, &mono),
+            ] {
+                s.text_styles
+                    .insert(style, FontId::new(size * scale, family.clone()));
+            }
+        });
+    }
+    ctx.data_mut(|d| {
+        d.insert_temp(palettes_id(), (light.0, dark.0));
+        d.insert_temp(fonts_id(), (light.1, dark.1));
+    });
 }
 
 /// The palette of the theme the window shows now.
@@ -206,71 +448,61 @@ pub fn palette(ui: &egui::Ui) -> Palette {
     if ui.visuals().dark_mode { dark } else { light }
 }
 
-/// The name of the font family for titles (semibold Segoe UI).
-pub const SEMIBOLD: &str = "semibold";
-
-/// Loads Segoe UI, its semibold cut and Consolas from the fonts folder of Windows when they are
-/// there; the fonts of egui stay as the fallback (symbols, emoji). Call it before the first frame.
-pub fn install_fonts(ctx: &egui::Context) {
-    let dir = std::env::var_os("WINDIR")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("C:\\Windows"))
-        .join("Fonts");
-    let read = |name: &str| {
-        std::fs::read(dir.join(name))
-            .ok()
-            .filter(|b| b.len() < 32 * 1024 * 1024)
-    };
-    let mut defs = egui::FontDefinitions::default();
-    let mut semibold = defs
-        .families
-        .get(&FontFamily::Proportional)
-        .cloned()
-        .unwrap_or_default();
-    if let Some(bytes) = read("segoeui.ttf") {
-        defs.font_data
-            .insert("segoe".into(), Arc::new(egui::FontData::from_owned(bytes)));
-        defs.families
-            .entry(FontFamily::Proportional)
-            .or_default()
-            .insert(0, "segoe".into());
-        semibold.insert(0, "segoe".into());
-    }
-    if let Some(bytes) = read("seguisb.ttf") {
-        defs.font_data.insert(
-            "segoe-semibold".into(),
-            Arc::new(egui::FontData::from_owned(bytes)),
-        );
-        semibold.insert(0, "segoe-semibold".into());
-    }
-    if let Some(bytes) = read("consola.ttf") {
-        defs.font_data
-            .insert("consolas".into(), Arc::new(egui::FontData::from_owned(bytes)));
-        defs.families
-            .entry(FontFamily::Monospace)
-            .or_default()
-            .insert(0, "consolas".into());
-    }
-    defs.families
-        .insert(FontFamily::Name(SEMIBOLD.into()), semibold);
-    ctx.set_fonts(defs);
-    ctx.data_mut(|d| d.insert_temp(fonts_id(), true));
+/// The fonts of the theme the window shows now.
+fn fonts(ui: &egui::Ui) -> Fonts {
+    ui.ctx()
+        .data(|d| d.get_temp::<(Fonts, Fonts)>(fonts_id()))
+        .map(|(l, d)| if ui.visuals().dark_mode { d } else { l })
+        .unwrap_or_default()
 }
 
-/// A semibold font of a size, or the regular one before the fonts are installed.
-pub fn strong_font(ui: &egui::Ui, size: f32) -> FontId {
-    let ready = ui
-        .ctx()
-        .data(|d| d.get_temp::<bool>(fonts_id()))
-        .unwrap_or(false);
-    if ready {
-        FontId::new(size, FontFamily::Name(SEMIBOLD.into()))
+/// A size of the layout in the text size of the theme.
+pub fn size(ui: &egui::Ui, size: f32) -> f32 {
+    size * fonts(ui).size / BASE_SIZE
+}
+
+/// The height of a row of a tree or a list: 28 points, more for a large text size.
+pub fn row_height(ui: &egui::Ui) -> f32 {
+    size(ui, 28.0).max(28.0).round()
+}
+
+fn named(ui: &egui::Ui) -> bool {
+    ui.ctx()
+        .data(|d| d.get_temp::<(Fonts, Fonts)>(installed_id()))
+        .is_some()
+}
+
+/// The font of the texts of a size of the layout.
+pub fn font(ui: &egui::Ui, at: f32) -> FontId {
+    let family = if named(ui) {
+        family_name(ui.visuals().dark_mode, "")
     } else {
-        FontId::proportional(size)
-    }
+        FontFamily::Proportional
+    };
+    FontId::new(size(ui, at), family)
 }
 
-/// Text in the semibold font.
+/// The font of code and values of a size of the layout.
+pub fn mono(ui: &egui::Ui, at: f32) -> FontId {
+    let family = if named(ui) {
+        family_name(ui.visuals().dark_mode, "-mono")
+    } else {
+        FontFamily::Monospace
+    };
+    FontId::new(size(ui, at), family)
+}
+
+/// The font of titles (the bold or semibold cut) of a size of the layout.
+pub fn strong_font(ui: &egui::Ui, at: f32) -> FontId {
+    let family = if named(ui) {
+        family_name(ui.visuals().dark_mode, "-strong")
+    } else {
+        FontFamily::Proportional
+    };
+    FontId::new(size(ui, at), family)
+}
+
+/// Text in the font of titles.
 pub fn strong(ui: &egui::Ui, text: impl Into<String>, size: f32) -> RichText {
     RichText::new(text).font(strong_font(ui, size))
 }
@@ -301,7 +533,7 @@ pub fn tool_button(
     split: bool,
 ) -> egui::Response {
     let p = palette(ui);
-    let label_font = FontId::proportional(11.0);
+    let label_font = font(ui, 11.0);
     let width = if compact {
         if split { 40.0 } else { 32.0 }
     } else {
@@ -312,7 +544,7 @@ pub fn tool_button(
             .x;
         (text + 20.0 + if split { 12.0 } else { 0.0 }).max(58.0)
     };
-    let height = if compact { 28.0 } else { 44.0 };
+    let height = if compact { 28.0 } else { size(ui, 44.0).max(44.0) };
     let sense = if enabled {
         Sense::click()
     } else {
@@ -343,7 +575,7 @@ pub fn tool_button(
             egui::pos2(rect.center().x - shift, icon_y),
             Align2::CENTER_CENTER,
             icon,
-            FontId::proportional(if compact { 15.0 } else { 17.0 }),
+            font(ui, if compact { 15.0 } else { 17.0 }),
             color,
         );
         if !compact {
@@ -400,7 +632,7 @@ pub fn icon_button(
             rect.center(),
             Align2::CENTER_CENTER,
             icon,
-            FontId::proportional(15.0),
+            font(ui, 15.0),
             c,
         );
     }
@@ -448,7 +680,7 @@ pub fn chip(ui: &mut egui::Ui, text: &str, accent: bool) -> egui::Response {
         .show(ui, |ui| {
             ui.label(
                 RichText::new(text)
-                    .size(11.0)
+                    .size(size(ui, 11.0))
                     .color(if accent { p.text } else { p.muted }),
             )
         })
@@ -504,8 +736,8 @@ pub fn selectable_text(ui: &mut egui::Ui, id: impl std::hash::Hash + std::fmt::D
 }
 
 /// Muted text of a size.
-pub fn muted(ui: &egui::Ui, text: impl Into<String>, size: f32) -> RichText {
-    RichText::new(text).size(size).color(palette(ui).muted)
+pub fn muted(ui: &egui::Ui, text: impl Into<String>, at: f32) -> RichText {
+    RichText::new(text).size(size(ui, at)).color(palette(ui).muted)
 }
 
 #[cfg(test)]

@@ -403,7 +403,7 @@ pub(crate) fn id_line(ui: &mut egui::Ui, id: &str) {
     let p = style::palette(ui);
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 2.0;
-        ui.add(egui::Label::new(RichText::new(id).monospace().size(12.0).color(p.muted)).selectable(true));
+        ui.add(egui::Label::new(RichText::new(id).font(style::mono(ui, 12.0)).color(p.muted)).selectable(true));
         if style::icon_button(ui, "\u{1F4CB}", tr("Copy the id"), true, None).clicked() {
             ui.ctx().copy_text(id.to_owned());
         }
@@ -628,21 +628,21 @@ fn writes(ui: &mut egui::Ui, rule: &Rule) {
                 String::new(),
             ),
             other => {
-                ui.add(egui::Label::new(RichText::new(describe(other)).monospace().size(12.0)).wrap());
+                ui.add(egui::Label::new(RichText::new(describe(other)).font(style::mono(ui, 12.0))).wrap());
                 continue;
             }
         };
         if path != last_path {
             ui.add_space(4.0);
             ui.add(
-                egui::Label::new(RichText::new(path).monospace().size(11.5).color(p.muted))
+                egui::Label::new(RichText::new(path).font(style::mono(ui, 11.5)).color(p.muted))
                     .wrap()
                     .selectable(true),
             );
             last_path = path;
         }
         ui.horizontal_wrapped(|ui| {
-            ui.add(egui::Label::new(RichText::new(line).monospace().size(12.0)).selectable(true));
+            ui.add(egui::Label::new(RichText::new(line).font(style::mono(ui, 12.0))).selectable(true));
             if !default.is_empty() {
                 ui.label(style::muted(
                     ui,

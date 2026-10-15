@@ -4,10 +4,10 @@
 //! click gives the list the keyboard focus. The columns change their width by dragging the lines
 //! between their titles; a row may have a mini button at its right end.
 
-use eframe::egui::{self, Align, CornerRadius, CursorIcon, FontId, Key, Modifiers, Rect, Sense, Stroke};
+use eframe::egui::{self, Align, CornerRadius, CursorIcon, Key, Modifiers, Rect, Sense, Stroke};
 
 use crate::style;
-use crate::tree::{self, ROW_HEIGHT, Scroll};
+use crate::tree::{self, Scroll};
 
 /// The height of the row of titles.
 const HEADER: f32 = 30.0;
@@ -117,7 +117,7 @@ pub fn show<K: Clone>(
     let area = ui.available_rect_before_wrap();
     let focused = tree::focus_area(ui, area, id, label);
     if focused {
-        let page = (((area.height() - HEADER) / ROW_HEIGHT) as usize).max(2) - 1;
+        let page = (((area.height() - HEADER) / style::row_height(ui)) as usize).max(2) - 1;
         if let Some(t) = tree::move_target(ui, rows.len(), selected, page) {
             if Some(t) != selected {
                 out.events.push(Event::Select(rows[t].key.clone()));
@@ -181,6 +181,7 @@ pub fn show<K: Clone>(
     }
     ui.data_mut(|d| d.insert_temp(widths_id, widths));
     let mut take_focus = false;
+    let row_height = style::row_height(ui);
     egui::ScrollArea::vertical()
         .id_salt(id.with("scroll"))
         .auto_shrink(false)
@@ -188,7 +189,7 @@ pub fn show<K: Clone>(
             ui.spacing_mut().item_spacing.y = 0.0;
             for (i, row) in rows.iter().enumerate() {
                 let (rect, response) = ui.allocate_exact_size(
-                    egui::vec2(ui.available_width(), ROW_HEIGHT),
+                    egui::vec2(ui.available_width(), row_height),
                     Sense::CLICK,
                 );
                 let is_selected = Some(i) == selected;
@@ -223,13 +224,15 @@ pub fn show<K: Clone>(
                             p.warn
                         } else if cell.muted {
                             p.muted
+                        } else if is_selected {
+                            p.sel_text
                         } else {
                             p.text
                         };
                         let font = if cell.strong {
                             style::strong_font(ui, 13.0)
                         } else {
-                            FontId::proportional(13.0)
+                            style::font(ui, 13.0)
                         };
                         let line = cell.text.lines().next().unwrap_or_default();
                         let galley = painter.layout_no_wrap(line.to_owned(), font, color);
@@ -286,7 +289,7 @@ pub fn show<K: Clone>(
                             button_rect.center(),
                             egui::Align2::CENTER_CENTER,
                             *icon,
-                            FontId::proportional(13.0),
+                            style::font(ui, 13.0),
                             if button.hovered() { p.accent } else { p.muted },
                         );
                     }

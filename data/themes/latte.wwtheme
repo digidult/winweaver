@@ -1,0 +1,29 @@
+{
+  "format": "winweaver-theme",
+  "version": 1,
+  "name": "Latte",
+  "dark": false,
+  "font": "Segoe UI",
+  "font_size": 13.0,
+  "mono_font": "Consolas",
+  "colors": {
+    "accent": "#8a4b1c",
+    "bg": "#efe4d2",
+    "border": "#c8b394",
+    "card": "#fbf6ee",
+    "card2": "#f4ead9",
+    "check": "#8c5e3c",
+    "check_mark": "#fff8ef",
+    "hover": "#e3d2b8",
+    "msg_bg": "#f6e7c8",
+    "msg_border": "#d9bf8f",
+    "msg_fg": "#5a3b00",
+    "muted": "#76614d",
+    "off": "#7a624a",
+    "ok": "#4f7a28",
+    "sel": "#8c5e3c",
+    "sel_text": "#fff8ef",
+    "text": "#3e2c1f",
+    "warn": "#8a5a00"
+  }
+}
