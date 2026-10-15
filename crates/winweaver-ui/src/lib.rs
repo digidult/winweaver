@@ -4257,7 +4257,10 @@ and kept"
         assert_eq!(titles(&app)[0], start[3]);
         assert_eq!(titles(&app)[1..], start[..3]);
         app.apply(vec![Act::Activate(2), Act::MoveTab(0, 3)]);
-        assert_eq!(app.active, 1, "the tab in front shifts left when a tab before it moves after it");
+        assert_eq!(
+            app.active, 1,
+            "the tab in front shifts left when a tab before it moves after it"
+        );
         assert_eq!(titles(&app), start);
         app.apply(vec![Act::MoveTab(1, 1), Act::MoveTab(0, 9)]);
         assert_eq!(titles(&app), start, "nothing moves out of the row");

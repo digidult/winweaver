@@ -186,14 +186,20 @@ impl App {
         let last = self.docs.len().saturating_sub(1);
         response.context_menu(|ui| {
             if ui
-                .add_enabled(i > 0, egui::Button::new(tr("Move the tab left (Ctrl+Shift+PgUp)")))
+                .add_enabled(
+                    i > 0,
+                    egui::Button::new(tr("Move the tab left (Ctrl+Shift+PgUp)")),
+                )
                 .clicked()
             {
                 acts.push(Act::MoveTab(i, i - 1));
                 ui.close();
             }
             if ui
-                .add_enabled(i < last, egui::Button::new(tr("Move the tab right (Ctrl+Shift+PgDn)")))
+                .add_enabled(
+                    i < last,
+                    egui::Button::new(tr("Move the tab right (Ctrl+Shift+PgDn)")),
+                )
                 .clicked()
             {
                 acts.push(Act::MoveTab(i, i + 1));
@@ -1005,7 +1011,9 @@ fn drop_place(rects: &[egui::Rect], from: usize, x: f32) -> (usize, f32) {
     let to = others.iter().filter(|r| r.center().x < x).count();
     let line = match others.get(to) {
         Some(r) => r.left() - 1.0,
-        None => others.last().map_or(rects[from].right(), |r| r.right() + 1.0),
+        None => others
+            .last()
+            .map_or(rects[from].right(), |r| r.right() + 1.0),
     };
     (to, line)
 }
