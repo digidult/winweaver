@@ -408,5 +408,7 @@
   "no policies": "політик немає",
   "Policy templates (opened without importing)": "Шаблони політик (відкриваються без імпорту)",
   "The other parts of the path": "Інші частини шляху",
-  "Server": "Сервер"
+  "Server": "Сервер",
+  "Move the tab left (Ctrl+Shift+PgUp)": "Перемістити вкладку вліво (Ctrl+Shift+PgUp)",
+  "Move the tab right (Ctrl+Shift+PgDn)": "Перемістити вкладку вправо (Ctrl+Shift+PgDn)"
 }
