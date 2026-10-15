@@ -55,11 +55,6 @@ impl Cell {
         self.muted = true;
         self
     }
-
-    pub fn warn(mut self) -> Self {
-        self.warn = true;
-        self
-    }
 }
 
 /// A row of the list, in the order it is shown.
