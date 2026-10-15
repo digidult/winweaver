@@ -5,7 +5,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use eframe::egui::{self, Color32};
+use eframe::egui::Color32;
 use serde::Deserialize;
 use winweaver_core::jsonfile;
 
@@ -68,61 +68,6 @@ pub fn color(text: &str) -> Option<Color32> {
     Some(Color32::from_rgb((v >> 16) as u8, (v >> 8) as u8, v as u8))
 }
 
-/// The visuals of a theme: its base with the colours it names.
-pub fn visuals(theme: &Theme) -> egui::Visuals {
-    let mut v = if theme.dark {
-        egui::Visuals::dark()
-    } else {
-        egui::Visuals::light()
-    };
-    let c = |key: &str| theme.colors.get(key).and_then(|t| color(t));
-    if let Some(bg) = c("background") {
-        v.panel_fill = bg;
-        v.window_fill = bg;
-        v.faint_bg_color = bg;
-    }
-    if let Some(fg) = c("foreground") {
-        v.override_text_color = Some(fg);
-    }
-    if let Some(field) = c("field") {
-        v.extreme_bg_color = field;
-        v.text_edit_bg_color = Some(field);
-    }
-    if let Some(sel) = c("select") {
-        v.selection.bg_fill = sel;
-    }
-    if let Some(sel_fg) = c("select_foreground") {
-        v.selection.stroke.color = sel_fg;
-    }
-    if let Some(border) = c("border") {
-        v.window_stroke.color = border;
-        v.widgets.noninteractive.bg_stroke.color = border;
-    }
-    if let Some(button) = c("button") {
-        v.widgets.inactive.bg_fill = button;
-        v.widgets.inactive.weak_bg_fill = button;
-    }
-    if let Some(active) = c("button_active") {
-        v.widgets.hovered.bg_fill = active;
-        v.widgets.hovered.weak_bg_fill = active;
-        v.widgets.active.bg_fill = active;
-        v.widgets.active.weak_bg_fill = active;
-    }
-    if let Some(muted) = c("muted") {
-        v.widgets.noninteractive.fg_stroke.color = muted;
-    }
-    if let Some(link) = c("link") {
-        v.hyperlink_color = link;
-    }
-    if let Some(e) = c("error") {
-        v.error_fg_color = e;
-    }
-    if let Some(w) = c("warning") {
-        v.warn_fg_color = w;
-    }
-    v
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -133,8 +78,8 @@ mod tests {
         assert_eq!(list.len(), 2);
         let matrix = list.iter().find(|t| t.id == "matrix").unwrap();
         assert!(matrix.dark);
-        let v = visuals(matrix);
-        assert_eq!(v.panel_fill, Color32::from_rgb(0, 0, 0));
+        let p = crate::style::Palette::from_colors(matrix.dark, &matrix.colors);
+        assert_eq!(p.bg, Color32::from_rgb(0, 0, 0));
         assert_eq!(color("#00ff41"), Some(Color32::from_rgb(0, 255, 65)));
         assert_eq!(color("00ff41"), None);
     }

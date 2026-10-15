@@ -6,6 +6,7 @@
 //! is collected as an [`Act`] while the frame is drawn and applied afterwards.
 
 mod catalogview;
+mod chrome;
 mod diffview;
 mod forms;
 mod i18n;
@@ -14,6 +15,7 @@ mod mcpview;
 mod mdview;
 mod session;
 mod settings;
+mod style;
 mod themes;
 mod views;
 
@@ -90,6 +92,9 @@ pub struct ProfileDoc {
     pub draft_key: String,
     /// When the profile last changed and has no draft yet.
     changed: Option<std::time::Instant>,
+    pub search: Search,
+    /// The selected row is scrolled into view at the next frame.
+    pub reveal: bool,
 }
 
 impl ProfileDoc {
@@ -112,6 +117,8 @@ impl ProfileDoc {
             issues: Vec::new(),
             draft_key,
             changed: None,
+            search: Search::default(),
+            reveal: false,
         }
     }
 
@@ -184,12 +191,11 @@ impl Doc {
     }
 }
 
-/// The search of the navigation row.
+/// The search of a tab, at the right end of its navigation row.
 #[derive(Default)]
 pub struct Search {
     pub open: bool,
     pub text: String,
-    pub history: Vec<String>,
     focus: bool,
 }
 
@@ -202,17 +208,18 @@ impl Search {
             .collect()
     }
 
-    /// Puts the current text first in the history; `true` when the history changed.
-    fn remember(&mut self) -> bool {
-        let text = self.text.trim().to_owned();
-        if text.is_empty() || self.history.first() == Some(&text) {
-            return false;
-        }
-        self.history.retain(|h| h != &text);
-        self.history.insert(0, text);
-        self.history.truncate(SEARCH_HISTORY);
-        true
+}
+
+/// Puts a search first in the history of the searches; `true` when the history changed.
+pub(crate) fn remember_search(history: &mut Vec<String>, text: &str) -> bool {
+    let text = text.trim().to_owned();
+    if text.is_empty() || history.first() == Some(&text) {
+        return false;
     }
+    history.retain(|h| h != &text);
+    history.insert(0, text);
+    history.truncate(SEARCH_HISTORY);
+    true
 }
 
 /// The stand-alone scripts the window saves.
@@ -301,6 +308,16 @@ pub enum Act {
     Check,
     Build,
     ClearMessages,
+    /// Opens the list of the message bar or folds it to one line.
+    ToggleMessages,
+    /// The search of the active tab was cleared: the selection comes back into view.
+    SearchCleared,
+    /// The selected row was scrolled into view.
+    Revealed,
+    /// Opens the settings at a section (0 general, 1 policy templates, 2 files).
+    OpenSettingsSection(usize),
+    /// Imports the catalog file of the active tab.
+    ImportOpenCatalog,
     Exit,
     Message(String),
 }
@@ -318,7 +335,13 @@ pub struct App {
     active: usize,
     settings: Settings,
     settings_dirty: bool,
-    search: Search,
+    /// The recent searches of every tab.
+    search_history: Vec<String>,
+    /// The searches of the bookmark tab and of the MCP tab.
+    marks_search: Search,
+    mcp_search: Search,
+    /// Whether the message bar shows its list or one line.
+    messages_open: bool,
     status: String,
     marks: Bookmarks,
     marks_path: PathBuf,
@@ -354,10 +377,7 @@ impl App {
         let profile = Profile::parse(PRESETS[0].1, PRESETS[0].0)
             .unwrap_or_else(|_| Profile::from_defaults(PRESETS[0].0, &catalog));
         let doc = ProfileDoc::new(profile, None, &catalog);
-        let search = Search {
-            history: settings.search_history.clone(),
-            ..Search::default()
-        };
+        let search_history = settings.search_history.clone();
         Self {
             base_catalog: catalog.clone(),
             base_texts: texts.clone(),
@@ -369,7 +389,10 @@ impl App {
             active: 0,
             settings,
             settings_dirty: false,
-            search,
+            search_history,
+            marks_search: Search::default(),
+            mcp_search: Search::default(),
+            messages_open: true,
             status: "Ready".to_owned(),
             marks: Bookmarks::default(),
             marks_path: exe_dir().join(bookmarks::DEFAULT_FILE),
@@ -401,6 +424,141 @@ impl App {
         match self.docs.get_mut(self.active) {
             Some(Doc::Profile(doc)) => Some(doc),
             _ => None,
+        }
+    }
+
+    /// The search of the active tab, `None` for a tab without one.
+    fn active_search(&mut self) -> Option<&mut Search> {
+        match self.docs.get_mut(self.active)? {
+            Doc::Profile(d) => Some(&mut d.search),
+            Doc::Diff(d) => Some(&mut d.search),
+            Doc::Markdown(d) => Some(&mut d.search),
+            Doc::Catalog(d) => Some(&mut d.search),
+            Doc::Bookmarks => Some(&mut self.marks_search),
+            Doc::Mcp => Some(&mut self.mcp_search),
+            Doc::Settings => None,
+        }
+    }
+
+    /// After the search of a tab is cleared, the selected item stays in view: the groups above
+    /// it open and its row is scrolled to at the next frame.
+    fn reveal_selection(&mut self) {
+        let catalog = &self.catalog;
+        match self.docs.get_mut(self.active) {
+            Some(Doc::Profile(doc)) => {
+                let mut next = match &doc.sel {
+                    Sel::Rule(id) => catalog.rule(id).map(|r| r.group.clone()),
+                    Sel::Group(id) => catalog.group(id).and_then(|g| g.parent.clone()),
+                    Sel::Form(_) => Some(winweaver_core::catalog::ROOT_UNATTEND.to_owned()),
+                    Sel::None => None,
+                };
+                while let Some(g) = next {
+                    next = catalog.group(&g).and_then(|x| x.parent.clone());
+                    doc.expanded.insert(g);
+                }
+                doc.reveal = true;
+            }
+            Some(Doc::Catalog(c)) => {
+                let mut chain = Vec::new();
+                if let Some(file) = c.catalog(&self.imports)
+                    && let Some(rule) = c
+                        .sel
+                        .as_deref()
+                        .and_then(|id| file.rules.iter().find(|r| r.id == id))
+                {
+                    let mut next = Some(rule.group.clone());
+                    while let Some(g) = next {
+                        next = file
+                            .groups
+                            .iter()
+                            .find(|x| x.id == g)
+                            .and_then(|x| x.parent.clone());
+                        chain.push(g);
+                    }
+                }
+                c.expanded.extend(chain);
+                c.reveal = true;
+            }
+            _ => {}
+        }
+    }
+
+    fn open_settings(&mut self) {
+        match self.docs.iter().position(|d| matches!(d, Doc::Settings)) {
+            Some(i) => self.active = i,
+            None => {
+                self.docs.push(Doc::Settings);
+                self.active = self.docs.len() - 1;
+            }
+        }
+    }
+
+    /// Opens a catalog file in a tab of its own, without importing it.
+    fn open_catalog_path(&mut self, path: PathBuf) {
+        if let Some(i) = self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path)))
+        {
+            self.active = i;
+            return;
+        }
+        match CatalogFile::load(&path) {
+            Ok(file) => {
+                let doc = catalogview::CatalogDoc::from_file(file, path.clone());
+                self.docs.push(Doc::Catalog(Box::new(doc)));
+                self.active = self.docs.len() - 1;
+                self.status = trf("Opened {path}", &[("path", &path.display())]);
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+        }
+    }
+
+    /// Imports the catalog file of the active tab: it is saved next to the executable, merged
+    /// into the catalog, and the tab shows the import from now on.
+    fn import_open_catalog(&mut self) {
+        let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        let Some(mut file) = c.file.take() else {
+            return;
+        };
+        if self.imports.iter().any(|f| f.id == file.id) && !file.id.starts_with("package-") {
+            file.id = format!("package-{}", file.id);
+        }
+        c.id = file.id.clone();
+        c.path = None;
+        let dir = imports_dir();
+        let path = dir.join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
+        let saved = std::fs::create_dir_all(&dir)
+            .map_err(|e| e.to_string())
+            .and_then(|()| file.save(&path));
+        let rules = file.rules.len();
+        self.imports.retain(|f| f.id != file.id);
+        self.imports.push(*file);
+        self.rebuild_catalog();
+        self.status = match saved {
+            Ok(()) => trf("Imported: {rules} rules", &[("rules", &rules)]),
+            Err(e) => trf("Imported, but not saved: {e}", &[("e", &e)]),
+        };
+    }
+
+    /// Saves the active diff to its file, or asks for one.
+    fn save_diff(&mut self) {
+        let Some(Doc::Diff(d)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        let Some(path) = d.path.clone() else {
+            self.save_active_diff();
+            return;
+        };
+        match d.diff.save(&path) {
+            Ok(()) => {
+                d.dirty = false;
+                self.status = trf("Saved {path}", &[("path", &path.display())]);
+            }
+            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
         }
     }
 
@@ -463,11 +621,11 @@ impl App {
         let active = self.active;
         let count = self.docs.len();
         let confirming = self.confirm.is_some();
+        let mut focus_search = false;
         ctx.input_mut(|i| {
             let sc = |m, k| KeyboardShortcut::new(m, k);
             if i.consume_shortcut(&sc(Modifiers::CTRL, Key::F)) {
-                self.search.open = true;
-                self.search.focus = true;
+                focus_search = true;
             }
             if i.consume_shortcut(&sc(Modifiers::CTRL, Key::D)) {
                 acts.push(Act::Fold);
@@ -521,258 +679,11 @@ impl App {
                 acts.push(Act::OpenPath(file.path().to_path_buf()));
             }
         });
+        if focus_search && let Some(search) = self.active_search() {
+            search.open = true;
+            search.focus = true;
+        }
         acts
-    }
-
-    fn tabs_row(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
-        ui.horizontal(|ui| {
-            ui.menu_button(tr("Menu"), |ui| {
-                ui.menu_button(tr("New"), |ui| {
-                    if ui.button(tr("Empty profile")).clicked() {
-                        acts.push(Act::NewProfile(None));
-                        ui.close();
-                    }
-                    ui.separator();
-                    for (name, _) in PRESETS {
-                        if ui
-                            .button(trf("Profile from the preset {name}", &[("name", &name)]))
-                            .clicked()
-                        {
-                            acts.push(Act::NewProfile(Some(name)));
-                            ui.close();
-                        }
-                    }
-                });
-                if ui
-                    .add(egui::Button::new(tr("Open...")).shortcut_text("Ctrl+O"))
-                    .clicked()
-                {
-                    acts.push(Act::Open);
-                    ui.close();
-                }
-                ui.add_enabled_ui(!self.settings.recent.is_empty(), |ui| {
-                    ui.menu_button(tr("Open recent"), |ui| {
-                        for path in &self.settings.recent {
-                            if ui.button(path.display().to_string()).clicked() {
-                                acts.push(Act::OpenPath(path.clone()));
-                                ui.close();
-                            }
-                        }
-                    });
-                });
-                if ui
-                    .add(egui::Button::new(tr("Save")).shortcut_text("Ctrl+S"))
-                    .clicked()
-                {
-                    acts.push(Act::Save);
-                    ui.close();
-                }
-                if ui
-                    .add(egui::Button::new(tr("Save as...")).shortcut_text("Ctrl+Shift+S"))
-                    .clicked()
-                {
-                    acts.push(Act::SaveAs);
-                    ui.close();
-                }
-                if ui
-                    .add(egui::Button::new(tr("Close tab")).shortcut_text("Ctrl+W"))
-                    .clicked()
-                {
-                    acts.push(Act::CloseTab(self.active, false));
-                    ui.close();
-                }
-                ui.separator();
-                if ui.button(tr("Compare with a file...")).clicked() {
-                    acts.push(Act::Compare);
-                    ui.close();
-                }
-                ui.menu_button(tr("Compare with a preset"), |ui| {
-                    for (name, _) in PRESETS {
-                        if ui.button(name).clicked() {
-                            acts.push(Act::CompareWith(name));
-                            ui.close();
-                        }
-                    }
-                });
-                ui.separator();
-                if ui.button(tr("Close tab, discard changes")).clicked() {
-                    acts.push(Act::CloseTab(self.active, true));
-                    ui.close();
-                }
-                ui.separator();
-                if ui
-                    .add(egui::Button::new(tr("Guide")).shortcut_text("F1"))
-                    .clicked()
-                {
-                    acts.push(Act::OpenGuide);
-                    ui.close();
-                }
-                if ui.button(tr("MCP server")).clicked() {
-                    acts.push(Act::OpenMcp);
-                    ui.close();
-                }
-                if ui.button(tr("Bookmarks")).clicked() {
-                    acts.push(Act::OpenMarks);
-                    ui.close();
-                }
-                if ui
-                    .add(egui::Button::new(tr("Settings")).shortcut_text("Ctrl+,"))
-                    .clicked()
-                {
-                    acts.push(Act::OpenSettings);
-                    ui.close();
-                }
-                if ui.button(tr("About")).clicked() {
-                    acts.push(Act::Message(format!(
-                        "WinWeaver {}, catalog {}, settings {}",
-                        winweaver_core::APP_VERSION,
-                        self.catalog.version(),
-                        Settings::path().display()
-                    )));
-                    ui.close();
-                }
-                if ui.button(tr("Exit")).clicked() {
-                    acts.push(Act::Exit);
-                    ui.close();
-                }
-            });
-            ui.separator();
-            for (i, doc) in self.docs.iter().enumerate() {
-                let mark = if doc.dirty() { "* " } else { "" };
-                let label = format!("{mark}{}", doc.title());
-                let response = ui.selectable_label(i == self.active, label);
-                if response.clicked() {
-                    acts.push(Act::Activate(i));
-                }
-                if response.middle_clicked() {
-                    acts.push(Act::CloseTab(i, false));
-                }
-                if let Doc::Profile(d) = doc
-                    && let Some(p) = &d.path
-                {
-                    response.on_hover_text(p.display().to_string());
-                }
-                if ui
-                    .small_button(tr("x"))
-                    .on_hover_text(tr("Close (Ctrl+W)"))
-                    .clicked()
-                {
-                    acts.push(Act::CloseTab(i, false));
-                }
-                ui.add_space(4.0);
-            }
-            if ui
-                .button(tr("+"))
-                .on_hover_text(tr("New profile (Ctrl+N)"))
-                .clicked()
-            {
-                acts.push(Act::NewProfile(None));
-            }
-        });
-    }
-
-    /// The commands of the active document: icons with labels, icons only when `compact`.
-    fn toolbar_items(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>, compact: bool) {
-        let label = |icon: &str, text: &'static str| {
-            let text = tr(text);
-            if compact {
-                icon.to_owned()
-            } else {
-                format!("{icon} {text}")
-            }
-        };
-        let button = |ui: &mut egui::Ui, icon: &str, text: &'static str, keys: &str| {
-            let hint = if keys.is_empty() {
-                tr(text).to_owned()
-            } else {
-                format!("{} ({keys})", tr(text))
-            };
-            ui.button(label(icon, text)).on_hover_text(hint).clicked()
-        };
-        if button(ui, "\u{1F4C4}", "New", "Ctrl+N") {
-            acts.push(Act::NewProfile(None));
-        }
-        if button(ui, "\u{1F4C2}", "Open", "Ctrl+O") {
-            acts.push(Act::Open);
-        }
-        if button(ui, "\u{1F4BE}", "Save", "Ctrl+S") {
-            acts.push(Act::Save);
-        }
-        ui.separator();
-        if button(ui, "\u{2714}", "Check", "F7") {
-            acts.push(Act::Check);
-        }
-        if button(ui, "\u{1F528}", "Build", "F9") {
-            acts.push(Act::Build);
-        }
-        ui.separator();
-        ui.menu_button(label("\u{1F5A5}", "This PC"), |ui| {
-            if ui.button(tr("Read this PC into a new profile")).clicked() {
-                acts.push(Act::ReadPc);
-                ui.close();
-            }
-            if ui
-                .button(tr("Read the selection into this profile"))
-                .clicked()
-            {
-                acts.push(Act::ReadSelection);
-                ui.close();
-            }
-            if ui.button(tr("Check the selection on this PC")).clicked() {
-                acts.push(Act::CheckOnPc);
-                ui.close();
-            }
-            ui.separator();
-            if ui
-                .button(tr("Save an apply script for the selection..."))
-                .clicked()
-            {
-                acts.push(Act::SaveScript(ScriptKind::Apply));
-                ui.close();
-            }
-            if ui
-                .button(tr("Save a return-to-defaults script for the selection..."))
-                .clicked()
-            {
-                acts.push(Act::SaveScript(ScriptKind::Revert));
-                ui.close();
-            }
-            if ui
-                .button(tr("Save an audit script for the selection..."))
-                .clicked()
-            {
-                acts.push(Act::SaveScript(ScriptKind::Audit));
-                ui.close();
-            }
-            ui.separator();
-            if ui.button(tr("Apply the selection to this PC...")).clicked() {
-                acts.push(Act::PlanNative(false));
-                ui.close();
-            }
-            if ui
-                .button(tr("Return the selection to Windows defaults..."))
-                .clicked()
-            {
-                acts.push(Act::PlanNative(true));
-                ui.close();
-            }
-            if ui.button(tr("Undo a change from its backup...")).clicked() {
-                acts.push(Act::PlanUndo);
-                ui.close();
-            }
-            ui.separator();
-            if ui.button(tr("Open an audit report...")).clicked() {
-                acts.push(Act::OpenReport);
-                ui.close();
-            }
-        });
-        if button(ui, "\u{1F500}", "Compare", "") {
-            acts.push(Act::Compare);
-        }
-    }
-
-    fn toolbar(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
-        ui.horizontal(|ui| self.toolbar_items(ui, acts, false));
     }
 
     fn crumbs(&self) -> Vec<(String, Sel)> {
@@ -805,145 +716,6 @@ impl App {
             crumbs.push((tr(f.title()).to_owned(), Sel::Form(*f)));
         }
         crumbs
-    }
-
-    fn nav_row(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>, compact: bool) {
-        let (can_back, can_forward) = match self.docs.get(self.active) {
-            Some(Doc::Profile(doc)) => (doc.can_go(-1), doc.can_go(1)),
-            _ => (false, false),
-        };
-        let crumbs = self.crumbs();
-        let marked = self
-            .current_bookmark()
-            .is_some_and(|b| self.marks.find(&b).is_some());
-        ui.horizontal(|ui| {
-            if ui
-                .add_enabled(can_back, egui::Button::new(tr("<")).frame(false))
-                .on_hover_text(tr("Back (Alt+Left)"))
-                .clicked()
-            {
-                acts.push(Act::Back);
-            }
-            if ui
-                .add_enabled(can_forward, egui::Button::new(tr(">")).frame(false))
-                .on_hover_text(tr("Forward (Alt+Right)"))
-                .clicked()
-            {
-                acts.push(Act::Forward);
-            }
-            ui.separator();
-            for (i, (label, sel)) in crumbs.iter().enumerate() {
-                if i > 0 {
-                    ui.weak(tr(">"));
-                }
-                let text = if i + 1 == crumbs.len() {
-                    egui::RichText::new(label.as_str()).strong()
-                } else {
-                    egui::RichText::new(label.as_str())
-                };
-                if ui.add(egui::Button::new(text).frame(false)).clicked() {
-                    acts.push(Act::Select(sel.clone()));
-                }
-            }
-            if !crumbs.is_empty() {
-                let mut m = marked;
-                if ui
-                    .toggle_value(&mut m, tr("Bookmark"))
-                    .on_hover_text(tr("Ctrl+B"))
-                    .changed()
-                {
-                    acts.push(Act::ToggleBookmark);
-                }
-            }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if compact {
-                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                        ui.separator();
-                        self.toolbar_items(ui, acts, true);
-                    });
-                }
-                if self.search.open {
-                    if ui
-                        .button(tr("x"))
-                        .on_hover_text(tr("Clear and close (Esc)"))
-                        .clicked()
-                    {
-                        self.search.text.clear();
-                        self.search.open = false;
-                    }
-                    let id = egui::Id::new("search-field");
-                    let response = ui.add(
-                        egui::TextEdit::singleline(&mut self.search.text)
-                            .id(id)
-                            .hint_text(tr("Search rules (Ctrl+F)"))
-                            .desired_width((ui.available_width() - 60.0).clamp(220.0, 640.0)),
-                    );
-                    if self.search.focus {
-                        ui.memory_mut(|m| m.request_focus(id));
-                        self.search.focus = false;
-                    }
-                    if response.lost_focus() {
-                        if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                            self.search.text.clear();
-                            self.search.open = false;
-                        } else if ui.input(|i| i.key_pressed(egui::Key::Enter))
-                            && self.search.remember()
-                        {
-                            self.settings.search_history = self.search.history.clone();
-                            self.settings_dirty = true;
-                        }
-                    }
-                    if !self.search.history.is_empty() {
-                        ui.menu_button(tr("v"), |ui| {
-                            for h in self.search.history.clone() {
-                                if ui.button(&h).clicked() {
-                                    self.search.text = h;
-                                    ui.close();
-                                }
-                            }
-                        });
-                    }
-                } else if ui
-                    .button(tr("Search"))
-                    .on_hover_text(tr("Ctrl+F"))
-                    .clicked()
-                {
-                    self.search.open = true;
-                    self.search.focus = true;
-                }
-            });
-        });
-    }
-
-    fn status_bar(&self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            let state = match self.docs.get(self.active) {
-                Some(Doc::Profile(d)) if d.dirty => tr("Modified"),
-                Some(Doc::Profile(d)) if d.path.is_some() => tr("Saved"),
-                Some(Doc::Profile(_)) => tr("Not saved yet"),
-                _ => "",
-            };
-            ui.weak(state);
-            ui.weak(trf(
-                "Catalog {version}, {n} rules",
-                &[
-                    ("version", &self.catalog.version()),
-                    ("n", &self.catalog.rules().len()),
-                ],
-            ));
-            if let Some(run) = &self.mcp.run {
-                ui.weak(trf(
-                    "MCP: {url}, mode {mode}",
-                    &[
-                        ("url", &run.http.url()),
-                        ("mode", &run.server.options().mode.name()),
-                    ],
-                ));
-            }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.weak(&self.status);
-            });
-        });
     }
 
     fn settings_view(&mut self, ui: &mut egui::Ui) {
@@ -1120,6 +892,10 @@ impl App {
         }
         if path.extension().is_some_and(|e| e == bookmarks::EXTENSION) {
             self.open_marks_path(path);
+            return;
+        }
+        if path.extension().is_some_and(|e| e == admx::CATALOG_EXTENSION) {
+            self.open_catalog_path(path);
             return;
         }
         let ext = path
@@ -2119,68 +1895,6 @@ impl App {
         });
     }
 
-    fn messages_panel(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
-        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
-            return;
-        };
-        if doc.issues.is_empty() {
-            return;
-        }
-        let texts = texts_for(&self.texts, &i18n::current());
-        egui::Panel::top("messages").show(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.strong(validate::summary(&doc.issues));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui
-                        .small_button(tr("x"))
-                        .on_hover_text(tr("Hide the messages"))
-                        .clicked()
-                    {
-                        acts.push(Act::ClearMessages);
-                    }
-                });
-            });
-            egui::ScrollArea::vertical()
-                .id_salt("messages")
-                .max_height(140.0)
-                .show(ui, |ui| {
-                    for issue in &doc.issues {
-                        ui.horizontal(|ui| {
-                            let tag = match issue.severity {
-                                Severity::Error => tr("Error"),
-                                Severity::Warning => tr("Warning"),
-                                Severity::Info => tr("Info"),
-                            };
-                            ui.weak(tag);
-                            let (label, sel) = match &issue.target {
-                                Target::Rule(id) => (
-                                    self.catalog.rule(id).map_or_else(
-                                        || id.clone(),
-                                        |r| views::rtitle(texts, r).to_owned(),
-                                    ),
-                                    Sel::Rule(id.clone()),
-                                ),
-                                Target::Install => {
-                                    ("Installation".to_owned(), Sel::Form(Form::Install))
-                                }
-                                Target::Accounts => {
-                                    ("Accounts".to_owned(), Sel::Form(Form::Accounts))
-                                }
-                                Target::Languages => {
-                                    ("Languages".to_owned(), Sel::Form(Form::Languages))
-                                }
-                                Target::Profile => (doc.profile.name.clone(), Sel::None),
-                            };
-                            if ui.link(label).clicked() {
-                                acts.push(Act::Select(sel));
-                            }
-                            ui.label(&issue.text);
-                        });
-                    }
-                });
-        });
-    }
-
     fn apply(&mut self, acts: Vec<Act>) {
         for act in acts {
             match act {
@@ -2274,16 +1988,19 @@ impl App {
                     }
                 }
                 Act::OpenPath(path) => self.open_path(path),
-                Act::OpenSettings => {
-                    match self.docs.iter().position(|d| matches!(d, Doc::Settings)) {
-                        Some(i) => self.active = i,
-                        None => {
-                            self.docs.push(Doc::Settings);
-                            self.active = self.docs.len() - 1;
-                        }
+                Act::OpenSettings => self.open_settings(),
+                Act::ImportOpenCatalog => self.import_open_catalog(),
+                Act::OpenSettingsSection(section) => {
+                    self.settings_section = section;
+                    self.open_settings();
+                }
+                Act::Save => {
+                    if matches!(self.docs.get(self.active), Some(Doc::Diff(_))) {
+                        self.save_diff();
+                    } else {
+                        self.save_active(false);
                     }
                 }
-                Act::Save => self.save_active(false),
                 Act::SaveAs => self.save_active(true),
                 Act::Back => {
                     if let Some(doc) = self.active_profile() {
@@ -2372,7 +2089,10 @@ impl App {
                     self.settings.desc_open = !self.settings.desc_open;
                     self.settings_dirty = true;
                 }
-                Act::Check => self.check_active(),
+                Act::Check => {
+                    self.check_active();
+                    self.messages_open = true;
+                }
                 Act::ReadPc => self.read_pc(false),
                 Act::ReadSelection => self.read_pc(true),
                 Act::CheckOnPc => self.check_on_pc(),
@@ -2462,6 +2182,13 @@ impl App {
                         doc.issues.clear();
                     }
                 }
+                Act::ToggleMessages => self.messages_open = !self.messages_open,
+                Act::SearchCleared => self.reveal_selection(),
+                Act::Revealed => match self.docs.get_mut(self.active) {
+                    Some(Doc::Profile(doc)) => doc.reveal = false,
+                    Some(Doc::Catalog(c)) => c.reveal = false,
+                    _ => {}
+                },
                 Act::Exit => self.exit = true,
                 Act::Message(text) => self.status = text,
             }
@@ -2620,6 +2347,7 @@ impl App {
                     diff,
                     path: Some(path.clone()),
                     dirty: false,
+                    search: Search::default(),
                 })));
                 self.active = self.docs.len() - 1;
                 self.status = format!("Opened {}", path.display());
@@ -2642,6 +2370,7 @@ impl App {
             diff,
             path: None,
             dirty: false,
+            search: Search::default(),
         })));
         self.active = self.docs.len() - 1;
     }
@@ -2761,7 +2490,8 @@ impl App {
                 Doc::Profile(d) => d.path.clone(),
                 Doc::Diff(d) => d.path.clone(),
                 Doc::Markdown(d) => d.path.clone(),
-                Doc::Bookmarks | Doc::Mcp | Doc::Settings | Doc::Catalog(_) => None,
+                Doc::Catalog(c) => c.path.clone(),
+                Doc::Bookmarks | Doc::Mcp | Doc::Settings => None,
             };
             if let Some(p) = path {
                 if i == self.active {
@@ -2920,17 +2650,17 @@ impl App {
         };
         match custom {
             Some(t) => {
-                let base = if t.dark {
-                    egui::Theme::Dark
+                let p = style::Palette::from_colors(t.dark, &t.colors);
+                let (base, light, dark) = if t.dark {
+                    (egui::Theme::Dark, style::Palette::LIGHT, p)
                 } else {
-                    egui::Theme::Light
+                    (egui::Theme::Light, p, style::Palette::DARK)
                 };
-                ctx.set_visuals_of(base, themes::visuals(&t));
+                style::apply(ctx, light, dark);
                 ctx.set_theme(base);
             }
             None => {
-                ctx.set_visuals_of(egui::Theme::Light, egui::Visuals::light());
-                ctx.set_visuals_of(egui::Theme::Dark, egui::Visuals::dark());
+                style::apply(ctx, style::Palette::LIGHT, style::Palette::DARK);
                 ctx.set_theme(self.settings.theme.preference());
             }
         }
@@ -2994,14 +2724,26 @@ impl eframe::App for App {
             self.last_title = title;
         }
         let mut acts = self.shortcuts(ui.ctx());
-        egui::Panel::top("tabs").show(ui, |ui| self.tabs_row(ui, &mut acts));
+        let (tabs_frame, tool_frame, nav_frame, status_frame) = Self::chrome_frames(ui);
+        egui::Panel::top("tabs")
+            .frame(tabs_frame)
+            .show_separator_line(false)
+            .show(ui, |ui| self.tabs_row(ui, &mut acts));
         let compact = ui.available_width() < COMPACT_WIDTH;
-        if !compact {
-            egui::Panel::top("toolbar").show(ui, |ui| self.toolbar(ui, &mut acts));
+        if !compact && self.has_tools() {
+            egui::Panel::top("toolbar").frame(tool_frame).show(ui, |ui| {
+                ui.horizontal(|ui| self.toolbar(ui, &mut acts, false));
+            });
         }
-        egui::Panel::top("nav").show(ui, |ui| self.nav_row(ui, &mut acts, compact));
+        if self.has_nav() || (compact && self.has_tools()) {
+            egui::Panel::top("nav")
+                .frame(nav_frame)
+                .show(ui, |ui| self.nav_row(ui, &mut acts, compact));
+        }
         self.messages_panel(ui, &mut acts);
-        egui::Panel::bottom("status").show(ui, |ui| self.status_bar(ui));
+        egui::Panel::bottom("status")
+            .frame(status_frame)
+            .show(ui, |ui| self.status_bar(ui));
         let kind = match self.docs.get(self.active) {
             Some(Doc::Profile(_)) => 0,
             Some(Doc::Settings) => 1,
@@ -3015,7 +2757,6 @@ impl eframe::App for App {
         if kind == 0 {
             let catalog = &self.catalog;
             let texts = texts_for(&self.texts, &i18n::current());
-            let search = &self.search;
             let settings = &self.settings;
             if let Some(Doc::Profile(doc)) = self.docs.get(self.active) {
                 let doc: &ProfileDoc = doc;
@@ -3028,7 +2769,7 @@ impl eframe::App for App {
                             catalog,
                             texts,
                             doc,
-                            search,
+                            &doc.search,
                             settings.inline_switches,
                             &mut acts,
                         );
@@ -3052,26 +2793,24 @@ impl eframe::App for App {
             }
         } else if kind == 6 {
             let panel = &mut self.mcp;
+            let search = &self.mcp_search;
             egui::CentralPanel::default().show(ui, |ui| {
                 egui::ScrollArea::vertical()
                     .auto_shrink(false)
                     .show(ui, |ui| {
-                        mcpview::mcp_view(ui, panel, &mut acts);
+                        mcpview::mcp_view(ui, panel, search, &mut acts);
                     });
             });
         } else if kind == 5 {
             let marks = &self.marks;
             let path = &self.marks_path;
+            let search = &self.marks_search;
             egui::CentralPanel::default().show(ui, |ui| {
-                marksview::marks_view(ui, marks, path, &mut acts);
+                marksview::marks_view(ui, marks, path, search, &mut acts);
             });
         } else if kind == 7 {
             let shown = match self.docs.get(self.active) {
-                Some(Doc::Catalog(doc)) => self
-                    .imports
-                    .iter()
-                    .find(|f| f.id == doc.id)
-                    .map(|f| (f, doc)),
+                Some(Doc::Catalog(doc)) => doc.catalog(&self.imports).map(|f| (f, doc)),
                 _ => None,
             };
             match shown {
@@ -3205,7 +2944,12 @@ fn pick_any() -> Option<PathBuf> {
         .set_title(tr("Open"))
         .add_filter(
             tr("WinWeaver files"),
-            &[profile::EXTENSION, diff::EXTENSION, bookmarks::EXTENSION],
+            &[
+                profile::EXTENSION,
+                diff::EXTENSION,
+                bookmarks::EXTENSION,
+                admx::CATALOG_EXTENSION,
+            ],
         )
         .add_filter(tr("Answer files (the profile they embed)"), &["xml"])
         .add_filter(tr("WinKickOff profiles and audit reports"), &["json"])
@@ -3244,7 +2988,8 @@ pub fn run() -> Result<(), String> {
     eframe::run_native(
         "WinWeaver",
         options,
-        Box::new(move |_cc| {
+        Box::new(move |cc| {
+            style::install_fonts(&cc.egui_ctx);
             let mut app = App::new(catalog, texts, settings);
             app.mcp.port = app.settings.mcp_port;
             app.mcp.token = app.settings.mcp_token.clone();
@@ -3401,7 +3146,10 @@ mod tests {
             .with_size(egui::vec2(1440.0, 900.0))
             .with_pixels_per_point(1.0)
             .wgpu()
-            .build_eframe(|_| app);
+            .build_eframe(|cc| {
+                style::install_fonts(&cc.egui_ctx);
+                app
+            });
         let shot = |h: &mut egui_kittest::Harness<'_, App>, name: &str| {
             for _ in 0..4 {
                 h.step();

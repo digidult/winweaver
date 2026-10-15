@@ -68,7 +68,11 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      Languages), diffview.rs, mdview.rs (Markdown tabs, the guide), marksview.rs,
 │   │                      mcpview.rs (the MCP tab), session.rs (drafts, the log), settings.rs (settings.json),
 │   │                      i18n.rs (tr and trf, the translations of the interface), themes.rs (colour themes),
-│   │                      catalogview.rs (the tab of an import: its tree without check boxes, a policy)
+│   │                      catalogview.rs (the tab of an import or of a catalog file: its tree without check
+│   │                      boxes, a policy), chrome.rs (the tab row, the command bar of the active tab, the
+│   │                      navigation row with the search of the tab, the message bar, the status bar),
+│   │                      style.rs (the palette of the mockups, Segoe UI and Consolas, the painted buttons,
+│   │                      cards and chips)
 │   └── winweaver/         the executable: the window, --mcp stdio, --mcp http, --elevated-apply <plan> <digest>
 │                          (the helper: only a plan-*.json of output/ with that SHA-256), --version, --check-catalog
 ├── data/                  embedded into the executable at build time
@@ -217,6 +221,19 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   with its eframe feature) draws whole frames without a screen and clicks by the labels of AccessKit, so no
   window ever opens. A test that needs a label finds it with `query_all_by_label`, since a text can appear
   twice (a tab and a breadcrumb).
+- The chrome follows the active tab (customer list of 15.10.2026, items 6, 9 to 11): the command bar holds the
+  commands of that tab (icons above labels; none for Settings and MCP; icons alone at the end of the
+  navigation row below 1100 px), the navigation row appears only for a tab with a history, a breadcrumb or
+  a search, and every tab but Settings has its own search (`active_search`): the profile tree, the policies
+  of a catalog tab, the differences, the blocks of a Markdown page, the bookmarks, the MCP journal. Clearing
+  a search opens the groups above the selection and scrolls it into view (`Act::SearchCleared`,
+  `reveal`). The message bar folds to one line or opens with a height the user drags.
+- The look comes from `style.rs`: the palette of `docs/design/mockups/common.css` for light and dark (a
+  colour theme overrides its tokens, also with the names of the first version), Segoe UI, its semibold cut
+  and Consolas read from the fonts folder of Windows before the first frame (`install_fonts`), egui's fonts
+  as the fallback for symbols. `style::strong` uses the semibold family only once it is installed.
+- A catalog file (`.wwcatalog`) opens like any document, without importing it (`CatalogDoc::from_file`);
+  its command bar offers Import.
 - The tab of an import (`Doc::Catalog`, "Open" in Settings, Policy templates) shows its tree without check boxes
   and the policy with its parameters and registry values; "Show in the profile tree" shows a hidden import
   again, brings the first profile tab to the front, opens the groups above the policy and selects it.

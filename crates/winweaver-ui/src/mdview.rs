@@ -23,6 +23,7 @@ pub struct MdDoc {
     pub path: Option<PathBuf>,
     pub text: String,
     cache: CommonMarkCache,
+    pub search: crate::Search,
 }
 
 impl MdDoc {
@@ -32,6 +33,7 @@ impl MdDoc {
             path,
             text,
             cache: CommonMarkCache::default(),
+            search: crate::Search::default(),
         }
     }
 
@@ -60,11 +62,78 @@ pub fn guide_text(code: &str) -> String {
         .to_owned()
 }
 
+/// The blocks of a page that hold every word of a search, each with the heading above it: the
+/// paragraphs, lists and code blocks between blank lines.
+pub fn matching_blocks(text: &str, words: &[String]) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut heading = String::new();
+    let mut in_code = false;
+    let mut block = String::new();
+    let flush = |block: &mut String, heading: &str, out: &mut Vec<String>| {
+        let lower = block.to_lowercase();
+        if !block.trim().is_empty() && words.iter().all(|w| lower.contains(w.as_str())) {
+            if heading.is_empty() || block.trim_start().starts_with('#') {
+                out.push(block.clone());
+            } else {
+                out.push(format!("{heading}\n\n{block}"));
+            }
+        }
+        block.clear();
+    };
+    for line in text.lines() {
+        if line.trim_start().starts_with("```") {
+            in_code = !in_code;
+        }
+        if !in_code && line.trim().is_empty() {
+            flush(&mut block, &heading, &mut out);
+            continue;
+        }
+        if !in_code && line.starts_with('#') {
+            flush(&mut block, &heading, &mut out);
+            heading = format!("#### {}", line.trim_start_matches('#').trim());
+        }
+        block.push_str(line);
+        block.push('\n');
+    }
+    flush(&mut block, &heading, &mut out);
+    out
+}
+
 pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc) {
+    let words = doc.search.words();
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .show(ui, |ui| {
             ui.set_max_width(PAGE_WIDTH);
-            CommonMarkViewer::new().show(ui, &mut doc.cache, &doc.text);
+            if words.is_empty() {
+                CommonMarkViewer::new().show(ui, &mut doc.cache, &doc.text);
+                return;
+            }
+            let blocks = matching_blocks(&doc.text, &words);
+            ui.weak(crate::i18n::trf(
+                "{n} places hold the search",
+                &[("n", &blocks.len())],
+            ));
+            for block in &blocks {
+                ui.separator();
+                CommonMarkViewer::new().show(ui, &mut doc.cache, block);
+            }
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_search_finds_the_blocks_with_their_headings() {
+        let text = "# Guide\n\nFirst steps here.\n\n## Build\n\nCopy autounattend.xml to the stick.\n\n```\nkeep code\n\nwhole\n```\n";
+        let words = vec!["autounattend".to_owned()];
+        let blocks = matching_blocks(text, &words);
+        assert_eq!(blocks.len(), 1);
+        assert!(blocks[0].starts_with("#### Build"), "{blocks:?}");
+        let code = matching_blocks(text, &["whole".to_owned()]);
+        assert_eq!(code.len(), 1);
+        assert!(code[0].contains("keep code"), "a code block stays whole");
+    }
 }

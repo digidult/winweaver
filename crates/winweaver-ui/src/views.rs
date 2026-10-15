@@ -169,10 +169,12 @@ fn group_rows(
             acts.push(Act::SetGroup(gid.to_owned(), checked));
         }
         let selected = matches!(&doc.sel, Sel::Group(id) if id == gid);
-        if ui
-            .selectable_label(selected, gtitle(texts, group))
-            .clicked()
-        {
+        let response = ui.selectable_label(selected, gtitle(texts, group));
+        if selected && doc.reveal {
+            response.scroll_to_me(Some(egui::Align::Center));
+            acts.push(Act::Revealed);
+        }
+        if response.clicked() {
             acts.push(Act::Select(Sel::Group(gid.to_owned())));
         }
         ui.weak(format!("{on}/{total}"));
@@ -256,6 +258,10 @@ fn rule_row(
         };
         let selected = matches!(&doc.sel, Sel::Rule(id) if id == &rule.id);
         let response = ui.selectable_label(selected, text);
+        if selected && doc.reveal {
+            response.scroll_to_me(Some(egui::Align::Center));
+            acts.push(Act::Revealed);
+        }
         let clicked = response.clicked();
         if let State::Blocked { by } = state {
             response.on_hover_text(trf("Blocked: needs {by}", &[("by", by)]));

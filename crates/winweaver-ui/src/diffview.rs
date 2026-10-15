@@ -18,6 +18,7 @@ pub struct DiffDoc {
     pub diff: Diff,
     pub path: Option<PathBuf>,
     pub dirty: bool,
+    pub search: crate::Search,
 }
 
 impl DiffDoc {
@@ -101,19 +102,12 @@ pub fn diff_view(
             ),
         ],
     ));
-    ui.horizontal(|ui| {
-        if ui
-            .button(tr("Apply the right side to the open profile"))
-            .on_hover_text(tr("Sets every difference to the value of the right side in the profile tab the diff was made from"))
-            .clicked()
-        {
-            acts.push(Act::ApplyDiff);
-        }
-        if ui.button(tr("Save as a diff file...")).clicked() {
-            acts.push(Act::SaveDiffAs);
-        }
-    });
     ui.add_space(8.0);
+    let words = doc.search.words();
+    let shown = |text: &str| {
+        let text = text.to_lowercase();
+        words.iter().all(|w| text.contains(w.as_str()))
+    };
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .show(ui, |ui| {
@@ -127,18 +121,28 @@ pub fn diff_view(
                     ui.strong(&d.other.name);
                     ui.end_row();
                     for (k, f) in &d.install {
-                        ui.label(trf("Installation: {k}", &[("k", k)]));
+                        let label = trf("Installation: {k}", &[("k", k)]);
+                        if !shown(&format!("{label} {} {}", value_text(&f.base), value_text(&f.other))) {
+                            continue;
+                        }
+                        ui.label(label);
                         ui.label(value_text(&f.base));
                         ui.label(value_text(&f.other));
                         ui.end_row();
                     }
                     for (k, f) in &d.languages {
-                        ui.label(trf("Languages: {k}", &[("k", k)]));
+                        let label = trf("Languages: {k}", &[("k", k)]);
+                        if !shown(&format!("{label} {} {}", value_text(&f.base), value_text(&f.other))) {
+                            continue;
+                        }
+                        ui.label(label);
                         ui.label(value_text(&f.base));
                         ui.label(value_text(&f.other));
                         ui.end_row();
                     }
-                    if let Some(f) = &d.accounts {
+                    if let Some(f) = &d.accounts
+                        && shown(&format!("{} {} {}", tr("Accounts"), value_text(&f.base), value_text(&f.other)))
+                    {
                         ui.label(tr("Accounts"));
                         ui.label(value_text(&f.base));
                         ui.label(value_text(&f.other));
@@ -148,6 +152,16 @@ pub fn diff_view(
                         let Some(r) = d.rules.get(&rule.id) else {
                             continue;
                         };
+                        let hay = format!(
+                            "{} {} {} {}",
+                            rule.id,
+                            rtitle(texts, rule),
+                            choice_text(&r.base),
+                            choice_text(&r.other)
+                        );
+                        if !shown(&hay) {
+                            continue;
+                        }
                         if ui.link(rtitle(texts, rule)).clicked() {
                             acts.push(Act::Select(Sel::Rule(rule.id.clone())));
                         }
@@ -156,7 +170,7 @@ pub fn diff_view(
                         ui.end_row();
                     }
                     for (id, r) in &d.rules {
-                        if catalog.rule(id).is_some() {
+                        if catalog.rule(id).is_some() || !shown(id) {
                             continue;
                         }
                         ui.weak(trf("{id} (not in this catalog)", &[("id", id)]));

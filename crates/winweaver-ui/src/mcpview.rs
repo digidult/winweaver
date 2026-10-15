@@ -49,7 +49,8 @@ fn masked(token: &str) -> String {
     format!("{}...{}", &token[..4], &token[token.len() - 4..])
 }
 
-pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
+pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, search: &crate::Search,
+    acts: &mut Vec<Act>) {
     ui.heading(tr("MCP server"));
     ui.weak(tr("AI agents read and, when the mode allows, edit profiles through this server. It has its own workspace of profiles and never applies settings to this PC."));
     ui.add_space(8.0);
@@ -196,7 +197,14 @@ pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
                 .num_columns(4)
                 .striped(true)
                 .show(ui, |ui| {
-                    for e in run.server.journal().iter().rev().take(100) {
+                    let words = search.words();
+                    let entries = run.server.journal();
+                    let shown = entries.iter().rev().filter(|e| {
+                        let hay = format!("{} {} {} {} {}", e.time, e.client, e.method, e.detail, e.result)
+                            .to_lowercase();
+                        words.iter().all(|w| hay.contains(w.as_str()))
+                    });
+                    for e in shown.take(100) {
                         ui.weak(e.time.get(11..19).unwrap_or(&e.time).to_owned());
                         ui.label(&e.method);
                         ui.weak(&e.detail);

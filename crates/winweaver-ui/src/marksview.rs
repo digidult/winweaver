@@ -9,7 +9,14 @@ use winweaver_core::bookmarks::Bookmarks;
 
 use crate::Act;
 
-pub fn marks_view(ui: &mut egui::Ui, marks: &Bookmarks, path: &Path, acts: &mut Vec<Act>) {
+pub fn marks_view(
+    ui: &mut egui::Ui,
+    marks: &Bookmarks,
+    path: &Path,
+    search: &crate::Search,
+    acts: &mut Vec<Act>,
+) {
+    let words = search.words();
     ui.heading(tr("Bookmarks"));
     ui.weak(trf(
         "{path} ({n} bookmarks)",
@@ -26,6 +33,10 @@ pub fn marks_view(ui: &mut egui::Ui, marks: &Bookmarks, path: &Path, acts: &mut 
         .show(ui, |ui| {
             let mut last_path: Option<&str> = None;
             for (i, b) in marks.items.iter().enumerate() {
+                let hay = format!("{} {} {} {}", b.title, b.item, b.path, b.comment).to_lowercase();
+                if !words.iter().all(|w| hay.contains(w.as_str())) {
+                    continue;
+                }
                 if last_path != Some(b.path.as_str()) {
                     ui.add_space(8.0);
                     ui.strong(if b.path.is_empty() {
