@@ -390,9 +390,9 @@ fn every_rule_of_registry_values_reads_as_applied() {
         let mut m = MemoryMachine::default();
         for action in &rule.actions {
             match action {
-                Action::Reg { path, name, value, .. } => {
-                    m.set(&path.replace("DU:", "HKCU:"), name, data_of(value))
-                }
+                Action::Reg {
+                    path, name, value, ..
+                } => m.set(&path.replace("DU:", "HKCU:"), name, data_of(value)),
                 Action::RegRemove { path, name, .. } => {
                     m.values.remove(&(
                         path.replace("DU:", "HKCU:").to_lowercase(),
@@ -419,7 +419,11 @@ fn every_rule_of_registry_values_reads_as_applied() {
             })
             .count()
     };
-    assert_eq!(realtime(true), 0, "the removal before the write is not checked");
+    assert_eq!(
+        realtime(true),
+        0,
+        "the removal before the write is not checked"
+    );
     assert_eq!(realtime(false), 1);
 }
 
