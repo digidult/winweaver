@@ -267,6 +267,8 @@ pub enum Act {
     SetParam(String, String, Value),
     Expand(String, bool),
     Activate(usize),
+    /// Moves a tab from one place of the row to another.
+    MoveTab(usize, usize),
     CloseTab(usize, bool),
     NewProfile(Option<&'static str>),
     Open,
@@ -849,6 +851,16 @@ impl App {
             }
             if count > 1 && i.consume_shortcut(&sc(Modifiers::CTRL, Key::Tab)) {
                 acts.push(Act::Activate((active + 1) % count));
+            }
+            if active > 0
+                && i.consume_shortcut(&sc(Modifiers::CTRL | Modifiers::SHIFT, Key::PageUp))
+            {
+                acts.push(Act::MoveTab(active, active - 1));
+            }
+            if active + 1 < count
+                && i.consume_shortcut(&sc(Modifiers::CTRL | Modifiers::SHIFT, Key::PageDown))
+            {
+                acts.push(Act::MoveTab(active, active + 1));
             }
             if confirming && i.consume_key(Modifiers::NONE, Key::Escape) {
                 acts.push(Act::CancelPlan);
@@ -2263,6 +2275,7 @@ impl App {
                         self.active = i;
                     }
                 }
+                Act::MoveTab(from, to) => self.move_tab(from, to),
                 Act::CloseTab(i, force) => {
                     if i < self.docs.len() {
                         if self.docs[i].dirty() && !force {
@@ -3185,6 +3198,25 @@ impl App {
         self.applied_theme = Some(wanted);
     }
 
+    /// Moves a tab to another place of the row; the tab in front stays in front.
+    fn move_tab(&mut self, from: usize, to: usize) {
+        let n = self.docs.len();
+        if from >= n || to >= n || from == to {
+            return;
+        }
+        let doc = self.docs.remove(from);
+        self.docs.insert(to, doc);
+        self.active = if self.active == from {
+            to
+        } else if from < self.active && self.active <= to {
+            self.active - 1
+        } else if to <= self.active && self.active < from {
+            self.active + 1
+        } else {
+            self.active
+        };
+    }
+
     /// Opens the editor of a theme, or brings its tab to the front.
     fn edit_theme(&mut self, theme: themes::Theme) {
         if let Some(i) = self
@@ -3898,14 +3930,15 @@ mod tests {
             .with_size(egui::vec2(1200.0, 800.0))
             .build_eframe(|_| app);
         let list = egui::Id::new(("diff-list", "Office", "Strict"));
-        let width = |h: &egui_kittest::Harness<'_, App>| {
-            h.ctx.read_response(list).map(|r| r.rect.width())
-        };
+        let width =
+            |h: &egui_kittest::Harness<'_, App>| h.ctx.read_response(list).map(|r| r.rect.width());
         harness.step();
         harness.step();
         let first = width(&harness).expect("the list is drawn");
         for key in keys {
-            harness.state_mut().apply(vec![Act::DiffSelect(key.clone())]);
+            harness
+                .state_mut()
+                .apply(vec![Act::DiffSelect(key.clone())]);
             harness.step();
             harness.step();
             assert_eq!(width(&harness), Some(first), "the divider moved for {key}");
@@ -4208,6 +4241,29 @@ and kept"
         app.apply(vec![Act::DiffGoTo(key, false)]);
         assert_eq!(app.active, 0);
         assert_eq!(app.active_profile().unwrap().sel, Sel::Rule(id));
+    }
+
+    #[test]
+    fn tabs_move_and_the_tab_in_front_stays_in_front() {
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        app.apply(vec![Act::OpenGuide, Act::OpenMarks, Act::OpenSettings]);
+        let titles = |app: &App| app.docs.iter().map(Doc::title).collect::<Vec<_>>();
+        let start = titles(&app);
+        assert_eq!(start.len(), 4);
+        assert_eq!(app.active, 3);
+        app.apply(vec![Act::MoveTab(3, 0)]);
+        assert_eq!(app.active, 0, "the moved tab stays in front");
+        assert_eq!(titles(&app)[0], start[3]);
+        assert_eq!(titles(&app)[1..], start[..3]);
+        app.apply(vec![Act::Activate(2), Act::MoveTab(0, 3)]);
+        assert_eq!(
+            app.active, 1,
+            "the tab in front shifts left when a tab before it moves after it"
+        );
+        assert_eq!(titles(&app), start);
+        app.apply(vec![Act::MoveTab(1, 1), Act::MoveTab(0, 9)]);
+        assert_eq!(titles(&app), start, "nothing moves out of the row");
     }
 
     #[test]

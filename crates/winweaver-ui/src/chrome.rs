@@ -59,8 +59,29 @@ impl App {
                 self.menu_items(ui, acts);
             });
             ui.add_space(4.0);
-            for (i, doc) in self.docs.iter().enumerate() {
-                self.tab(ui, &p, i, doc, acts);
+            let tabs: Vec<egui::Response> = self
+                .docs
+                .iter()
+                .enumerate()
+                .map(|(i, doc)| self.tab(ui, &p, i, doc, acts))
+                .collect();
+            let rects: Vec<egui::Rect> = tabs.iter().map(|r| r.rect).collect();
+            let pointer = ui.ctx().pointer_interact_pos();
+            if let (Some(from), Some(pos)) = (tabs.iter().position(|r| r.dragged()), pointer) {
+                ui.ctx().set_cursor_icon(egui::CursorIcon::Grabbing);
+                let (_, x) = drop_place(&rects, from, pos.x);
+                let row = rects[from];
+                ui.painter().vline(
+                    x,
+                    row.top() + 4.0..=row.bottom() - 4.0,
+                    Stroke::new(2.0, p.accent),
+                );
+            }
+            if let (Some(from), Some(pos)) = (tabs.iter().position(|r| r.drag_stopped()), pointer) {
+                let (to, _) = drop_place(&rects, from, pos.x);
+                if to != from {
+                    acts.push(Act::MoveTab(from, to));
+                }
             }
             if style::icon_button(ui, "+", tr("New profile (Ctrl+N)"), true, None).clicked() {
                 acts.push(Act::NewProfile(None));
@@ -68,7 +89,16 @@ impl App {
         });
     }
 
-    fn tab(&self, ui: &mut egui::Ui, p: &Palette, i: usize, doc: &Doc, acts: &mut Vec<Act>) {
+    /// A tab of the row: a click brings it to the front, a drag moves it, the right button opens
+    /// a menu that moves or closes it.
+    fn tab(
+        &self,
+        ui: &mut egui::Ui,
+        p: &Palette,
+        i: usize,
+        doc: &Doc,
+        acts: &mut Vec<Act>,
+    ) -> egui::Response {
         let active = i == self.active;
         let title = doc.title();
         let font = style::font(ui, 12.5);
@@ -80,7 +110,8 @@ impl App {
             .min(200.0);
         let dirty = doc.dirty();
         let width = 12.0 + 16.0 + if dirty { 10.0 } else { 0.0 } + text_w + 8.0 + 22.0;
-        let (rect, response) = ui.allocate_exact_size(egui::vec2(width, 32.0), Sense::click());
+        let (rect, response) =
+            ui.allocate_exact_size(egui::vec2(width, 32.0), Sense::click_and_drag());
         let close_rect = egui::Rect::from_center_size(
             egui::pos2(rect.right() - 15.0, rect.center().y),
             egui::vec2(18.0, 18.0),
@@ -152,14 +183,43 @@ impl App {
         if response.middle_clicked() {
             acts.push(Act::CloseTab(i, false));
         }
+        let last = self.docs.len().saturating_sub(1);
+        response.context_menu(|ui| {
+            if ui
+                .add_enabled(
+                    i > 0,
+                    egui::Button::new(tr("Move the tab left (Ctrl+Shift+PgUp)")),
+                )
+                .clicked()
+            {
+                acts.push(Act::MoveTab(i, i - 1));
+                ui.close();
+            }
+            if ui
+                .add_enabled(
+                    i < last,
+                    egui::Button::new(tr("Move the tab right (Ctrl+Shift+PgDn)")),
+                )
+                .clicked()
+            {
+                acts.push(Act::MoveTab(i, i + 1));
+                ui.close();
+            }
+            ui.separator();
+            if ui.button(tr("Close (Ctrl+W)")).clicked() {
+                acts.push(Act::CloseTab(i, false));
+                ui.close();
+            }
+        });
         let hint = match doc {
             Doc::Profile(d) => d.path.as_ref().map(|p| p.display().to_string()),
             Doc::Diff(d) => d.path.as_ref().map(|p| p.display().to_string()),
             Doc::Markdown(d) => d.path.as_ref().map(|p| p.display().to_string()),
             _ => None,
         };
-        if let Some(h) = hint {
-            response.on_hover_text(h);
+        match hint {
+            Some(h) => response.on_hover_text(h),
+            None => response,
         }
     }
 
@@ -937,4 +997,23 @@ fn fit_crumbs(ui: &egui::Ui, crumbs: &[(String, Option<Act>)], room: f32) -> Vec
         list = vec![Some(n - 1)];
     }
     list
+}
+
+/// Where a dragged tab goes: its new index and the x of the line that shows the place, from the
+/// tabs of the row, the index of the dragged one and the x of the pointer.
+fn drop_place(rects: &[egui::Rect], from: usize, x: f32) -> (usize, f32) {
+    let others: Vec<&egui::Rect> = rects
+        .iter()
+        .enumerate()
+        .filter(|(j, _)| *j != from)
+        .map(|(_, r)| r)
+        .collect();
+    let to = others.iter().filter(|r| r.center().x < x).count();
+    let line = match others.get(to) {
+        Some(r) => r.left() - 1.0,
+        None => others
+            .last()
+            .map_or(rects[from].right(), |r| r.right() + 1.0),
+    };
+    (to, line)
 }
