@@ -166,6 +166,14 @@ impl ProfileDoc {
     }
 }
 
+/// A question over the window: its title, its text, the label of the yes and the act it runs.
+struct Ask {
+    title: String,
+    text: String,
+    yes: String,
+    act: Act,
+}
+
 /// A tab of the window.
 pub enum Doc {
     Profile(Box<ProfileDoc>),
@@ -301,8 +309,15 @@ pub enum Act {
     McpRenewToken,
     McpOpen(String),
     GoToMark(usize),
+    /// Selects a bookmark in the bookmark tab.
+    MarkSelect(usize),
     SetMarkComment(usize, String),
     RemoveMark(usize),
+    /// Removes a bookmark, asking first when it has a comment.
+    RemoveMarkAsk(usize),
+    /// The answer to the question over the window: yes runs its act.
+    AskYes,
+    AskNo,
     Compare,
     CompareWith(&'static str),
     ApplyDiff,
@@ -356,6 +371,9 @@ pub struct App {
     search_history: Vec<String>,
     /// The searches of the bookmark tab and of the MCP tab.
     marks_search: Search,
+    marks_tab: marksview::MarksTab,
+    /// A question over the window and the act a yes runs.
+    ask: Option<Ask>,
     mcp_search: Search,
     /// Whether the message bar shows its list or one line.
     messages_open: bool,
@@ -408,6 +426,8 @@ impl App {
             settings_dirty: false,
             search_history,
             marks_search: Search::default(),
+            marks_tab: marksview::MarksTab::default(),
+            ask: None,
             mcp_search: Search::default(),
             messages_open: true,
             status: "Ready".to_owned(),
@@ -432,6 +452,9 @@ impl App {
                 read_pc: false,
                 run: None,
                 error: String::new(),
+                journal_sel: None,
+                journal_follow: false,
+                journal_reveal: false,
             },
             last_logged: String::new(),
         }
@@ -497,8 +520,55 @@ impl App {
                 c.reveal = true;
             }
             Some(Doc::Diff(d)) => d.reveal = true,
+            Some(Doc::Bookmarks) => self.marks_tab.reveal = true,
+            Some(Doc::Mcp) => self.mcp.journal_reveal = true,
             _ => {}
         }
+    }
+
+    /// Asks before a bookmark with a comment is removed.
+    fn ask_remove_mark(&mut self, i: usize) {
+        let Some(b) = self.marks.items.get(i) else {
+            return;
+        };
+        let t = marksview::target(
+            &self.catalog,
+            texts_for(&self.texts, &i18n::current()),
+            &self.imports,
+            b,
+        );
+        self.ask = Some(Ask {
+            title: tr("Remove the bookmark").to_owned(),
+            text: trf(
+                "The bookmark of {title} has a comment. Remove it with the comment?",
+                &[("title", &t.title)],
+            ),
+            yes: tr("Remove").to_owned(),
+            act: Act::RemoveMark(i),
+        });
+    }
+
+    /// The question over the window, when there is one.
+    fn ask_view(&self, ctx: &egui::Context, acts: &mut Vec<Act>) {
+        let Some(ask) = &self.ask else {
+            return;
+        };
+        egui::Window::new(ask.title.as_str())
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.label(ask.text.as_str());
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if ui.button(ask.yes.as_str()).clicked() {
+                        acts.push(Act::AskYes);
+                    }
+                    if ui.button(tr("Cancel")).clicked() {
+                        acts.push(Act::AskNo);
+                    }
+                });
+            });
     }
 
     fn open_settings(&mut self) {
@@ -642,48 +712,31 @@ impl App {
 
     /// The current position of the active tab as a bookmark, without a comment. The path of an
     /// unsaved document is its tab title, so that the bookmark finds the tab again.
-    fn current_bookmark(&self) -> Option<Bookmark> {
-        let (document, path, item, title) = match self.docs.get(self.active) {
+    /// The bookmark of the option selected in the active tab: a profile (with its file as the
+    /// link), an imported catalog or a rule of a diff (with the file of its base).
+    pub(crate) fn current_bookmark(&self) -> Option<Bookmark> {
+        let (item, path) = match self.docs.get(self.active) {
             Some(Doc::Profile(doc)) => {
                 let item = match &doc.sel {
-                    Sel::None => String::new(),
+                    Sel::None => return None,
                     Sel::Group(id) | Sel::Rule(id) => id.clone(),
                     Sel::Form(f) => f.id().to_owned(),
                 };
-                let title = self
-                    .crumbs()
-                    .last()
-                    .map(|c| c.0.clone())
-                    .unwrap_or_else(|| doc.profile.name.clone());
                 let path = doc
                     .path
                     .as_ref()
-                    .map_or_else(|| doc.title(), |p| p.display().to_string());
-                ("profile", path, item, title)
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_default();
+                (item, path)
             }
-            Some(Doc::Markdown(doc)) => {
-                let path = doc
-                    .path
-                    .as_ref()
-                    .map_or_else(|| doc.title.clone(), |p| p.display().to_string());
-                ("markdown", path, String::new(), doc.title.clone())
-            }
-            Some(Doc::Diff(doc)) => {
-                let path = doc
-                    .path
-                    .as_ref()
-                    .map_or_else(|| doc.title(), |p| p.display().to_string());
-                ("diff", path, String::new(), doc.title())
+            Some(Doc::Catalog(c)) if c.file.is_none() => (c.sel.clone()?, String::new()),
+            Some(Doc::Diff(d)) => {
+                let id = d.sel.as_deref()?.strip_prefix("rule:")?;
+                (id.to_owned(), d.diff.base.path.clone())
             }
             _ => return None,
         };
-        Some(Bookmark {
-            document: document.to_owned(),
-            path,
-            item,
-            title,
-            ..Bookmark::default()
-        })
+        Some(Bookmark::option(&item, &path))
     }
 
     fn shortcuts(&mut self, ctx: &egui::Context) -> Vec<Act> {
@@ -692,6 +745,7 @@ impl App {
         let active = self.active;
         let count = self.docs.len();
         let confirming = self.confirm.is_some();
+        let asking = self.ask.is_some();
         let mut focus_search = false;
         ctx.input_mut(|i| {
             let sc = |m, k| KeyboardShortcut::new(m, k);
@@ -745,6 +799,9 @@ impl App {
             }
             if confirming && i.consume_key(Modifiers::NONE, Key::Escape) {
                 acts.push(Act::CancelPlan);
+            }
+            if asking && i.consume_key(Modifiers::NONE, Key::Escape) {
+                acts.push(Act::AskNo);
             }
             for file in &i.raw.dropped_files {
                 acts.push(Act::OpenPath(file.path().to_path_buf()));
@@ -2085,6 +2142,12 @@ impl App {
                 }
                 Act::ToggleBookmark => {
                     if let Some(mut mark) = self.current_bookmark() {
+                        if let Some(j) = self.marks.find(&mark)
+                            && !self.marks.items[j].comment.trim().is_empty()
+                        {
+                            self.ask_remove_mark(j);
+                            continue;
+                        }
                         mark.created = clock::now_utc_iso();
                         let added = self.marks.toggle(mark);
                         if self.save_marks() {
@@ -2153,9 +2216,33 @@ impl App {
                 Act::RemoveMark(i) => {
                     if i < self.marks.items.len() {
                         self.marks.items.remove(i);
+                        self.marks_tab.sel = match self.marks_tab.sel {
+                            Some(s) if s == i => None,
+                            Some(s) if s > i => Some(s - 1),
+                            other => other,
+                        };
                         self.save_marks();
                     }
                 }
+                Act::RemoveMarkAsk(i) => {
+                    let has_comment = self
+                        .marks
+                        .items
+                        .get(i)
+                        .is_some_and(|b| !b.comment.trim().is_empty());
+                    if has_comment {
+                        self.ask_remove_mark(i);
+                    } else {
+                        self.apply(vec![Act::RemoveMark(i)]);
+                    }
+                }
+                Act::MarkSelect(i) => self.marks_tab.sel = Some(i),
+                Act::AskYes => {
+                    if let Some(ask) = self.ask.take() {
+                        self.apply(vec![ask.act]);
+                    }
+                }
+                Act::AskNo => self.ask = None,
                 Act::Fold => {
                     self.settings.desc_open = !self.settings.desc_open;
                     self.settings_dirty = true;
@@ -2294,12 +2381,17 @@ impl App {
                         d.reveal = false;
                         d.follow = false;
                     }
+                    Some(Doc::Bookmarks) => {
+                        self.marks_tab.reveal = false;
+                        self.marks_tab.follow = false;
+                    }
                     _ => {}
                 },
                 Act::Follow => match self.docs.get_mut(self.active) {
                     Some(Doc::Profile(doc)) => doc.follow = true,
                     Some(Doc::Catalog(c)) => c.follow = true,
                     Some(Doc::Diff(d)) => d.follow = true,
+                    Some(Doc::Bookmarks) => self.marks_tab.follow = true,
                     _ => {}
                 },
                 Act::OpenDoc(link) => self.open_doc(&link),
@@ -2338,28 +2430,43 @@ impl App {
 
     /// Opens the document of a bookmark (a file, or the tab of an unsaved document by its
     /// title) and selects its item.
+    /// Opens the profile of a bookmark (loading its file when no tab has it) and selects the
+    /// option; without a profile file the option is shown in the profile tab in front, else the first one.
     fn go_to_mark(&mut self, i: usize) {
         let Some(mark) = self.marks.items.get(i).cloned() else {
             return;
         };
+        self.marks_tab.sel = Some(i);
         let path = PathBuf::from(&mark.path);
-        if path.is_file() {
+        if !mark.path.is_empty() && path.is_file() {
             self.open_path(path);
-        } else {
-            match self.docs.iter().position(|d| d.title() == mark.path) {
+        } else if let Some(j) = (!mark.path.is_empty())
+            .then(|| self.docs.iter().position(|d| d.title() == mark.path))
+            .flatten()
+        {
+            self.active = j;
+        } else if mark.is_option() {
+            let front = match self.docs.get(self.active) {
+                Some(Doc::Profile(_)) => Some(self.active),
+                _ => self.docs.iter().position(|d| matches!(d, Doc::Profile(_))),
+            };
+            match front {
                 Some(j) => self.active = j,
                 None => {
-                    self.status =
-                        format!("The document of the bookmark is not open: {}", mark.path);
+                    self.status = tr("Open a profile to show the option of the bookmark in").to_owned();
                     return;
                 }
             }
+        } else {
+            self.status = format!("The document of the bookmark is not open: {}", mark.path);
+            return;
         }
-        if mark.document == "profile" && !mark.item.is_empty() {
+        if mark.is_option() {
             let sel = sel_from_item(&self.catalog, &mark.item);
             if let Some(doc) = self.active_profile() {
                 doc.select(sel);
             }
+            self.reveal_selection();
         }
     }
 
@@ -2993,20 +3100,61 @@ impl eframe::App for App {
         } else if kind == 6 {
             let panel = &mut self.mcp;
             let search = &self.mcp_search;
-            egui::CentralPanel::default().show(ui, |ui| {
-                egui::ScrollArea::vertical()
-                    .auto_shrink(false)
+            let p = style::palette(ui);
+            let settings_frame = egui::Frame::new()
+                .fill(p.bg)
+                .inner_margin(egui::Margin::symmetric(18, 12));
+            if panel.run.is_some() {
+                let max = (ui.available_height() - 120.0).max(160.0);
+                egui::Panel::top("mcp-settings")
+                    .resizable(true)
+                    .default_size(420.0)
+                    .size_range(120.0..=max)
+                    .frame(settings_frame)
                     .show(ui, |ui| {
-                        mcpview::mcp_view(ui, panel, search, &mut acts);
+                        egui::ScrollArea::vertical()
+                            .auto_shrink(false)
+                            .show(ui, |ui| mcpview::mcp_view(ui, panel, &mut acts));
                     });
-            });
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::new().fill(p.card))
+                    .show(ui, |ui| mcpview::journal_view(ui, panel, search));
+            } else {
+                egui::CentralPanel::default()
+                    .frame(settings_frame)
+                    .show(ui, |ui| {
+                        egui::ScrollArea::vertical()
+                            .auto_shrink(false)
+                            .show(ui, |ui| mcpview::mcp_view(ui, panel, &mut acts));
+                    });
+            }
         } else if kind == 5 {
+            let catalog = &self.catalog;
+            let texts = texts_for(&self.texts, &i18n::current());
+            let imports = &self.imports;
+            let settings = &self.settings;
             let marks = &self.marks;
             let path = &self.marks_path;
             let search = &self.marks_search;
-            egui::CentralPanel::default().show(ui, |ui| {
-                marksview::marks_view(ui, marks, path, search, &mut acts);
-            });
+            let tab = &self.marks_tab;
+            let p = style::palette(ui);
+            egui::Panel::right("marks-detail")
+                .resizable(true)
+                .default_size(420.0)
+                .size_range(260.0..=900.0)
+                .frame(egui::Frame::new().fill(p.bg))
+                .show(ui, |ui| {
+                    marksview::marks_detail(
+                        ui, catalog, texts, imports, marks, tab, settings, &mut acts,
+                    );
+                });
+            egui::CentralPanel::default()
+                .frame(egui::Frame::new().fill(p.card))
+                .show(ui, |ui| {
+                    marksview::marks_view(
+                        ui, catalog, texts, imports, marks, path, search, tab, &mut acts,
+                    );
+                });
         } else if kind == 7 {
             let shown = match self.docs.get(self.active) {
                 Some(Doc::Catalog(doc)) => doc.catalog(&self.imports).map(|f| (f, doc)),
@@ -3028,6 +3176,7 @@ impl eframe::App for App {
             });
         }
         self.confirm_view(ui.ctx(), &mut acts);
+        self.ask_view(ui.ctx(), &mut acts);
         let links: Vec<String> = ui.ctx().output_mut(|o| {
             let mut found = Vec::new();
             o.commands.retain(|c| match c {
@@ -3458,7 +3607,8 @@ mod tests {
         ]);
         assert_eq!(app.marks.items.len(), 1, "{}", app.status);
         assert_eq!(app.marks.items[0].item, "install.bypass-tpm");
-        assert_eq!(app.marks.items[0].path, "Office.wwprofile");
+        assert_eq!(app.marks.items[0].path, "", "an unsaved profile has no file to link");
+        assert_eq!(app.marks.items[0].title, "", "the title comes from the catalog");
         assert!(
             app.marks_path.exists(),
             "the default file is created at the first bookmark"
@@ -3475,6 +3625,20 @@ mod tests {
         );
         app.apply(vec![Act::ToggleBookmark]);
         assert!(app.marks.items.is_empty());
+        app.apply(vec![
+            Act::ToggleBookmark,
+            Act::SetMarkComment(0, "Ask the customer\nabout the TPM".into()),
+            Act::ToggleBookmark,
+        ]);
+        assert_eq!(app.marks.items.len(), 1, "a bookmark with a comment asks first");
+        assert!(app.ask.is_some());
+        app.apply(vec![Act::AskNo]);
+        assert_eq!(app.marks.items.len(), 1);
+        app.apply(vec![Act::OpenMarks, Act::MarkSelect(0), Act::RemoveMarkAsk(0)]);
+        assert!(app.ask.is_some());
+        app.apply(vec![Act::AskYes]);
+        assert!(app.marks.items.is_empty());
+        assert_eq!(app.marks_tab.sel, None);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

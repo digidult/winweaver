@@ -1,6 +1,7 @@
 //! The MCP tab (`docs/spec/01-ui.md` section 11): the HTTP server of the window, its mode, the
 //! option to read this PC, the token, the configuration for clients, the workspace of the server
-//! and the journal. The server does not depend on the open tabs.
+//! and the journal, a list under them that the search of the tab filters. The server does not
+//! depend on the open tabs.
 
 use std::sync::Arc;
 
@@ -8,8 +9,8 @@ use eframe::egui;
 use winweaver_mcp::http::HttpServer;
 use winweaver_mcp::{Mode, Server};
 
-use crate::Act;
 use crate::i18n::{tr, trf};
+use crate::{Act, list, style, tree};
 
 /// A server the window runs.
 pub struct McpRun {
@@ -25,6 +26,12 @@ pub struct McpPanel {
     pub read_pc: bool,
     pub run: Option<McpRun>,
     pub error: String,
+    /// The selected entry of the journal, by its place in the journal.
+    pub journal_sel: Option<usize>,
+    /// The selection moved with the keys: it comes into view at the next frame.
+    pub journal_follow: bool,
+    /// The search was cleared: the selection comes to the middle of the list.
+    pub journal_reveal: bool,
 }
 
 /// The configuration a client needs for the HTTP server of the window.
@@ -49,8 +56,7 @@ fn masked(token: &str) -> String {
     format!("{}...{}", &token[..4], &token[token.len() - 4..])
 }
 
-pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, search: &crate::Search,
-    acts: &mut Vec<Act>) {
+pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
     ui.heading(tr("MCP server"));
     ui.weak(tr("AI agents read and, when the mode allows, edit profiles through this server. It has its own workspace of profiles and never applies settings to this PC."));
     ui.add_space(8.0);
@@ -187,34 +193,81 @@ pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, search: &crate::Search,
             }
         });
     }
-    ui.add_space(10.0);
-    ui.strong(tr("Journal"));
-    egui::ScrollArea::vertical()
-        .id_salt("mcp-journal")
-        .max_height(260.0)
-        .show(ui, |ui| {
-            egui::Grid::new("mcp-journal-grid")
-                .num_columns(4)
-                .striped(true)
-                .show(ui, |ui| {
-                    let words = search.words();
-                    let entries = run.server.journal();
-                    let shown = entries.iter().rev().filter(|e| {
-                        let hay = format!("{} {} {} {} {}", e.time, e.client, e.method, e.detail, e.result)
-                            .to_lowercase();
-                        words.iter().all(|w| hay.contains(w.as_str()))
-                    });
-                    for e in shown.take(100) {
-                        ui.weak(e.time.get(11..19).unwrap_or(&e.time).to_owned());
-                        ui.label(&e.method);
-                        ui.weak(&e.detail);
-                        ui.label(&e.result);
-                        ui.end_row();
-                    }
-                });
-        });
     ui.ctx()
         .request_repaint_after(std::time::Duration::from_secs(1));
+}
+
+/// The journal of the running server, the newest call first, as the search of the tab filters it.
+pub fn journal_view(ui: &mut egui::Ui, panel: &mut McpPanel, search: &crate::Search) {
+    let Some(run) = &panel.run else {
+        return;
+    };
+    egui::Frame::new()
+        .inner_margin(egui::Margin::symmetric(18, 8))
+        .show(ui, |ui| style::section_title(ui, tr("Journal")));
+    let words = search.words();
+    let entries = run.server.journal();
+    let rows: Vec<list::Row<usize>> = entries
+        .iter()
+        .enumerate()
+        .rev()
+        .filter(|(_, e)| {
+            let hay = format!("{} {} {} {} {}", e.time, e.client, e.method, e.detail, e.result)
+                .to_lowercase();
+            words.iter().all(|w| hay.contains(w.as_str()))
+        })
+        .map(|(i, e)| {
+            let result = list::Cell::new(&e.result);
+            list::Row {
+                key: i,
+                cells: vec![
+                    list::Cell::new(e.time.get(11..19).unwrap_or(&e.time)).muted(),
+                    list::Cell::new(&e.client).muted(),
+                    list::Cell::new(&e.method),
+                    list::Cell::new(&e.detail).muted(),
+                    if e.result == "ok" { result } else { result.warn() },
+                ],
+                button: None,
+            }
+        })
+        .collect();
+    let columns = [
+        list::Column::new(tr("Time"), 90.0),
+        list::Column::new(tr("Client"), 150.0),
+        list::Column::new(tr("Call"), 170.0),
+        list::Column::new(tr("Arguments"), 320.0),
+        list::Column::new(tr("Result"), 120.0),
+    ];
+    let selected = panel
+        .journal_sel
+        .and_then(|s| rows.iter().position(|r| r.key == s));
+    let scroll = if panel.journal_reveal {
+        tree::Scroll::Center
+    } else if panel.journal_follow {
+        tree::Scroll::Near
+    } else {
+        tree::Scroll::None
+    };
+    let out = list::show(
+        ui,
+        egui::Id::new("mcp-journal"),
+        tr("Journal"),
+        &columns,
+        &rows,
+        selected,
+        scroll,
+    );
+    for event in out.events {
+        if let list::Event::Select(i) | list::Event::Open(i) = event {
+            panel.journal_sel = Some(i);
+        }
+    }
+    if out.moved {
+        panel.journal_follow = true;
+    } else if out.scrolled {
+        panel.journal_follow = false;
+        panel.journal_reveal = false;
+    }
 }
 
 #[cfg(test)]

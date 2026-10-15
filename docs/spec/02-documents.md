@@ -97,14 +97,18 @@ Plain, gzip or xz; the compression is detected by the first bytes.
   "format": "winweaver-bookmarks",
   "version": 1,
   "items": [
-    { "document": "profile", "path": "profiles/office.wwprofile", "item": "defender.pua", "title": "Potentially unwanted apps", "comment": "Ask the customer about Audit mode", "created": "..." },
-    { "document": "markdown", "path": "docs/en/this-pc.md", "item": "#apply", "title": "Apply", "comment": "", "created": "..." }
+    { "document": "profile", "path": "profiles/office.wwprofile", "item": "defender.pua", "comment": "Ask the customer about Audit mode
+and note the answer", "created": "..." }
   ]
 }
 ```
 
-A bookmark of a document that is not open opens it; a bookmark of a file that is missing is shown greyed
-with "file not found" and can be edited or removed.
+A bookmark holds the id of an option (a rule, a group or a form) and, as a link, the profile it was made
+in (`path`, empty for an unsaved profile or a catalog tab); the title is taken from the catalog when it
+is shown, so an option is one bookmark in every profile. The comment may have several lines. Opening a
+bookmark opens its profile (loading the file when no tab has it) and selects the option; without a
+profile file it selects the option in the profile tab in front. Files may also hold positions of other
+documents with a `title` (`"document": "markdown"`, `"item": "#heading"`); they are read and kept.
 
 ## 7. Settings
 

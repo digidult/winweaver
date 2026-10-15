@@ -240,6 +240,7 @@ pub fn diff_view(
                 list::Cell::new(doc.diff.comments.get(&item.key).cloned().unwrap_or_default())
                     .muted(),
             ],
+            button: None,
         })
         .collect();
     let selected = doc
@@ -265,7 +266,10 @@ pub fn diff_view(
     for event in out.events {
         match event {
             list::Event::Select(key) => acts.push(Act::DiffSelect(key)),
-            list::Event::Open(key) => acts.push(Act::DiffGoTo(key, false)),
+            list::Event::Open(key) | list::Event::Button(key) => {
+                acts.push(Act::DiffGoTo(key, false))
+            }
+            list::Event::Delete(_) => {}
         }
     }
     if out.moved {

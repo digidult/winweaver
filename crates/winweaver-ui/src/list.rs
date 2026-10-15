@@ -1,7 +1,8 @@
 //! A list with columns: the differences of a diff, the bookmarks, the log of the MCP server. Like
 //! the tree it is one stop of the Tab key; the arrows, Home, End, Page Up and Page Down move the
-//! selection and bring it into view, Enter opens the selected row, a click gives the list the
-//! keyboard focus. The columns change their width by dragging the lines between their titles.
+//! selection and bring it into view, Enter opens the selected row, Delete asks to remove it, a
+//! click gives the list the keyboard focus. The columns change their width by dragging the lines
+//! between their titles; a row may have a mini button at its right end.
 
 use eframe::egui::{self, Align, CornerRadius, CursorIcon, FontId, Key, Modifiers, Rect, Sense, Stroke};
 
@@ -55,12 +56,19 @@ impl Cell {
         self.muted = true;
         self
     }
+
+    pub fn warn(mut self) -> Self {
+        self.warn = true;
+        self
+    }
 }
 
 /// A row of the list, in the order it is shown.
 pub struct Row<K> {
     pub key: K,
     pub cells: Vec<Cell>,
+    /// A mini button at the right end: its icon and its hint.
+    pub button: Option<(&'static str, String)>,
 }
 
 /// What the user did in the list.
@@ -68,6 +76,10 @@ pub enum Event<K> {
     Select(K),
     /// A double click or Enter on a row.
     Open(K),
+    /// The mini button of a row.
+    Button(K),
+    /// Delete on the selected row.
+    Delete(K),
 }
 
 pub struct Output<K> {
@@ -115,6 +127,10 @@ pub fn show<K: Clone>(
             && ui.input_mut(|inp| inp.consume_key(Modifiers::NONE, Key::Enter))
         {
             out.events.push(Event::Open(rows[i].key.clone()));
+        } else if let Some(i) = selected
+            && ui.input_mut(|inp| inp.consume_key(Modifiers::NONE, Key::Delete))
+        {
+            out.events.push(Event::Delete(rows[i].key.clone()));
         }
     }
     let widths_id = id.with("widths");
@@ -185,6 +201,10 @@ pub fn show<K: Clone>(
                     ui.scroll_to_rect(rect, align);
                     out.scrolled = true;
                 }
+                let button_rect = Rect::from_center_size(
+                    egui::pos2(rect.right() - 20.0, rect.center().y),
+                    egui::vec2(26.0, 22.0),
+                );
                 let mut cut = Vec::new();
                 if ui.is_rect_visible(rect) {
                     let painter = ui.painter();
@@ -193,7 +213,12 @@ pub fn show<K: Clone>(
                     } else if response.hovered() {
                         painter.rect_filled(rect, CornerRadius::ZERO, p.hover);
                     }
-                    for (cell, &(x, w)) in row.cells.iter().zip(&spans) {
+                    for (j, (cell, &(x, w))) in row.cells.iter().zip(&spans).enumerate() {
+                        let w = if row.button.is_some() && j + 1 == spans.len() {
+                            (w - 30.0).max(0.0)
+                        } else {
+                            w
+                        };
                         let color = if cell.warn {
                             p.warn
                         } else if cell.muted {
@@ -241,6 +266,38 @@ pub fn show<K: Clone>(
                 } else {
                     response.on_hover_text(cut.join("\n"))
                 };
+                if let Some((icon, hint)) = &row.button {
+                    let button = ui.interact(button_rect, response.id.with("button"), Sense::CLICK);
+                    button.widget_info(|| {
+                        egui::WidgetInfo::labeled(egui::WidgetType::Button, true, hint.as_str())
+                    });
+                    if ui.is_rect_visible(button_rect) {
+                        let painter = ui.painter();
+                        if button.hovered() {
+                            painter.rect_filled(button_rect, CornerRadius::same(4), p.card2);
+                            painter.rect_stroke(
+                                button_rect,
+                                CornerRadius::same(4),
+                                Stroke::new(1.0, p.border),
+                                egui::StrokeKind::Inside,
+                            );
+                        }
+                        painter.text(
+                            button_rect.center(),
+                            egui::Align2::CENTER_CENTER,
+                            *icon,
+                            FontId::proportional(13.0),
+                            if button.hovered() { p.accent } else { p.muted },
+                        );
+                    }
+                    let clicked = button.clicked();
+                    button.on_hover_text(hint.as_str());
+                    if clicked {
+                        out.events.push(Event::Button(row.key.clone()));
+                        take_focus = true;
+                        continue;
+                    }
+                }
                 if response.double_clicked() {
                     out.events.push(Event::Open(row.key.clone()));
                 } else if response.clicked() {

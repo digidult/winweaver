@@ -450,11 +450,9 @@ impl App {
             _ => None,
         };
         let crumbs = self.nav_crumbs();
-        let star = matches!(self.docs.get(self.active), Some(Doc::Profile(_)))
-            && !crumbs.is_empty();
-        let marked = self
-            .current_bookmark()
-            .is_some_and(|b| self.marks.find(&b).is_some());
+        let current = self.current_bookmark();
+        let star = current.is_some();
+        let marked = current.is_some_and(|b| self.marks.find(&b).is_some());
         let hint = self.docs.get(self.active).map_or("", search_hint);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 2.0;

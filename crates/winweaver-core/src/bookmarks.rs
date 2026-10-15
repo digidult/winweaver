@@ -30,22 +30,47 @@ pub enum BookmarksError {
     Version { name: String, found: u32 },
 }
 
-/// A position: the kind of document (`profile`, `diff`, `markdown`), its path (empty for an
-/// unsaved document), the item inside it (a rule or group id, a form id, a heading) and texts.
+/// The kind of document of a bookmark of an option.
+pub const OPTION: &str = "profile";
+
+/// A bookmark of an option: its id (a rule, a group or a form) in `item`, the profile it was made
+/// in as a link (`path`, empty for an unsaved profile or a catalog), a comment and the time. Its
+/// title comes from the catalog when it is shown. Files of version 1 may also hold positions in
+/// other documents (`diff`, `markdown`) with a `title`; they are read and kept.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Bookmark {
     pub document: String,
     pub path: String,
     pub item: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub title: String,
     pub comment: String,
     pub created: String,
 }
 
 impl Bookmark {
-    /// Whether two bookmarks point at the same position.
+    /// The bookmark of an option, with the profile it was made in.
+    pub fn option(item: &str, path: &str) -> Self {
+        Self {
+            document: OPTION.to_owned(),
+            path: path.to_owned(),
+            item: item.to_owned(),
+            ..Self::default()
+        }
+    }
+
+    /// Whether this is the bookmark of an option.
+    pub fn is_option(&self) -> bool {
+        self.document == OPTION && !self.item.is_empty()
+    }
+
+    /// Whether two bookmarks point at the same place: the same option wherever it was marked,
+    /// or the same position of the same document.
     pub fn same_position(&self, other: &Bookmark) -> bool {
+        if self.is_option() && other.is_option() {
+            return self.item == other.item;
+        }
         self.document == other.document && self.path == other.path && self.item == other.item
     }
 }
@@ -148,6 +173,28 @@ mod tests {
             title: item.to_uppercase(),
             ..Bookmark::default()
         }
+    }
+
+    #[test]
+    fn an_option_is_one_bookmark_in_every_profile_and_keeps_no_title() {
+        let mut marks = Bookmarks::default();
+        assert!(marks.toggle(Bookmark::option("defender.pua", "profiles/office.wwprofile")));
+        let elsewhere = Bookmark::option("defender.pua", "profiles/strict.wwprofile");
+        assert_eq!(marks.find(&elsewhere), Some(0));
+        assert_eq!(marks.find(&Bookmark::option("defender.pua", "")), Some(0));
+        assert!(!marks.to_json().contains("\"title\""));
+        let page = Bookmark {
+            document: "markdown".into(),
+            path: "docs/guide.md".into(),
+            item: "#apply".into(),
+            title: "Apply".into(),
+            ..Bookmark::default()
+        };
+        assert!(marks.toggle(page.clone()));
+        assert!(marks.to_json().contains("\"title\": \"Apply\""));
+        assert_eq!(marks.find(&page), Some(1));
+        assert!(!marks.toggle(elsewhere));
+        assert_eq!(marks.items, vec![page]);
     }
 
     #[test]
