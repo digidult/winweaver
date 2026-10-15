@@ -379,10 +379,9 @@ fn definitions(light: &Fonts, dark: &Fonts) -> egui::FontDefinitions {
         defs.families
             .insert(family_name(dark, "-mono"), list(vec![code], &monospace));
     }
-    let first: Vec<String> = ["file:segoeui.ttf", &format!("file:{SYMBOLS}")]
-        .iter()
-        .filter(|k| loaded.contains(**k))
-        .map(|k| (*k).to_owned())
+    let first: Vec<String> = ["file:segoeui.ttf".to_owned(), format!("file:{SYMBOLS}")]
+        .into_iter()
+        .filter(|k| loaded.contains(k))
         .collect();
     let family = defs.families.entry(FontFamily::Proportional).or_default();
     for (i, k) in first.into_iter().enumerate() {
