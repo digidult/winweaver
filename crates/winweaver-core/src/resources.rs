@@ -113,6 +113,45 @@ pub fn keyboard(tag: &str) -> Option<&'static Keyboard> {
     keyboards().iter().find(|k| k.tag == tag)
 }
 
+/// The keyboard of an input language as Windows reports it. Windows shortens the tag of a
+/// language whose region is its only or main one (`uk` for `uk-UA`), so a tag without a region
+/// finds the keyboards of its language; of several keyboards the one whose layout is among the
+/// input method tips (`0422:00020422`) wins.
+pub fn keyboard_of_read(tag: &str, tips: &[String]) -> Option<&'static Keyboard> {
+    let layouts: Vec<&str> = tips
+        .iter()
+        .filter_map(|t| t.split_once(':').map(|(_, klid)| klid.trim()))
+        .collect();
+    let pick = |found: Vec<&'static Keyboard>| {
+        found
+            .iter()
+            .copied()
+            .find(|k| layouts.iter().any(|l| l.eq_ignore_ascii_case(&k.klid)))
+            .or_else(|| found.first().copied())
+    };
+    let exact: Vec<&'static Keyboard> = keyboards()
+        .iter()
+        .filter(|k| k.tag.eq_ignore_ascii_case(tag))
+        .collect();
+    if !exact.is_empty() {
+        return pick(exact);
+    }
+    if tag.contains('-') {
+        return None;
+    }
+    let language: Vec<&'static Keyboard> = keyboards()
+        .iter()
+        .filter(|k| {
+            !k.transient
+                && k.tag
+                    .split('-')
+                    .next()
+                    .is_some_and(|l| l.eq_ignore_ascii_case(tag))
+        })
+        .collect();
+    pick(language)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -130,6 +169,17 @@ mod tests {
         assert!(!kyiv.title_for("uk").is_empty());
         assert!(keyboard("en-US").is_some_and(|k| k.klid == "00000409"));
         assert!(keyboard("ru-UA").is_some_and(|k| k.transient && k.lcid.is_none()));
+        let tips = |t: &str| vec![t.to_owned()];
+        let read = |tag: &str, tips: &[String]| keyboard_of_read(tag, tips).map(|k| (k.tag.as_str(), k.klid.as_str()));
+        assert_eq!(read("uk", &tips("0422:00020422")), Some(("uk-UA", "00020422")));
+        assert_eq!(read("uk", &tips("0422:00000422")), Some(("uk-UA", "00000422")));
+        assert_eq!(read("uk", &[]), Some(("uk-UA", "00020422")));
+        assert_eq!(read("UK-ua", &[]), Some(("uk-UA", "00020422")));
+        assert_eq!(read("ru-UA", &tips("2000:00000419")), Some(("ru-UA", "00000419")));
+        assert_eq!(read("ru", &[]), Some(("ru", "00000419")));
+        assert_eq!(read("en-US", &[]), Some(("en-US", "00000409")));
+        assert_eq!(read("xx", &[]), None);
+        assert_eq!(read("uk-XX", &[]), None);
         assert_eq!(generic_key("Pro"), Some("VK7JG-NPHTM-C97JM-9MPGT-3V66T"));
         assert!(generic_key("Home").is_none());
         assert_eq!(editions().count(), 14);
