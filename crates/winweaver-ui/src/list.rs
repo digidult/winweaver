@@ -37,6 +37,8 @@ pub struct Cell {
     pub strong: bool,
     pub muted: bool,
     pub warn: bool,
+    /// A value in a tinted box: the old one of a difference (`Some(false)`) or the new one.
+    pub chip: Option<bool>,
 }
 
 impl Cell {
@@ -59,6 +61,12 @@ impl Cell {
 
     pub fn warn(mut self) -> Self {
         self.warn = true;
+        self
+    }
+
+    /// The value of a side of a difference in a tinted box: red for the old, green for the new.
+    pub fn chip(mut self, new: bool) -> Self {
+        self.chip = Some(new);
         self
     }
 }
@@ -248,6 +256,20 @@ pub fn show<K: Clone>(
                         let galley = painter.layout_no_wrap(line.to_owned(), font, color);
                         if galley.size().x > w - 2.0 * PAD || line.len() < cell.text.len() {
                             cut.push(cell.text.as_str());
+                        }
+                        if let Some(new) = cell.chip
+                            && !line.is_empty()
+                        {
+                            let tint = if new { p.ok } else { p.warn };
+                            let chip = Rect::from_min_size(
+                                egui::pos2(x + PAD - 6.0, rect.center().y - 10.0),
+                                egui::vec2((galley.size().x + 12.0).min(w - 2.0 * PAD + 12.0), 20.0),
+                            );
+                            painter.rect_filled(
+                                chip,
+                                CornerRadius::same(4),
+                                tint.gamma_multiply(if p.dark { 0.28 } else { 0.16 }),
+                            );
                         }
                         let clip = Rect::from_min_max(
                             egui::pos2(x + PAD, rect.top()),

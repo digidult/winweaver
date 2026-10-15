@@ -243,8 +243,8 @@ pub fn diff_view(
                     list::Cell::new(&item.title).muted()
                 },
                 list::Cell::new(&item.group).muted(),
-                list::Cell::new(item.base.join(", ")),
-                list::Cell::new(item.other.join(", ")).strong(),
+                list::Cell::new(item.base.join(", ")).chip(false),
+                list::Cell::new(item.other.join(", ")).chip(true),
                 list::Cell::new(
                     doc.diff
                         .comments
@@ -297,19 +297,23 @@ pub fn diff_view(
     }
 }
 
-/// A side of the difference: the name of the profile and its value.
-fn side_lines(ui: &mut egui::Ui, name: &str, lines: &[String], strong: bool) {
-    ui.label(style::muted(ui, name, 12.0));
-    ui.vertical(|ui| {
-        for line in lines {
-            if strong {
-                ui.label(style::strong(ui, line, 13.0));
-            } else {
-                ui.label(line);
+/// A side of the difference: a card with the name of its profile and its value, tinted red for
+/// the base and green for the other side, as in the mockups.
+fn side_card(ui: &mut egui::Ui, name: &str, lines: &[String], new: bool) {
+    let p = style::palette(ui);
+    let tint = if new { p.ok } else { p.warn };
+    egui::Frame::new()
+        .fill(tint.gamma_multiply(if p.dark { 0.18 } else { 0.08 }))
+        .stroke(egui::Stroke::new(1.0, tint.gamma_multiply(0.5)))
+        .corner_radius(egui::CornerRadius::same(6))
+        .inner_margin(Margin::symmetric(10, 8))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            style::section_title(ui, name);
+            for line in lines {
+                ui.label(line.as_str());
             }
-        }
-    });
-    ui.end_row();
+        });
 }
 
 /// The detail panel on the right: the selected item, its comment and the description of its rule.
@@ -371,13 +375,10 @@ pub fn diff_detail(
             views::block(ui, |ui| {
                 style::section_title(ui, tr("Difference"));
                 ui.add_space(4.0);
-                egui::Grid::new(("diff-sides", item.key.as_str()))
-                    .num_columns(2)
-                    .spacing([14.0, 6.0])
-                    .show(ui, |ui| {
-                        side_lines(ui, &d.base.name, &item.base, false);
-                        side_lines(ui, &d.other.name, &item.other, true);
-                    });
+                ui.columns(2, |cols| {
+                    side_card(&mut cols[0], &d.base.name, &item.base, false);
+                    side_card(&mut cols[1], &d.other.name, &item.other, true);
+                });
                 ui.add_space(6.0);
                 ui.horizontal_wrapped(|ui| {
                     if ui
