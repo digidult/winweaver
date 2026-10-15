@@ -375,12 +375,6 @@ pub fn show<K: Clone>(
                     };
                     let galley =
                         painter.layout_no_wrap(row.title.clone(), style::font(ui, 13.0), color);
-                    let clip = Rect::from_min_max(egui::pos2(x, rect.top()), egui::pos2(right_edge, rect.bottom()));
-                    painter.with_clip_rect(clip.intersect(painter.clip_rect())).galley(
-                        egui::pos2(x, cy - galley.size().y / 2.0),
-                        galley,
-                        color,
-                    );
                     let clip = Rect::from_min_max(
                         egui::pos2(x, rect.top()),
                         egui::pos2(right_edge, rect.bottom()),
