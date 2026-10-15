@@ -410,5 +410,6 @@
   "The other parts of the path": "Інші частини шляху",
   "Server": "Сервер",
   "Move the tab left (Ctrl+Shift+PgUp)": "Перемістити вкладку вліво (Ctrl+Shift+PgUp)",
-  "Move the tab right (Ctrl+Shift+PgDn)": "Перемістити вкладку вправо (Ctrl+Shift+PgDn)"
+  "Move the tab right (Ctrl+Shift+PgDn)": "Перемістити вкладку вправо (Ctrl+Shift+PgDn)",
+  "This PC: partly in effect, so read as off: {what}": "Цей ПК: діє частково, тому прочитано як вимкнене: {what}"
 }

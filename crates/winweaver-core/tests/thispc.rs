@@ -367,3 +367,121 @@ fn a_report_of_the_audit_script_is_judged_like_a_native_read() {
     ));
     assert!(Report::parse("{\"a\": 1}", "x.json").is_err());
 }
+
+/// Every rule of plain registry values reads as in effect (or as on a clean Windows) on a PC
+/// where its actions ran in their order: a value removed for a clean start and written again,
+/// or written twice, is judged by what the rule leaves.
+#[test]
+fn every_rule_of_registry_values_reads_as_applied() {
+    let catalog = Catalog::embedded().unwrap();
+    let mut wrong = Vec::new();
+    for rule in catalog.rules() {
+        if thispc::exclusion(rule).is_some() || !rule.params.is_empty() || rule.actions.is_empty() {
+            continue;
+        }
+        let plain = rule.actions.iter().all(|a| match a {
+            Action::Reg { kind, .. } => !matches!(kind, winweaver_core::catalog::RegKind::Binary),
+            Action::RegRemove { .. } => true,
+            _ => false,
+        });
+        if !plain {
+            continue;
+        }
+        let mut m = MemoryMachine::default();
+        for action in &rule.actions {
+            match action {
+                Action::Reg { path, name, value, .. } => {
+                    m.set(&path.replace("DU:", "HKCU:"), name, data_of(value))
+                }
+                Action::RegRemove { path, name, .. } => {
+                    m.values.remove(&(
+                        path.replace("DU:", "HKCU:").to_lowercase(),
+                        name.to_lowercase(),
+                    ));
+                }
+                _ => {}
+            }
+        }
+        let verdict = reading(&catalog, &m, &rule.id).verdict;
+        if !matches!(verdict, Verdict::InEffect | Verdict::AsDefault) {
+            wrong.push(format!("{} {verdict:?}", rule.id));
+        }
+    }
+    assert!(wrong.is_empty(), "{wrong:?}");
+    let plan = thispc::plan(&catalog, &office(), &["defender.realtime".to_owned()]);
+    let realtime = |absent: bool| {
+        plan.checks
+            .iter()
+            .filter(|c| match &c.probe {
+                Probe::RegAbsent { name, .. } => absent && name == "DisableRealtimeMonitoring",
+                Probe::Reg { name, .. } => !absent && name == "DisableRealtimeMonitoring",
+                _ => false,
+            })
+            .count()
+    };
+    assert_eq!(realtime(true), 0, "the removal before the write is not checked");
+    assert_eq!(realtime(false), 1);
+}
+
+/// Windows shortens uk-UA to uk in the list of the user; the layouts of the tips pick the
+/// keyboard, and a language read twice is kept once.
+#[test]
+fn input_languages_are_read_as_windows_lists_them() {
+    let catalog = Catalog::embedded().unwrap();
+    let info = SystemInfo {
+        input: vec![
+            InputLanguage {
+                tag: "en-US".into(),
+                tips: vec!["0409:00000409".into()],
+            },
+            InputLanguage {
+                tag: "uk".into(),
+                tips: vec!["0422:00020422".into()],
+            },
+            InputLanguage {
+                tag: "ru-UA".into(),
+                tips: vec!["2000:00000419".into()],
+            },
+            InputLanguage {
+                tag: "uk-UA".into(),
+                tips: vec![],
+            },
+        ],
+        ..SystemInfo::default()
+    };
+    let (profile, summary) = thispc::capture(&catalog, &office(), &[], Some(&info));
+    assert_eq!(profile.languages.input, vec!["en-US", "uk-UA", "ru-UA"]);
+    assert!(
+        !summary.notes.iter().any(|n| n.contains("input")),
+        "{:?}",
+        summary.notes
+    );
+}
+
+/// A rule of which one value was changed after the installation is partly in effect: the
+/// capture turns it off and names the value that differs.
+#[test]
+fn a_rule_partly_in_effect_names_what_differs() {
+    let catalog = Catalog::embedded().unwrap();
+    let rule = catalog.rule("default-user.widgets-button-off").unwrap();
+    let mut m = MemoryMachine::default();
+    for (path, name, value) in reg_actions(rule) {
+        m.set(&path, &name, data_of(&value));
+    }
+    let id = "default-user.no-consumer-content";
+    let cdm = catalog.rule(id).unwrap();
+    let actions = reg_actions(cdm);
+    for (path, name, value) in &actions {
+        m.set(path, name, data_of(value));
+    }
+    let (path, name, _) = &actions[0];
+    m.set(path, name, RegData::Dword(1));
+    let r = reading(&catalog, &m, id);
+    assert_eq!(r.verdict, Verdict::Partly);
+    assert_eq!(r.differing.len(), 1, "{:?}", r.differing);
+    assert!(r.differing[0].contains(name.as_str()), "{:?}", r.differing);
+    let (profile, summary) = thispc::capture(&catalog, &office(), &[r], None);
+    assert!(!profile.is_on(id));
+    assert_eq!(summary.partly.len(), 1);
+    assert_eq!(summary.partly[0].0, id);
+}
