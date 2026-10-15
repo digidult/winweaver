@@ -375,7 +375,7 @@ impl App {
                     acts.push(Act::ExportImport(c.id.clone()));
                 }
             }
-            Some(Doc::Settings) | Some(Doc::Mcp) => {}
+            Some(Doc::Settings) => {}
             None => {
                 if tool(ui, "\u{1F4C4}", tr("New"), "Ctrl+N", true) {
                     acts.push(Act::NewProfile(None));
