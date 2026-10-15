@@ -242,7 +242,7 @@ pub fn journal_view(ui: &mut egui::Ui, panel: &mut McpPanel, search: &crate::Sea
                 cells: vec![
                     list::Cell::new(e.time.get(11..19).unwrap_or(&e.time)).muted(),
                     list::Cell::new(&e.client).muted(),
-                    list::Cell::new(&e.method),
+                    list::Cell::new(&e.method).strong(),
                     list::Cell::new(&e.detail).muted(),
                     if e.result == "ok" {
                         result
