@@ -170,12 +170,23 @@ mod tests {
         assert!(keyboard("en-US").is_some_and(|k| k.klid == "00000409"));
         assert!(keyboard("ru-UA").is_some_and(|k| k.transient && k.lcid.is_none()));
         let tips = |t: &str| vec![t.to_owned()];
-        let read = |tag: &str, tips: &[String]| keyboard_of_read(tag, tips).map(|k| (k.tag.as_str(), k.klid.as_str()));
-        assert_eq!(read("uk", &tips("0422:00020422")), Some(("uk-UA", "00020422")));
-        assert_eq!(read("uk", &tips("0422:00000422")), Some(("uk-UA", "00000422")));
+        let read = |tag: &str, tips: &[String]| {
+            keyboard_of_read(tag, tips).map(|k| (k.tag.as_str(), k.klid.as_str()))
+        };
+        assert_eq!(
+            read("uk", &tips("0422:00020422")),
+            Some(("uk-UA", "00020422"))
+        );
+        assert_eq!(
+            read("uk", &tips("0422:00000422")),
+            Some(("uk-UA", "00000422"))
+        );
         assert_eq!(read("uk", &[]), Some(("uk-UA", "00020422")));
         assert_eq!(read("UK-ua", &[]), Some(("uk-UA", "00020422")));
-        assert_eq!(read("ru-UA", &tips("2000:00000419")), Some(("ru-UA", "00000419")));
+        assert_eq!(
+            read("ru-UA", &tips("2000:00000419")),
+            Some(("ru-UA", "00000419"))
+        );
         assert_eq!(read("ru", &[]), Some(("ru", "00000419")));
         assert_eq!(read("en-US", &[]), Some(("en-US", "00000409")));
         assert_eq!(read("xx", &[]), None);
