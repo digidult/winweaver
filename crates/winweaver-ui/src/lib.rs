@@ -493,7 +493,7 @@ impl App {
             Doc::Catalog(d) => Some(&mut d.search),
             Doc::Bookmarks => Some(&mut self.marks_search),
             Doc::Mcp => Some(&mut self.mcp_search),
-            Doc::Settings => None,
+            Doc::Settings | Doc::Theme(_) => None,
         }
     }
 
