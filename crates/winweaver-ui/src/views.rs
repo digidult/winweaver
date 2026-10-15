@@ -221,7 +221,16 @@ fn tree_rows(
         }
     }
     for child in catalog.child_groups(Some(gid)) {
-        tree_rows(rows, catalog, texts, doc, words, &child.id, depth + 1, inline);
+        tree_rows(
+            rows,
+            catalog,
+            texts,
+            doc,
+            words,
+            &child.id,
+            depth + 1,
+            inline,
+        );
     }
     let group_selected = matches!(&doc.sel, Sel::Group(g) if g == gid);
     for rule in catalog.rules_in(gid) {
@@ -240,7 +249,8 @@ fn tree_rows(
         } else {
             tree::Check::Off
         };
-        let switch = (inline && group_selected && rule.params.is_empty() && !linked).then_some(chosen);
+        let switch =
+            (inline && group_selected && rule.params.is_empty() && !linked).then_some(chosen);
         rows.push(tree::Row {
             key: Sel::Rule(rule.id.clone()),
             depth: depth + 1,
@@ -424,7 +434,11 @@ fn profile_detail(ui: &mut egui::Ui, doc: &ProfileDoc) {
     header(ui, |ui| {
         ui.label(style::strong(ui, p.name.as_str(), 18.0));
         ui.horizontal_wrapped(|ui| {
-            style::chip(ui, &trf("Catalog {version}", &[("version", &p.catalog)]), true);
+            style::chip(
+                ui,
+                &trf("Catalog {version}", &[("version", &p.catalog)]),
+                true,
+            );
         });
         if !p.comment.is_empty() {
             ui.add_space(4.0);
@@ -493,7 +507,10 @@ fn group_detail(
         ui.horizontal_wrapped(|ui| {
             style::chip(
                 ui,
-                &trf("{n} rules, {on} in effect", &[("n", &rules.len()), ("on", &on)]),
+                &trf(
+                    "{n} rules, {on} in effect",
+                    &[("n", &rules.len()), ("on", &on)],
+                ),
                 true,
             );
         });
@@ -509,7 +526,9 @@ fn group_detail(
     });
     let summary = gsummary(texts, group);
     if !summary.is_empty() {
-        block(ui, |ui| style::selectable_text(ui, ("group-summary", id), summary));
+        block(ui, |ui| {
+            style::selectable_text(ui, ("group-summary", id), summary)
+        });
     }
     block(ui, |ui| {
         style::section_title(ui, tr("This PC, this selection"));
@@ -537,7 +556,10 @@ fn this_pc_buttons(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
             (tr("Read into the profile"), Act::ReadSelection),
             (tr("Apply to this PC..."), Act::PlanNative(false)),
             (tr("Return to Windows defaults..."), Act::PlanNative(true)),
-            (tr("Save an apply script..."), Act::SaveScript(ScriptKind::Apply)),
+            (
+                tr("Save an apply script..."),
+                Act::SaveScript(ScriptKind::Apply),
+            ),
             (
                 tr("Save a return-to-defaults script..."),
                 Act::SaveScript(ScriptKind::Revert),
@@ -811,7 +833,9 @@ pub(crate) fn rule_description(
             style::selectable_text(ui, ("risk", rule.id.as_str()), &rule.risk);
         });
     }
-    section(ui, "desc-writes", tr("What it writes"), true, |ui| writes(ui, rule));
+    section(ui, "desc-writes", tr("What it writes"), true, |ui| {
+        writes(ui, rule)
+    });
     if !rule.requires.is_empty() || !rule.conflicts.is_empty() {
         section(ui, "desc-deps", tr("Dependencies and conflicts"), false, |ui| {
             for (label, list) in [
@@ -831,17 +855,26 @@ pub(crate) fn rule_description(
                         }
                     });
                 }
-            }
-        });
+            },
+        );
     }
     if !rule.versions.is_empty() || !rule.rollback.is_empty() || !rule.verify.is_empty() {
-        section(ui, "desc-more", tr("Versions, check and rollback"), false, |ui| {
-            for (i, text) in [&rule.versions, &rule.verify, &rule.rollback].into_iter().enumerate() {
-                if !text.is_empty() {
-                    style::selectable_text(ui, ("more", rule.id.as_str(), i), text);
+        section(
+            ui,
+            "desc-more",
+            tr("Versions, check and rollback"),
+            false,
+            |ui| {
+                for (i, text) in [&rule.versions, &rule.verify, &rule.rollback]
+                    .into_iter()
+                    .enumerate()
+                {
+                    if !text.is_empty() {
+                        style::selectable_text(ui, ("more", rule.id.as_str(), i), text);
+                    }
                 }
-            }
-        });
+            },
+        );
     }
     if !rule.doc.is_empty() {
         section(ui, "desc-ref", tr("Reference"), false, |ui| {
@@ -935,7 +968,9 @@ fn param_editor(
                 let items: Vec<Value> = if text.is_empty() {
                     Vec::new()
                 } else {
-                    text.split('\n').map(|l| Value::from(l.trim_end_matches('\r'))).collect()
+                    text.split('\n')
+                        .map(|l| Value::from(l.trim_end_matches('\r')))
+                        .collect()
                 };
                 acts.push(Act::SetParam(
                     rule.id.clone(),
