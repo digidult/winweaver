@@ -3898,14 +3898,15 @@ mod tests {
             .with_size(egui::vec2(1200.0, 800.0))
             .build_eframe(|_| app);
         let list = egui::Id::new(("diff-list", "Office", "Strict"));
-        let width = |h: &egui_kittest::Harness<'_, App>| {
-            h.ctx.read_response(list).map(|r| r.rect.width())
-        };
+        let width =
+            |h: &egui_kittest::Harness<'_, App>| h.ctx.read_response(list).map(|r| r.rect.width());
         harness.step();
         harness.step();
         let first = width(&harness).expect("the list is drawn");
         for key in keys {
-            harness.state_mut().apply(vec![Act::DiffSelect(key.clone())]);
+            harness
+                .state_mut()
+                .apply(vec![Act::DiffSelect(key.clone())]);
             harness.step();
             harness.step();
             assert_eq!(width(&harness), Some(first), "the divider moved for {key}");
