@@ -406,5 +406,6 @@
   "Language and theme": "Язык и тема",
   "Fonts of the theme {name}": "Шрифты темы {name}",
   "no policies": "политик нет",
-  "Policy templates (opened without importing)": "Шаблоны политик (открываются без импорта)"
+  "Policy templates (opened without importing)": "Шаблоны политик (открываются без импорта)",
+  "The other parts of the path": "Остальные части пути"
 }

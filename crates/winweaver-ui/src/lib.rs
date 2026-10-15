@@ -3318,7 +3318,7 @@ impl eframe::App for App {
                     self.toolbar(ui, &mut acts, false);
                     if search_here {
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            self.search_field(ui, &mut acts, hint);
+                            self.search_field(ui, &mut acts, hint, 0.0);
                         });
                     }
                 });

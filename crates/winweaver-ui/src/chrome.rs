@@ -490,7 +490,9 @@ impl App {
         self.docs.get(self.active).map_or("", search_hint)
     }
 
-    /// The navigation row of the active tab.
+    /// The navigation row of the active tab: the history, the breadcrumb (shortened to the first
+    /// and the last parts with a menu of the others when the row is narrow), the star, and at the
+    /// right end the search and, in a narrow window, the command bar as icons.
     pub(crate) fn nav_row(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>, compact: bool) {
         let p = Self::palette_now(ui);
         let history = match self.docs.get(self.active) {
@@ -502,6 +504,26 @@ impl App {
         let star = current.is_some();
         let marked = current.is_some_and(|b| self.marks.find(&b).is_some());
         let hint = self.docs.get(self.active).map_or("", search_hint);
+        let search_open = self.active_search().is_some_and(|s| s.open);
+        let tools = compact && self.has_tools();
+        let tools_id = egui::Id::new("nav-tools-width");
+        let tools_w = if tools {
+            ui.data(|d| d.get_temp::<f32>(tools_id)).unwrap_or(320.0)
+        } else {
+            0.0
+        };
+        let search_w = if hint.is_empty() {
+            0.0
+        } else if search_open {
+            240.0
+        } else {
+            34.0
+        };
+        let clone_act = |a: &Act| match a {
+            Act::Select(s) => Some(Act::Select(s.clone())),
+            Act::CatalogSelect(s) => Some(Act::CatalogSelect(s.clone())),
+            _ => None,
+        };
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
             if let Some((back, forward)) = history {
@@ -515,25 +537,54 @@ impl App {
                 }
                 ui.add_space(6.0);
             }
-            for (i, (label, act)) in crumbs.iter().enumerate() {
-                if i > 0 {
-                    ui.label(style::muted(ui, "\u{25B8}", 10.0));
+            let star_w = if star { 34.0 } else { 0.0 };
+            let room = (ui.available_width() - tools_w - search_w - star_w - 32.0).max(80.0);
+            let shown = fit_crumbs(ui, &crumbs, room);
+            let hidden: Vec<usize> = (0..crumbs.len())
+                .filter(|i| !shown.contains(&Some(*i)))
+                .collect();
+            for (k, entry) in shown.iter().enumerate() {
+                if k > 0 {
+                    ui.label(style::muted(ui, "\u{203A}", 13.0));
                 }
-                let last = i + 1 == crumbs.len();
-                let text = if last {
-                    style::strong(ui, label.as_str(), 13.0)
-                } else {
-                    RichText::new(label.as_str())
-                };
-                let response = style::flat_button(ui, text);
-                if response.clicked()
-                    && let Some(a) = act
-                {
-                    acts.push(match a {
-                        Act::Select(s) => Act::Select(s.clone()),
-                        Act::CatalogSelect(s) => Act::CatalogSelect(s.clone()),
-                        _ => continue,
-                    });
+                match entry {
+                    Some(i) => {
+                        let (label, act) = &crumbs[*i];
+                        let last = *i + 1 == crumbs.len();
+                        let text = if last {
+                            style::strong(ui, label.as_str(), 13.0)
+                        } else {
+                            RichText::new(label.as_str())
+                        };
+                        let clicked = if last && shown.len() == 1 {
+                            ui.scope(|ui| {
+                                ui.set_max_width(room);
+                                ui.add(egui::Label::new(text).truncate().sense(Sense::click()))
+                            })
+                            .inner
+                            .clicked()
+                        } else {
+                            style::flat_button(ui, text).clicked()
+                        };
+                        if clicked && let Some(a) = act.as_ref().and_then(clone_act) {
+                            acts.push(a);
+                        }
+                    }
+                    None => {
+                        let more = style::flat_button(ui, RichText::new("\u{2026}"))
+                            .on_hover_text(tr("The other parts of the path"));
+                        egui::Popup::menu(&more).show(|ui| {
+                            for i in &hidden {
+                                let (label, act) = &crumbs[*i];
+                                if ui.button(label.as_str()).clicked() {
+                                    if let Some(a) = act.as_ref().and_then(clone_act) {
+                                        acts.push(a);
+                                    }
+                                    ui.close();
+                                }
+                            }
+                        });
+                    }
                 }
             }
             if star {
@@ -547,19 +598,36 @@ impl App {
                 }
             }
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                if compact && self.has_tools() {
-                    ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
-                        self.toolbar(ui, acts, true);
-                    });
+                let reserve = if tools { tools_w + 12.0 } else { 0.0 };
+                self.search_field(ui, acts, hint, reserve);
+                if tools {
                     ui.separator();
+                    let (rect, _) = ui.allocate_exact_size(egui::vec2(tools_w, 30.0), Sense::hover());
+                    let mut child = ui.new_child(
+                        egui::UiBuilder::new()
+                            .max_rect(rect)
+                            .layout(Layout::left_to_right(Align::Center)),
+                    );
+                    self.toolbar(&mut child, acts, true);
+                    let used = child.min_rect().width().ceil();
+                    if (used - tools_w).abs() > 0.5 {
+                        ui.data_mut(|d| d.insert_temp(tools_id, used));
+                        ui.ctx().request_repaint();
+                    }
                 }
-                self.search_field(ui, acts, hint);
             });
         });
     }
 
     /// The search of the active tab, at the right end of the navigation row.
-    pub(crate) fn search_field(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>, hint: &'static str) {
+    /// The search of the active tab; `reserve` is the width the row keeps for what comes after it.
+    pub(crate) fn search_field(
+        &mut self,
+        ui: &mut egui::Ui,
+        acts: &mut Vec<Act>,
+        hint: &'static str,
+        reserve: f32,
+    ) {
         if hint.is_empty() {
             return;
         }
@@ -588,7 +656,7 @@ impl App {
             });
         }
         let id = egui::Id::new("search-field");
-        let width = (ui.available_width() - 40.0).clamp(200.0, 560.0);
+        let width = (ui.available_width() - 40.0 - reserve).clamp(160.0, 560.0);
         let response = ui.add(
             egui::TextEdit::singleline(&mut search.text)
                 .id(id)
@@ -824,4 +892,40 @@ pub(crate) fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
     item(ui, tr("Undo a change from its backup..."), Act::PlanUndo);
     ui.separator();
     item(ui, tr("Open an audit report..."), Act::OpenReport);
+}
+
+/// The parts of the breadcrumb that fit a width: all of them, else the first, an ellipsis
+/// (`None`) and the last ones, else the last alone.
+fn fit_crumbs(ui: &egui::Ui, crumbs: &[(String, Option<Act>)], room: f32) -> Vec<Option<usize>> {
+    let n = crumbs.len();
+    let width = |i: usize| {
+        let font = if i + 1 == n {
+            style::strong_font(ui, 13.0)
+        } else {
+            style::font(ui, 13.0)
+        };
+        ui.painter()
+            .layout_no_wrap(crumbs[i].0.clone(), font, egui::Color32::WHITE)
+            .size()
+            .x
+            + 22.0
+    };
+    let total = |list: &[Option<usize>]| {
+        list.iter().map(|x| x.map_or(26.0, width)).sum::<f32>()
+            + 16.0 * list.len().saturating_sub(1) as f32
+    };
+    let mut list: Vec<Option<usize>> = (0..n).map(Some).collect();
+    while total(&list) > room && list.len() > 2 {
+        if list[1].is_some() {
+            list[1] = None;
+        } else if list.len() > 3 {
+            list.remove(2);
+        } else {
+            break;
+        }
+    }
+    if total(&list) > room && n > 0 {
+        list = vec![Some(n - 1)];
+    }
+    list
 }
