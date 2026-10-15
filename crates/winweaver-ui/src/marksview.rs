@@ -121,11 +121,7 @@ fn shown(
             let t = target(catalog, texts, imports, b);
             let hay = format!(
                 "{} {} {} {} {}",
-                t.title,
-                t.group,
-                b.item,
-                b.path,
-                b.comment
+                t.title, t.group, b.item, b.path, b.comment
             )
             .to_lowercase();
             words.iter().all(|w| hay.contains(w.as_str()))
@@ -253,7 +249,11 @@ pub fn marks_detail(
         egui::Frame::new()
             .inner_margin(Margin::same(18))
             .show(ui, |ui| {
-                ui.label(style::muted(ui, tr("Select a bookmark to see it here."), 13.0));
+                ui.label(style::muted(
+                    ui,
+                    tr("Select a bookmark to see it here."),
+                    13.0,
+                ));
             });
         return;
     };
@@ -297,7 +297,11 @@ pub fn marks_detail(
                 style::section_title(ui, tr("Profile"));
                 ui.add_space(4.0);
                 if b.path.is_empty() {
-                    ui.label(style::muted(ui, tr("No profile file: the option is shown in the profile in front."), 12.0));
+                    ui.label(style::muted(
+                        ui,
+                        tr("No profile file: the option is shown in the profile in front."),
+                        12.0,
+                    ));
                 } else {
                     style::selectable_text(ui, ("mark-path", i), &b.path);
                 }

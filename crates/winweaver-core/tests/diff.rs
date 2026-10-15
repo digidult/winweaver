@@ -120,9 +120,14 @@ fn items_apply_one_by_one_and_comments_stay_in_the_file() {
     diff.apply_item("install:workgroup", &mut one);
     assert_eq!(one.install.workgroup, "LAB");
     assert_eq!(one.rules, office.rules);
-    diff.comments
-        .insert("install:workgroup".into(), "The lab has its own\nworkgroup".into());
+    diff.comments.insert(
+        "install:workgroup".into(),
+        "The lab has its own\nworkgroup".into(),
+    );
     let back = Diff::parse(&diff.to_json(), "x").unwrap();
-    assert_eq!(back.comments["install:workgroup"], "The lab has its own\nworkgroup");
+    assert_eq!(
+        back.comments["install:workgroup"],
+        "The lab has its own\nworkgroup"
+    );
     assert_eq!(back, diff);
 }

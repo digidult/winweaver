@@ -4,7 +4,9 @@
 //! click gives the list the keyboard focus. The columns change their width by dragging the lines
 //! between their titles; a row may have a mini button at its right end.
 
-use eframe::egui::{self, Align, CornerRadius, CursorIcon, FontId, Key, Modifiers, Rect, Sense, Stroke};
+use eframe::egui::{
+    self, Align, CornerRadius, CursorIcon, FontId, Key, Modifiers, Rect, Sense, Stroke,
+};
 
 use crate::style;
 use crate::tree::{self, ROW_HEIGHT, Scroll};
@@ -138,7 +140,11 @@ pub fn show<K: Clone>(
     let (header, _) = ui.allocate_exact_size(egui::vec2(area.width(), HEADER), Sense::hover());
     let painter = ui.painter().clone();
     painter.rect_filled(header, CornerRadius::ZERO, p.card2);
-    painter.hline(header.x_range(), header.bottom() - 0.5, Stroke::new(1.0, p.border));
+    painter.hline(
+        header.x_range(),
+        header.bottom() - 0.5,
+        Stroke::new(1.0, p.border),
+    );
     let mut x = header.left();
     let mut spans = Vec::with_capacity(columns.len());
     for (i, column) in columns.iter().enumerate() {
@@ -150,19 +156,21 @@ pub fn show<K: Clone>(
         };
         spans.push((x, w));
         let cell = Rect::from_min_size(egui::pos2(x, header.top()), egui::vec2(w, HEADER));
-        let galley = painter.layout_no_wrap(
-            column.title.clone(),
-            style::strong_font(ui, 12.0),
-            p.muted,
-        );
-        painter.with_clip_rect(cell.shrink2(egui::vec2(PAD, 0.0))).galley(
-            egui::pos2(x + PAD, cell.center().y - galley.size().y / 2.0),
-            galley,
-            p.muted,
-        );
+        let galley =
+            painter.layout_no_wrap(column.title.clone(), style::strong_font(ui, 12.0), p.muted);
+        painter
+            .with_clip_rect(cell.shrink2(egui::vec2(PAD, 0.0)))
+            .galley(
+                egui::pos2(x + PAD, cell.center().y - galley.size().y / 2.0),
+                galley,
+                p.muted,
+            );
         if !last {
             let edge = x + w;
-            let grip = Rect::from_center_size(egui::pos2(edge, header.center().y), egui::vec2(8.0, HEADER));
+            let grip = Rect::from_center_size(
+                egui::pos2(edge, header.center().y),
+                egui::vec2(8.0, HEADER),
+            );
             let drag = ui.interact(grip, id.with(("resize", i)), Sense::drag());
             if drag.hovered() || drag.dragged() {
                 ui.ctx().set_cursor_icon(CursorIcon::ResizeHorizontal);
@@ -175,7 +183,11 @@ pub fn show<K: Clone>(
             } else {
                 p.border
             };
-            painter.vline(edge, header.top() + 7.0..=header.bottom() - 7.0, Stroke::new(1.0, color));
+            painter.vline(
+                edge,
+                header.top() + 7.0..=header.bottom() - 7.0,
+                Stroke::new(1.0, color),
+            );
         }
         x += w;
     }
@@ -240,11 +252,13 @@ pub fn show<K: Clone>(
                             egui::pos2(x + PAD, rect.top()),
                             egui::pos2(x + w - PAD, rect.bottom()),
                         );
-                        painter.with_clip_rect(clip.intersect(painter.clip_rect())).galley(
-                            egui::pos2(x + PAD, rect.center().y - galley.size().y / 2.0),
-                            galley,
-                            color,
-                        );
+                        painter
+                            .with_clip_rect(clip.intersect(painter.clip_rect()))
+                            .galley(
+                                egui::pos2(x + PAD, rect.center().y - galley.size().y / 2.0),
+                                galley,
+                                color,
+                            );
                     }
                 }
                 let text = row

@@ -176,7 +176,11 @@ pub(crate) fn move_target(
     let pressed = |key: Key| ui.input_mut(|i| i.consume_key(Modifiers::NONE, key));
     let cur = selected.unwrap_or(0);
     if pressed(Key::ArrowDown) {
-        Some(if selected.is_none() { 0 } else { (cur + 1).min(n - 1) })
+        Some(if selected.is_none() {
+            0
+        } else {
+            (cur + 1).min(n - 1)
+        })
     } else if pressed(Key::ArrowUp) {
         Some(cur.saturating_sub(1))
     } else if pressed(Key::Home) {
@@ -225,7 +229,12 @@ pub(crate) fn paint_focus(ui: &egui::Ui, area: Rect, p: &Palette) {
 }
 
 /// The keys of a focused tree.
-fn keys<K: Clone>(ui: &mut egui::Ui, rows: &[Row<K>], selected: Option<usize>, out: &mut Output<K>) {
+fn keys<K: Clone>(
+    ui: &mut egui::Ui,
+    rows: &[Row<K>],
+    selected: Option<usize>,
+    out: &mut Output<K>,
+) {
     let n = rows.len();
     if n == 0 {
         return;

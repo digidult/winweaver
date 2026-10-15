@@ -212,8 +212,11 @@ pub fn journal_view(ui: &mut egui::Ui, panel: &mut McpPanel, search: &crate::Sea
         .enumerate()
         .rev()
         .filter(|(_, e)| {
-            let hay = format!("{} {} {} {} {}", e.time, e.client, e.method, e.detail, e.result)
-                .to_lowercase();
+            let hay = format!(
+                "{} {} {} {} {}",
+                e.time, e.client, e.method, e.detail, e.result
+            )
+            .to_lowercase();
             words.iter().all(|w| hay.contains(w.as_str()))
         })
         .map(|(i, e)| {
@@ -225,7 +228,11 @@ pub fn journal_view(ui: &mut egui::Ui, panel: &mut McpPanel, search: &crate::Sea
                     list::Cell::new(&e.client).muted(),
                     list::Cell::new(&e.method),
                     list::Cell::new(&e.detail).muted(),
-                    if e.result == "ok" { result } else { result.warn() },
+                    if e.result == "ok" {
+                        result
+                    } else {
+                        result.warn()
+                    },
                 ],
                 button: None,
             }
