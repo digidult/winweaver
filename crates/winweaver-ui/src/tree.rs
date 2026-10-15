@@ -131,7 +131,11 @@ fn paint_check(painter: &egui::Painter, rect: Rect, check: Check, p: &Palette) {
 
 fn paint_switch(painter: &egui::Painter, rect: Rect, on: bool, p: &Palette) {
     let radius = rect.height() / 2.0;
-    painter.rect_filled(rect, CornerRadius::same(radius as u8), if on { p.accent } else { p.off });
+    painter.rect_filled(
+        rect,
+        CornerRadius::same(radius as u8),
+        if on { p.accent } else { p.off },
+    );
     let x = if on {
         rect.right() - radius
     } else {
@@ -159,7 +163,12 @@ fn paint_twisty(painter: &egui::Painter, center: egui::Pos2, open: bool, color: 
 }
 
 /// The keys of a focused tree.
-fn keys<K: Clone>(ui: &mut egui::Ui, rows: &[Row<K>], selected: Option<usize>, out: &mut Output<K>) {
+fn keys<K: Clone>(
+    ui: &mut egui::Ui,
+    rows: &[Row<K>],
+    selected: Option<usize>,
+    out: &mut Output<K>,
+) {
     let n = rows.len();
     if n == 0 {
         return;
@@ -168,7 +177,11 @@ fn keys<K: Clone>(ui: &mut egui::Ui, rows: &[Row<K>], selected: Option<usize>, o
     let pressed = |key: Key| ui.input_mut(|i| i.consume_key(Modifiers::NONE, key));
     let cur = selected.unwrap_or(0);
     let target = if pressed(Key::ArrowDown) {
-        Some(if selected.is_none() { 0 } else { (cur + 1).min(n - 1) })
+        Some(if selected.is_none() {
+            0
+        } else {
+            (cur + 1).min(n - 1)
+        })
     } else if pressed(Key::ArrowUp) {
         Some(cur.saturating_sub(1))
     } else if pressed(Key::Home) {
@@ -270,9 +283,12 @@ pub fn show<K: Clone>(
                 let is_selected = Some(i) == selected;
                 let cy = rect.center().y;
                 let left = rect.left() + 8.0 + row.depth as f32 * 16.0;
-                let twisty_rect =
-                    Rect::from_min_max(egui::pos2(left - 2.0, rect.top()), egui::pos2(left + 16.0, rect.bottom()));
-                let check_rect = Rect::from_center_size(egui::pos2(left + 26.0, cy), egui::vec2(16.0, 16.0));
+                let twisty_rect = Rect::from_min_max(
+                    egui::pos2(left - 2.0, rect.top()),
+                    egui::pos2(left + 16.0, rect.bottom()),
+                );
+                let check_rect =
+                    Rect::from_center_size(egui::pos2(left + 26.0, cy), egui::vec2(16.0, 16.0));
                 let switch_rect = Rect::from_center_size(
                     egui::pos2(rect.right() - 26.0, cy),
                     egui::vec2(32.0, 16.0),
@@ -332,14 +348,18 @@ pub fn show<K: Clone>(
                         left + 40.0
                     };
                     let color = if row.muted { p.muted } else { p.text };
-                    let galley =
-                        painter.layout_no_wrap(row.title.clone(), FontId::proportional(13.0), color);
-                    let clip = Rect::from_min_max(egui::pos2(x, rect.top()), egui::pos2(right_edge, rect.bottom()));
-                    painter.with_clip_rect(clip.intersect(painter.clip_rect())).galley(
-                        egui::pos2(x, cy - galley.size().y / 2.0),
-                        galley,
+                    let galley = painter.layout_no_wrap(
+                        row.title.clone(),
+                        FontId::proportional(13.0),
                         color,
                     );
+                    let clip = Rect::from_min_max(
+                        egui::pos2(x, rect.top()),
+                        egui::pos2(right_edge, rect.bottom()),
+                    );
+                    painter
+                        .with_clip_rect(clip.intersect(painter.clip_rect()))
+                        .galley(egui::pos2(x, cy - galley.size().y / 2.0), galley, color);
                 }
                 response.widget_info(|| {
                     egui::WidgetInfo::selected(
@@ -353,12 +373,17 @@ pub fn show<K: Clone>(
                 if row.open.is_some() {
                     let twisty = ui.interact(twisty_rect, response.id.with("twisty"), Sense::CLICK);
                     if twisty.clicked() {
-                        out.events.push(Event::Expand(row.key.clone(), row.open != Some(true)));
+                        out.events
+                            .push(Event::Expand(row.key.clone(), row.open != Some(true)));
                         handled = true;
                     }
                 }
                 if !matches!(row.check, Check::None | Check::Linked) {
-                    let check = ui.interact(check_rect.expand(2.0), response.id.with("check"), Sense::CLICK);
+                    let check = ui.interact(
+                        check_rect.expand(2.0),
+                        response.id.with("check"),
+                        Sense::CLICK,
+                    );
                     check.widget_info(|| {
                         egui::WidgetInfo::labeled(
                             egui::WidgetType::Checkbox,
@@ -385,7 +410,8 @@ pub fn show<K: Clone>(
                         handled = true;
                     }
                 }
-                if !handled && response.double_clicked()
+                if !handled
+                    && response.double_clicked()
                     && let Some(open) = row.open
                 {
                     out.events.push(Event::Expand(row.key.clone(), !open));

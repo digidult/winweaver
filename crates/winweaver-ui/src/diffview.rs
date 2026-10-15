@@ -122,7 +122,11 @@ pub fn diff_view(
                     ui.end_row();
                     for (k, f) in &d.install {
                         let label = trf("Installation: {k}", &[("k", k)]);
-                        if !shown(&format!("{label} {} {}", value_text(&f.base), value_text(&f.other))) {
+                        if !shown(&format!(
+                            "{label} {} {}",
+                            value_text(&f.base),
+                            value_text(&f.other)
+                        )) {
                             continue;
                         }
                         ui.label(label);
@@ -132,7 +136,11 @@ pub fn diff_view(
                     }
                     for (k, f) in &d.languages {
                         let label = trf("Languages: {k}", &[("k", k)]);
-                        if !shown(&format!("{label} {} {}", value_text(&f.base), value_text(&f.other))) {
+                        if !shown(&format!(
+                            "{label} {} {}",
+                            value_text(&f.base),
+                            value_text(&f.other)
+                        )) {
                             continue;
                         }
                         ui.label(label);
@@ -141,7 +149,12 @@ pub fn diff_view(
                         ui.end_row();
                     }
                     if let Some(f) = &d.accounts
-                        && shown(&format!("{} {} {}", tr("Accounts"), value_text(&f.base), value_text(&f.other)))
+                        && shown(&format!(
+                            "{} {} {}",
+                            tr("Accounts"),
+                            value_text(&f.base),
+                            value_text(&f.other)
+                        ))
                     {
                         ui.label(tr("Accounts"));
                         ui.label(value_text(&f.base));

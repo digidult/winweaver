@@ -3,7 +3,9 @@
 //! the labels), the navigation row where it means something (back and forward, the breadcrumb,
 //! the star, the search of the tab), the message bar with its own height, and the status bar.
 
-use eframe::egui::{self, Align, Align2, CornerRadius, FontId, Layout, Margin, RichText, Sense, Stroke};
+use eframe::egui::{
+    self, Align, Align2, CornerRadius, FontId, Layout, Margin, RichText, Sense, Stroke,
+};
 
 use crate::i18n::{tr, trf};
 use crate::style::{self, Palette};
@@ -190,13 +192,23 @@ impl App {
         ui.add_enabled_ui(!self.settings.recent.is_empty(), |ui| {
             ui.menu_button(tr("Open recent"), |ui| {
                 for path in &self.settings.recent {
-                    item(ui, &path.display().to_string(), "", Act::OpenPath(path.clone()));
+                    item(
+                        ui,
+                        &path.display().to_string(),
+                        "",
+                        Act::OpenPath(path.clone()),
+                    );
                 }
             });
         });
         item(ui, tr("Save"), "Ctrl+S", Act::Save);
         item(ui, tr("Save as..."), "Ctrl+Shift+S", Act::SaveAs);
-        item(ui, tr("Close tab"), "Ctrl+W", Act::CloseTab(self.active, false));
+        item(
+            ui,
+            tr("Close tab"),
+            "Ctrl+W",
+            Act::CloseTab(self.active, false),
+        );
         item(
             ui,
             tr("Close tab, discard changes"),
@@ -377,7 +389,10 @@ impl App {
                 crate::ImportSource::ThisWindows,
             ),
             (tr("Import a folder..."), crate::ImportSource::Folder),
-            (tr("Import a catalog file..."), crate::ImportSource::CatalogFile),
+            (
+                tr("Import a catalog file..."),
+                crate::ImportSource::CatalogFile,
+            ),
         ] {
             if ui.button(text).clicked() {
                 acts.push(Act::ImportTemplates(source));
@@ -405,10 +420,16 @@ impl App {
                 };
                 let mut out = vec![(file.name.clone(), Some(Act::CatalogSelect(String::new())))];
                 if c.sel.is_none()
-                    && let Some(g) = c.group.as_deref().and_then(|g| file.groups.iter().find(|x| x.id == g))
+                    && let Some(g) = c
+                        .group
+                        .as_deref()
+                        .and_then(|g| file.groups.iter().find(|x| x.id == g))
                 {
                     let lang = crate::i18n::current();
-                    out.push((crate::catalogview::group_title(file, &lang, g).to_owned(), None));
+                    out.push((
+                        crate::catalogview::group_title(file, &lang, g).to_owned(),
+                        None,
+                    ));
                 }
                 if let Some(rule) = c
                     .sel
@@ -450,8 +471,8 @@ impl App {
             _ => None,
         };
         let crumbs = self.nav_crumbs();
-        let star = matches!(self.docs.get(self.active), Some(Doc::Profile(_)))
-            && !crumbs.is_empty();
+        let star =
+            matches!(self.docs.get(self.active), Some(Doc::Profile(_))) && !crumbs.is_empty();
         let marked = self
             .current_bookmark()
             .is_some_and(|b| self.marks.find(&b).is_some());
@@ -600,8 +621,14 @@ impl App {
                     acts.push(Act::ToggleMessages);
                 }
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                    if style::icon_button(ui, "\u{2715}", tr("Hide the messages"), true, Some(p.msg_fg))
-                        .clicked()
+                    if style::icon_button(
+                        ui,
+                        "\u{2715}",
+                        tr("Hide the messages"),
+                        true,
+                        Some(p.msg_fg),
+                    )
+                    .clicked()
                     {
                         acts.push(Act::ClearMessages);
                     }
@@ -709,17 +736,17 @@ impl App {
     }
 
     /// The frames of the bars of the chrome.
-    pub(crate) fn chrome_frames(ui: &egui::Ui) -> (egui::Frame, egui::Frame, egui::Frame, egui::Frame) {
+    pub(crate) fn chrome_frames(
+        ui: &egui::Ui,
+    ) -> (egui::Frame, egui::Frame, egui::Frame, egui::Frame) {
         let p = Self::palette_now(ui);
         (
-            egui::Frame::new()
-                .fill(p.bg)
-                .inner_margin(Margin {
-                    left: 6,
-                    right: 6,
-                    top: 4,
-                    bottom: 0,
-                }),
+            egui::Frame::new().fill(p.bg).inner_margin(Margin {
+                left: 6,
+                right: 6,
+                top: 4,
+                bottom: 0,
+            }),
             bar_frame(&p, Margin::symmetric(8, 4)),
             bar_frame(&p, Margin::symmetric(8, 4)),
             bar_frame(&p, Margin::symmetric(12, 3)),
@@ -736,7 +763,11 @@ pub(crate) fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         }
     };
     item(ui, tr("Read this PC into a new profile"), Act::ReadPc);
-    item(ui, tr("Read the selection into this profile"), Act::ReadSelection);
+    item(
+        ui,
+        tr("Read the selection into this profile"),
+        Act::ReadSelection,
+    );
     item(ui, tr("Check the selection on this PC"), Act::CheckOnPc);
     ui.separator();
     item(
@@ -755,7 +786,11 @@ pub(crate) fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         Act::SaveScript(ScriptKind::Audit),
     );
     ui.separator();
-    item(ui, tr("Apply the selection to this PC..."), Act::PlanNative(false));
+    item(
+        ui,
+        tr("Apply the selection to this PC..."),
+        Act::PlanNative(false),
+    );
     item(
         ui,
         tr("Return the selection to Windows defaults..."),

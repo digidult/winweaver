@@ -244,8 +244,10 @@ pub fn install_fonts(ctx: &egui::Context) {
         semibold.insert(0, "segoe-semibold".into());
     }
     if let Some(bytes) = read("consola.ttf") {
-        defs.font_data
-            .insert("consolas".into(), Arc::new(egui::FontData::from_owned(bytes)));
+        defs.font_data.insert(
+            "consolas".into(),
+            Arc::new(egui::FontData::from_owned(bytes)),
+        );
         defs.families
             .entry(FontFamily::Monospace)
             .or_default()
@@ -410,7 +412,11 @@ pub fn icon_button(
 
 /// A frameless text button with the hover background, such as a part of the breadcrumb.
 pub fn flat_button(ui: &mut egui::Ui, text: RichText) -> egui::Response {
-    ui.add(egui::Button::new(text).frame(false).min_size(egui::vec2(0.0, 24.0)))
+    ui.add(
+        egui::Button::new(text)
+            .frame(false)
+            .min_size(egui::vec2(0.0, 24.0)),
+    )
 }
 
 /// A card: the white rounded box of the detail panel.
@@ -480,7 +486,10 @@ pub fn selectable_text(ui: &mut egui::Ui, id: impl std::hash::Hash + std::fmt::D
     let galley = output.galley.clone();
     output.response.context_menu(|ui| {
         if ui
-            .add_enabled(!selected.is_empty(), egui::Button::new(crate::i18n::tr("Copy")))
+            .add_enabled(
+                !selected.is_empty(),
+                egui::Button::new(crate::i18n::tr("Copy")),
+            )
             .clicked()
         {
             ui.ctx().copy_text(selected.clone());
@@ -490,7 +499,9 @@ pub fn selectable_text(ui: &mut egui::Ui, id: impl std::hash::Hash + std::fmt::D
             if let Some(mut state) = egui::TextEdit::load_state(ui.ctx(), id) {
                 state
                     .cursor
-                    .set_char_range(Some(egui::text_selection::CCursorRange::select_all(&galley)));
+                    .set_char_range(Some(egui::text_selection::CCursorRange::select_all(
+                        &galley,
+                    )));
                 state.store(ui.ctx(), id);
             }
             ui.memory_mut(|m| m.request_focus(id));

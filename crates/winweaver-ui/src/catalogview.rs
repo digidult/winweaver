@@ -219,7 +219,11 @@ pub fn catalog_view(ui: &mut egui::Ui, file: &CatalogFile, doc: &CatalogDoc, act
     egui::Panel::left("catalog-tree")
         .resizable(true)
         .default_size(380.0)
-        .frame(egui::Frame::new().fill(p.card).inner_margin(egui::Margin::symmetric(0, 4)))
+        .frame(
+            egui::Frame::new()
+                .fill(p.card)
+                .inner_margin(egui::Margin::symmetric(0, 4)),
+        )
         .show(ui, |ui| {
             if filter.words && filter.rules.is_empty() {
                 ui.weak(tr("Nothing matches the search."));
@@ -275,14 +279,20 @@ fn detail(
             crate::views::id_line(ui, &group.id);
             ui.weak(trf(
                 "{n} policies",
-                &[("n", &file.rules.iter().filter(|r| r.group == group.id).count())],
+                &[(
+                    "n",
+                    &file.rules.iter().filter(|r| r.group == group.id).count(),
+                )],
             ));
             return;
         }
         ui.heading(&file.name);
         ui.weak(trf(
             "{rules} rules, {skipped} skipped",
-            &[("rules", &file.rules.len()), ("skipped", &file.skipped.len())],
+            &[
+                ("rules", &file.rules.len()),
+                ("skipped", &file.skipped.len()),
+            ],
         ));
         if let Some(path) = &doc.path {
             ui.weak(trf(

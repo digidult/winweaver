@@ -293,7 +293,11 @@ mod tests {
         let text = "# Top\n\nText.\n\n## Microsoft Edge\n\nKey.\n";
         let (before, after) = split_at_heading(text, "microsoft-edge").unwrap();
         assert!(before.ends_with("Text.\n\n") && after.starts_with("## Microsoft Edge"));
-        let browsers = REFERENCE.iter().find(|(n, _)| *n == "18-browsers.md").unwrap().1;
+        let browsers = REFERENCE
+            .iter()
+            .find(|(n, _)| *n == "18-browsers.md")
+            .unwrap()
+            .1;
         assert!(split_at_heading(browsers, "microsoft-edge").is_some());
     }
 }
