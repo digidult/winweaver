@@ -270,8 +270,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   are `style::selectable_text` (a menu on the right button: copy, select all, copy all). A `doc` link
   opens the reference page in a Markdown tab at its heading (`Act::OpenDoc`, `mdview::slug`); links to
   `.md` pages inside Markdown tabs are taken from the output of egui instead of the browser.
-- A catalog file (`.wwcatalog`) opens like any document, without importing it (`CatalogDoc::from_file`);
-  its command bar offers Import.
+- A catalog file (`.wwcatalog`) or an ADMX file (`admx::read_file`, with the ADML of the folders of the
+  cultures next to it) opens like any document, without importing it (`CatalogDoc::from_file`); its
+  command bar offers Import.
 - The tab of an import (`Doc::Catalog`, "Open" in Settings, Policy templates) shows its tree without check boxes
   and the policy with its parameters and registry values; "Show in the profile tree" shows a hidden import
   again, brings the first profile tab to the front, opens the groups above the policy and selects it.

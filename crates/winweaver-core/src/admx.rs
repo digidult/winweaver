@@ -608,30 +608,43 @@ pub fn read_folder(dir: &Path) -> Templates {
         .collect();
     files.sort();
     for path in files {
-        let file = jsonfile::display_name(&path);
-        let admx = match jsonfile::read_text_bom(&path, FILE_MAX) {
-            Ok(t) => t,
-            Err(e) => {
-                out.skipped.push((file, e.to_string()));
-                continue;
-            }
-        };
-        let stem = path
-            .file_stem()
-            .map(|s| s.to_string_lossy().into_owned())
-            .unwrap_or_default();
-        let mut adml = Vec::new();
-        for (culture, _) in CULTURES {
-            let p = dir.join(culture).join(format!("{stem}.adml"));
-            if let Ok(t) = jsonfile::read_text_bom(&p, FILE_MAX) {
-                adml.push((culture.to_owned(), t));
-            }
-        }
-        if let Err(e) = read_pair(&admx, &adml, &file, &mut out) {
-            out.skipped.push((file, e));
-        }
+        read_one(&path, &mut out);
     }
     out
+}
+
+/// Reads one ADMX file with the ADML of the cultures the program keeps from the folders of the
+/// cultures next to it (`en-US/<name>.adml`), as an import of it alone shows it.
+pub fn read_file(path: &Path) -> Templates {
+    let mut out = Templates::default();
+    read_one(path, &mut out);
+    out
+}
+
+fn read_one(path: &Path, out: &mut Templates) {
+    let file = jsonfile::display_name(path);
+    let admx = match jsonfile::read_text_bom(path, FILE_MAX) {
+        Ok(t) => t,
+        Err(e) => {
+            out.skipped.push((file, e.to_string()));
+            return;
+        }
+    };
+    let stem = path
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let dir = path.parent().unwrap_or(Path::new("."));
+    let mut adml = Vec::new();
+    for (culture, _) in CULTURES {
+        let p = dir.join(culture).join(format!("{stem}.adml"));
+        if let Ok(t) = jsonfile::read_text_bom(&p, FILE_MAX) {
+            adml.push((culture.to_owned(), t));
+        }
+    }
+    if let Err(e) = read_pair(&admx, &adml, &file, out) {
+        out.skipped.push((file, e));
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1826,5 +1839,10 @@ mod windows_tests {
         let base = Catalog::embedded().unwrap();
         let (merged, _) = merge(&base, &[f]).unwrap();
         assert!(merged.rules().len() > base.rules().len() + 1000);
+        let one = read_file(&dir.join("WindowsUpdate.admx"));
+        assert!(one.policies() > 10, "{} policies", one.policies());
+        let f = to_catalog_file(&one, "file-test", "WindowsUpdate", "", "now");
+        f.check().unwrap();
+        assert!(!f.rules.is_empty());
     }
 }

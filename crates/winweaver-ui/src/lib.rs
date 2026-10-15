@@ -672,6 +672,43 @@ impl App {
         }
     }
 
+    /// Opens an ADMX file as a catalog tab without importing it: its policies with the texts of
+    /// the ADML next to it; the command bar of the tab offers Import.
+    fn open_admx_path(&mut self, path: PathBuf) {
+        if let Some(i) = self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path)))
+        {
+            self.active = i;
+            return;
+        }
+        let templates = admx::read_file(&path);
+        if templates.policies() == 0 {
+            let why = templates
+                .skipped
+                .first()
+                .map(|s| s.1.clone())
+                .unwrap_or_else(|| tr("no policies").to_owned());
+            self.status = trf("Open failed: {e}", &[("e", &why)]);
+            return;
+        }
+        let name = path
+            .file_stem()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Templates".to_owned());
+        let id = format!(
+            "file-{:08x}",
+            session::fnv(&path.display().to_string().to_lowercase()) as u32
+        );
+        let file = admx::to_catalog_file(&templates, &id, &name, "", &clock::now_utc_iso());
+        let doc = catalogview::CatalogDoc::from_file(file, path.clone());
+        self.docs.push(Doc::Catalog(Box::new(doc)));
+        self.active = self.docs.len() - 1;
+        self.status = trf("Opened {path}", &[("path", &path.display())]);
+        self.remember_recent(&path);
+    }
+
     /// Imports the catalog file of the active tab: it is saved next to the executable, merged
     /// into the catalog, and the tab shows the import from now on.
     fn import_open_catalog(&mut self) {
@@ -1148,6 +1185,13 @@ impl App {
             .is_some_and(|e| e == admx::CATALOG_EXTENSION)
         {
             self.open_catalog_path(path);
+            return;
+        }
+        if path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("admx"))
+        {
+            self.open_admx_path(path);
             return;
         }
         if path.extension().is_some_and(|e| e == themes::EXTENSION) {
@@ -3612,6 +3656,7 @@ fn pick_any() -> Option<PathBuf> {
                 themes::EXTENSION,
             ],
         )
+        .add_filter(tr("Policy templates (opened without importing)"), &["admx"])
         .add_filter(tr("Answer files (the profile they embed)"), &["xml"])
         .add_filter(tr("WinKickOff profiles and audit reports"), &["json"])
         .add_filter(tr("Markdown pages"), &["md"]);

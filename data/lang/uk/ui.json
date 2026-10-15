@@ -404,5 +404,7 @@
   "Value": "Значення",
   "Windows default": "Стандартно в Windows",
   "Language and theme": "Мова і тема",
-  "Fonts of the theme {name}": "Шрифти теми {name}"
+  "Fonts of the theme {name}": "Шрифти теми {name}",
+  "no policies": "політик немає",
+  "Policy templates (opened without importing)": "Шаблони політик (відкриваються без імпорту)"
 }
