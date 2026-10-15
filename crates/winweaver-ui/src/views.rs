@@ -831,8 +831,8 @@ pub(crate) fn rule_description(
                         }
                     });
                 }
-            },
-        );
+            }
+        });
     }
     if !rule.versions.is_empty() || !rule.rollback.is_empty() || !rule.verify.is_empty() {
         section(
