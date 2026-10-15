@@ -451,10 +451,24 @@ impl App {
 
     /// Whether the active tab has a navigation row: a history, a breadcrumb or a search.
     pub(crate) fn has_nav(&self) -> bool {
+        match self.docs.get(self.active) {
+            Some(Doc::Profile(_)) | Some(Doc::Catalog(_)) => true,
+            Some(Doc::Settings) | Some(Doc::Theme(_)) | None => false,
+            _ => !self.has_tools(),
+        }
+    }
+
+    /// Whether the active tab has something to search.
+    pub(crate) fn has_search(&self) -> bool {
         !matches!(
             self.docs.get(self.active),
             Some(Doc::Settings) | Some(Doc::Theme(_)) | None
         )
+    }
+
+    /// The hint of the search field of the active tab.
+    pub(crate) fn search_hint_now(&self) -> &'static str {
+        self.docs.get(self.active).map_or("", search_hint)
     }
 
     /// The navigation row of the active tab.
@@ -526,7 +540,7 @@ impl App {
     }
 
     /// The search of the active tab, at the right end of the navigation row.
-    fn search_field(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>, hint: &'static str) {
+    pub(crate) fn search_field(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>, hint: &'static str) {
         if hint.is_empty() {
             return;
         }

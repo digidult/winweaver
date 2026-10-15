@@ -209,6 +209,10 @@ pub const MONO_FAMILIES: [(&str, &str); 4] = [
     ("Lucida Console", "lucon.ttf"),
 ];
 
+/// Segoe UI Symbol: the arrows, triangles, stars and marks the texts lack, before the fonts of
+/// egui.
+const SYMBOLS: &str = "seguisym.ttf";
+
 fn fonts_dir() -> PathBuf {
     std::env::var_os("WINDIR")
         .map(PathBuf::from)
@@ -352,30 +356,37 @@ fn definitions(light: &Fonts, dark: &Fonts) -> egui::FontDefinitions {
                     .map(|f| f.1)
             })
             .unwrap_or(MONO_FAMILIES[0].1);
-        let mut body = proportional.clone();
-        let mut strong = proportional.clone();
-        let mut code = monospace.clone();
         let regular = load(&mut defs, family.1).or_else(|| load(&mut defs, FAMILIES[0].1));
         let bold = load(&mut defs, family.2).or_else(|| load(&mut defs, FAMILIES[0].2));
-        if let Some(k) = &regular {
-            body.insert(0, k.clone());
-            strong.insert(0, k.clone());
-        }
-        if let Some(k) = bold {
-            strong.insert(0, k);
-        }
-        if let Some(k) = load(&mut defs, mono) {
-            code.insert(0, k);
-        }
-        defs.families.insert(family_name(dark, ""), body);
-        defs.families.insert(family_name(dark, "-strong"), strong);
-        defs.families.insert(family_name(dark, "-mono"), code);
-    }
-    if let Some(k) = loaded.iter().find(|k| k.as_str() == "file:segoeui.ttf") {
+        let code = load(&mut defs, mono);
+        let symbols = load(&mut defs, SYMBOLS);
+        let list = |first: Vec<Option<String>>, rest: &Vec<String>| -> Vec<String> {
+            first
+                .into_iter()
+                .flatten()
+                .chain(symbols.clone())
+                .chain(rest.iter().cloned())
+                .collect()
+        };
+        defs.families.insert(
+            family_name(dark, ""),
+            list(vec![regular.clone()], &proportional),
+        );
+        defs.families.insert(
+            family_name(dark, "-strong"),
+            list(vec![bold, regular], &proportional),
+        );
         defs.families
-            .entry(FontFamily::Proportional)
-            .or_default()
-            .insert(0, k.clone());
+            .insert(family_name(dark, "-mono"), list(vec![code], &monospace));
+    }
+    let first: Vec<String> = ["file:segoeui.ttf", &format!("file:{SYMBOLS}")]
+        .iter()
+        .filter(|k| loaded.contains(**k))
+        .map(|k| (*k).to_owned())
+        .collect();
+    let family = defs.families.entry(FontFamily::Proportional).or_default();
+    for (i, k) in first.into_iter().enumerate() {
+        family.insert(i, k);
     }
     defs
 }

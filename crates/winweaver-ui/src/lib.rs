@@ -3200,8 +3200,17 @@ impl eframe::App for App {
             .show(ui, |ui| self.tabs_row(ui, &mut acts));
         let compact = ui.available_width() < COMPACT_WIDTH;
         if !compact && self.has_tools() {
+            let search_here = !self.has_nav() && self.has_search();
+            let hint = self.search_hint_now();
             egui::Panel::top("toolbar").frame(tool_frame).show(ui, |ui| {
-                ui.horizontal(|ui| self.toolbar(ui, &mut acts, false));
+                ui.horizontal(|ui| {
+                    self.toolbar(ui, &mut acts, false);
+                    if search_here {
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            self.search_field(ui, &mut acts, hint);
+                        });
+                    }
+                });
             });
         }
         if self.has_nav() || (compact && self.has_tools()) {
@@ -3260,6 +3269,9 @@ impl eframe::App for App {
             let catalog = &self.catalog;
             let texts = texts_for(&self.texts, &i18n::current());
             let settings = &self.settings;
+            let marked = self
+                .current_bookmark()
+                .is_some_and(|b| self.marks.find(&b).is_some());
             if let Some(Doc::Diff(doc)) = self.docs.get(self.active) {
                 let doc: &DiffDoc = doc;
                 let p = style::palette(ui);
@@ -3269,7 +3281,7 @@ impl eframe::App for App {
                     .size_range(260.0..=900.0)
                     .frame(egui::Frame::new().fill(p.bg))
                     .show(ui, |ui| {
-                        diffview::diff_detail(ui, catalog, texts, doc, settings, &mut acts);
+                        diffview::diff_detail(ui, catalog, texts, doc, settings, marked, &mut acts);
                     });
                 egui::CentralPanel::default()
                     .frame(egui::Frame::new().fill(p.card))

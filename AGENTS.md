@@ -231,8 +231,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   twice (a tab and a breadcrumb).
 - The chrome follows the active tab (customer list of 15.10.2026, items 6, 9 to 11): the command bar holds the
   commands of that tab (icons above labels; none for Settings and MCP; icons alone at the end of the
-  navigation row below 1100 px), the navigation row appears only for a tab with a history, a breadcrumb or
-  a search, and every tab but Settings has its own search (`active_search`): the profile tree, the policies
+  navigation row below 1100 px), the navigation row appears only for a profile and a catalog tab (the
+  history, the breadcrumb, the star) and for the MCP tab, which has no command bar; the other tabs keep
+  their search at the right end of the command bar. Every tab but Settings and a theme has its own search (`active_search`): the profile tree, the policies
   of a catalog tab, the differences, the blocks of a Markdown page, the bookmarks, the MCP journal. Clearing
   a search opens the groups above the selection and scrolls it into view (`Act::SearchCleared`,
   `reveal`). The message bar folds to one line or opens with a height the user drags.

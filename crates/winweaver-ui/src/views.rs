@@ -64,15 +64,24 @@ fn switch(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
         response.mark_changed();
     }
     if ui.is_rect_visible(rect) {
+        let p = style::palette(ui);
         let t = ui.ctx().animate_bool_responsive(response.id, *on);
-        let visuals = ui.style().interact_selectable(&response, *on);
         let radius = rect.height() / 2.0;
-        ui.painter().rect_filled(rect, radius, visuals.bg_fill);
+        let track = if *on { p.check } else { p.off };
+        ui.painter().rect_filled(rect, radius, track);
+        if response.has_focus() {
+            ui.painter().rect_stroke(
+                rect.expand(2.0),
+                radius + 2.0,
+                Stroke::new(1.5, p.accent),
+                egui::StrokeKind::Outside,
+            );
+        }
         let x = egui::lerp((rect.left() + radius)..=(rect.right() - radius), t);
         ui.painter().circle_filled(
             egui::pos2(x, rect.center().y),
             radius * 0.72,
-            visuals.fg_stroke.color,
+            p.check_mark,
         );
     }
     response
@@ -596,61 +605,81 @@ fn default_text(default: &Option<Value>) -> String {
     }
 }
 
-/// What a rule writes: the registry values under their key, the other actions as one line each.
+/// What a rule writes: the registry values as a table of key, name, value and the default of
+/// Windows, as in the mockups; the other actions as one line each under it.
 fn writes(ui: &mut egui::Ui, rule: &Rule) {
     let p = style::palette(ui);
-    let mut last_path = "";
+    let mut rows = Vec::new();
+    let mut others = Vec::new();
     for action in &rule.actions {
-        let (path, line, default) = match action {
+        match action {
             Action::Reg {
                 path,
                 name,
                 value,
                 default,
                 ..
-            } => (
-                path.as_str(),
-                format!("{name} = {}", value_text(value)),
-                default_text(default),
-            ),
+            } => rows.push((path.as_str(), name.clone(), value_text(value), default_text(default))),
             Action::RegRemove {
                 path,
                 name,
                 default,
-            } => (
+            } => rows.push((
                 path.as_str(),
-                trf("{name} removed", &[("name", name)]),
+                name.clone(),
+                tr("removed").to_owned(),
                 default_text(default),
-            ),
-            Action::RegList { path, param, .. } => (
+            )),
+            Action::RegList { path, param, .. } => rows.push((
                 path.as_str(),
+                String::new(),
                 trf("the items of the parameter {param}", &[("param", param)]),
                 String::new(),
-            ),
-            other => {
-                ui.add(egui::Label::new(RichText::new(describe(other)).font(style::mono(ui, 12.0))).wrap());
-                continue;
-            }
-        };
-        if path != last_path {
-            ui.add_space(4.0);
-            ui.add(
-                egui::Label::new(RichText::new(path).font(style::mono(ui, 11.5)).color(p.muted))
-                    .wrap()
-                    .selectable(true),
-            );
-            last_path = path;
+            )),
+            other => others.push(describe(other)),
         }
-        ui.horizontal_wrapped(|ui| {
-            ui.add(egui::Label::new(RichText::new(line).font(style::mono(ui, 12.0))).selectable(true));
-            if !default.is_empty() {
-                ui.label(style::muted(
-                    ui,
-                    trf("Windows default: {value}", &[("value", &default)]),
-                    11.0,
-                ));
-            }
-        });
+    }
+    if !rows.is_empty() {
+        let key_width = (ui.available_width() * 0.45).max(160.0);
+        let cell = |ui: &mut egui::Ui, text: &str, mono: bool, muted: bool, width: f32| {
+            ui.scope(|ui| {
+                ui.set_max_width(width);
+                let mut rich = RichText::new(text);
+                rich = if mono {
+                    rich.font(style::mono(ui, 12.0))
+                } else {
+                    rich.font(style::font(ui, 12.5))
+                };
+                if muted {
+                    rich = rich.color(p.muted);
+                }
+                ui.add(egui::Label::new(rich).wrap().selectable(true));
+            });
+        };
+        egui::Grid::new(("writes", rule.id.as_str()))
+            .num_columns(4)
+            .spacing([16.0, 6.0])
+            .show(ui, |ui| {
+                for title in [tr("Key"), tr("Name"), tr("Value"), tr("Windows default")] {
+                    ui.label(style::strong(ui, title, 12.0).color(p.muted));
+                }
+                ui.end_row();
+                for (path, name, value, default) in &rows {
+                    cell(ui, path, true, false, key_width);
+                    cell(ui, name, false, false, 220.0);
+                    cell(ui, value, false, false, 220.0);
+                    cell(ui, default, false, true, 160.0);
+                    ui.end_row();
+                }
+            });
+    }
+    for line in others {
+        ui.add_space(4.0);
+        ui.add(
+            egui::Label::new(RichText::new(line).font(style::mono(ui, 12.0)))
+                .wrap()
+                .selectable(true),
+        );
     }
 }
 

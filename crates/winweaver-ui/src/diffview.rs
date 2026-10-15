@@ -295,12 +295,14 @@ fn side_lines(ui: &mut egui::Ui, name: &str, lines: &[String], strong: bool) {
 }
 
 /// The detail panel on the right: the selected item, its comment and the description of its rule.
+/// `marked` says whether its rule has a bookmark.
 pub fn diff_detail(
     ui: &mut egui::Ui,
     catalog: &Catalog,
     texts: Option<&CatalogTexts>,
     doc: &DiffDoc,
     settings: &Settings,
+    marked: bool,
     acts: &mut Vec<Act>,
 ) {
     let d = &doc.diff;
@@ -321,7 +323,20 @@ pub fn diff_detail(
         .auto_shrink(false)
         .show(ui, |ui| {
             views::header(ui, |ui| {
-                ui.label(style::strong(ui, &item.title, 18.0));
+                ui.horizontal(|ui| {
+                    ui.label(style::strong(ui, &item.title, 18.0));
+                    if item.key.starts_with("rule:") {
+                        let p = style::palette(ui);
+                        let (icon, hint) = if marked {
+                            ("\u{2605}", tr("Remove the bookmark (Ctrl+B)"))
+                        } else {
+                            ("\u{2606}", tr("Bookmark this (Ctrl+B)"))
+                        };
+                        if style::icon_button(ui, icon, hint, true, Some(p.accent)).clicked() {
+                            acts.push(Act::ToggleBookmark);
+                        }
+                    }
+                });
                 if let Some(id) = item.key.strip_prefix("rule:") {
                     views::id_line(ui, id);
                 }

@@ -398,5 +398,9 @@
   "as in the base": "як в основі",
   "Default ({name})": "Стандартний ({name})",
   "The fonts belong to the theme {name}: a change is saved in its file in the themes folder.": "Шрифти належать темі {name}: зміна зберігається в її файлі в папці тем.",
-  "Embedded; the first save writes themes/{file}": "Вбудована; перше збереження запише themes/{file}"
+  "Embedded; the first save writes themes/{file}": "Вбудована; перше збереження запише themes/{file}",
+  "removed": "видаляється",
+  "Key": "Ключ",
+  "Value": "Значення",
+  "Windows default": "Стандартно в Windows"
 }
