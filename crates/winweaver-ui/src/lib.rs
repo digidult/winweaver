@@ -3385,6 +3385,63 @@ mod tests {
         );
     }
 
+    /// Pictures of the window for the review of its design. Only when `WINWEAVER_SCREENSHOTS` names
+    /// a folder (CI sets it on the Windows runner): the main tabs are drawn with wgpu without a
+    /// screen and saved there as PNG files; a renderer that cannot start writes `error.txt`.
+    #[test]
+    fn screenshots_of_the_window() {
+        let Some(dir) = std::env::var_os("WINWEAVER_SCREENSHOTS") else {
+            return;
+        };
+        let dir = PathBuf::from(dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let catalog = Catalog::embedded().unwrap();
+        let app = App::new(catalog, CatalogTexts::embedded().unwrap(), Settings::default());
+        let mut harness = egui_kittest::Harness::builder()
+            .with_size(egui::vec2(1440.0, 900.0))
+            .with_pixels_per_point(1.0)
+            .wgpu()
+            .build_eframe(|_| app);
+        let shot = |h: &mut egui_kittest::Harness<'_, App>, name: &str| {
+            for _ in 0..4 {
+                h.step();
+            }
+            match h.render() {
+                Ok(image) => {
+                    if let Err(e) = image.save(dir.join(format!("{name}.png"))) {
+                        let _ = std::fs::write(dir.join("error.txt"), format!("{name}: {e}"));
+                    }
+                }
+                Err(e) => {
+                    let _ = std::fs::write(dir.join("error.txt"), format!("{name}: {e}"));
+                }
+            }
+        };
+        shot(&mut harness, "01-profile");
+        harness.state_mut().apply(vec![
+            Act::Expand("policies".to_owned(), true),
+            Act::Expand("defender".to_owned(), true),
+            Act::Select(Sel::Rule("defender.pua".to_owned())),
+        ]);
+        shot(&mut harness, "02-rule");
+        harness.state_mut().apply(vec![Act::Check]);
+        shot(&mut harness, "03-checked");
+        harness.state_mut().apply(vec![Act::CompareWith("Strict")]);
+        shot(&mut harness, "04-diff");
+        for (act, name) in [
+            (Act::OpenSettings, "05-settings"),
+            (Act::OpenMcp, "06-mcp"),
+            (Act::OpenMarks, "07-bookmarks"),
+            (Act::OpenGuide, "08-guide"),
+        ] {
+            harness.state_mut().apply(vec![act]);
+            shot(&mut harness, name);
+        }
+        harness.set_size(egui::vec2(1000.0, 700.0));
+        harness.state_mut().apply(vec![Act::Activate(0)]);
+        shot(&mut harness, "09-compact");
+    }
+
     #[test]
     fn bookmarks_toggle_and_lead_back() {
         let catalog = Catalog::embedded().unwrap();

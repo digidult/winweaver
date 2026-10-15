@@ -209,6 +209,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   profile wants ASCII items and refuses a pair without `=` or a name twice. An ADMX `list` element becomes
   such a rule (the Disabled rule clears a list that is not additive), `multiText` a MultiString value; lists
   come before the other values of a policy. The read of this PC checks lists but reads no list parameters.
+- Screenshots: the Windows job sets `WINWEAVER_SCREENSHOTS`, and the test `screenshots_of_the_window` draws the
+  main tabs with wgpu (no screen) into `target/screenshots`, uploaded as the artifact `screenshots`
+  (`gh run download <id> -n screenshots -D <folder>`); the way to see the window without starting it on the
+  customer's PC. A renderer that cannot start writes `error.txt` there instead of failing the tests.
 - Window tests: `App::new` and `App::apply` test the logic without frames; `egui_kittest` (a dev-dependency
   with its eframe feature) draws whole frames without a screen and clicks by the labels of AccessKit, so no
   window ever opens. A test that needs a label finds it with `query_all_by_label`, since a text can appear
