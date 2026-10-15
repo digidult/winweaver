@@ -263,7 +263,10 @@ pub fn show<K: Clone>(
                             let tint = if new { p.ok } else { p.warn };
                             let chip = Rect::from_min_size(
                                 egui::pos2(x + PAD - 6.0, rect.center().y - 10.0),
-                                egui::vec2((galley.size().x + 12.0).min(w - 2.0 * PAD + 12.0), 20.0),
+                                egui::vec2(
+                                    (galley.size().x + 12.0).min(w - 2.0 * PAD + 12.0),
+                                    20.0,
+                                ),
                             );
                             painter.rect_filled(
                                 chip,
