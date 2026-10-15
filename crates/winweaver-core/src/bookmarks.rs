@@ -178,7 +178,10 @@ mod tests {
     #[test]
     fn an_option_is_one_bookmark_in_every_profile_and_keeps_no_title() {
         let mut marks = Bookmarks::default();
-        assert!(marks.toggle(Bookmark::option("defender.pua", "profiles/office.wwprofile")));
+        assert!(marks.toggle(Bookmark::option(
+            "defender.pua",
+            "profiles/office.wwprofile"
+        )));
         let elsewhere = Bookmark::option("defender.pua", "profiles/strict.wwprofile");
         assert_eq!(marks.find(&elsewhere), Some(0));
         assert_eq!(marks.find(&Bookmark::option("defender.pua", "")), Some(0));

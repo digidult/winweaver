@@ -100,9 +100,7 @@ pub fn size_combo(ui: &mut egui::Ui, id: &str, size: &mut f32) -> bool {
         .show_ui(ui, |ui| {
             let (low, high) = (*style::SIZES.start() as u32, *style::SIZES.end() as u32);
             for s in low..=high {
-                changed |= ui
-                    .selectable_value(size, s as f32, s.to_string())
-                    .changed();
+                changed |= ui.selectable_value(size, s as f32, s.to_string()).changed();
             }
         });
     changed

@@ -78,11 +78,8 @@ fn switch(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
             );
         }
         let x = egui::lerp((rect.left() + radius)..=(rect.right() - radius), t);
-        ui.painter().circle_filled(
-            egui::pos2(x, rect.center().y),
-            radius * 0.72,
-            p.check_mark,
-        );
+        ui.painter()
+            .circle_filled(egui::pos2(x, rect.center().y), radius * 0.72, p.check_mark);
     }
     response
 }
@@ -422,7 +419,11 @@ pub(crate) fn id_line(ui: &mut egui::Ui, id: &str) {
     let p = style::palette(ui);
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 2.0;
-        style::copy_label(ui, RichText::new(id).font(style::mono(ui, 12.0)).color(p.muted), false);
+        style::copy_label(
+            ui,
+            RichText::new(id).font(style::mono(ui, 12.0)).color(p.muted),
+            false,
+        );
         if style::icon_button(ui, "\u{1F4CB}", tr("Copy the id"), true, None).clicked() {
             ui.ctx().copy_text(id.to_owned());
         }
@@ -641,7 +642,12 @@ fn writes(ui: &mut egui::Ui, rule: &Rule) {
                 value,
                 default,
                 ..
-            } => rows.push((path.as_str(), name.clone(), value_text(value), default_text(default))),
+            } => rows.push((
+                path.as_str(),
+                name.clone(),
+                value_text(value),
+                default_text(default),
+            )),
             Action::RegRemove {
                 path,
                 name,
@@ -833,26 +839,32 @@ pub(crate) fn rule_description(
         writes(ui, rule)
     });
     if !rule.requires.is_empty() || !rule.conflicts.is_empty() {
-        section(ui, "desc-deps", tr("Dependencies and conflicts"), false, |ui| {
-            for (label, list) in [
-                (tr("Needs"), &rule.requires),
-                (tr("Conflicts with"), &rule.conflicts),
-            ] {
-                for other in list {
-                    ui.horizontal(|ui| {
-                        ui.weak(label);
-                        let title = catalog
-                            .rule(other)
-                            .map_or(other.as_str(), |r| rtitle(texts, r));
-                        if !links {
-                            ui.label(title);
-                        } else if ui.link(title).clicked() {
-                            acts.push(Act::Select(Sel::Rule(other.clone())));
-                        }
-                    });
+        section(
+            ui,
+            "desc-deps",
+            tr("Dependencies and conflicts"),
+            false,
+            |ui| {
+                for (label, list) in [
+                    (tr("Needs"), &rule.requires),
+                    (tr("Conflicts with"), &rule.conflicts),
+                ] {
+                    for other in list {
+                        ui.horizontal(|ui| {
+                            ui.weak(label);
+                            let title = catalog
+                                .rule(other)
+                                .map_or(other.as_str(), |r| rtitle(texts, r));
+                            if !links {
+                                ui.label(title);
+                            } else if ui.link(title).clicked() {
+                                acts.push(Act::Select(Sel::Rule(other.clone())));
+                            }
+                        });
+                    }
                 }
-            }
-        });
+            },
+        );
     }
     if !rule.versions.is_empty() || !rule.rollback.is_empty() || !rule.verify.is_empty() {
         section(

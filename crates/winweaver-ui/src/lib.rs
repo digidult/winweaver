@@ -925,10 +925,14 @@ impl App {
                                 egui::Sense::click(),
                             );
                             if selected {
-                                ui.painter().rect_filled(rect, egui::CornerRadius::same(6), p.sel);
-                            } else if response.hovered() {
                                 ui.painter()
-                                    .rect_filled(rect, egui::CornerRadius::same(6), p.hover);
+                                    .rect_filled(rect, egui::CornerRadius::same(6), p.sel);
+                            } else if response.hovered() {
+                                ui.painter().rect_filled(
+                                    rect,
+                                    egui::CornerRadius::same(6),
+                                    p.hover,
+                                );
                             }
                             ui.painter().text(
                                 egui::pos2(rect.left() + 12.0, rect.center().y),
@@ -1102,7 +1106,9 @@ impl App {
             }
             if ui
                 .button(tr("Edit the theme"))
-                .on_hover_text(tr("Opens the theme file in its editor: colours, fonts, Save as"))
+                .on_hover_text(tr(
+                    "Opens the theme file in its editor: colours, fonts, Save as",
+                ))
                 .clicked()
             {
                 self.pending_acts.push(Act::EditTheme(shown.clone()));
@@ -2658,7 +2664,8 @@ impl App {
             match front {
                 Some(j) => self.active = j,
                 None => {
-                    self.status = tr("Open a profile to show the option of the bookmark in").to_owned();
+                    self.status =
+                        tr("Open a profile to show the option of the bookmark in").to_owned();
                     return;
                 }
             }
@@ -2788,7 +2795,8 @@ impl App {
         let other_side = diff::Side::of(&other, other_path);
         let diff = Diff::between(&doc.profile, &other, base_side, other_side);
         self.status = format!("{} differences", diff.count());
-        self.docs.push(Doc::Diff(Box::new(DiffDoc::new(diff, None))));
+        self.docs
+            .push(Doc::Diff(Box::new(DiffDoc::new(diff, None))));
         self.active = self.docs.len() - 1;
     }
 
@@ -3313,16 +3321,21 @@ impl eframe::App for App {
         if !compact && self.has_tools() {
             let search_here = !self.has_nav() && self.has_search();
             let hint = self.search_hint_now();
-            egui::Panel::top("toolbar").frame(tool_frame).show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    self.toolbar(ui, &mut acts, false);
-                    if search_here {
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            self.search_field(ui, &mut acts, hint, 0.0);
-                        });
-                    }
+            egui::Panel::top("toolbar")
+                .frame(tool_frame)
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        self.toolbar(ui, &mut acts, false);
+                        if search_here {
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    self.search_field(ui, &mut acts, hint, 0.0);
+                                },
+                            );
+                        }
+                    });
                 });
-            });
         }
         if self.has_nav() || (compact && self.has_tools()) {
             egui::Panel::top("nav")
@@ -3843,7 +3856,10 @@ mod tests {
         harness.state_mut().apply(vec![Act::DiffSelect(key)]);
         harness.step();
         harness.step();
-        assert!(has(&harness, "Apply this difference"), "the item is shown on the right");
+        assert!(
+            has(&harness, "Apply this difference"),
+            "the item is shown on the right"
+        );
     }
 
     /// The key of the first rule of the diff in the last tab.
@@ -3916,11 +3932,17 @@ mod tests {
             harness.state_mut().apply(vec![act]);
             shot(&mut harness, name);
         }
-        harness.state_mut().apply(vec![Act::EditTheme("latte".to_owned())]);
+        harness
+            .state_mut()
+            .apply(vec![Act::EditTheme("latte".to_owned())]);
         shot(&mut harness, "10-theme-editor");
-        harness.state_mut().apply(vec![Act::UseTheme("matrix".to_owned()), Act::Activate(0)]);
+        harness
+            .state_mut()
+            .apply(vec![Act::UseTheme("matrix".to_owned()), Act::Activate(0)]);
         shot(&mut harness, "11-matrix");
-        harness.state_mut().apply(vec![Act::UseTheme("light".to_owned())]);
+        harness
+            .state_mut()
+            .apply(vec![Act::UseTheme("light".to_owned())]);
         harness.set_size(egui::vec2(1000.0, 700.0));
         shot(&mut harness, "09-compact");
     }
@@ -3939,7 +3961,10 @@ mod tests {
             t.theme.font_size = 16.0;
         }
         let (_, dark, preference) = app.wanted_theme();
-        assert_eq!(dark.id, "matrix", "the edited theme shows while its tab is in front");
+        assert_eq!(
+            dark.id, "matrix",
+            "the edited theme shows while its tab is in front"
+        );
         assert_eq!(dark.font_size, 16.0);
         assert_eq!(preference, egui::ThemePreference::Dark);
         app.apply(vec![Act::EditTheme("matrix".into())]);
@@ -3968,8 +3993,14 @@ mod tests {
         ]);
         assert_eq!(app.marks.items.len(), 1, "{}", app.status);
         assert_eq!(app.marks.items[0].item, "install.bypass-tpm");
-        assert_eq!(app.marks.items[0].path, "", "an unsaved profile has no file to link");
-        assert_eq!(app.marks.items[0].title, "", "the title comes from the catalog");
+        assert_eq!(
+            app.marks.items[0].path, "",
+            "an unsaved profile has no file to link"
+        );
+        assert_eq!(
+            app.marks.items[0].title, "",
+            "the title comes from the catalog"
+        );
         assert!(
             app.marks_path.exists(),
             "the default file is created at the first bookmark"
@@ -3991,11 +4022,19 @@ mod tests {
             Act::SetMarkComment(0, "Ask the customer\nabout the TPM".into()),
             Act::ToggleBookmark,
         ]);
-        assert_eq!(app.marks.items.len(), 1, "a bookmark with a comment asks first");
+        assert_eq!(
+            app.marks.items.len(),
+            1,
+            "a bookmark with a comment asks first"
+        );
         assert!(app.ask.is_some());
         app.apply(vec![Act::AskNo]);
         assert_eq!(app.marks.items.len(), 1);
-        app.apply(vec![Act::OpenMarks, Act::MarkSelect(0), Act::RemoveMarkAsk(0)]);
+        app.apply(vec![
+            Act::OpenMarks,
+            Act::MarkSelect(0),
+            Act::RemoveMarkAsk(0),
+        ]);
         assert!(app.ask.is_some());
         app.apply(vec![Act::AskYes]);
         assert!(app.marks.items.is_empty());
@@ -4086,15 +4125,22 @@ mod tests {
         let id = key.trim_start_matches("rule:").to_owned();
         app.apply(vec![
             Act::DiffSelect(key.clone()),
-            Act::DiffComment(key.clone(), "Checked with the lab
-and kept".into()),
+            Act::DiffComment(
+                key.clone(),
+                "Checked with the lab
+and kept"
+                    .into(),
+            ),
         ]);
         let Doc::Diff(d) = &app.docs[1] else {
             panic!("the second tab is the diff");
         };
         assert_eq!(d.sel.as_deref(), Some(key.as_str()));
-        assert_eq!(d.diff.comments[&key], "Checked with the lab
-and kept");
+        assert_eq!(
+            d.diff.comments[&key],
+            "Checked with the lab
+and kept"
+        );
         assert!(d.dirty);
         app.apply(vec![Act::DiffComment(key.clone(), "  ".into())]);
         assert!(matches!(&app.docs[1], Doc::Diff(d) if d.diff.comments.is_empty()));

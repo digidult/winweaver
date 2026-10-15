@@ -554,7 +554,11 @@ pub fn tool_button(
             .x;
         (text + 20.0 + if split { 12.0 } else { 0.0 }).max(58.0)
     };
-    let height = if compact { 28.0 } else { size(ui, 44.0).max(44.0) };
+    let height = if compact {
+        28.0
+    } else {
+        size(ui, 44.0).max(44.0)
+    };
     let sense = if enabled {
         Sense::click()
     } else {
@@ -692,11 +696,11 @@ pub fn chip(ui: &mut egui::Ui, text: &str, accent: bool) -> egui::Response {
         .corner_radius(CornerRadius::same(10))
         .inner_margin(Margin::symmetric(8, 1))
         .show(ui, |ui| {
-            ui.label(
-                RichText::new(text)
-                    .size(size(ui, 11.0))
-                    .color(if accent { p.text } else { p.muted }),
-            )
+            ui.label(RichText::new(text).size(size(ui, 11.0)).color(if accent {
+                p.text
+            } else {
+                p.muted
+            }))
         })
         .inner
 }
@@ -773,7 +777,9 @@ pub fn copy_label(ui: &mut egui::Ui, text: RichText, wrap: bool) -> egui::Respon
 
 /// Muted text of a size.
 pub fn muted(ui: &egui::Ui, text: impl Into<String>, at: f32) -> RichText {
-    RichText::new(text).size(size(ui, at)).color(palette(ui).muted)
+    RichText::new(text)
+        .size(size(ui, at))
+        .color(palette(ui).muted)
 }
 
 #[cfg(test)]

@@ -602,7 +602,8 @@ impl App {
                 self.search_field(ui, acts, hint, reserve);
                 if tools {
                     ui.separator();
-                    let (rect, _) = ui.allocate_exact_size(egui::vec2(tools_w, 30.0), Sense::hover());
+                    let (rect, _) =
+                        ui.allocate_exact_size(egui::vec2(tools_w, 30.0), Sense::hover());
                     let mut child = ui.new_child(
                         egui::UiBuilder::new()
                             .max_rect(rect)
@@ -754,7 +755,9 @@ impl App {
                                     Severity::Warning => (tr("Warning"), p.warn),
                                     Severity::Info => (tr("Info"), p.muted),
                                 };
-                                ui.label(RichText::new(tag).color(color).size(style::size(ui, 12.0)));
+                                ui.label(
+                                    RichText::new(tag).color(color).size(style::size(ui, 12.0)),
+                                );
                                 let (label, sel) = match &issue.target {
                                     Target::Rule(id) => (
                                         self.catalog.rule(id).map_or_else(

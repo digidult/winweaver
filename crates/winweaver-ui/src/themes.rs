@@ -22,7 +22,10 @@ pub const EMBEDDED: [(&str, &str); 4] = [
     ("dark", include_str!("../../../data/themes/dark.wwtheme")),
     ("latte", include_str!("../../../data/themes/latte.wwtheme")),
     ("light", include_str!("../../../data/themes/light.wwtheme")),
-    ("matrix", include_str!("../../../data/themes/matrix.wwtheme")),
+    (
+        "matrix",
+        include_str!("../../../data/themes/matrix.wwtheme"),
+    ),
 ];
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -73,7 +76,10 @@ impl Theme {
             theme.format = FORMAT.to_owned();
         }
         if theme.format != FORMAT {
-            return Err(format!("{name}: not a WinWeaver theme (format {})", theme.format));
+            return Err(format!(
+                "{name}: not a WinWeaver theme (format {})",
+                theme.format
+            ));
         }
         if theme.version > VERSION {
             return Err(format!(
@@ -213,7 +219,11 @@ mod tests {
         let list = themes(&std::env::temp_dir().join("winweaver-no-themes"));
         assert_eq!(list.len(), 4);
         let light = list.iter().find(|t| t.id == "light").unwrap();
-        assert_eq!(light.palette(), Palette::LIGHT, "Light is the palette of the mockups");
+        assert_eq!(
+            light.palette(),
+            Palette::LIGHT,
+            "Light is the palette of the mockups"
+        );
         let dark = list.iter().find(|t| t.id == "dark").unwrap();
         assert_eq!(dark.palette(), Palette::DARK);
         let matrix = list.iter().find(|t| t.id == "matrix").unwrap();
