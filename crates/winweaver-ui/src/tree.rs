@@ -158,16 +158,20 @@ fn paint_twisty(painter: &egui::Painter, center: egui::Pos2, open: bool, color: 
     painter.add(Shape::convex_polygon(points, color, Stroke::NONE));
 }
 
-/// The keys of a focused tree.
-fn keys<K: Clone>(ui: &mut egui::Ui, rows: &[Row<K>], selected: Option<usize>, out: &mut Output<K>) {
-    let n = rows.len();
+/// The row a key that moves leads to among `n` rows: the arrows up and down, Home, End, Page Up
+/// and Page Down (`page` rows). The key is consumed.
+pub(crate) fn move_target(
+    ui: &egui::Ui,
+    n: usize,
+    selected: Option<usize>,
+    page: usize,
+) -> Option<usize> {
     if n == 0 {
-        return;
+        return None;
     }
-    let page = ((ui.available_height() / ROW_HEIGHT) as usize).max(2) - 1;
     let pressed = |key: Key| ui.input_mut(|i| i.consume_key(Modifiers::NONE, key));
     let cur = selected.unwrap_or(0);
-    let target = if pressed(Key::ArrowDown) {
+    if pressed(Key::ArrowDown) {
         Some(if selected.is_none() { 0 } else { (cur + 1).min(n - 1) })
     } else if pressed(Key::ArrowUp) {
         Some(cur.saturating_sub(1))
@@ -181,8 +185,50 @@ fn keys<K: Clone>(ui: &mut egui::Ui, rows: &[Row<K>], selected: Option<usize>, o
         Some(cur.saturating_sub(page))
     } else {
         None
-    };
-    if let Some(t) = target {
+    }
+}
+
+/// Makes `area` one stop of the Tab key named `label` and keeps the arrows inside it while it has
+/// the keyboard focus; returns whether it has it.
+pub(crate) fn focus_area(ui: &mut egui::Ui, area: Rect, id: egui::Id, label: &str) -> bool {
+    let focus = ui.interact(area, id, Sense::focusable_noninteractive());
+    focus.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, label));
+    let focused = focus.has_focus();
+    if focused {
+        ui.memory_mut(|m| {
+            m.set_focus_lock_filter(
+                id,
+                egui::EventFilter {
+                    vertical_arrows: true,
+                    horizontal_arrows: true,
+                    tab: false,
+                    escape: false,
+                },
+            )
+        });
+    }
+    focused
+}
+
+/// The frame of an area with the keyboard focus.
+pub(crate) fn paint_focus(ui: &egui::Ui, area: Rect, p: &Palette) {
+    ui.painter().rect_stroke(
+        area.shrink(1.0),
+        CornerRadius::same(2),
+        Stroke::new(1.5, p.accent),
+        StrokeKind::Inside,
+    );
+}
+
+/// The keys of a focused tree.
+fn keys<K: Clone>(ui: &mut egui::Ui, rows: &[Row<K>], selected: Option<usize>, out: &mut Output<K>) {
+    let n = rows.len();
+    if n == 0 {
+        return;
+    }
+    let page = ((ui.available_height() / ROW_HEIGHT) as usize).max(2) - 1;
+    let pressed = |key: Key| ui.input_mut(|i| i.consume_key(Modifiers::NONE, key));
+    if let Some(t) = move_target(ui, n, selected, page) {
         if Some(t) != selected {
             out.events.push(Event::Select(rows[t].key.clone()));
             out.moved = true;
@@ -237,23 +283,8 @@ pub fn show<K: Clone>(
         scrolled: false,
     };
     let area = ui.available_rect_before_wrap();
-    let focus = ui.interact(area, id, Sense::focusable_noninteractive());
-    focus.widget_info(|| {
-        egui::WidgetInfo::labeled(egui::WidgetType::Other, true, crate::i18n::tr("Tree"))
-    });
-    let focused = focus.has_focus();
+    let focused = focus_area(ui, area, id, crate::i18n::tr("Tree"));
     if focused {
-        ui.memory_mut(|m| {
-            m.set_focus_lock_filter(
-                id,
-                egui::EventFilter {
-                    vertical_arrows: true,
-                    horizontal_arrows: true,
-                    tab: false,
-                    escape: false,
-                },
-            )
-        });
         keys(ui, rows, selected, &mut out);
     }
     let mut take_focus = false;
@@ -401,12 +432,7 @@ pub fn show<K: Clone>(
         ui.memory_mut(|m| m.request_focus(id));
     }
     if focused {
-        ui.painter().rect_stroke(
-            area.shrink(1.0),
-            CornerRadius::same(2),
-            Stroke::new(1.5, p.accent),
-            StrokeKind::Inside,
-        );
+        paint_focus(ui, area, &p);
     }
     out
 }

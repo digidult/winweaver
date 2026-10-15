@@ -95,3 +95,34 @@ fn diff_round_trip_and_wrong_files() {
     assert!(Diff::parse(r#"{"format": "winweaver-profile", "version": 1, "catalog": "0", "base": {}, "other": {}}"#, "x").is_err());
     assert!(Diff::parse(r#"{"format": "winweaver-diff", "version": 9, "catalog": "0", "base": {}, "other": {}}"#, "x").is_err());
 }
+
+#[test]
+fn items_apply_one_by_one_and_comments_stay_in_the_file() {
+    let office = preset("office");
+    let mut other = preset("strict");
+    other.install.workgroup = "LAB".into();
+    other.accounts[0].display_name = "Administrator".into();
+    let (a, b) = sides();
+    let mut diff = Diff::between(&office, &other, a, b);
+    let keys = diff.keys();
+    assert_eq!(keys.len(), diff.count());
+    assert!(keys.contains(&"install:workgroup".to_owned()));
+    assert!(keys.contains(&"accounts".to_owned()));
+    let mut merged = office.clone();
+    for key in &keys {
+        diff.apply_item(key, &mut merged);
+    }
+    assert_eq!(merged.rules, other.rules);
+    assert_eq!(merged.install, other.install);
+    assert_eq!(merged.languages, other.languages);
+    assert_eq!(merged.accounts, other.accounts);
+    let mut one = office.clone();
+    diff.apply_item("install:workgroup", &mut one);
+    assert_eq!(one.install.workgroup, "LAB");
+    assert_eq!(one.rules, office.rules);
+    diff.comments
+        .insert("install:workgroup".into(), "The lab has its own\nworkgroup".into());
+    let back = Diff::parse(&diff.to_json(), "x").unwrap();
+    assert_eq!(back.comments["install:workgroup"], "The lab has its own\nworkgroup");
+    assert_eq!(back, diff);
+}

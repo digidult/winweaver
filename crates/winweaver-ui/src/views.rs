@@ -339,7 +339,7 @@ fn rule_checkbox(
 }
 
 /// The head of the detail panel: the card colour across the width.
-fn header(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
+pub(crate) fn header(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
     let p = style::palette(ui);
     egui::Frame::new()
         .fill(p.card)
@@ -361,7 +361,7 @@ fn header(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
 }
 
 /// A card of the detail panel, with the margins of the mockups.
-fn block(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
+pub(crate) fn block(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
     egui::Frame::new()
         .outer_margin(Margin {
             left: 18,
@@ -730,6 +730,20 @@ fn rule_detail(
         ui.add_space(4.0);
         this_pc_buttons(ui, acts);
     });
+    rule_description(ui, catalog, texts, rule, settings.desc_open, true, acts);
+}
+
+/// The description of a rule under its title, folded with Ctrl+D: what it does, the risk, what it
+/// writes, its dependencies (links that select them when `links`), versions and the reference.
+pub(crate) fn rule_description(
+    ui: &mut egui::Ui,
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    rule: &Rule,
+    open: bool,
+    links: bool,
+    acts: &mut Vec<Act>,
+) {
     ui.add_space(6.0);
     egui::Frame::new()
         .inner_margin(Margin {
@@ -742,7 +756,7 @@ fn rule_detail(
             ui.horizontal(|ui| {
                 style::section_title(ui, tr("Description"));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let (icon, hint) = if settings.desc_open {
+                    let (icon, hint) = if open {
                         ("\u{25BE}", tr("Fold the description (Ctrl+D)"))
                     } else {
                         ("\u{25B8}", tr("Show the description (Ctrl+D)"))
@@ -753,7 +767,7 @@ fn rule_detail(
                 });
             });
         });
-    if !settings.desc_open {
+    if !open {
         return;
     }
     section(ui, "desc-what", tr("What it does"), true, |ui| {
@@ -780,7 +794,9 @@ fn rule_detail(
                         let title = catalog
                             .rule(other)
                             .map_or(other.as_str(), |r| rtitle(texts, r));
-                        if ui.link(title).clicked() {
+                        if !links {
+                            ui.label(title);
+                        } else if ui.link(title).clicked() {
                             acts.push(Act::Select(Sel::Rule(other.clone())));
                         }
                     });

@@ -1,0 +1,266 @@
+//! A list with columns: the differences of a diff, the bookmarks, the log of the MCP server. Like
+//! the tree it is one stop of the Tab key; the arrows, Home, End, Page Up and Page Down move the
+//! selection and bring it into view, Enter opens the selected row, a click gives the list the
+//! keyboard focus. The columns change their width by dragging the lines between their titles.
+
+use eframe::egui::{self, Align, CornerRadius, CursorIcon, FontId, Key, Modifiers, Rect, Sense, Stroke};
+
+use crate::style;
+use crate::tree::{self, ROW_HEIGHT, Scroll};
+
+/// The height of the row of titles.
+const HEADER: f32 = 30.0;
+/// The narrowest a column gets by dragging.
+const MIN_WIDTH: f32 = 48.0;
+/// The space inside a cell on the left and on the right.
+const PAD: f32 = 10.0;
+
+pub struct Column {
+    pub title: String,
+    /// The width at the first show; the last column takes the rest of the row.
+    pub width: f32,
+}
+
+impl Column {
+    pub fn new(title: impl Into<String>, width: f32) -> Self {
+        Self {
+            title: title.into(),
+            width,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct Cell {
+    pub text: String,
+    pub strong: bool,
+    pub muted: bool,
+    pub warn: bool,
+}
+
+impl Cell {
+    pub fn new(text: impl Into<String>) -> Self {
+        Self {
+            text: text.into(),
+            ..Self::default()
+        }
+    }
+
+    pub fn strong(mut self) -> Self {
+        self.strong = true;
+        self
+    }
+
+    pub fn muted(mut self) -> Self {
+        self.muted = true;
+        self
+    }
+
+    pub fn warn(mut self) -> Self {
+        self.warn = true;
+        self
+    }
+}
+
+/// A row of the list, in the order it is shown.
+pub struct Row<K> {
+    pub key: K,
+    pub cells: Vec<Cell>,
+}
+
+/// What the user did in the list.
+pub enum Event<K> {
+    Select(K),
+    /// A double click or Enter on a row.
+    Open(K),
+}
+
+pub struct Output<K> {
+    pub events: Vec<Event<K>>,
+    /// The selection moved with the keys, so it should follow into view at the next frame.
+    pub moved: bool,
+    /// The selected row was scrolled into view.
+    pub scrolled: bool,
+}
+
+/// The widths of the columns: the stored ones while their number stays, else the first ones.
+fn widths(ui: &egui::Ui, id: egui::Id, columns: &[Column]) -> Vec<f32> {
+    ui.data(|d| d.get_temp::<Vec<f32>>(id))
+        .filter(|w| w.len() == columns.len())
+        .unwrap_or_else(|| columns.iter().map(|c| c.width).collect())
+}
+
+/// Draws the list and returns what the user did. `id` names the list for its focus, its scroll
+/// and the widths of its columns; `label` names it for the screen readers.
+pub fn show<K: Clone>(
+    ui: &mut egui::Ui,
+    id: egui::Id,
+    label: &str,
+    columns: &[Column],
+    rows: &[Row<K>],
+    selected: Option<usize>,
+    scroll: Scroll,
+) -> Output<K> {
+    let p = style::palette(ui);
+    let mut out = Output {
+        events: Vec::new(),
+        moved: false,
+        scrolled: false,
+    };
+    let area = ui.available_rect_before_wrap();
+    let focused = tree::focus_area(ui, area, id, label);
+    if focused {
+        let page = (((area.height() - HEADER) / ROW_HEIGHT) as usize).max(2) - 1;
+        if let Some(t) = tree::move_target(ui, rows.len(), selected, page) {
+            if Some(t) != selected {
+                out.events.push(Event::Select(rows[t].key.clone()));
+                out.moved = true;
+            }
+        } else if let Some(i) = selected
+            && ui.input_mut(|inp| inp.consume_key(Modifiers::NONE, Key::Enter))
+        {
+            out.events.push(Event::Open(rows[i].key.clone()));
+        }
+    }
+    let widths_id = id.with("widths");
+    let mut widths = widths(ui, widths_id, columns);
+    let (header, _) = ui.allocate_exact_size(egui::vec2(area.width(), HEADER), Sense::hover());
+    let painter = ui.painter().clone();
+    painter.rect_filled(header, CornerRadius::ZERO, p.card2);
+    painter.hline(header.x_range(), header.bottom() - 0.5, Stroke::new(1.0, p.border));
+    let mut x = header.left();
+    let mut spans = Vec::with_capacity(columns.len());
+    for (i, column) in columns.iter().enumerate() {
+        let last = i + 1 == columns.len();
+        let w = if last {
+            (header.right() - x).max(MIN_WIDTH)
+        } else {
+            widths[i]
+        };
+        spans.push((x, w));
+        let cell = Rect::from_min_size(egui::pos2(x, header.top()), egui::vec2(w, HEADER));
+        let galley = painter.layout_no_wrap(
+            column.title.clone(),
+            style::strong_font(ui, 12.0),
+            p.muted,
+        );
+        painter.with_clip_rect(cell.shrink2(egui::vec2(PAD, 0.0))).galley(
+            egui::pos2(x + PAD, cell.center().y - galley.size().y / 2.0),
+            galley,
+            p.muted,
+        );
+        if !last {
+            let edge = x + w;
+            let grip = Rect::from_center_size(egui::pos2(edge, header.center().y), egui::vec2(8.0, HEADER));
+            let drag = ui.interact(grip, id.with(("resize", i)), Sense::drag());
+            if drag.hovered() || drag.dragged() {
+                ui.ctx().set_cursor_icon(CursorIcon::ResizeHorizontal);
+            }
+            if drag.dragged() {
+                widths[i] = (widths[i] + drag.drag_delta().x).max(MIN_WIDTH);
+            }
+            let color = if drag.hovered() || drag.dragged() {
+                p.accent
+            } else {
+                p.border
+            };
+            painter.vline(edge, header.top() + 7.0..=header.bottom() - 7.0, Stroke::new(1.0, color));
+        }
+        x += w;
+    }
+    ui.data_mut(|d| d.insert_temp(widths_id, widths));
+    let mut take_focus = false;
+    egui::ScrollArea::vertical()
+        .id_salt(id.with("scroll"))
+        .auto_shrink(false)
+        .show(ui, |ui| {
+            ui.spacing_mut().item_spacing.y = 0.0;
+            for (i, row) in rows.iter().enumerate() {
+                let (rect, response) = ui.allocate_exact_size(
+                    egui::vec2(ui.available_width(), ROW_HEIGHT),
+                    Sense::CLICK,
+                );
+                let is_selected = Some(i) == selected;
+                if is_selected && scroll != Scroll::None {
+                    let align = if scroll == Scroll::Center {
+                        Some(Align::Center)
+                    } else {
+                        None
+                    };
+                    ui.scroll_to_rect(rect, align);
+                    out.scrolled = true;
+                }
+                let mut cut = Vec::new();
+                if ui.is_rect_visible(rect) {
+                    let painter = ui.painter();
+                    if is_selected {
+                        painter.rect_filled(rect, CornerRadius::ZERO, p.sel);
+                    } else if response.hovered() {
+                        painter.rect_filled(rect, CornerRadius::ZERO, p.hover);
+                    }
+                    for (cell, &(x, w)) in row.cells.iter().zip(&spans) {
+                        let color = if cell.warn {
+                            p.warn
+                        } else if cell.muted {
+                            p.muted
+                        } else {
+                            p.text
+                        };
+                        let font = if cell.strong {
+                            style::strong_font(ui, 13.0)
+                        } else {
+                            FontId::proportional(13.0)
+                        };
+                        let line = cell.text.lines().next().unwrap_or_default();
+                        let galley = painter.layout_no_wrap(line.to_owned(), font, color);
+                        if galley.size().x > w - 2.0 * PAD || line.len() < cell.text.len() {
+                            cut.push(cell.text.as_str());
+                        }
+                        let clip = Rect::from_min_max(
+                            egui::pos2(x + PAD, rect.top()),
+                            egui::pos2(x + w - PAD, rect.bottom()),
+                        );
+                        painter.with_clip_rect(clip.intersect(painter.clip_rect())).galley(
+                            egui::pos2(x + PAD, rect.center().y - galley.size().y / 2.0),
+                            galley,
+                            color,
+                        );
+                    }
+                }
+                let text = row
+                    .cells
+                    .iter()
+                    .map(|c| c.text.as_str())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                response.widget_info(|| {
+                    egui::WidgetInfo::selected(
+                        egui::WidgetType::SelectableLabel,
+                        true,
+                        is_selected,
+                        &text,
+                    )
+                });
+                let response = if cut.is_empty() {
+                    response
+                } else {
+                    response.on_hover_text(cut.join("\n"))
+                };
+                if response.double_clicked() {
+                    out.events.push(Event::Open(row.key.clone()));
+                } else if response.clicked() {
+                    out.events.push(Event::Select(row.key.clone()));
+                }
+                if response.clicked() || response.double_clicked() {
+                    take_focus = true;
+                }
+            }
+        });
+    if take_focus {
+        ui.memory_mut(|m| m.request_focus(id));
+    }
+    if focused {
+        tree::paint_focus(ui, area, &p);
+    }
+    out
+}

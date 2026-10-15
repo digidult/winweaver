@@ -81,6 +81,9 @@ pub struct Diff {
     /// The whole account list of both sides when it differs.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub accounts: Option<FieldDiff>,
+    /// Comments on the differences, by the key of an item ([`Diff::keys`]).
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub comments: IndexMap<String, String>,
 }
 
 /// A choice that is worth listing: on, or with parameters, or with a source.
@@ -158,6 +161,54 @@ impl Diff {
             install: field_diffs(&fields(&base.install), &fields(&other.install)),
             languages: field_diffs(&fields(&base.languages), &fields(&other.languages)),
             accounts,
+            comments: IndexMap::new(),
+        }
+    }
+
+    /// The keys of the items in their order: `install:<field>`, `languages:<field>`, `accounts`
+    /// and `rule:<id>`.
+    pub fn keys(&self) -> Vec<String> {
+        let mut keys: Vec<String> = self.install.keys().map(|k| format!("install:{k}")).collect();
+        keys.extend(self.languages.keys().map(|k| format!("languages:{k}")));
+        if self.accounts.is_some() {
+            keys.push("accounts".to_owned());
+        }
+        keys.extend(self.rules.keys().map(|k| format!("rule:{k}")));
+        keys
+    }
+
+    /// Sets one item of a profile to the value of the other side.
+    pub fn apply_item(&self, key: &str, profile: &mut Profile) {
+        if let Some(id) = key.strip_prefix("rule:") {
+            if let Some(d) = self.rules.get(id) {
+                match &d.other {
+                    Some(c) => {
+                        profile.rules.insert(id.to_owned(), c.clone());
+                    }
+                    None => {
+                        profile.rules.shift_remove(id);
+                    }
+                }
+            }
+        } else if let Some(field) = key.strip_prefix("install:") {
+            if let Some(f) = self.install.get(field) {
+                let one: IndexMap<String, FieldDiff> = [(field.to_owned(), f.clone())].into();
+                if let Some(install) = merged(&profile.install, &one) {
+                    profile.install = install;
+                }
+            }
+        } else if let Some(field) = key.strip_prefix("languages:") {
+            if let Some(f) = self.languages.get(field) {
+                let one: IndexMap<String, FieldDiff> = [(field.to_owned(), f.clone())].into();
+                if let Some(languages) = merged(&profile.languages, &one) {
+                    profile.languages = languages;
+                }
+            }
+        } else if key == "accounts"
+            && let Some(d) = &self.accounts
+            && let Ok(accounts) = serde_json::from_value(d.other.clone())
+        {
+            profile.accounts = accounts;
         }
     }
 

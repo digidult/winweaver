@@ -330,5 +330,16 @@
   "the items of the parameter {param}": "елементи параметра {param}",
   "Windows default: {value}": "Стандартно в Windows: {value}",
   "default: {value}": "стандартно: {value}",
-  "{n} policies": "Політик: {n}"
+  "{n} policies": "Політик: {n}",
+  "Differences": "Відмінності",
+  "Select a difference to see it here.": "Виберіть відмінність, щоб побачити її тут.",
+  "Difference": "Відмінність",
+  "Selects it in the profile tab, opening the profile when needed": "Вибирає її на вкладці профілю, за потреби відкриває профіль",
+  "Apply this difference": "Застосувати цю відмінність",
+  "A comment on this difference, saved in the diff file": "Коментар до цієї відмінності, зберігається у файлі порівняння",
+  "Show in {name}": "Показати в {name}",
+  "Applied one difference to {name}": "Одну відмінність застосовано до {name}",
+  "Sets it in {base} as in {other}": "Встановлює в {base} так, як у {other}",
+  "This rule is not in the catalog of this program, so it has no description here.": "Цього правила немає в каталозі програми, тому опису тут немає.",
+  "The profile {name} is not open and has no file to open": "Профіль {name} не відкритий і не має файлу, який можна відкрити"
 }

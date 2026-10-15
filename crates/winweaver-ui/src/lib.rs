@@ -10,6 +10,7 @@ mod chrome;
 mod diffview;
 mod forms;
 mod i18n;
+mod list;
 mod marksview;
 mod mcpview;
 mod mdview;
@@ -306,6 +307,14 @@ pub enum Act {
     CompareWith(&'static str),
     ApplyDiff,
     SaveDiffAs,
+    /// Selects an item of the active diff by its key.
+    DiffSelect(String),
+    /// Sets the comment on an item of the active diff (empty removes it).
+    DiffComment(String, String),
+    /// Shows an item of the active diff in the profile of its base (false) or other side (true).
+    DiffGoTo(String, bool),
+    /// Sets one item of the active diff in the profile of its base.
+    DiffApplyItem(String),
     SetInstall(Install),
     SetAccounts(Vec<Account>),
     SetLanguages(Languages),
@@ -487,6 +496,7 @@ impl App {
                 c.expanded.extend(chain);
                 c.reveal = true;
             }
+            Some(Doc::Diff(d)) => d.reveal = true,
             _ => {}
         }
     }
@@ -2229,6 +2239,23 @@ impl App {
                 }
                 Act::ApplyDiff => self.apply_active_diff(),
                 Act::SaveDiffAs => self.save_active_diff(),
+                Act::DiffSelect(key) => {
+                    if let Some(Doc::Diff(d)) = self.docs.get_mut(self.active) {
+                        d.sel = Some(key);
+                    }
+                }
+                Act::DiffComment(key, text) => {
+                    if let Some(Doc::Diff(d)) = self.docs.get_mut(self.active) {
+                        if text.trim().is_empty() {
+                            d.diff.comments.shift_remove(&key);
+                        } else {
+                            d.diff.comments.insert(key, text);
+                        }
+                        d.dirty = true;
+                    }
+                }
+                Act::DiffGoTo(key, other) => self.go_to_diff_item(&key, other),
+                Act::DiffApplyItem(key) => self.apply_diff_item(&key),
                 Act::SetInstall(install) => {
                     if let Some(doc) = self.active_profile() {
                         doc.profile.install = install;
@@ -2263,11 +2290,16 @@ impl App {
                         c.reveal = false;
                         c.follow = false;
                     }
+                    Some(Doc::Diff(d)) => {
+                        d.reveal = false;
+                        d.follow = false;
+                    }
                     _ => {}
                 },
                 Act::Follow => match self.docs.get_mut(self.active) {
                     Some(Doc::Profile(doc)) => doc.follow = true,
                     Some(Doc::Catalog(c)) => c.follow = true,
+                    Some(Doc::Diff(d)) => d.follow = true,
                     _ => {}
                 },
                 Act::OpenDoc(link) => self.open_doc(&link),
@@ -2425,12 +2457,8 @@ impl App {
     fn open_diff_path(&mut self, path: PathBuf) {
         match Diff::load(&path) {
             Ok(diff) => {
-                self.docs.push(Doc::Diff(Box::new(DiffDoc {
-                    diff,
-                    path: Some(path.clone()),
-                    dirty: false,
-                    search: Search::default(),
-                })));
+                self.docs
+                    .push(Doc::Diff(Box::new(DiffDoc::new(diff, Some(path.clone())))));
                 self.active = self.docs.len() - 1;
                 self.status = format!("Opened {}", path.display());
                 self.remember_recent(&path);
@@ -2448,12 +2476,7 @@ impl App {
         let other_side = diff::Side::of(&other, other_path);
         let diff = Diff::between(&doc.profile, &other, base_side, other_side);
         self.status = format!("{} differences", diff.count());
-        self.docs.push(Doc::Diff(Box::new(DiffDoc {
-            diff,
-            path: None,
-            dirty: false,
-            search: Search::default(),
-        })));
+        self.docs.push(Doc::Diff(Box::new(DiffDoc::new(diff, None))));
         self.active = self.docs.len() - 1;
     }
 
@@ -2488,6 +2511,80 @@ impl App {
             self.status = format!("Applied {} differences to {}", diff.count(), p.title());
         }
         self.active = i;
+    }
+
+    /// Shows an item of the active diff in the profile tab of a side; the profile is opened from
+    /// its file, or from the preset of its name, when no tab has it.
+    fn go_to_diff_item(&mut self, key: &str, other: bool) {
+        let Some(Doc::Diff(d)) = self.docs.get(self.active) else {
+            return;
+        };
+        let diff = d.diff.clone();
+        let base_tab = self.diff_target(&diff);
+        let tab = if other {
+            let side = &diff.other;
+            let by_path = |(i, d): (usize, &Doc)| {
+                Some(i) != base_tab
+                    && matches!(d, Doc::Profile(p) if !side.path.is_empty()
+                        && p.path.as_ref().is_some_and(|x| x.display().to_string() == side.path))
+            };
+            let by_name = |(i, d): (usize, &Doc)| {
+                Some(i) != base_tab && matches!(d, Doc::Profile(p) if p.profile.name == side.name)
+            };
+            self.docs
+                .iter()
+                .enumerate()
+                .position(by_path)
+                .or_else(|| self.docs.iter().enumerate().position(by_name))
+        } else {
+            base_tab
+        };
+        let side = if other { &diff.other } else { &diff.base };
+        match tab {
+            Some(i) => self.active = i,
+            None if !side.path.is_empty() && Path::new(&side.path).is_file() => {
+                self.open_path(PathBuf::from(&side.path));
+            }
+            None => match PRESETS.iter().find(|p| p.0 == side.name) {
+                Some(&(name, text)) => {
+                    let profile = Profile::parse(text, name)
+                        .unwrap_or_else(|_| Profile::from_defaults(name, &self.catalog));
+                    let doc = ProfileDoc::new(profile, None, &self.catalog);
+                    self.docs.push(Doc::Profile(Box::new(doc)));
+                    self.active = self.docs.len() - 1;
+                }
+                None => {
+                    self.status = trf(
+                        "The profile {name} is not open and has no file to open",
+                        &[("name", &side.name)],
+                    );
+                    return;
+                }
+            },
+        }
+        let sel = sel_from_diff_key(&self.catalog, key);
+        if let Some(doc) = self.active_profile() {
+            doc.select(sel);
+        }
+        self.reveal_selection();
+    }
+
+    /// Sets one item of the active diff in the profile of its base and stays on the diff.
+    fn apply_diff_item(&mut self, key: &str) {
+        let Some(Doc::Diff(d)) = self.docs.get(self.active) else {
+            return;
+        };
+        let diff = d.diff.clone();
+        let Some(i) = self.diff_target(&diff) else {
+            self.status = tr("Apply: open the profile to change first").to_owned();
+            return;
+        };
+        let catalog = &self.catalog;
+        if let Some(Doc::Profile(p)) = self.docs.get_mut(i) {
+            diff.apply_item(key, &mut p.profile);
+            p.refresh(catalog);
+            self.status = trf("Applied one difference to {name}", &[("name", &p.title())]);
+        }
     }
 
     fn save_active_diff(&mut self) {
@@ -2871,11 +2968,23 @@ impl eframe::App for App {
         } else if kind == 3 {
             let catalog = &self.catalog;
             let texts = texts_for(&self.texts, &i18n::current());
+            let settings = &self.settings;
             if let Some(Doc::Diff(doc)) = self.docs.get(self.active) {
                 let doc: &DiffDoc = doc;
-                egui::CentralPanel::default().show(ui, |ui| {
-                    diffview::diff_view(ui, catalog, texts, doc, &mut acts);
-                });
+                let p = style::palette(ui);
+                egui::Panel::right("diff-detail")
+                    .resizable(true)
+                    .default_size(420.0)
+                    .size_range(260.0..=900.0)
+                    .frame(egui::Frame::new().fill(p.bg))
+                    .show(ui, |ui| {
+                        diffview::diff_detail(ui, catalog, texts, doc, settings, &mut acts);
+                    });
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::new().fill(p.card))
+                    .show(ui, |ui| {
+                        diffview::diff_view(ui, catalog, texts, doc, &mut acts);
+                    });
             }
         } else if kind == 4 {
             if let Some(Doc::Markdown(doc)) = self.docs.get_mut(self.active) {
@@ -2955,6 +3064,21 @@ fn is_doc_link(url: &str) -> bool {
 }
 
 /// The selection a bookmark item names: a form id, a rule id or a group id.
+/// What a profile tab selects for an item of a diff ([`Diff::keys`]).
+fn sel_from_diff_key(catalog: &Catalog, key: &str) -> Sel {
+    if let Some(id) = key.strip_prefix("rule:") {
+        sel_from_item(catalog, id)
+    } else if key.starts_with("install:") {
+        Sel::Form(Form::Install)
+    } else if key.starts_with("languages:") {
+        Sel::Form(Form::Languages)
+    } else if key == "accounts" {
+        Sel::Form(Form::Accounts)
+    } else {
+        Sel::None
+    }
+}
+
 fn sel_from_item(catalog: &Catalog, item: &str) -> Sel {
     if item.is_empty() {
         Sel::None
@@ -3239,6 +3363,23 @@ mod tests {
             matches!(harness.state().docs[0], Doc::Profile(ref d) if d.sel == Sel::Rule("install.bypass-tpm".into())),
             "a click on a rule selects it"
         );
+        harness.state_mut().apply(vec![Act::CompareWith("Strict")]);
+        harness.step();
+        harness.step();
+        assert!(has(&harness, "Select a difference to see it here."));
+        let key = first_rule_key(harness.state()).expect("Strict differs in a rule");
+        harness.state_mut().apply(vec![Act::DiffSelect(key)]);
+        harness.step();
+        harness.step();
+        assert!(has(&harness, "Apply this difference"), "the item is shown on the right");
+    }
+
+    /// The key of the first rule of the diff in the last tab.
+    fn first_rule_key(app: &App) -> Option<String> {
+        match app.docs.last() {
+            Some(Doc::Diff(d)) => d.diff.keys().into_iter().find(|k| k.starts_with("rule:")),
+            _ => None,
+        }
     }
 
     /// Pictures of the window for the review of its design. Only when `WINWEAVER_SCREENSHOTS` names
@@ -3286,6 +3427,9 @@ mod tests {
         harness.state_mut().apply(vec![Act::Check]);
         shot(&mut harness, "03-checked");
         harness.state_mut().apply(vec![Act::CompareWith("Strict")]);
+        if let Some(key) = first_rule_key(harness.state()) {
+            harness.state_mut().apply(vec![Act::DiffSelect(key)]);
+        }
         shot(&mut harness, "04-diff");
         for (act, name) in [
             (Act::OpenSettings, "05-settings"),
@@ -3398,6 +3542,52 @@ mod tests {
         assert!(office.dirty);
         let strict = Profile::parse(PRESETS[1].1, "Strict").unwrap();
         assert_eq!(office.profile.rules, strict.rules);
+    }
+
+    #[test]
+    fn an_item_of_a_diff_takes_a_comment_applies_alone_and_leads_to_both_profiles() {
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        app.apply(vec![Act::CompareWith("Strict")]);
+        let Doc::Diff(d) = &app.docs[1] else {
+            panic!("the second tab is the diff");
+        };
+        let key = d
+            .diff
+            .keys()
+            .into_iter()
+            .find(|k| k.starts_with("rule:"))
+            .expect("Strict differs in a rule");
+        let id = key.trim_start_matches("rule:").to_owned();
+        app.apply(vec![
+            Act::DiffSelect(key.clone()),
+            Act::DiffComment(key.clone(), "Checked with the lab
+and kept".into()),
+        ]);
+        let Doc::Diff(d) = &app.docs[1] else {
+            panic!("the second tab is the diff");
+        };
+        assert_eq!(d.sel.as_deref(), Some(key.as_str()));
+        assert_eq!(d.diff.comments[&key], "Checked with the lab
+and kept");
+        assert!(d.dirty);
+        app.apply(vec![Act::DiffComment(key.clone(), "  ".into())]);
+        assert!(matches!(&app.docs[1], Doc::Diff(d) if d.diff.comments.is_empty()));
+        app.apply(vec![Act::DiffApplyItem(key.clone())]);
+        assert_eq!(app.active, 1, "the diff stays in front");
+        let strict = Profile::parse(PRESETS[1].1, "Strict").unwrap();
+        let Doc::Profile(office) = &app.docs[0] else {
+            panic!("the first tab is the profile");
+        };
+        assert_eq!(office.profile.rules.get(&id), strict.rules.get(&id));
+        app.apply(vec![Act::DiffGoTo(key.clone(), true)]);
+        assert_eq!(app.docs.len(), 3, "the preset Strict opens in a new tab");
+        assert_eq!(app.active, 2);
+        assert_eq!(app.active_profile().unwrap().sel, Sel::Rule(id.clone()));
+        app.active = 1;
+        app.apply(vec![Act::DiffGoTo(key, false)]);
+        assert_eq!(app.active, 0);
+        assert_eq!(app.active_profile().unwrap().sel, Sel::Rule(id));
     }
 
     #[test]
