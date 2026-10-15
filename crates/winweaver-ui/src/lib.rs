@@ -865,30 +865,72 @@ impl App {
 
     fn settings_view(&mut self, ui: &mut egui::Ui) {
         let before = self.settings.clone();
-        ui.heading(tr("Settings"));
-        ui.add_space(8.0);
+        let p = style::palette(ui);
+        views::header(ui, |ui| {
+            ui.label(style::strong(ui, tr("Settings"), 18.0));
+        });
         ui.horizontal_top(|ui| {
+            egui::Frame::new()
+                .inner_margin(egui::Margin {
+                    left: 8,
+                    right: 0,
+                    top: 10,
+                    bottom: 0,
+                })
+                .show(ui, |ui| {
+                    ui.vertical(|ui| {
+                        ui.set_width(200.0);
+                        ui.spacing_mut().item_spacing.y = 2.0;
+                        let sections = [tr("General"), tr("Policy templates"), tr("Files")];
+                        for (i, title) in sections.into_iter().enumerate() {
+                            let selected = self.settings_section == i;
+                            let (rect, response) = ui.allocate_exact_size(
+                                egui::vec2(200.0, style::row_height(ui)),
+                                egui::Sense::click(),
+                            );
+                            if selected {
+                                ui.painter().rect_filled(rect, egui::CornerRadius::same(6), p.sel);
+                            } else if response.hovered() {
+                                ui.painter()
+                                    .rect_filled(rect, egui::CornerRadius::same(6), p.hover);
+                            }
+                            ui.painter().text(
+                                egui::pos2(rect.left() + 12.0, rect.center().y),
+                                egui::Align2::LEFT_CENTER,
+                                title,
+                                style::font(ui, 13.0),
+                                if selected { p.sel_text } else { p.text },
+                            );
+                            response.widget_info(|| {
+                                egui::WidgetInfo::selected(
+                                    egui::WidgetType::SelectableLabel,
+                                    true,
+                                    selected,
+                                    title,
+                                )
+                            });
+                            if response.clicked() {
+                                self.settings_section = i;
+                            }
+                        }
+                    });
+                });
             ui.vertical(|ui| {
-                ui.set_width(170.0);
-                let sections = [tr("General"), tr("Policy templates"), tr("Files")];
-                for (i, title) in sections.into_iter().enumerate() {
-                    if ui
-                        .selectable_label(self.settings_section == i, title)
-                        .clicked()
-                    {
-                        self.settings_section = i;
-                    }
-                }
-            });
-            ui.separator();
-            ui.vertical(|ui| match self.settings_section {
-                1 => {
-                    let mut acts = Vec::new();
-                    self.imports_view(ui, &mut acts);
-                    self.pending_acts.extend(acts);
-                }
-                2 => self.files_settings(ui),
-                _ => self.general_settings(ui),
+                egui::ScrollArea::vertical()
+                    .id_salt("settings-page")
+                    .auto_shrink(false)
+                    .show(ui, |ui| {
+                        match self.settings_section {
+                            1 => {
+                                let mut acts = Vec::new();
+                                views::block(ui, |ui| self.imports_view(ui, &mut acts));
+                                self.pending_acts.extend(acts);
+                            }
+                            2 => views::block(ui, |ui| self.files_settings(ui)),
+                            _ => self.general_settings(ui),
+                        }
+                        ui.add_space(12.0);
+                    });
             });
         });
         if before != self.settings {
@@ -901,6 +943,8 @@ impl App {
 
     /// The folders next to the executable and the recent files.
     fn files_settings(&mut self, ui: &mut egui::Ui) {
+        style::section_title(ui, tr("Files"));
+        ui.add_space(4.0);
         ui.label(trf(
             "Settings file: {path}",
             &[("path", &Settings::path().display())],
@@ -923,8 +967,37 @@ impl App {
         }
     }
 
-    /// Language, theme and the behaviour of the window.
+    /// Language, theme, the fonts of the theme and the behaviour of the window, in cards.
     fn general_settings(&mut self, ui: &mut egui::Ui) {
+        views::block(ui, |ui| {
+            style::section_title(ui, tr("Language and theme"));
+            ui.add_space(4.0);
+            self.language_and_theme(ui);
+        });
+        views::block(ui, |ui| self.theme_fonts(ui));
+        views::block(ui, |ui| {
+            style::section_title(ui, tr("Window"));
+            ui.add_space(4.0);
+            ui.checkbox(
+                &mut self.settings.desc_open,
+                tr("Show the description panel (Ctrl+D)"),
+            );
+            ui.checkbox(
+                &mut self.settings.show_guide_at_start,
+                tr("Open the guide at the next start"),
+            );
+            ui.checkbox(
+                &mut self.settings.inline_switches,
+                tr("Switches at the end of the rows of the selected group"),
+            );
+            ui.checkbox(
+                &mut self.settings.restore_tabs,
+                tr("Open the tabs of the last session at the start"),
+            );
+        });
+    }
+
+    fn language_and_theme(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.label(tr("Language"));
             let langs = i18n::languages(&lang_dir());
@@ -1002,7 +1075,16 @@ impl App {
                 self.pending_acts.push(Act::OpenThemeFile);
             }
         });
+    }
+
+    /// The fonts of the theme the window shows, saved in its file when one changes.
+    fn theme_fonts(&mut self, ui: &mut egui::Ui) {
+        let shown = self.shown_theme_id(ui.visuals().dark_mode);
         let mut theme = themes::find(&self.themes, &shown);
+        style::section_title(
+            ui,
+            &trf("Fonts of the theme {name}", &[("name", &theme.name)]),
+        );
         let families = style::installed_families();
         ui.add_space(4.0);
         if themeview::fonts_grid(ui, "settings-fonts", &mut theme, &families) {
@@ -1023,23 +1105,6 @@ impl App {
             ),
             12.0,
         ));
-        ui.add_space(6.0);
-        ui.checkbox(
-            &mut self.settings.desc_open,
-            tr("Show the description panel (Ctrl+D)"),
-        );
-        ui.checkbox(
-            &mut self.settings.show_guide_at_start,
-            tr("Open the guide at the next start"),
-        );
-        ui.checkbox(
-            &mut self.settings.inline_switches,
-            tr("Switches at the end of the rows of the selected group"),
-        );
-        ui.checkbox(
-            &mut self.settings.restore_tabs,
-            tr("Open the tabs of the last session at the start"),
-        );
     }
 
     /// The language the window shows: the setting, or the language of Windows when it says to
@@ -2018,7 +2083,7 @@ impl App {
 
     /// The section of the settings that lists the imports of policy templates.
     fn imports_view(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
-        ui.strong(tr("Policy templates"));
+        style::section_title(ui, tr("Policy templates"));
         ui.weak(tr("Imported ADMX templates become rules under Standard policies. When two imports hold a policy, the templates of this Windows win."));
         for f in &self.imports {
             ui.horizontal(|ui| {
@@ -3375,7 +3440,10 @@ impl eframe::App for App {
                     });
             }
         } else if kind == 1 {
-            egui::CentralPanel::default().show(ui, |ui| self.settings_view(ui));
+            let p = style::palette(ui);
+            egui::CentralPanel::default()
+                .frame(egui::Frame::new().fill(p.bg))
+                .show(ui, |ui| self.settings_view(ui));
         } else {
             egui::CentralPanel::default().show(ui, |ui| {
                 ui.label(tr("No document is open. Use Menu, New or Ctrl+N."));

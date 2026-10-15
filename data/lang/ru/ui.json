@@ -402,5 +402,7 @@
   "removed": "удаляется",
   "Key": "Ключ",
   "Value": "Значение",
-  "Windows default": "По умолчанию в Windows"
+  "Windows default": "По умолчанию в Windows",
+  "Language and theme": "Язык и тема",
+  "Fonts of the theme {name}": "Шрифты темы {name}"
 }
