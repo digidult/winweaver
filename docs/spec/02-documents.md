@@ -75,12 +75,15 @@ unknown extension, by its content.
   "other": { "name": "Strict", "path": "profiles/strict.wwprofile", "modified": "..." },
   "rules": { "asr.usb-untrusted": { "base": { "on": false }, "other": { "on": true } } },
   "install": { "key_mode": { "base": "generic", "other": "ask" } },
-  "accounts": { }, "languages": { }
+  "accounts": { }, "languages": { },
+  "comments": { "rule:asr.usb-untrusted": "Strict blocks USB sticks\nask the customer first" }
 }
 ```
 
 A diff applied to a profile sets the `other` side of every entry; the resolver then disables what the new
-states make impossible and the message bar lists it.
+states make impossible and the message bar lists it. One item can be applied alone. `comments` keeps an
+optional comment of several lines by the key of an item: `rule:<id>`, `install:<field>`,
+`languages:<field>` or `accounts`.
 
 ## 5. Catalog file
 
@@ -97,14 +100,17 @@ Plain, gzip or xz; the compression is detected by the first bytes.
   "format": "winweaver-bookmarks",
   "version": 1,
   "items": [
-    { "document": "profile", "path": "profiles/office.wwprofile", "item": "defender.pua", "title": "Potentially unwanted apps", "comment": "Ask the customer about Audit mode", "created": "..." },
-    { "document": "markdown", "path": "docs/en/this-pc.md", "item": "#apply", "title": "Apply", "comment": "", "created": "..." }
+    { "document": "profile", "path": "profiles/office.wwprofile", "item": "defender.pua", "comment": "Ask the customer about Audit mode\nand note the answer", "created": "..." }
   ]
 }
 ```
 
-A bookmark of a document that is not open opens it; a bookmark of a file that is missing is shown greyed
-with "file not found" and can be edited or removed.
+A bookmark holds the id of an option (a rule, a group or a form) and, as a link, the profile it was made
+in (`path`, empty for an unsaved profile or a catalog tab); the title is taken from the catalog when it
+is shown, so an option is one bookmark in every profile. The comment may have several lines. Opening a
+bookmark opens its profile (loading the file when no tab has it) and selects the option; without a
+profile file it selects the option in the profile tab in front. Files may also hold positions of other
+documents with a `title` (`"document": "markdown"`, `"item": "#heading"`); they are read and kept.
 
 ## 7. Settings
 
@@ -133,7 +139,7 @@ WinWeaver/
 ├── settings.json          written by the window
 ├── bookmarks.wwmarks      created at the first bookmark
 ├── lang/<code>/           ui.json, catalog.json, docs/*.md (a language is a folder; en is embedded)
-├── themes/*.json          colour themes (light and dark are embedded)
+├── themes/*.wwtheme       themes: colours and fonts (Light, Dark, Latte and Matrix are embedded)
 ├── catalogs/*.wwcatalog   catalog files shipped with the program (none until the licence check)
 ├── imports/<id>/          saved imports of policy templates (created by the program)
 ├── profiles/              the user's profiles (the default folder of Open and Save)
@@ -143,7 +149,7 @@ WinWeaver/
 └── output/                autounattend.xml and the generated scripts
 ```
 
-Everything embedded (the catalog, English texts, presets, the two base themes, the guide) is in the
+Everything embedded (the catalog, English texts, presets, the four themes, the guide) is in the
 executable, so a bare `winweaver.exe` runs; the folders add languages, themes, catalogs and persistence.
 
 ## Open questions

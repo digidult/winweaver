@@ -16,6 +16,8 @@ use crate::{Mode, Server, State, WsDoc};
 const TEXT_LIMIT: usize = 60_000;
 const LIST_LIMIT: usize = 200;
 const PRESET_IDS: [&str; 4] = ["office", "strict", "laptop", "home"];
+/// The skill for agents, served as a resource.
+const SKILL: &str = include_str!("../../../skills/winweaver/SKILL.md");
 
 /// A failed tool call: the kind starts the text the client sees.
 pub(crate) struct ToolError {
@@ -103,7 +105,7 @@ pub(crate) fn definitions() -> Vec<Value> {
                 json!({
                     "id": s("A rule id"),
                     "name": s("The parameter name"),
-                    "value": { "description": "An option of an enum, a whole number in range, or a text" },
+                    "value": { "description": "An option of an enum, a whole number in range, a text, or for a list an array of texts" },
                 }),
                 &["id", "name", "value"],
             ),
@@ -192,6 +194,7 @@ pub(crate) fn resources() -> Vec<Value> {
         json!({ "uri": "winweaver://catalog", "name": "Rule catalog", "mimeType": "application/json" }),
         json!({ "uri": "winweaver://profile", "name": "Current profile", "mimeType": "application/json" }),
         json!({ "uri": "winweaver://presets", "name": "Presets", "mimeType": "application/json" }),
+        json!({ "uri": "winweaver://skill", "name": "How to use WinWeaver over MCP", "mimeType": "text/markdown" }),
     ]
 }
 
@@ -207,6 +210,7 @@ pub(crate) fn resource(server: &Server, state: &State, uri: &str) -> Option<Stri
         "winweaver://presets" => {
             json!({ "presets": server.presets.iter().map(|(n, _)| n.clone()).collect::<Vec<_>>() })
         }
+        "winweaver://skill" => return Some(SKILL.to_owned()),
         _ => return None,
     };
     Some(fit(
@@ -360,6 +364,15 @@ fn describe(action: &Action) -> String {
             ..
         } => format!("registry {path}\\{name} = {value} ({kind:?})"),
         Action::RegRemove { path, name, .. } => format!("registry {path}\\{name} removed"),
+        Action::RegList {
+            path,
+            param,
+            additive,
+            ..
+        } => {
+            let how = if *additive { "added to" } else { "replacing" };
+            format!("registry list {path} from the parameter {param}, {how} its values")
+        }
         Action::Service { name, start, .. } => format!("service {name} start type {start}"),
         Action::Exe { file, args } => format!("runs {file} {}", args.join(" ")),
         Action::Feature { name, state, .. } => format!("optional feature {name} {state}"),
@@ -405,6 +418,9 @@ fn param_json(catalog: &Catalog, p: &Profile, rule: &Rule, name: &str, param: &P
             required,
         } => json!({
             "name": name, "type": "string", "title": title, "default": default, "value": value, "required": required,
+        }),
+        Param::List { title, default } => json!({
+            "name": name, "type": "list", "title": title, "default": default, "value": value,
         }),
     }
 }
@@ -615,6 +631,7 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
                 "state": state_text(resolution.state(&id)),
                 "chosen_on": doc.profile.is_on(&id),
                 "blocked_by": blocked_by,
+                "linked_by": resolution.linked_by(&id),
                 "params": rule.params.iter().map(|(n, p)| param_json(catalog, &doc.profile, rule, n, p)).collect::<Vec<_>>(),
                 "requires": rule.requires,
                 "conflicts": rule.conflicts,
@@ -740,6 +757,25 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
                         .as_str()
                         .ok_or_else(|| fail("invalid", "a text is needed"))?;
                     Value::from(one_line(t, 500)?)
+                }
+                Param::List { .. } => {
+                    let items = value
+                        .as_array()
+                        .ok_or_else(|| fail("invalid", "a list of texts is needed"))?;
+                    if items.len() > 1000 {
+                        return Err(fail("invalid", "a list of at most 1000 items"));
+                    }
+                    let mut texts = Vec::new();
+                    for item in items {
+                        let t = item
+                            .as_str()
+                            .ok_or_else(|| fail("invalid", "every item of a list is a text"))?;
+                        let t = one_line(t, 500)?;
+                        if !t.is_empty() {
+                            texts.push(Value::from(t));
+                        }
+                    }
+                    Value::Array(texts)
                 }
             };
             let default = param.default_value();

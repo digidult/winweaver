@@ -4,7 +4,7 @@ use std::io;
 
 use winreg::RegKey;
 use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, HKEY_USERS, KEY_READ, RegType};
-use winweaver_core::thispc::{InputLanguage, Machine, RegData, SystemInfo};
+use winweaver_core::thispc::{InputLanguage, Machine, ReadAccount, RegData, SystemInfo};
 
 /// This PC, read through the Windows API. It never writes.
 #[derive(Debug, Clone, Copy, Default)]
@@ -110,7 +110,7 @@ pub fn ui_language() -> Option<String> {
 }
 
 /// Whether the process runs elevated.
-fn elevated() -> bool {
+pub(crate) fn elevated() -> bool {
     use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
     use windows_sys::Win32::Security::{
         GetTokenInformation, TOKEN_ELEVATION, TOKEN_QUERY, TokenElevation,
@@ -139,6 +139,197 @@ fn elevated() -> bool {
     ok != 0 && elevation.TokenIsElevated != 0
 }
 
+/// The text of a null-terminated wide string the system wrote, empty for a null pointer.
+///
+/// # Safety
+///
+/// `p` is null or points to a null-terminated UTF-16 string that stays valid during the call.
+unsafe fn wide_text(p: *const u16) -> String {
+    if p.is_null() {
+        return String::new();
+    }
+    let mut len = 0usize;
+    // SAFETY: the caller guarantees a terminating null, so every unit up to it is readable.
+    while unsafe { *p.add(len) } != 0 {
+        len += 1;
+    }
+    // SAFETY: the `len` units before the null were read just above.
+    String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(p, len) })
+}
+
+/// A text as a null-terminated wide string for the Windows API.
+fn wide(text: &str) -> Vec<u16> {
+    text.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+/// The name of a built-in group in the language of this Windows, such as `Administratoren` on a
+/// German Windows.
+fn builtin_group(kind: windows_sys::Win32::Security::WELL_KNOWN_SID_TYPE) -> Option<String> {
+    use windows_sys::Win32::Security::{
+        CreateWellKnownSid, LookupAccountSidW, SECURITY_MAX_SID_SIZE, SID_NAME_USE,
+    };
+    // a SID of the largest size, aligned for its 32-bit sub-authorities
+    let mut sid = [0u32; SECURITY_MAX_SID_SIZE as usize / 4];
+    let mut size = SECURITY_MAX_SID_SIZE;
+    // SAFETY: the buffer holds the largest SID and its size in bytes is passed.
+    let made = unsafe {
+        CreateWellKnownSid(
+            kind,
+            std::ptr::null_mut(),
+            sid.as_mut_ptr().cast(),
+            &mut size,
+        )
+    };
+    if made == 0 {
+        return None;
+    }
+    let mut name = [0u16; 256];
+    let mut name_len = name.len() as u32;
+    let mut domain = [0u16; 256];
+    let mut domain_len = domain.len() as u32;
+    let mut kind_of_name: SID_NAME_USE = 0;
+    // SAFETY: the SID was written above; both buffers are valid for the lengths passed.
+    let found = unsafe {
+        LookupAccountSidW(
+            std::ptr::null(),
+            sid.as_mut_ptr().cast(),
+            name.as_mut_ptr(),
+            &mut name_len,
+            domain.as_mut_ptr(),
+            &mut domain_len,
+            &mut kind_of_name,
+        )
+    };
+    if found == 0 {
+        return None;
+    }
+    let end = name.iter().position(|&c| c == 0).unwrap_or(name.len());
+    Some(String::from_utf16_lossy(&name[..end]))
+}
+
+/// The local groups an account belongs to directly, in lower case; none when they cannot be read.
+fn groups_of(user: &str) -> Vec<String> {
+    use windows_sys::Win32::NetworkManagement::NetManagement::{
+        LOCALGROUP_USERS_INFO_0, MAX_PREFERRED_LENGTH, NERR_Success, NetApiBufferFree,
+        NetUserGetLocalGroups,
+    };
+    let name = wide(user);
+    let mut buffer: *mut u8 = std::ptr::null_mut();
+    let (mut read, mut total) = (0u32, 0u32);
+    // SAFETY: the name is null-terminated; the call allocates the buffer and writes its counts.
+    let status = unsafe {
+        NetUserGetLocalGroups(
+            std::ptr::null(),
+            name.as_ptr(),
+            0,
+            0,
+            &mut buffer,
+            MAX_PREFERRED_LENGTH,
+            &mut read,
+            &mut total,
+        )
+    };
+    let mut groups = Vec::new();
+    if status == NERR_Success && !buffer.is_null() {
+        // SAFETY: on success the buffer holds `read` entries of level 0.
+        let entries = unsafe {
+            std::slice::from_raw_parts(buffer.cast::<LOCALGROUP_USERS_INFO_0>(), read as usize)
+        };
+        for entry in entries {
+            // SAFETY: each name is a null-terminated string inside the buffer.
+            groups.push(unsafe { wide_text(entry.lgrui0_name) }.to_lowercase());
+        }
+    }
+    if !buffer.is_null() {
+        // SAFETY: the buffer came from the call above and is freed once.
+        unsafe { NetApiBufferFree(buffer.cast_const().cast()) };
+    }
+    groups
+}
+
+/// The enabled local accounts but the built-in ones, with their group, the way the audit script
+/// reads them: the relative ids 500, 501, 503 and 504 are Administrator, Guest, DefaultAccount
+/// and WDAGUtilityAccount. A password is never read.
+fn local_accounts() -> Result<Vec<ReadAccount>, String> {
+    use windows_sys::Win32::Foundation::ERROR_MORE_DATA;
+    use windows_sys::Win32::NetworkManagement::NetManagement::{
+        FILTER_NORMAL_ACCOUNT, MAX_PREFERRED_LENGTH, NERR_Success, NetApiBufferFree, NetUserEnum,
+        UF_ACCOUNTDISABLE, USER_INFO_20,
+    };
+    use windows_sys::Win32::Security::{WinBuiltinAdministratorsSid, WinBuiltinUsersSid};
+    let admins = builtin_group(WinBuiltinAdministratorsSid)
+        .ok_or("the name of the group Administrators could not be read")?
+        .to_lowercase();
+    let users = builtin_group(WinBuiltinUsersSid)
+        .ok_or("the name of the group Users could not be read")?
+        .to_lowercase();
+    let mut accounts = Vec::new();
+    let mut resume = 0u32;
+    loop {
+        let mut buffer: *mut u8 = std::ptr::null_mut();
+        let (mut read, mut total) = (0u32, 0u32);
+        // SAFETY: the call allocates the buffer and writes its counts and the resume handle.
+        let status = unsafe {
+            NetUserEnum(
+                std::ptr::null(),
+                20,
+                FILTER_NORMAL_ACCOUNT,
+                &mut buffer,
+                MAX_PREFERRED_LENGTH,
+                &mut read,
+                &mut total,
+                &mut resume,
+            )
+        };
+        let more = status == ERROR_MORE_DATA;
+        if (status == NERR_Success || more) && !buffer.is_null() {
+            // SAFETY: the buffer holds `read` entries of level 20.
+            let entries =
+                unsafe { std::slice::from_raw_parts(buffer.cast::<USER_INFO_20>(), read as usize) };
+            for entry in entries {
+                if entry.usri20_flags & UF_ACCOUNTDISABLE != 0
+                    || matches!(entry.usri20_user_id, 500 | 501 | 503 | 504)
+                {
+                    continue;
+                }
+                // SAFETY: the texts are null-terminated strings inside the buffer.
+                let (name, full_name, description) = unsafe {
+                    (
+                        wide_text(entry.usri20_name),
+                        wide_text(entry.usri20_full_name),
+                        wide_text(entry.usri20_comment),
+                    )
+                };
+                let groups = groups_of(&name);
+                let group = if groups.contains(&admins) {
+                    "Administrators"
+                } else if groups.contains(&users) {
+                    "Users"
+                } else {
+                    ""
+                };
+                accounts.push(ReadAccount {
+                    name,
+                    full_name,
+                    description,
+                    group: group.to_owned(),
+                });
+            }
+        }
+        if !buffer.is_null() {
+            // SAFETY: the buffer came from the call above and is freed once.
+            unsafe { NetApiBufferFree(buffer.cast_const().cast()) };
+        }
+        if status == NERR_Success {
+            return Ok(accounts);
+        }
+        if !more || read == 0 {
+            let error = format!("the local accounts could not be read (error {status})");
+            return Err(error);
+        }
+    }
+}
+
 impl Machine for NativeMachine {
     fn value(&self, path: &str, name: &str) -> Result<Option<RegData>, String> {
         let Some(key) = open(path)? else {
@@ -158,6 +349,17 @@ impl Machine for NativeMachine {
         };
         key.enum_keys()
             .collect::<io::Result<Vec<String>>>()
+            .map(Some)
+            .map_err(|e| e.to_string())
+    }
+
+    fn values(&self, path: &str) -> Result<Option<Vec<(String, RegData)>>, String> {
+        let Some(key) = open(path)? else {
+            return Ok(None);
+        };
+        key.enum_values()
+            .map(|v| v.map(|(name, value)| (name, convert(&value.vtype, &value.bytes))))
+            .collect::<io::Result<Vec<_>>>()
             .map(Some)
             .map_err(|e| e.to_string())
     }
@@ -185,6 +387,10 @@ impl Machine for NativeMachine {
                 .collect(),
             _ => Vec::new(),
         };
+        let (accounts, accounts_error) = match local_accounts() {
+            Ok(list) => (list, String::new()),
+            Err(e) => (Vec::new(), e),
+        };
         SystemInfo {
             computer_name: self.computer_name(),
             edition_id: text(self, CV, "EditionID"),
@@ -209,8 +415,8 @@ impl Machine for NativeMachine {
             .unwrap_or_default(),
             user_locale: text(self, "HKCU:\\Control Panel\\International", "LocaleName"),
             input,
-            accounts: Vec::new(),
-            accounts_error: "local accounts are not read by the program yet".to_owned(),
+            accounts,
+            accounts_error,
         }
     }
 }
@@ -253,6 +459,22 @@ mod tests {
         );
         assert_eq!(locale_name(0x0409).as_deref(), Some("en-US"));
         assert_eq!(hex_locale("00000422").as_deref(), Some("uk-UA"));
+    }
+
+    #[test]
+    fn reads_the_local_accounts_without_a_password() {
+        let accounts = local_accounts().expect("the local accounts");
+        assert!(accounts.iter().all(|a| !a.name.is_empty()), "{accounts:?}");
+        let groups = ["Administrators", "Users", ""];
+        assert!(
+            accounts.iter().all(|a| groups.contains(&a.group.as_str())),
+            "{accounts:?}"
+        );
+        let admins = builtin_group(windows_sys::Win32::Security::WinBuiltinAdministratorsSid);
+        assert!(admins.is_some_and(|n| !n.is_empty()));
+        let info = NativeMachine.system_info();
+        assert!(info.accounts_error.is_empty(), "{}", info.accounts_error);
+        assert_eq!(info.accounts, accounts);
     }
 
     #[test]

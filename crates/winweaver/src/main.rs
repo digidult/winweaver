@@ -46,6 +46,37 @@ fn option(args: &[String], name: &str) -> Option<String> {
     })
 }
 
+/// The catalog with the imports of policy templates next to the executable, the templates of
+/// this Windows first; a file that cannot be read or merged is left out.
+fn with_imports(catalog: Catalog, dir: &std::path::Path) -> Catalog {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return catalog;
+    };
+    let mut paths: Vec<std::path::PathBuf> = entries
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| {
+            p.extension()
+                .is_some_and(|e| e == winweaver_core::admx::CATALOG_EXTENSION)
+        })
+        .collect();
+    paths.sort_by_key(|p| {
+        let name = p
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        (!name.starts_with("system"), name)
+    });
+    let files: Vec<winweaver_core::admx::CatalogFile> = paths
+        .iter()
+        .filter_map(|p| winweaver_core::admx::CatalogFile::load(p).ok())
+        .collect();
+    match winweaver_core::admx::merge(&catalog, &files) {
+        Ok((merged, _)) => merged,
+        Err(_) => catalog,
+    }
+}
+
 fn mcp(args: &[String]) -> ExitCode {
     let transport = args.first().map(String::as_str).unwrap_or("");
     let mode = match option(args, "--mode")
@@ -67,6 +98,7 @@ fn mcp(args: &[String]) -> ExitCode {
         }
     };
     let dir = winweaver_ui::exe_dir();
+    let catalog = with_imports(catalog, &winweaver_ui::imports_dir());
     let server = winweaver_mcp::Server::new(
         catalog,
         &winweaver_ui::PRESETS,
@@ -124,6 +156,62 @@ fn mcp(args: &[String]) -> ExitCode {
     }
 }
 
+/// The elevated helper: runs a plan file of the output folder whose bytes have the SHA-256 given on
+/// the command line and writes its report next to it. It reads the file once and refuses any other
+/// file, so a plan changed after the permission of Windows never runs.
+fn elevated_apply(args: &[String]) -> ExitCode {
+    use std::io::Read;
+    let (Some(plan_path), Some(expected)) = (args.first(), args.get(1)) else {
+        return ExitCode::from(2);
+    };
+    let out = winweaver_ui::output_dir();
+    let plan_path = std::path::PathBuf::from(plan_path);
+    let name = plan_path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let parent = plan_path
+        .parent()
+        .map(std::path::Path::to_path_buf)
+        .unwrap_or_default();
+    let in_output = match (std::fs::canonicalize(&parent), std::fs::canonicalize(&out)) {
+        (Ok(a), Ok(b)) => a == b,
+        _ => false,
+    };
+    if !in_output
+        || !name.starts_with("plan-")
+        || !name.ends_with(".json")
+        || name.contains("-report")
+    {
+        return ExitCode::from(3);
+    }
+    let limit = winweaver_core::apply::PLAN_MAX_BYTES;
+    let mut bytes = Vec::new();
+    let read =
+        std::fs::File::open(&plan_path).and_then(|f| f.take(limit + 1).read_to_end(&mut bytes));
+    if read.is_err() || bytes.len() as u64 > limit {
+        return ExitCode::from(3);
+    }
+    if expected.len() != 64 || winweaver_core::apply::digest(&bytes) != *expected {
+        return ExitCode::from(3);
+    }
+    let Ok(plan) = winweaver_core::apply::Plan::from_bytes(&bytes, &name) else {
+        return ExitCode::from(3);
+    };
+    let stamp = winweaver_core::clock::now_utc_iso()
+        .replace([':', '-'], "")
+        .replace('T', "-")
+        .trim_end_matches('Z')
+        .to_owned();
+    let report = winweaver_win::execute_plan(&plan, &out, &stamp);
+    let report_path = plan_path.with_file_name(name.replace(".json", "-report.json"));
+    let text = serde_json::to_string_pretty(&report).unwrap_or_default();
+    match std::fs::write(&report_path, text) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(_) => ExitCode::FAILURE,
+    }
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
@@ -135,6 +223,7 @@ fn main() -> ExitCode {
             }
         },
         Some("--mcp") => mcp(&args[1..]),
+        Some("--elevated-apply") => elevated_apply(&args[1..]),
         Some("--version") => {
             attach_console();
             println!("WinWeaver {}", winweaver_core::APP_VERSION);

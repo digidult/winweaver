@@ -16,6 +16,8 @@ path = "src/main.rs"
 winweaver-core = { path = "../winweaver-core" }
 winweaver-ui = { path = "../winweaver-ui" }
 winweaver-mcp = { path = "../winweaver-mcp" }
+winweaver-win = { path = "../winweaver-win" }
+serde_json.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_System_Console"] }

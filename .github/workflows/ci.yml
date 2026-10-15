@@ -60,6 +60,15 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Tests
         run: cargo test --workspace
+        env:
+          WINWEAVER_SCREENSHOTS: ${{ github.workspace }}/target/screenshots
+      - name: Screenshots of the window
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: target/screenshots
+          if-no-files-found: ignore
       - name: Catalog check
         run: cargo run -p winweaver -- --check-catalog
       - name: Release build

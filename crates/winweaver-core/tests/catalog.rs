@@ -75,6 +75,7 @@ fn translations_cover_every_rule() {
     assert_eq!(texts.len(), 2);
     for t in &texts {
         assert!(!t.language.is_empty(), "{}: _language", t.code);
+        assert!(!t.disabled.is_empty(), "{}: _disabled", t.code);
         for rule in catalog.rules() {
             let entry = t.rules.get(&rule.id);
             assert!(

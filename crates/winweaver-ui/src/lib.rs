@@ -5,14 +5,21 @@
 //! tree with the detail panel, the Settings tab and the status bar. Every change of the profile
 //! is collected as an [`Act`] while the frame is drawn and applied afterwards.
 
+mod catalogview;
+mod chrome;
 mod diffview;
 mod forms;
 mod i18n;
+mod list;
 mod marksview;
 mod mcpview;
 mod mdview;
 mod session;
 mod settings;
+mod style;
+mod themes;
+mod themeview;
+mod tree;
 mod views;
 
 use std::collections::HashSet;
@@ -20,6 +27,7 @@ use std::path::{Path, PathBuf};
 
 use eframe::egui;
 use serde_json::Value;
+use winweaver_core::admx::{self, CatalogFile};
 use winweaver_core::bookmarks::{self, Bookmark, Bookmarks};
 use winweaver_core::catalog::{Catalog, TREE_ROOTS, check};
 use winweaver_core::clock;
@@ -87,6 +95,11 @@ pub struct ProfileDoc {
     pub draft_key: String,
     /// When the profile last changed and has no draft yet.
     changed: Option<std::time::Instant>,
+    pub search: Search,
+    /// The selected row is scrolled to the middle at the next frame (after a search).
+    pub reveal: bool,
+    /// The selected row follows into view at the next frame (after a move with the keys).
+    pub follow: bool,
 }
 
 impl ProfileDoc {
@@ -109,6 +122,9 @@ impl ProfileDoc {
             issues: Vec::new(),
             draft_key,
             changed: None,
+            search: Search::default(),
+            reveal: false,
+            follow: false,
         }
     }
 
@@ -151,6 +167,14 @@ impl ProfileDoc {
     }
 }
 
+/// A question over the window: its title, its text, the label of the yes and the act it runs.
+struct Ask {
+    title: String,
+    text: String,
+    yes: String,
+    act: Act,
+}
+
 /// A tab of the window.
 pub enum Doc {
     Profile(Box<ProfileDoc>),
@@ -159,6 +183,10 @@ pub enum Doc {
     Bookmarks,
     Mcp,
     Settings,
+    /// The tree of an import of policy templates.
+    Catalog(Box<catalogview::CatalogDoc>),
+    /// The editor of a theme.
+    Theme(Box<themeview::ThemeDoc>),
 }
 
 impl Doc {
@@ -170,20 +198,23 @@ impl Doc {
             Doc::Bookmarks => tr("Bookmarks").to_owned(),
             Doc::Mcp => "MCP".to_owned(),
             Doc::Settings => tr("Settings").to_owned(),
+            Doc::Catalog(d) => d.name.clone(),
+            Doc::Theme(d) => d.title(),
         }
     }
 
     pub fn dirty(&self) -> bool {
-        matches!(self, Doc::Profile(d) if d.dirty) || matches!(self, Doc::Diff(d) if d.dirty)
+        matches!(self, Doc::Profile(d) if d.dirty)
+            || matches!(self, Doc::Diff(d) if d.dirty)
+            || matches!(self, Doc::Theme(d) if d.dirty)
     }
 }
 
-/// The search of the navigation row.
+/// The search of a tab, at the right end of its navigation row.
 #[derive(Default)]
 pub struct Search {
     pub open: bool,
     pub text: String,
-    pub history: Vec<String>,
     focus: bool,
 }
 
@@ -195,18 +226,18 @@ impl Search {
             .map(str::to_lowercase)
             .collect()
     }
+}
 
-    /// Puts the current text first in the history; `true` when the history changed.
-    fn remember(&mut self) -> bool {
-        let text = self.text.trim().to_owned();
-        if text.is_empty() || self.history.first() == Some(&text) {
-            return false;
-        }
-        self.history.retain(|h| h != &text);
-        self.history.insert(0, text);
-        self.history.truncate(SEARCH_HISTORY);
-        true
+/// Puts a search first in the history of the searches; `true` when the history changed.
+pub(crate) fn remember_search(history: &mut Vec<String>, text: &str) -> bool {
+    let text = text.trim().to_owned();
+    if text.is_empty() || history.first() == Some(&text) {
+        return false;
     }
+    history.retain(|h| h != &text);
+    history.insert(0, text);
+    history.truncate(SEARCH_HISTORY);
+    true
 }
 
 /// The stand-alone scripts the window saves.
@@ -217,6 +248,17 @@ pub enum ScriptKind {
     Audit,
 }
 
+/// Where an import of policy templates comes from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImportSource {
+    ThisWindows,
+    Folder,
+    CatalogFile,
+}
+
+/// The colours of the title bar: dark, caption, text, border.
+type TitleColors = (bool, [u8; 3], [u8; 3], [u8; 3]);
+
 /// A change requested while a frame was drawn, applied after it.
 pub enum Act {
     Select(Sel),
@@ -225,6 +267,8 @@ pub enum Act {
     SetParam(String, String, Value),
     Expand(String, bool),
     Activate(usize),
+    /// Moves a tab from one place of the row to another.
+    MoveTab(usize, usize),
     CloseTab(usize, bool),
     NewProfile(Option<&'static str>),
     Open,
@@ -243,6 +287,26 @@ pub enum Act {
     /// Compare the selected rules with this PC in the messages panel.
     CheckOnPc,
     SaveScript(ScriptKind),
+    /// Import the templates of this Windows (None), of a folder or a catalog file.
+    ImportTemplates(ImportSource),
+    ToggleImport(String),
+    RemoveImport(String),
+    ExportImport(String),
+    /// Starts to rename an import: its id and its name now.
+    StartRename(String, String),
+    /// Opens the tab of an import.
+    OpenCatalog(String),
+    CatalogSelect(String),
+    CatalogExpand(String, bool),
+    /// Shows a policy of an import (the import, the rule) in the tree of a profile.
+    ShowInProfile(String, String),
+    CancelRename,
+    RenameImport(String, String),
+    /// Prepare the native apply (false) or the return to the defaults (true) of the selection.
+    PlanNative(bool),
+    PlanUndo,
+    ConfirmPlan,
+    CancelPlan,
     OpenReport,
     OpenGuide,
     OpenMarks,
@@ -252,18 +316,53 @@ pub enum Act {
     McpRenewToken,
     McpOpen(String),
     GoToMark(usize),
+    /// Selects a bookmark in the bookmark tab.
+    MarkSelect(usize),
     SetMarkComment(usize, String),
     RemoveMark(usize),
+    /// Removes a bookmark, asking first when it has a comment.
+    RemoveMarkAsk(usize),
+    /// The answer to the question over the window: yes runs its act.
+    AskYes,
+    AskNo,
     Compare,
     CompareWith(&'static str),
     ApplyDiff,
     SaveDiffAs,
+    /// Selects an item of the active diff by its key.
+    DiffSelect(String),
+    /// Sets the comment on an item of the active diff (empty removes it).
+    DiffComment(String, String),
+    /// Shows an item of the active diff in the profile of its base (false) or other side (true).
+    DiffGoTo(String, bool),
+    /// Sets one item of the active diff in the profile of its base.
+    DiffApplyItem(String),
     SetInstall(Install),
     SetAccounts(Vec<Account>),
     SetLanguages(Languages),
     Check,
     Build,
     ClearMessages,
+    /// Opens the list of the message bar or folds it to one line.
+    ToggleMessages,
+    /// The search of the active tab was cleared: the selection comes back into view.
+    SearchCleared,
+    /// The selected row was scrolled into view.
+    Revealed,
+    /// The selection moved with the keys: it follows into view.
+    Follow,
+    /// Opens a page of the documentation, `name.md#heading`.
+    OpenDoc(String),
+    /// Opens the settings at a section (0 general, 1 policy templates, 2 files).
+    OpenSettingsSection(usize),
+    /// Imports the catalog file of the active tab.
+    ImportOpenCatalog,
+    /// Opens the editor of a theme by its id.
+    EditTheme(String),
+    /// Opens a theme file in its editor.
+    OpenThemeFile,
+    /// Makes a theme the theme of the window.
+    UseTheme(String),
     Exit,
     Message(String),
 }
@@ -271,20 +370,52 @@ pub enum Act {
 pub struct App {
     catalog: Catalog,
     texts: Vec<CatalogTexts>,
+    /// The embedded catalog and its translations, before the imports are merged.
+    base_catalog: Catalog,
+    base_texts: Vec<CatalogTexts>,
+    /// The imports of policy templates found next to the executable.
+    imports: Vec<CatalogFile>,
+    importing: Option<std::sync::mpsc::Receiver<Result<CatalogFile, String>>>,
     docs: Vec<Doc>,
     active: usize,
     settings: Settings,
     settings_dirty: bool,
-    search: Search,
+    /// The recent searches of every tab.
+    search_history: Vec<String>,
+    /// The searches of the bookmark tab and of the MCP tab.
+    marks_search: Search,
+    marks_tab: marksview::MarksTab,
+    /// A question over the window and the act a yes runs.
+    ask: Option<Ask>,
+    mcp_search: Search,
+    /// Whether the message bar shows its list or one line.
+    messages_open: bool,
     status: String,
     marks: Bookmarks,
     marks_path: PathBuf,
-    theme_applied: bool,
+    /// The themes of the folder and the embedded ones, read at the start, when the settings
+    /// open and after a theme is saved.
+    themes: Vec<themes::Theme>,
+    /// The themes the window shows now: light, dark and the preference.
+    applied_theme: Option<(themes::Theme, themes::Theme, egui::ThemePreference)>,
+    /// The colours given to the title bar last.
+    title_colors: Option<TitleColors>,
     last_title: String,
     exit: bool,
     drafts_dir: PathBuf,
     logs_dir: PathBuf,
     mcp: mcpview::McpPanel,
+    /// Actions requested by views that run without the list of the frame.
+    pending_acts: Vec<Act>,
+    /// The section of the settings tab: general, policy templates, files.
+    settings_section: usize,
+    /// The import being renamed and the name typed so far.
+    renaming: Option<(String, String)>,
+    /// A plan waiting for the confirmation of the user.
+    confirm: Option<winweaver_core::apply::Plan>,
+    /// The helper that runs a confirmed plan, and what the plan left out.
+    running: Option<std::sync::mpsc::Receiver<Result<winweaver_core::apply::Report, String>>>,
+    running_skipped: Vec<(String, String)>,
     last_logged: String,
 }
 
@@ -298,26 +429,40 @@ impl App {
         let profile = Profile::parse(PRESETS[0].1, PRESETS[0].0)
             .unwrap_or_else(|_| Profile::from_defaults(PRESETS[0].0, &catalog));
         let doc = ProfileDoc::new(profile, None, &catalog);
-        let search = Search {
-            history: settings.search_history.clone(),
-            ..Search::default()
-        };
+        let search_history = settings.search_history.clone();
         Self {
+            base_catalog: catalog.clone(),
+            base_texts: texts.clone(),
+            imports: Vec::new(),
+            importing: None,
             catalog,
             texts,
             docs: vec![Doc::Profile(Box::new(doc))],
             active: 0,
             settings,
             settings_dirty: false,
-            search,
+            search_history,
+            marks_search: Search::default(),
+            marks_tab: marksview::MarksTab::default(),
+            ask: None,
+            mcp_search: Search::default(),
+            messages_open: true,
             status: "Ready".to_owned(),
             marks: Bookmarks::default(),
             marks_path: exe_dir().join(bookmarks::DEFAULT_FILE),
-            theme_applied: false,
+            themes: themes::themes(&themes_dir()),
+            applied_theme: None,
+            title_colors: None,
             last_title: String::new(),
             exit: false,
             drafts_dir: exe_dir().join("drafts"),
             logs_dir: exe_dir().join("logs"),
+            confirm: None,
+            pending_acts: Vec::new(),
+            settings_section: 0,
+            renaming: None,
+            running: None,
+            running_skipped: Vec::new(),
             mcp: mcpview::McpPanel {
                 port: 8765,
                 token: String::new(),
@@ -325,6 +470,9 @@ impl App {
                 read_pc: false,
                 run: None,
                 error: String::new(),
+                journal_sel: None,
+                journal_follow: false,
+                journal_reveal: false,
             },
             last_logged: String::new(),
         }
@@ -337,6 +485,279 @@ impl App {
         }
     }
 
+    /// The search of the active tab, `None` for a tab without one.
+    fn active_search(&mut self) -> Option<&mut Search> {
+        match self.docs.get_mut(self.active)? {
+            Doc::Profile(d) => Some(&mut d.search),
+            Doc::Diff(d) => Some(&mut d.search),
+            Doc::Markdown(d) => Some(&mut d.search),
+            Doc::Catalog(d) => Some(&mut d.search),
+            Doc::Bookmarks => Some(&mut self.marks_search),
+            Doc::Mcp => Some(&mut self.mcp_search),
+            Doc::Settings | Doc::Theme(_) => None,
+        }
+    }
+
+    /// After the search of a tab is cleared, the selected item stays in view: the groups above
+    /// it open and its row is scrolled to at the next frame.
+    fn reveal_selection(&mut self) {
+        let catalog = &self.catalog;
+        match self.docs.get_mut(self.active) {
+            Some(Doc::Profile(doc)) => {
+                let mut next = match &doc.sel {
+                    Sel::Rule(id) => catalog.rule(id).map(|r| r.group.clone()),
+                    Sel::Group(id) => catalog.group(id).and_then(|g| g.parent.clone()),
+                    Sel::Form(_) => Some(winweaver_core::catalog::ROOT_UNATTEND.to_owned()),
+                    Sel::None => None,
+                };
+                while let Some(g) = next {
+                    next = catalog.group(&g).and_then(|x| x.parent.clone());
+                    doc.expanded.insert(g);
+                }
+                doc.reveal = true;
+            }
+            Some(Doc::Catalog(c)) => {
+                let mut chain = Vec::new();
+                if let Some(file) = c.catalog(&self.imports)
+                    && let Some(rule) = c
+                        .sel
+                        .as_deref()
+                        .and_then(|id| file.rules.iter().find(|r| r.id == id))
+                {
+                    let mut next = Some(rule.group.clone());
+                    while let Some(g) = next {
+                        next = file
+                            .groups
+                            .iter()
+                            .find(|x| x.id == g)
+                            .and_then(|x| x.parent.clone());
+                        chain.push(g);
+                    }
+                }
+                c.expanded.extend(chain);
+                c.reveal = true;
+            }
+            Some(Doc::Diff(d)) => d.reveal = true,
+            Some(Doc::Bookmarks) => self.marks_tab.reveal = true,
+            Some(Doc::Mcp) => self.mcp.journal_reveal = true,
+            _ => {}
+        }
+    }
+
+    /// Asks before a bookmark with a comment is removed.
+    fn ask_remove_mark(&mut self, i: usize) {
+        let Some(b) = self.marks.items.get(i) else {
+            return;
+        };
+        let t = marksview::target(
+            &self.catalog,
+            texts_for(&self.texts, &i18n::current()),
+            &self.imports,
+            b,
+        );
+        self.ask = Some(Ask {
+            title: tr("Remove the bookmark").to_owned(),
+            text: trf(
+                "The bookmark of {title} has a comment. Remove it with the comment?",
+                &[("title", &t.title)],
+            ),
+            yes: tr("Remove").to_owned(),
+            act: Act::RemoveMark(i),
+        });
+    }
+
+    /// The question over the window, when there is one.
+    fn ask_view(&self, ctx: &egui::Context, acts: &mut Vec<Act>) {
+        let Some(ask) = &self.ask else {
+            return;
+        };
+        egui::Window::new(ask.title.as_str())
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.label(ask.text.as_str());
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if ui.button(ask.yes.as_str()).clicked() {
+                        acts.push(Act::AskYes);
+                    }
+                    if ui.button(tr("Cancel")).clicked() {
+                        acts.push(Act::AskNo);
+                    }
+                });
+            });
+    }
+
+    fn open_settings(&mut self) {
+        match self.docs.iter().position(|d| matches!(d, Doc::Settings)) {
+            Some(i) => self.active = i,
+            None => {
+                self.docs.push(Doc::Settings);
+                self.active = self.docs.len() - 1;
+            }
+        }
+    }
+
+    /// Opens a page of the documentation a link names, such as
+    /// `docs/technical/reference/18-browsers.md#microsoft-edge`, at the heading of its anchor; a
+    /// link `#heading` goes to a heading of the Markdown tab that is open.
+    fn open_doc(&mut self, link: &str) {
+        let (file, anchor) = match link.split_once('#') {
+            Some((f, a)) => (f, Some(a.to_owned())),
+            None => (link, None),
+        };
+        let name = file.rsplit(['/', '\\']).next().unwrap_or(file);
+        if name.is_empty() {
+            if let Some(Doc::Markdown(m)) = self.docs.get_mut(self.active) {
+                m.jump = anchor.is_some();
+                m.anchor = anchor;
+            }
+            return;
+        }
+        let (title, text) = if name.eq_ignore_ascii_case("guide.md") {
+            (
+                mdview::GUIDE_TITLE.to_owned(),
+                Some(mdview::guide_text(&i18n::current())),
+            )
+        } else {
+            (
+                name.to_owned(),
+                mdview::REFERENCE
+                    .iter()
+                    .find(|(n, _)| n.eq_ignore_ascii_case(name))
+                    .map(|(_, t)| (*t).to_owned()),
+            )
+        };
+        let Some(text) = text else {
+            self.status = trf("No page {name} in the documentation", &[("name", &name)]);
+            return;
+        };
+        let i = match self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Markdown(m) if m.path.is_none() && m.title == title))
+        {
+            Some(i) => i,
+            None => {
+                self.docs
+                    .push(Doc::Markdown(Box::new(MdDoc::new(title, None, text))));
+                self.docs.len() - 1
+            }
+        };
+        self.active = i;
+        if let Some(Doc::Markdown(m)) = self.docs.get_mut(i) {
+            m.jump = anchor.is_some();
+            m.anchor = anchor;
+        }
+    }
+
+    /// Opens a catalog file in a tab of its own, without importing it.
+    fn open_catalog_path(&mut self, path: PathBuf) {
+        if let Some(i) = self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path)))
+        {
+            self.active = i;
+            return;
+        }
+        match CatalogFile::load(&path) {
+            Ok(file) => {
+                let doc = catalogview::CatalogDoc::from_file(file, path.clone());
+                self.docs.push(Doc::Catalog(Box::new(doc)));
+                self.active = self.docs.len() - 1;
+                self.status = trf("Opened {path}", &[("path", &path.display())]);
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+        }
+    }
+
+    /// Opens an ADMX file as a catalog tab without importing it: its policies with the texts of
+    /// the ADML next to it; the command bar of the tab offers Import.
+    fn open_admx_path(&mut self, path: PathBuf) {
+        if let Some(i) = self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path)))
+        {
+            self.active = i;
+            return;
+        }
+        let templates = admx::read_file(&path);
+        if templates.policies() == 0 {
+            let why = templates
+                .skipped
+                .first()
+                .map(|s| s.1.clone())
+                .unwrap_or_else(|| tr("no policies").to_owned());
+            self.status = trf("Open failed: {e}", &[("e", &why)]);
+            return;
+        }
+        let name = path
+            .file_stem()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "Templates".to_owned());
+        let id = format!(
+            "file-{:08x}",
+            session::fnv(&path.display().to_string().to_lowercase()) as u32
+        );
+        let file = admx::to_catalog_file(&templates, &id, &name, "", &clock::now_utc_iso());
+        let doc = catalogview::CatalogDoc::from_file(file, path.clone());
+        self.docs.push(Doc::Catalog(Box::new(doc)));
+        self.active = self.docs.len() - 1;
+        self.status = trf("Opened {path}", &[("path", &path.display())]);
+        self.remember_recent(&path);
+    }
+
+    /// Imports the catalog file of the active tab: it is saved next to the executable, merged
+    /// into the catalog, and the tab shows the import from now on.
+    fn import_open_catalog(&mut self) {
+        let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        let Some(mut file) = c.file.take() else {
+            return;
+        };
+        if self.imports.iter().any(|f| f.id == file.id) && !file.id.starts_with("package-") {
+            file.id = format!("package-{}", file.id);
+        }
+        c.id = file.id.clone();
+        c.path = None;
+        let dir = imports_dir();
+        let path = dir.join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
+        let saved = std::fs::create_dir_all(&dir)
+            .map_err(|e| e.to_string())
+            .and_then(|()| file.save(&path));
+        let rules = file.rules.len();
+        self.imports.retain(|f| f.id != file.id);
+        self.imports.push(*file);
+        self.rebuild_catalog();
+        self.status = match saved {
+            Ok(()) => trf("Imported: {rules} rules", &[("rules", &rules)]),
+            Err(e) => trf("Imported, but not saved: {e}", &[("e", &e)]),
+        };
+    }
+
+    /// Saves the active diff to its file, or asks for one.
+    fn save_diff(&mut self) {
+        let Some(Doc::Diff(d)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        let Some(path) = d.path.clone() else {
+            self.save_active_diff();
+            return;
+        };
+        match d.diff.save(&path) {
+            Ok(()) => {
+                d.dirty = false;
+                self.status = trf("Saved {path}", &[("path", &path.display())]);
+            }
+            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+        }
+    }
+
     fn refresh_active(&mut self) {
         let catalog = &self.catalog;
         if let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) {
@@ -346,48 +767,31 @@ impl App {
 
     /// The current position of the active tab as a bookmark, without a comment. The path of an
     /// unsaved document is its tab title, so that the bookmark finds the tab again.
-    fn current_bookmark(&self) -> Option<Bookmark> {
-        let (document, path, item, title) = match self.docs.get(self.active) {
+    /// The bookmark of the option selected in the active tab: a profile (with its file as the
+    /// link), an imported catalog or a rule of a diff (with the file of its base).
+    pub(crate) fn current_bookmark(&self) -> Option<Bookmark> {
+        let (item, path) = match self.docs.get(self.active) {
             Some(Doc::Profile(doc)) => {
                 let item = match &doc.sel {
-                    Sel::None => String::new(),
+                    Sel::None => return None,
                     Sel::Group(id) | Sel::Rule(id) => id.clone(),
                     Sel::Form(f) => f.id().to_owned(),
                 };
-                let title = self
-                    .crumbs()
-                    .last()
-                    .map(|c| c.0.clone())
-                    .unwrap_or_else(|| doc.profile.name.clone());
                 let path = doc
                     .path
                     .as_ref()
-                    .map_or_else(|| doc.title(), |p| p.display().to_string());
-                ("profile", path, item, title)
+                    .map(|p| p.display().to_string())
+                    .unwrap_or_default();
+                (item, path)
             }
-            Some(Doc::Markdown(doc)) => {
-                let path = doc
-                    .path
-                    .as_ref()
-                    .map_or_else(|| doc.title.clone(), |p| p.display().to_string());
-                ("markdown", path, String::new(), doc.title.clone())
-            }
-            Some(Doc::Diff(doc)) => {
-                let path = doc
-                    .path
-                    .as_ref()
-                    .map_or_else(|| doc.title(), |p| p.display().to_string());
-                ("diff", path, String::new(), doc.title())
+            Some(Doc::Catalog(c)) if c.file.is_none() => (c.sel.clone()?, String::new()),
+            Some(Doc::Diff(d)) => {
+                let id = d.sel.as_deref()?.strip_prefix("rule:")?;
+                (id.to_owned(), d.diff.base.path.clone())
             }
             _ => return None,
         };
-        Some(Bookmark {
-            document: document.to_owned(),
-            path,
-            item,
-            title,
-            ..Bookmark::default()
-        })
+        Some(Bookmark::option(&item, &path))
     }
 
     fn shortcuts(&mut self, ctx: &egui::Context) -> Vec<Act> {
@@ -395,11 +799,13 @@ impl App {
         let mut acts = Vec::new();
         let active = self.active;
         let count = self.docs.len();
+        let confirming = self.confirm.is_some();
+        let asking = self.ask.is_some();
+        let mut focus_search = false;
         ctx.input_mut(|i| {
             let sc = |m, k| KeyboardShortcut::new(m, k);
             if i.consume_shortcut(&sc(Modifiers::CTRL, Key::F)) {
-                self.search.open = true;
-                self.search.focus = true;
+                focus_search = true;
             }
             if i.consume_shortcut(&sc(Modifiers::CTRL, Key::D)) {
                 acts.push(Act::Fold);
@@ -440,249 +846,37 @@ impl App {
             if i.consume_shortcut(&sc(Modifiers::ALT, Key::ArrowRight)) {
                 acts.push(Act::Forward);
             }
+            if count > 1 && i.consume_shortcut(&sc(Modifiers::CTRL | Modifiers::SHIFT, Key::Tab)) {
+                acts.push(Act::Activate((active + count - 1) % count));
+            }
             if count > 1 && i.consume_shortcut(&sc(Modifiers::CTRL, Key::Tab)) {
                 acts.push(Act::Activate((active + 1) % count));
+            }
+            if active > 0
+                && i.consume_shortcut(&sc(Modifiers::CTRL | Modifiers::SHIFT, Key::PageUp))
+            {
+                acts.push(Act::MoveTab(active, active - 1));
+            }
+            if active + 1 < count
+                && i.consume_shortcut(&sc(Modifiers::CTRL | Modifiers::SHIFT, Key::PageDown))
+            {
+                acts.push(Act::MoveTab(active, active + 1));
+            }
+            if confirming && i.consume_key(Modifiers::NONE, Key::Escape) {
+                acts.push(Act::CancelPlan);
+            }
+            if asking && i.consume_key(Modifiers::NONE, Key::Escape) {
+                acts.push(Act::AskNo);
             }
             for file in &i.raw.dropped_files {
                 acts.push(Act::OpenPath(file.path().to_path_buf()));
             }
         });
+        if focus_search && let Some(search) = self.active_search() {
+            search.open = true;
+            search.focus = true;
+        }
         acts
-    }
-
-    fn tabs_row(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
-        ui.horizontal(|ui| {
-            ui.menu_button(tr("Menu"), |ui| {
-                ui.menu_button(tr("New"), |ui| {
-                    if ui.button(tr("Empty profile")).clicked() {
-                        acts.push(Act::NewProfile(None));
-                        ui.close();
-                    }
-                    ui.separator();
-                    for (name, _) in PRESETS {
-                        if ui
-                            .button(trf("Profile from the preset {name}", &[("name", &name)]))
-                            .clicked()
-                        {
-                            acts.push(Act::NewProfile(Some(name)));
-                            ui.close();
-                        }
-                    }
-                });
-                if ui
-                    .add(egui::Button::new(tr("Open...")).shortcut_text("Ctrl+O"))
-                    .clicked()
-                {
-                    acts.push(Act::Open);
-                    ui.close();
-                }
-                ui.add_enabled_ui(!self.settings.recent.is_empty(), |ui| {
-                    ui.menu_button(tr("Open recent"), |ui| {
-                        for path in &self.settings.recent {
-                            if ui.button(path.display().to_string()).clicked() {
-                                acts.push(Act::OpenPath(path.clone()));
-                                ui.close();
-                            }
-                        }
-                    });
-                });
-                if ui
-                    .add(egui::Button::new(tr("Save")).shortcut_text("Ctrl+S"))
-                    .clicked()
-                {
-                    acts.push(Act::Save);
-                    ui.close();
-                }
-                if ui
-                    .add(egui::Button::new(tr("Save as...")).shortcut_text("Ctrl+Shift+S"))
-                    .clicked()
-                {
-                    acts.push(Act::SaveAs);
-                    ui.close();
-                }
-                if ui
-                    .add(egui::Button::new(tr("Close tab")).shortcut_text("Ctrl+W"))
-                    .clicked()
-                {
-                    acts.push(Act::CloseTab(self.active, false));
-                    ui.close();
-                }
-                ui.separator();
-                if ui.button(tr("Compare with a file...")).clicked() {
-                    acts.push(Act::Compare);
-                    ui.close();
-                }
-                ui.menu_button(tr("Compare with a preset"), |ui| {
-                    for (name, _) in PRESETS {
-                        if ui.button(name).clicked() {
-                            acts.push(Act::CompareWith(name));
-                            ui.close();
-                        }
-                    }
-                });
-                ui.separator();
-                if ui.button(tr("Close tab, discard changes")).clicked() {
-                    acts.push(Act::CloseTab(self.active, true));
-                    ui.close();
-                }
-                ui.separator();
-                if ui
-                    .add(egui::Button::new(tr("Guide")).shortcut_text("F1"))
-                    .clicked()
-                {
-                    acts.push(Act::OpenGuide);
-                    ui.close();
-                }
-                if ui.button(tr("MCP server")).clicked() {
-                    acts.push(Act::OpenMcp);
-                    ui.close();
-                }
-                if ui.button(tr("Bookmarks")).clicked() {
-                    acts.push(Act::OpenMarks);
-                    ui.close();
-                }
-                if ui
-                    .add(egui::Button::new(tr("Settings")).shortcut_text("Ctrl+,"))
-                    .clicked()
-                {
-                    acts.push(Act::OpenSettings);
-                    ui.close();
-                }
-                if ui.button(tr("About")).clicked() {
-                    acts.push(Act::Message(format!(
-                        "WinWeaver {}, catalog {}, settings {}",
-                        winweaver_core::APP_VERSION,
-                        self.catalog.version(),
-                        Settings::path().display()
-                    )));
-                    ui.close();
-                }
-                if ui.button(tr("Exit")).clicked() {
-                    acts.push(Act::Exit);
-                    ui.close();
-                }
-            });
-            ui.separator();
-            for (i, doc) in self.docs.iter().enumerate() {
-                let mark = if doc.dirty() { "* " } else { "" };
-                let label = format!("{mark}{}", doc.title());
-                let response = ui.selectable_label(i == self.active, label);
-                if response.clicked() {
-                    acts.push(Act::Activate(i));
-                }
-                if response.middle_clicked() {
-                    acts.push(Act::CloseTab(i, false));
-                }
-                if let Doc::Profile(d) = doc
-                    && let Some(p) = &d.path
-                {
-                    response.on_hover_text(p.display().to_string());
-                }
-                if ui
-                    .small_button(tr("x"))
-                    .on_hover_text(tr("Close (Ctrl+W)"))
-                    .clicked()
-                {
-                    acts.push(Act::CloseTab(i, false));
-                }
-                ui.add_space(4.0);
-            }
-            if ui
-                .button(tr("+"))
-                .on_hover_text(tr("New profile (Ctrl+N)"))
-                .clicked()
-            {
-                acts.push(Act::NewProfile(None));
-            }
-        });
-    }
-
-    /// The commands of the active document: icons with labels, icons only when `compact`.
-    fn toolbar_items(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>, compact: bool) {
-        let label = |icon: &str, text: &'static str| {
-            let text = tr(text);
-            if compact {
-                icon.to_owned()
-            } else {
-                format!("{icon} {text}")
-            }
-        };
-        let button = |ui: &mut egui::Ui, icon: &str, text: &'static str, keys: &str| {
-            let hint = if keys.is_empty() {
-                tr(text).to_owned()
-            } else {
-                format!("{} ({keys})", tr(text))
-            };
-            ui.button(label(icon, text)).on_hover_text(hint).clicked()
-        };
-        if button(ui, "\u{1F4C4}", "New", "Ctrl+N") {
-            acts.push(Act::NewProfile(None));
-        }
-        if button(ui, "\u{1F4C2}", "Open", "Ctrl+O") {
-            acts.push(Act::Open);
-        }
-        if button(ui, "\u{1F4BE}", "Save", "Ctrl+S") {
-            acts.push(Act::Save);
-        }
-        ui.separator();
-        if button(ui, "\u{2714}", "Check", "F7") {
-            acts.push(Act::Check);
-        }
-        if button(ui, "\u{1F528}", "Build", "F9") {
-            acts.push(Act::Build);
-        }
-        ui.separator();
-        ui.menu_button(label("\u{1F5A5}", "This PC"), |ui| {
-            if ui.button(tr("Read this PC into a new profile")).clicked() {
-                acts.push(Act::ReadPc);
-                ui.close();
-            }
-            if ui
-                .button(tr("Read the selection into this profile"))
-                .clicked()
-            {
-                acts.push(Act::ReadSelection);
-                ui.close();
-            }
-            if ui.button(tr("Check the selection on this PC")).clicked() {
-                acts.push(Act::CheckOnPc);
-                ui.close();
-            }
-            ui.separator();
-            if ui
-                .button(tr("Save an apply script for the selection..."))
-                .clicked()
-            {
-                acts.push(Act::SaveScript(ScriptKind::Apply));
-                ui.close();
-            }
-            if ui
-                .button(tr("Save a return-to-defaults script for the selection..."))
-                .clicked()
-            {
-                acts.push(Act::SaveScript(ScriptKind::Revert));
-                ui.close();
-            }
-            if ui
-                .button(tr("Save an audit script for the selection..."))
-                .clicked()
-            {
-                acts.push(Act::SaveScript(ScriptKind::Audit));
-                ui.close();
-            }
-            ui.separator();
-            if ui.button(tr("Open an audit report...")).clicked() {
-                acts.push(Act::OpenReport);
-                ui.close();
-            }
-        });
-        if button(ui, "\u{1F500}", "Compare", "") {
-            acts.push(Act::Compare);
-        }
-    }
-
-    fn toolbar(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
-        ui.horizontal(|ui| self.toolbar_items(ui, acts, false));
     }
 
     fn crumbs(&self) -> Vec<(String, Sel)> {
@@ -717,149 +911,145 @@ impl App {
         crumbs
     }
 
-    fn nav_row(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>, compact: bool) {
-        let (can_back, can_forward) = match self.docs.get(self.active) {
-            Some(Doc::Profile(doc)) => (doc.can_go(-1), doc.can_go(1)),
-            _ => (false, false),
-        };
-        let crumbs = self.crumbs();
-        let marked = self
-            .current_bookmark()
-            .is_some_and(|b| self.marks.find(&b).is_some());
-        ui.horizontal(|ui| {
-            if ui
-                .add_enabled(can_back, egui::Button::new(tr("<")).frame(false))
-                .on_hover_text(tr("Back (Alt+Left)"))
-                .clicked()
-            {
-                acts.push(Act::Back);
-            }
-            if ui
-                .add_enabled(can_forward, egui::Button::new(tr(">")).frame(false))
-                .on_hover_text(tr("Forward (Alt+Right)"))
-                .clicked()
-            {
-                acts.push(Act::Forward);
-            }
-            ui.separator();
-            for (i, (label, sel)) in crumbs.iter().enumerate() {
-                if i > 0 {
-                    ui.weak(tr(">"));
-                }
-                let text = if i + 1 == crumbs.len() {
-                    egui::RichText::new(label.as_str()).strong()
-                } else {
-                    egui::RichText::new(label.as_str())
-                };
-                if ui.add(egui::Button::new(text).frame(false)).clicked() {
-                    acts.push(Act::Select(sel.clone()));
-                }
-            }
-            if !crumbs.is_empty() {
-                let mut m = marked;
-                if ui
-                    .toggle_value(&mut m, tr("Bookmark"))
-                    .on_hover_text(tr("Ctrl+B"))
-                    .changed()
-                {
-                    acts.push(Act::ToggleBookmark);
-                }
-            }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if compact {
-                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                        ui.separator();
-                        self.toolbar_items(ui, acts, true);
-                    });
-                }
-                if self.search.open {
-                    if ui
-                        .button(tr("x"))
-                        .on_hover_text(tr("Clear and close (Esc)"))
-                        .clicked()
-                    {
-                        self.search.text.clear();
-                        self.search.open = false;
-                    }
-                    let id = egui::Id::new("search-field");
-                    let response = ui.add(
-                        egui::TextEdit::singleline(&mut self.search.text)
-                            .id(id)
-                            .hint_text(tr("Search rules (Ctrl+F)"))
-                            .desired_width((ui.available_width() - 60.0).clamp(220.0, 640.0)),
-                    );
-                    if self.search.focus {
-                        ui.memory_mut(|m| m.request_focus(id));
-                        self.search.focus = false;
-                    }
-                    if response.lost_focus() {
-                        if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                            self.search.text.clear();
-                            self.search.open = false;
-                        } else if ui.input(|i| i.key_pressed(egui::Key::Enter))
-                            && self.search.remember()
-                        {
-                            self.settings.search_history = self.search.history.clone();
-                            self.settings_dirty = true;
-                        }
-                    }
-                    if !self.search.history.is_empty() {
-                        ui.menu_button(tr("v"), |ui| {
-                            for h in self.search.history.clone() {
-                                if ui.button(&h).clicked() {
-                                    self.search.text = h;
-                                    ui.close();
-                                }
-                            }
-                        });
-                    }
-                } else if ui
-                    .button(tr("Search"))
-                    .on_hover_text(tr("Ctrl+F"))
-                    .clicked()
-                {
-                    self.search.open = true;
-                    self.search.focus = true;
-                }
-            });
-        });
-    }
-
-    fn status_bar(&self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            let state = match self.docs.get(self.active) {
-                Some(Doc::Profile(d)) if d.dirty => tr("Modified"),
-                Some(Doc::Profile(d)) if d.path.is_some() => tr("Saved"),
-                Some(Doc::Profile(_)) => tr("Not saved yet"),
-                _ => "",
-            };
-            ui.weak(state);
-            ui.weak(trf(
-                "Catalog {version}, {n} rules",
-                &[
-                    ("version", &self.catalog.version()),
-                    ("n", &self.catalog.rules().len()),
-                ],
-            ));
-            if let Some(run) = &self.mcp.run {
-                ui.weak(trf(
-                    "MCP: {url}, mode {mode}",
-                    &[
-                        ("url", &run.http.url()),
-                        ("mode", &run.server.options().mode.name()),
-                    ],
-                ));
-            }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.weak(&self.status);
-            });
-        });
-    }
-
     fn settings_view(&mut self, ui: &mut egui::Ui) {
         let before = self.settings.clone();
-        ui.heading(tr("Settings"));
+        let p = style::palette(ui);
+        views::header(ui, |ui| {
+            ui.label(style::strong(ui, tr("Settings"), 18.0));
+        });
+        ui.horizontal_top(|ui| {
+            egui::Frame::new()
+                .inner_margin(egui::Margin {
+                    left: 8,
+                    right: 0,
+                    top: 10,
+                    bottom: 0,
+                })
+                .show(ui, |ui| {
+                    ui.vertical(|ui| {
+                        ui.set_width(200.0);
+                        ui.spacing_mut().item_spacing.y = 2.0;
+                        let sections = [tr("General"), tr("Policy templates"), tr("Files")];
+                        for (i, title) in sections.into_iter().enumerate() {
+                            let selected = self.settings_section == i;
+                            let (rect, response) = ui.allocate_exact_size(
+                                egui::vec2(200.0, style::row_height(ui)),
+                                egui::Sense::click(),
+                            );
+                            if selected {
+                                ui.painter()
+                                    .rect_filled(rect, egui::CornerRadius::same(6), p.sel);
+                            } else if response.hovered() {
+                                ui.painter().rect_filled(
+                                    rect,
+                                    egui::CornerRadius::same(6),
+                                    p.hover,
+                                );
+                            }
+                            ui.painter().text(
+                                egui::pos2(rect.left() + 12.0, rect.center().y),
+                                egui::Align2::LEFT_CENTER,
+                                title,
+                                style::font(ui, 13.0),
+                                if selected { p.sel_text } else { p.text },
+                            );
+                            response.widget_info(|| {
+                                egui::WidgetInfo::selected(
+                                    egui::WidgetType::SelectableLabel,
+                                    true,
+                                    selected,
+                                    title,
+                                )
+                            });
+                            if response.clicked() {
+                                self.settings_section = i;
+                            }
+                        }
+                    });
+                });
+            ui.vertical(|ui| {
+                egui::ScrollArea::vertical()
+                    .id_salt("settings-page")
+                    .auto_shrink(false)
+                    .show(ui, |ui| {
+                        match self.settings_section {
+                            1 => {
+                                let mut acts = Vec::new();
+                                views::block(ui, |ui| self.imports_view(ui, &mut acts));
+                                self.pending_acts.extend(acts);
+                            }
+                            2 => views::block(ui, |ui| self.files_settings(ui)),
+                            _ => self.general_settings(ui),
+                        }
+                        ui.add_space(12.0);
+                    });
+            });
+        });
+        if before != self.settings {
+            self.settings_dirty = true;
+            if before.language != self.settings.language {
+                self.apply_language();
+            }
+        }
+    }
+
+    /// The folders next to the executable and the recent files.
+    fn files_settings(&mut self, ui: &mut egui::Ui) {
+        style::section_title(ui, tr("Files"));
+        ui.add_space(4.0);
+        ui.label(trf(
+            "Settings file: {path}",
+            &[("path", &Settings::path().display())],
+        ));
+        ui.label(trf(
+            "Profiles folder: {path}",
+            &[("path", &profiles_dir().display())],
+        ));
+        ui.label(trf(
+            "Output folder: {path}",
+            &[("path", &output_dir().display())],
+        ));
+        ui.label(trf(
+            "Policy templates folder: {path}",
+            &[("path", &imports_dir().display())],
+        ));
         ui.add_space(8.0);
+        if !self.settings.recent.is_empty() && ui.button(tr("Forget recent files")).clicked() {
+            self.settings.recent.clear();
+        }
+    }
+
+    /// Language, theme, the fonts of the theme and the behaviour of the window, in cards.
+    fn general_settings(&mut self, ui: &mut egui::Ui) {
+        views::block(ui, |ui| {
+            style::section_title(ui, tr("Language and theme"));
+            ui.add_space(4.0);
+            self.language_and_theme(ui);
+        });
+        views::block(ui, |ui| self.theme_fonts(ui));
+        views::block(ui, |ui| {
+            style::section_title(ui, tr("Window"));
+            ui.add_space(4.0);
+            ui.checkbox(
+                &mut self.settings.desc_open,
+                tr("Show the description panel (Ctrl+D)"),
+            );
+            ui.checkbox(
+                &mut self.settings.show_guide_at_start,
+                tr("Open the guide at the next start"),
+            );
+            ui.checkbox(
+                &mut self.settings.inline_switches,
+                tr("Switches at the end of the rows of the selected group"),
+            );
+            ui.checkbox(
+                &mut self.settings.restore_tabs,
+                tr("Open the tabs of the last session at the start"),
+            );
+        });
+    }
+
+    fn language_and_theme(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.label(tr("Language"));
             let langs = i18n::languages(&lang_dir());
@@ -884,50 +1074,91 @@ impl App {
                     }
                 });
         });
+        let shown = self.shown_theme_id(ui.visuals().dark_mode);
         ui.horizontal(|ui| {
             ui.label(tr("Theme"));
-            ui.radio_value(
-                &mut self.settings.theme,
-                ThemeChoice::System,
-                tr("Follow Windows"),
-            );
-            ui.radio_value(&mut self.settings.theme, ThemeChoice::Light, tr("Light"));
-            ui.radio_value(&mut self.settings.theme, ThemeChoice::Dark, tr("Dark"));
-        });
-        ui.checkbox(
-            &mut self.settings.desc_open,
-            tr("Show the description panel (Ctrl+D)"),
-        );
-        ui.checkbox(
-            &mut self.settings.show_guide_at_start,
-            tr("Open the guide at the next start"),
-        );
-        ui.checkbox(
-            &mut self.settings.inline_switches,
-            tr("Switches at the end of the rows of the selected group"),
-        );
-        ui.checkbox(
-            &mut self.settings.restore_tabs,
-            tr("Open the tabs of the last session at the start"),
-        );
-        ui.add_space(12.0);
-        ui.horizontal(|ui| {
-            ui.weak(format!("Settings file: {}", Settings::path().display()));
-            if !self.settings.recent.is_empty()
-                && ui.small_button(tr("Forget recent files")).clicked()
+            let current = if self.settings.custom_theme.is_empty()
+                && self.settings.theme == ThemeChoice::System
             {
-                self.settings.recent.clear();
+                tr("Follow Windows").to_owned()
+            } else {
+                themes::find(&self.themes, &shown).name
+            };
+            let mut choice = if self.settings.theme == ThemeChoice::System
+                && self.settings.custom_theme.is_empty()
+            {
+                String::new()
+            } else {
+                shown.clone()
+            };
+            let before = choice.clone();
+            egui::ComboBox::from_id_salt("theme")
+                .selected_text(current)
+                .width(200.0)
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut choice, String::new(), tr("Follow Windows"))
+                        .on_hover_text(tr("Light or Dark, as Windows shows its apps"));
+                    for t in &self.themes {
+                        ui.selectable_value(&mut choice, t.id.clone(), &t.name);
+                    }
+                });
+            if choice != before {
+                if choice.is_empty() {
+                    self.settings.theme = ThemeChoice::System;
+                    self.settings.custom_theme.clear();
+                } else {
+                    let dark = themes::find(&self.themes, &choice).dark;
+                    self.settings.theme = if dark {
+                        ThemeChoice::Dark
+                    } else {
+                        ThemeChoice::Light
+                    };
+                    self.settings.custom_theme = choice;
+                }
+            }
+            if ui
+                .button(tr("Edit the theme"))
+                .on_hover_text(tr(
+                    "Opens the theme file in its editor: colours, fonts, Save as",
+                ))
+                .clicked()
+            {
+                self.pending_acts.push(Act::EditTheme(shown.clone()));
+            }
+            if ui.button(tr("Open a theme file...")).clicked() {
+                self.pending_acts.push(Act::OpenThemeFile);
             }
         });
-        if before != self.settings {
-            self.settings_dirty = true;
-            if before.theme != self.settings.theme {
-                self.theme_applied = false;
-            }
-            if before.language != self.settings.language {
-                self.apply_language();
+    }
+
+    /// The fonts of the theme the window shows, saved in its file when one changes.
+    fn theme_fonts(&mut self, ui: &mut egui::Ui) {
+        let shown = self.shown_theme_id(ui.visuals().dark_mode);
+        let mut theme = themes::find(&self.themes, &shown);
+        style::section_title(
+            ui,
+            &trf("Fonts of the theme {name}", &[("name", &theme.name)]),
+        );
+        let families = style::installed_families();
+        ui.add_space(4.0);
+        if themeview::fonts_grid(ui, "settings-fonts", &mut theme, &families) {
+            let path = theme.file_in(&themes_dir());
+            match theme.save(&path) {
+                Ok(()) => {
+                    self.themes = themes::themes(&themes_dir());
+                    self.status = trf("Saved {path}", &[("path", &path.display())]);
+                }
+                Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
             }
         }
+        ui.label(style::muted(
+            ui,
+            trf(
+                "The fonts belong to the theme {name}: a change is saved in its file in the themes folder.",
+                &[("name", &theme.name)],
+            ),
+            12.0,
+        ));
     }
 
     /// The language the window shows: the setting, or the language of Windows when it says to
@@ -965,6 +1196,24 @@ impl App {
         }
         if path.extension().is_some_and(|e| e == bookmarks::EXTENSION) {
             self.open_marks_path(path);
+            return;
+        }
+        if path
+            .extension()
+            .is_some_and(|e| e == admx::CATALOG_EXTENSION)
+        {
+            self.open_catalog_path(path);
+            return;
+        }
+        if path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("admx"))
+        {
+            self.open_admx_path(path);
+            return;
+        }
+        if path.extension().is_some_and(|e| e == themes::EXTENSION) {
+            self.open_theme_path(path);
             return;
         }
         let ext = path
@@ -1157,7 +1406,12 @@ impl App {
         let ids = if only_selection {
             self.selection_ids()
         } else {
-            self.catalog.rules().iter().map(|r| r.id.clone()).collect()
+            self.catalog
+                .rules()
+                .iter()
+                .filter(|r| !r.id.starts_with("admx."))
+                .map(|r| r.id.clone())
+                .collect()
         };
         let base = doc.profile.clone();
         let plan = thispc::plan(&self.catalog, &base, &ids);
@@ -1384,65 +1638,578 @@ impl App {
         self.status = format!("Read the report {}: {}", path.display(), summary.line());
     }
 
-    fn messages_panel(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
-        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
-            return;
-        };
-        if doc.issues.is_empty() {
+    /// Prepares the native apply or return of the selection and asks for the confirmation.
+    fn plan_native(&mut self, revert: bool) {
+        if self.running.is_some() {
+            self.status = tr("A change of this PC is running; wait for its report").to_owned();
             return;
         }
-        let texts = texts_for(&self.texts, &i18n::current());
-        egui::Panel::top("messages").show(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.strong(validate::summary(&doc.issues));
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    if ui
-                        .small_button(tr("x"))
-                        .on_hover_text(tr("Hide the messages"))
-                        .clicked()
-                    {
-                        acts.push(Act::ClearMessages);
+        let ids = self.selection_ids();
+        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+            self.status = tr("Open a profile first").to_owned();
+            return;
+        };
+        let nonce = match winweaver_mcp::new_token() {
+            Ok(n) => n,
+            Err(e) => {
+                self.status = e;
+                return;
+            }
+        };
+        let plan = if revert {
+            winweaver_core::apply::plan_revert(&self.catalog, &ids, &nonce)
+        } else {
+            winweaver_core::apply::plan_apply(&self.catalog, &doc.profile, &ids, &nonce)
+        };
+        if plan.steps.is_empty() {
+            self.status = trf(
+                "Nothing to change natively; {n} steps are left to the stand-alone script",
+                &[("n", &plan.skipped.len())],
+            );
+            return;
+        }
+        self.confirm = Some(plan);
+    }
+
+    /// Prepares the undo of a backup file the user picks.
+    fn plan_undo(&mut self) {
+        let start = output_dir();
+        let dialog = rfd::FileDialog::new()
+            .set_title(tr("Choose the backup to restore"))
+            .add_filter(tr("Backups"), &["json"]);
+        let dialog = if start.is_dir() {
+            dialog.set_directory(start)
+        } else {
+            dialog
+        };
+        let Some(path) = dialog.pick_file() else {
+            return;
+        };
+        let entries = match winweaver_core::apply::read_backup(&path) {
+            Ok(e) => e,
+            Err(e) => {
+                self.status = trf("Backup not read: {e}", &[("e", &e)]);
+                return;
+            }
+        };
+        let nonce = match winweaver_mcp::new_token() {
+            Ok(n) => n,
+            Err(e) => {
+                self.status = e;
+                return;
+            }
+        };
+        let plan = winweaver_core::apply::plan_undo(&entries, &nonce);
+        if plan.steps.is_empty() {
+            self.status = tr("The backup holds nothing to restore").to_owned();
+            return;
+        }
+        self.confirm = Some(plan);
+    }
+
+    /// Writes the confirmed plan into the output folder and runs the elevated helper on it in a
+    /// thread; the report comes back through a channel.
+    fn run_plan(&mut self) {
+        let Some(plan) = self.confirm.take() else {
+            return;
+        };
+        let dir = output_dir();
+        if let Err(e) = std::fs::create_dir_all(&dir) {
+            self.status = trf("The plan was not written: {e}", &[("e", &e)]);
+            return;
+        }
+        let stamp = clock::now_utc_iso()
+            .replace([':', '-'], "")
+            .replace('T', "-")
+            .trim_end_matches('Z')
+            .to_owned();
+        let path = dir.join(format!("plan-{stamp}.json"));
+        let text = plan.to_json();
+        let digest = winweaver_core::apply::digest(text.as_bytes());
+        if let Err(e) = write_file(&path, text.as_bytes()) {
+            self.status = trf("The plan was not written: {e}", &[("e", &e)]);
+            return;
+        }
+        let exe = match std::env::current_exe() {
+            Ok(p) => p,
+            Err(e) => {
+                self.status = e.to_string();
+                return;
+            }
+        };
+        self.running_skipped = plan.skipped.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let args = vec![
+                "--elevated-apply".to_owned(),
+                path.display().to_string(),
+                digest,
+            ];
+            let result = winweaver_win::run_elevated(&exe, &args).and_then(|code| {
+                let report_path = path.with_file_name(format!("plan-{stamp}-report.json"));
+                let read = std::fs::read_to_string(&report_path)
+                    .map_err(|e| e.to_string())
+                    .and_then(|t| {
+                        serde_json::from_str::<winweaver_core::apply::Report>(&t)
+                            .map_err(|e| e.to_string())
+                    });
+                let _ = std::fs::remove_file(&report_path);
+                match (code, read) {
+                    (0, Ok(report)) => Ok(report),
+                    (0, Err(e)) => Err(e),
+                    (code, _) => Err(format!("the helper ended with the code {code}")),
+                }
+            });
+            let _ = std::fs::remove_file(&path);
+            let _ = tx.send(result);
+        });
+        self.running = Some(rx);
+        self.status = tr("Windows asks for the permission; the change of this PC runs").to_owned();
+    }
+
+    /// Takes the report of a finished helper.
+    fn poll_running(&mut self, ctx: &egui::Context) {
+        let Some(rx) = &self.running else {
+            return;
+        };
+        match rx.try_recv() {
+            Ok(result) => {
+                self.running = None;
+                let skipped = std::mem::take(&mut self.running_skipped);
+                match result {
+                    Ok(report) => {
+                        let mut issues: Vec<Issue> = report
+                            .results
+                            .iter()
+                            .filter(|r| r.status != "ok")
+                            .map(|r| Issue {
+                                severity: if r.status == "failed" {
+                                    Severity::Warning
+                                } else {
+                                    Severity::Info
+                                },
+                                target: Target::Rule(r.rule.clone()),
+                                text: format!("{}: {} {}", r.status, r.what, r.note),
+                            })
+                            .collect();
+                        issues.extend(skipped.into_iter().map(|(rule, why)| Issue {
+                            severity: Severity::Info,
+                            target: Target::Rule(rule),
+                            text: trf("Left to the stand-alone script: {why}", &[("why", &why)]),
+                        }));
+                        if let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) {
+                            doc.issues = issues;
+                        }
+                        self.status = trf(
+                            "This PC changed: {ok} done, {failed} failed, {skipped} skipped; backup {backup}",
+                            &[
+                                ("ok", &report.count("ok")),
+                                ("failed", &report.count("failed")),
+                                ("skipped", &report.count("skipped")),
+                                (
+                                    "backup",
+                                    &if report.backup.is_empty() {
+                                        "-".to_owned()
+                                    } else {
+                                        report.backup.clone()
+                                    },
+                                ),
+                            ],
+                        );
+                    }
+                    Err(e) => self.status = trf("This PC was not changed: {e}", &[("e", &e)]),
+                }
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => {
+                ctx.request_repaint_after(std::time::Duration::from_millis(250));
+            }
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => self.running = None,
+        }
+    }
+
+    /// The confirmation of a plan, over the window.
+    fn confirm_view(&self, ctx: &egui::Context, acts: &mut Vec<Act>) {
+        let Some(plan) = &self.confirm else {
+            return;
+        };
+        let title = match plan.purpose.as_str() {
+            "revert" => tr("Return to Windows defaults"),
+            "undo" => tr("Undo a change"),
+            _ => tr("Apply to this PC"),
+        };
+        egui::Window::new(title)
+            .collapsible(false)
+            .resizable(false)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.label(trf(
+                    "{n} changes of this PC run as administrator; Windows asks for the permission first.",
+                    &[("n", &plan.changes())],
+                ));
+                if !plan.skipped.is_empty() {
+                    ui.label(trf(
+                        "{n} steps are left to the stand-alone script (scripts, app removals, values without a known Windows default).",
+                        &[("n", &plan.skipped.len())],
+                    ));
+                }
+                if plan.uses_default_user() {
+                    ui.label(tr("The default user profile changes too: accounts created from now on get its settings."));
+                }
+                ui.label(tr("Every registry value is saved to a backup in the output folder before its change; Undo restores it."));
+                ui.add_space(8.0);
+                ui.horizontal(|ui| {
+                    if ui.button(tr("Change this PC")).clicked() {
+                        acts.push(Act::ConfirmPlan);
+                    }
+                    if ui.button(tr("Cancel")).clicked() {
+                        acts.push(Act::CancelPlan);
                     }
                 });
             });
-            egui::ScrollArea::vertical()
-                .id_salt("messages")
-                .max_height(140.0)
-                .show(ui, |ui| {
-                    for issue in &doc.issues {
-                        ui.horizontal(|ui| {
-                            let tag = match issue.severity {
-                                Severity::Error => tr("Error"),
-                                Severity::Warning => tr("Warning"),
-                                Severity::Info => tr("Info"),
-                            };
-                            ui.weak(tag);
-                            let (label, sel) = match &issue.target {
-                                Target::Rule(id) => (
-                                    self.catalog.rule(id).map_or_else(
-                                        || id.clone(),
-                                        |r| views::rtitle(texts, r).to_owned(),
-                                    ),
-                                    Sel::Rule(id.clone()),
-                                ),
-                                Target::Install => {
-                                    ("Installation".to_owned(), Sel::Form(Form::Install))
-                                }
-                                Target::Accounts => {
-                                    ("Accounts".to_owned(), Sel::Form(Form::Accounts))
-                                }
-                                Target::Languages => {
-                                    ("Languages".to_owned(), Sel::Form(Form::Languages))
-                                }
-                                Target::Profile => (doc.profile.name.clone(), Sel::None),
-                            };
-                            if ui.link(label).clicked() {
-                                acts.push(Act::Select(sel));
-                            }
-                            ui.label(&issue.text);
-                        });
+    }
+
+    /// Reads the catalog files of the imports next to the executable; the templates of this
+    /// Windows first, so that they win a policy two imports hold.
+    fn load_imports(&mut self) {
+        let dir = imports_dir();
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            return;
+        };
+        let mut files: Vec<std::path::PathBuf> = entries
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|e| e == admx::CATALOG_EXTENSION))
+            .collect();
+        files.sort_by_key(|p| {
+            let name = p
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            (!name.starts_with("system"), name)
+        });
+        let mut broken = 0;
+        for path in files {
+            match CatalogFile::load(&path) {
+                Ok(f) => self.imports.push(f),
+                Err(_) => broken += 1,
+            }
+        }
+        if broken > 0 {
+            self.status = trf(
+                "{n} imports of policy templates could not be read",
+                &[("n", &broken)],
+            );
+        }
+        self.rebuild_catalog();
+    }
+
+    /// Merges the visible imports into the catalog and brings the choices of the open profiles
+    /// in line with it.
+    fn rebuild_catalog(&mut self) {
+        let visible: Vec<CatalogFile> = self
+            .imports
+            .iter()
+            .filter(|f| !self.settings.hidden_imports.contains(&f.id))
+            .cloned()
+            .collect();
+        match admx::merge(&self.base_catalog, &visible) {
+            Ok((catalog, notes)) => {
+                self.catalog = catalog;
+                if !notes.is_empty() {
+                    self.status = notes.join("; ");
+                }
+            }
+            Err(e) => {
+                self.status = trf("The imports were not merged: {e}", &[("e", &e)]);
+                self.catalog = self.base_catalog.clone();
+            }
+        }
+        let mut texts = self.base_texts.clone();
+        admx::merge_texts(&mut texts, &visible);
+        self.texts = texts;
+        let catalog = &self.catalog;
+        for doc in &mut self.docs {
+            if let Doc::Profile(d) = doc {
+                d.profile.take_known(catalog);
+                d.profile.split_unknown(catalog);
+                d.resolution = resolver::resolve(catalog, &d.profile);
+            }
+        }
+    }
+
+    /// Starts an import in a thread: the templates of this Windows, a folder or a catalog file.
+    fn start_import(&mut self, source: ImportSource) {
+        if self.importing.is_some() {
+            return;
+        }
+        let path = match source {
+            ImportSource::ThisWindows => None,
+            ImportSource::Folder => match rfd::FileDialog::new()
+                .set_title(tr("Choose the folder of the ADMX files"))
+                .pick_folder()
+            {
+                Some(p) => Some(p),
+                None => return,
+            },
+            ImportSource::CatalogFile => match rfd::FileDialog::new()
+                .set_title(tr("Open a catalog file"))
+                .add_filter(tr("Catalog files"), &[admx::CATALOG_EXTENSION])
+                .pick_file()
+            {
+                Some(p) => Some(p),
+                None => return,
+            },
+        };
+        let build = winweaver_win::this_pc()
+            .map(|m| m.system_info().build)
+            .unwrap_or_default();
+        let taken: Vec<String> = self.imports.iter().map(|f| f.id.clone()).collect();
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let now = clock::now_utc_iso();
+            let result = match (source, path) {
+                (ImportSource::ThisWindows, _) => {
+                    let t =
+                        admx::read_folder(std::path::Path::new("C:\\Windows\\PolicyDefinitions"));
+                    let name = if build.is_empty() {
+                        "Policy templates of this Windows".to_owned()
+                    } else {
+                        format!("Policy templates of this Windows ({build})")
+                    };
+                    Ok(admx::to_catalog_file(&t, "system", &name, &build, &now))
+                }
+                (ImportSource::Folder, Some(dir)) => {
+                    let t = admx::read_folder(&dir);
+                    let name = dir
+                        .file_name()
+                        .map(|n| n.to_string_lossy().into_owned())
+                        .unwrap_or_else(|| "Templates".to_owned());
+                    let id = format!(
+                        "folder-{:08x}",
+                        session::fnv(&dir.display().to_string().to_lowercase()) as u32
+                    );
+                    Ok(admx::to_catalog_file(&t, &id, &name, "", &now))
+                }
+                (ImportSource::CatalogFile, Some(file)) => CatalogFile::load(&file).map(|mut f| {
+                    if taken.contains(&f.id) && !f.id.starts_with("package-") {
+                        f.id = format!("package-{}", f.id);
+                    }
+                    f
+                }),
+                _ => Err("nothing to import".to_owned()),
+            };
+            let _ = tx.send(result);
+        });
+        self.importing = Some(rx);
+        self.status = tr("The policy templates are being read").to_owned();
+    }
+
+    /// Takes the result of a finished import: saved next to the executable, merged.
+    fn poll_import(&mut self, ctx: &egui::Context) {
+        let Some(rx) = &self.importing else {
+            return;
+        };
+        match rx.try_recv() {
+            Ok(result) => {
+                self.importing = None;
+                match result {
+                    Ok(file) => {
+                        let dir = imports_dir();
+                        let path = dir.join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
+                        let saved = std::fs::create_dir_all(&dir)
+                            .map_err(|e| e.to_string())
+                            .and_then(|()| file.save(&path));
+                        let rules = file.rules.len();
+                        let skipped = file.skipped.len();
+                        self.imports.retain(|f| f.id != file.id);
+                        self.imports.push(file);
+                        self.rebuild_catalog();
+                        self.status = match saved {
+                            Ok(()) => trf(
+                                "Imported: {rules} rules, {skipped} policies skipped",
+                                &[("rules", &rules), ("skipped", &skipped)],
+                            ),
+                            Err(e) => trf("Imported, but not saved: {e}", &[("e", &e)]),
+                        };
+                    }
+                    Err(e) => self.status = trf("The import failed: {e}", &[("e", &e)]),
+                }
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => {
+                ctx.request_repaint_after(std::time::Duration::from_millis(250))
+            }
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => self.importing = None,
+        }
+    }
+
+    /// Opens the tab of an import, or brings it to the front.
+    fn open_catalog(&mut self, id: &str) {
+        if let Some(i) = self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Catalog(c) if c.id == id))
+        {
+            self.active = i;
+            return;
+        }
+        let Some(file) = self.imports.iter().find(|f| f.id == id) else {
+            return;
+        };
+        self.docs
+            .push(Doc::Catalog(Box::new(catalogview::CatalogDoc::new(file))));
+        self.active = self.docs.len() - 1;
+    }
+
+    /// Shows a policy of an import in the tree of a profile: a hidden import is shown again, the
+    /// first profile tab comes to the front, the groups above the policy open and it is selected.
+    fn show_in_profile(&mut self, import: &str, rule: &str) {
+        if let Some(i) = self
+            .settings
+            .hidden_imports
+            .iter()
+            .position(|h| h == import)
+        {
+            self.settings.hidden_imports.remove(i);
+            self.settings_dirty = true;
+            self.rebuild_catalog();
+        }
+        let Some(index) = self.docs.iter().position(|d| matches!(d, Doc::Profile(_))) else {
+            self.status = tr("Open a profile first").to_owned();
+            return;
+        };
+        let mut groups = Vec::new();
+        let mut group = self.catalog.rule(rule).map(|r| r.group.clone());
+        while let Some(g) = group {
+            group = self.catalog.group(&g).and_then(|x| x.parent.clone());
+            groups.push(g);
+        }
+        self.active = index;
+        if let Some(Doc::Profile(doc)) = self.docs.get_mut(index) {
+            doc.expanded.extend(groups);
+            doc.select(Sel::Rule(rule.to_owned()));
+        }
+    }
+
+    /// Gives an import another name, in the settings and as the title of its tree.
+    fn rename_import(&mut self, id: &str, name: &str) {
+        self.renaming = None;
+        let name = name.trim();
+        if name.is_empty() || name.chars().count() > 120 || name.chars().any(char::is_control) {
+            self.status =
+                tr("A name of 1 to 120 characters without control characters is needed").to_owned();
+            return;
+        }
+        let Some(file) = self.imports.iter_mut().find(|f| f.id == id) else {
+            return;
+        };
+        file.name = name.to_owned();
+        let root = Some(winweaver_core::catalog::ROOT_POLICIES);
+        for group in file
+            .groups
+            .iter_mut()
+            .filter(|g| g.parent.as_deref() == root)
+        {
+            group.title = name.to_owned();
+        }
+        let path = imports_dir().join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
+        let saved = file.save(&path);
+        for doc in &mut self.docs {
+            if let Doc::Catalog(c) = doc
+                && c.id == id
+            {
+                c.name = name.to_owned();
+            }
+        }
+        self.rebuild_catalog();
+        self.status = match saved {
+            Ok(()) => trf("Renamed to {name}", &[("name", &name)]),
+            Err(e) => trf("Renamed, but not saved: {e}", &[("e", &e)]),
+        };
+    }
+
+    fn export_import(&mut self, id: &str) {
+        let Some(file) = self.imports.iter().find(|f| f.id == id) else {
+            return;
+        };
+        let Some(path) = rfd::FileDialog::new()
+            .set_title(tr("Export the catalog file"))
+            .add_filter(tr("Catalog files"), &[admx::CATALOG_EXTENSION])
+            .set_file_name(format!("{}.{}", file.id, admx::CATALOG_EXTENSION))
+            .save_file()
+        else {
+            return;
+        };
+        self.status = match file.save(&path) {
+            Ok(()) => trf("Saved {path}", &[("path", &path.display())]),
+            Err(e) => trf("Save failed: {e}", &[("e", &e)]),
+        };
+    }
+
+    /// The section of the settings that lists the imports of policy templates.
+    fn imports_view(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+        style::section_title(ui, tr("Policy templates"));
+        ui.weak(tr("Imported ADMX templates become rules under Standard policies. When two imports hold a policy, the templates of this Windows win."));
+        for f in &self.imports {
+            ui.horizontal(|ui| {
+                let mut shown = !self.settings.hidden_imports.contains(&f.id);
+                if ui.checkbox(&mut shown, &f.name).changed() {
+                    acts.push(Act::ToggleImport(f.id.clone()));
+                }
+                ui.weak(trf(
+                    "{rules} rules, {skipped} skipped",
+                    &[("rules", &f.rules.len()), ("skipped", &f.skipped.len())],
+                ));
+                if ui.small_button(tr("Export...")).clicked() {
+                    acts.push(Act::ExportImport(f.id.clone()));
+                }
+                if ui.small_button(tr("Open")).clicked() {
+                    acts.push(Act::OpenCatalog(f.id.clone()));
+                }
+                if ui.small_button(tr("Rename")).clicked() {
+                    acts.push(Act::StartRename(f.id.clone(), f.name.clone()));
+                }
+                if ui.small_button(tr("Remove")).clicked() {
+                    acts.push(Act::RemoveImport(f.id.clone()));
+                }
+            });
+            if let Some((id, name)) = &mut self.renaming
+                && id == &f.id
+            {
+                ui.horizontal(|ui| {
+                    let edit = ui.text_edit_singleline(name);
+                    let enter = edit.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                    if ui.small_button(tr("OK")).clicked() || enter {
+                        acts.push(Act::RenameImport(id.clone(), name.clone()));
+                    }
+                    if ui.small_button(tr("Cancel")).clicked() {
+                        acts.push(Act::CancelRename);
                     }
                 });
+            }
+        }
+        ui.horizontal(|ui| {
+            let busy = self.importing.is_some();
+            if ui
+                .add_enabled(
+                    !busy,
+                    egui::Button::new(tr("Import the templates of this Windows")),
+                )
+                .clicked()
+            {
+                acts.push(Act::ImportTemplates(ImportSource::ThisWindows));
+            }
+            if ui
+                .add_enabled(!busy, egui::Button::new(tr("Import a folder...")))
+                .clicked()
+            {
+                acts.push(Act::ImportTemplates(ImportSource::Folder));
+            }
+            if ui
+                .add_enabled(!busy, egui::Button::new(tr("Import a catalog file...")))
+                .clicked()
+            {
+                acts.push(Act::ImportTemplates(ImportSource::CatalogFile));
+            }
         });
     }
 
@@ -1465,6 +2232,7 @@ impl App {
                         .catalog
                         .rules_under(&group)
                         .iter()
+                        .filter(|r| !on || !r.id.starts_with("admx."))
                         .map(|r| r.id.clone())
                         .collect();
                     if let Some(doc) = self.active_profile() {
@@ -1507,6 +2275,7 @@ impl App {
                         self.active = i;
                     }
                 }
+                Act::MoveTab(from, to) => self.move_tab(from, to),
                 Act::CloseTab(i, force) => {
                     if i < self.docs.len() {
                         if self.docs[i].dirty() && !force {
@@ -1539,16 +2308,52 @@ impl App {
                 }
                 Act::OpenPath(path) => self.open_path(path),
                 Act::OpenSettings => {
-                    match self.docs.iter().position(|d| matches!(d, Doc::Settings)) {
-                        Some(i) => self.active = i,
-                        None => {
-                            self.docs.push(Doc::Settings);
-                            self.active = self.docs.len() - 1;
-                        }
+                    self.themes = themes::themes(&themes_dir());
+                    self.open_settings();
+                }
+                Act::ImportOpenCatalog => self.import_open_catalog(),
+                Act::OpenSettingsSection(section) => {
+                    self.settings_section = section;
+                    self.open_settings();
+                }
+                Act::Save => match self.docs.get(self.active) {
+                    Some(Doc::Diff(_)) => self.save_diff(),
+                    Some(Doc::Theme(_)) => self.save_theme(false),
+                    _ => self.save_active(false),
+                },
+                Act::SaveAs => match self.docs.get(self.active) {
+                    Some(Doc::Diff(_)) => self.save_active_diff(),
+                    Some(Doc::Theme(_)) => self.save_theme(true),
+                    _ => self.save_active(true),
+                },
+                Act::EditTheme(id) => {
+                    let theme = themes::find(&self.themes, &id);
+                    self.edit_theme(theme);
+                }
+                Act::OpenThemeFile => {
+                    let dir = themes_dir();
+                    let dialog = rfd::FileDialog::new()
+                        .add_filter(tr("WinWeaver theme"), &[themes::EXTENSION, "json"])
+                        .set_title(tr("Open a theme file"));
+                    let dialog = if dir.is_dir() {
+                        dialog.set_directory(dir)
+                    } else {
+                        dialog
+                    };
+                    if let Some(path) = dialog.pick_file() {
+                        self.open_theme_path(path);
                     }
                 }
-                Act::Save => self.save_active(false),
-                Act::SaveAs => self.save_active(true),
+                Act::UseTheme(id) => {
+                    let dark = themes::find(&self.themes, &id).dark;
+                    self.settings.theme = if dark {
+                        ThemeChoice::Dark
+                    } else {
+                        ThemeChoice::Light
+                    };
+                    self.settings.custom_theme = id;
+                    self.settings_dirty = true;
+                }
                 Act::Back => {
                     if let Some(doc) = self.active_profile() {
                         doc.go(-1);
@@ -1561,6 +2366,12 @@ impl App {
                 }
                 Act::ToggleBookmark => {
                     if let Some(mut mark) = self.current_bookmark() {
+                        if let Some(j) = self.marks.find(&mark)
+                            && !self.marks.items[j].comment.trim().is_empty()
+                        {
+                            self.ask_remove_mark(j);
+                            continue;
+                        }
                         mark.created = clock::now_utc_iso();
                         let added = self.marks.toggle(mark);
                         if self.save_marks() {
@@ -1629,19 +2440,96 @@ impl App {
                 Act::RemoveMark(i) => {
                     if i < self.marks.items.len() {
                         self.marks.items.remove(i);
+                        self.marks_tab.sel = match self.marks_tab.sel {
+                            Some(s) if s == i => None,
+                            Some(s) if s > i => Some(s - 1),
+                            other => other,
+                        };
                         self.save_marks();
                     }
                 }
+                Act::RemoveMarkAsk(i) => {
+                    let has_comment = self
+                        .marks
+                        .items
+                        .get(i)
+                        .is_some_and(|b| !b.comment.trim().is_empty());
+                    if has_comment {
+                        self.ask_remove_mark(i);
+                    } else {
+                        self.apply(vec![Act::RemoveMark(i)]);
+                    }
+                }
+                Act::MarkSelect(i) => self.marks_tab.sel = Some(i),
+                Act::AskYes => {
+                    if let Some(ask) = self.ask.take() {
+                        self.apply(vec![ask.act]);
+                    }
+                }
+                Act::AskNo => self.ask = None,
                 Act::Fold => {
                     self.settings.desc_open = !self.settings.desc_open;
                     self.settings_dirty = true;
                 }
-                Act::Check => self.check_active(),
+                Act::Check => {
+                    self.check_active();
+                    self.messages_open = true;
+                }
                 Act::ReadPc => self.read_pc(false),
                 Act::ReadSelection => self.read_pc(true),
                 Act::CheckOnPc => self.check_on_pc(),
                 Act::SaveScript(kind) => self.save_script(kind),
                 Act::OpenReport => self.open_report(),
+                Act::ImportTemplates(source) => self.start_import(source),
+                Act::ToggleImport(id) => {
+                    if let Some(i) = self.settings.hidden_imports.iter().position(|h| h == &id) {
+                        self.settings.hidden_imports.remove(i);
+                    } else {
+                        self.settings.hidden_imports.push(id);
+                    }
+                    self.settings_dirty = true;
+                    self.rebuild_catalog();
+                }
+                Act::RemoveImport(id) => {
+                    let _ = std::fs::remove_file(
+                        imports_dir().join(format!("{id}.{}", admx::CATALOG_EXTENSION)),
+                    );
+                    self.imports.retain(|f| f.id != id);
+                    self.rebuild_catalog();
+                }
+                Act::ExportImport(id) => self.export_import(&id),
+                Act::StartRename(id, name) => self.renaming = Some((id, name)),
+                Act::OpenCatalog(id) => self.open_catalog(&id),
+                Act::CatalogSelect(key) => {
+                    if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) {
+                        if let Some(group) = key.strip_prefix("g:") {
+                            c.group = Some(group.to_owned());
+                            c.sel = None;
+                        } else if key.is_empty() {
+                            c.group = None;
+                            c.sel = None;
+                        } else {
+                            c.group = None;
+                            c.sel = Some(key);
+                        }
+                    }
+                }
+                Act::CatalogExpand(gid, open) => {
+                    if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) {
+                        if open {
+                            c.expanded.insert(gid);
+                        } else {
+                            c.expanded.remove(&gid);
+                        }
+                    }
+                }
+                Act::ShowInProfile(import, rule) => self.show_in_profile(&import, &rule),
+                Act::CancelRename => self.renaming = None,
+                Act::RenameImport(id, name) => self.rename_import(&id, &name),
+                Act::PlanNative(revert) => self.plan_native(revert),
+                Act::PlanUndo => self.plan_undo(),
+                Act::ConfirmPlan => self.run_plan(),
+                Act::CancelPlan => self.confirm = None,
                 Act::Build => self.build_active(),
                 Act::OpenGuide => self.open_guide(),
                 Act::Compare => {
@@ -1662,6 +2550,23 @@ impl App {
                 }
                 Act::ApplyDiff => self.apply_active_diff(),
                 Act::SaveDiffAs => self.save_active_diff(),
+                Act::DiffSelect(key) => {
+                    if let Some(Doc::Diff(d)) = self.docs.get_mut(self.active) {
+                        d.sel = Some(key);
+                    }
+                }
+                Act::DiffComment(key, text) => {
+                    if let Some(Doc::Diff(d)) = self.docs.get_mut(self.active) {
+                        if text.trim().is_empty() {
+                            d.diff.comments.shift_remove(&key);
+                        } else {
+                            d.diff.comments.insert(key, text);
+                        }
+                        d.dirty = true;
+                    }
+                }
+                Act::DiffGoTo(key, other) => self.go_to_diff_item(&key, other),
+                Act::DiffApplyItem(key) => self.apply_diff_item(&key),
                 Act::SetInstall(install) => {
                     if let Some(doc) = self.active_profile() {
                         doc.profile.install = install;
@@ -1685,6 +2590,35 @@ impl App {
                         doc.issues.clear();
                     }
                 }
+                Act::ToggleMessages => self.messages_open = !self.messages_open,
+                Act::SearchCleared => self.reveal_selection(),
+                Act::Revealed => match self.docs.get_mut(self.active) {
+                    Some(Doc::Profile(doc)) => {
+                        doc.reveal = false;
+                        doc.follow = false;
+                    }
+                    Some(Doc::Catalog(c)) => {
+                        c.reveal = false;
+                        c.follow = false;
+                    }
+                    Some(Doc::Diff(d)) => {
+                        d.reveal = false;
+                        d.follow = false;
+                    }
+                    Some(Doc::Bookmarks) => {
+                        self.marks_tab.reveal = false;
+                        self.marks_tab.follow = false;
+                    }
+                    _ => {}
+                },
+                Act::Follow => match self.docs.get_mut(self.active) {
+                    Some(Doc::Profile(doc)) => doc.follow = true,
+                    Some(Doc::Catalog(c)) => c.follow = true,
+                    Some(Doc::Diff(d)) => d.follow = true,
+                    Some(Doc::Bookmarks) => self.marks_tab.follow = true,
+                    _ => {}
+                },
+                Act::OpenDoc(link) => self.open_doc(&link),
                 Act::Exit => self.exit = true,
                 Act::Message(text) => self.status = text,
             }
@@ -1720,28 +2654,44 @@ impl App {
 
     /// Opens the document of a bookmark (a file, or the tab of an unsaved document by its
     /// title) and selects its item.
+    /// Opens the profile of a bookmark (loading its file when no tab has it) and selects the
+    /// option; without a profile file the option is shown in the profile tab in front, else the first one.
     fn go_to_mark(&mut self, i: usize) {
         let Some(mark) = self.marks.items.get(i).cloned() else {
             return;
         };
+        self.marks_tab.sel = Some(i);
         let path = PathBuf::from(&mark.path);
-        if path.is_file() {
+        if !mark.path.is_empty() && path.is_file() {
             self.open_path(path);
-        } else {
-            match self.docs.iter().position(|d| d.title() == mark.path) {
+        } else if let Some(j) = (!mark.path.is_empty())
+            .then(|| self.docs.iter().position(|d| d.title() == mark.path))
+            .flatten()
+        {
+            self.active = j;
+        } else if mark.is_option() {
+            let front = match self.docs.get(self.active) {
+                Some(Doc::Profile(_)) => Some(self.active),
+                _ => self.docs.iter().position(|d| matches!(d, Doc::Profile(_))),
+            };
+            match front {
                 Some(j) => self.active = j,
                 None => {
                     self.status =
-                        format!("The document of the bookmark is not open: {}", mark.path);
+                        tr("Open a profile to show the option of the bookmark in").to_owned();
                     return;
                 }
             }
+        } else {
+            self.status = format!("The document of the bookmark is not open: {}", mark.path);
+            return;
         }
-        if mark.document == "profile" && !mark.item.is_empty() {
+        if mark.is_option() {
             let sel = sel_from_item(&self.catalog, &mark.item);
             if let Some(doc) = self.active_profile() {
                 doc.select(sel);
             }
+            self.reveal_selection();
         }
     }
 
@@ -1839,11 +2789,8 @@ impl App {
     fn open_diff_path(&mut self, path: PathBuf) {
         match Diff::load(&path) {
             Ok(diff) => {
-                self.docs.push(Doc::Diff(Box::new(DiffDoc {
-                    diff,
-                    path: Some(path.clone()),
-                    dirty: false,
-                })));
+                self.docs
+                    .push(Doc::Diff(Box::new(DiffDoc::new(diff, Some(path.clone())))));
                 self.active = self.docs.len() - 1;
                 self.status = format!("Opened {}", path.display());
                 self.remember_recent(&path);
@@ -1861,11 +2808,8 @@ impl App {
         let other_side = diff::Side::of(&other, other_path);
         let diff = Diff::between(&doc.profile, &other, base_side, other_side);
         self.status = format!("{} differences", diff.count());
-        self.docs.push(Doc::Diff(Box::new(DiffDoc {
-            diff,
-            path: None,
-            dirty: false,
-        })));
+        self.docs
+            .push(Doc::Diff(Box::new(DiffDoc::new(diff, None))));
         self.active = self.docs.len() - 1;
     }
 
@@ -1900,6 +2844,80 @@ impl App {
             self.status = format!("Applied {} differences to {}", diff.count(), p.title());
         }
         self.active = i;
+    }
+
+    /// Shows an item of the active diff in the profile tab of a side; the profile is opened from
+    /// its file, or from the preset of its name, when no tab has it.
+    fn go_to_diff_item(&mut self, key: &str, other: bool) {
+        let Some(Doc::Diff(d)) = self.docs.get(self.active) else {
+            return;
+        };
+        let diff = d.diff.clone();
+        let base_tab = self.diff_target(&diff);
+        let tab = if other {
+            let side = &diff.other;
+            let by_path = |(i, d): (usize, &Doc)| {
+                Some(i) != base_tab
+                    && matches!(d, Doc::Profile(p) if !side.path.is_empty()
+                        && p.path.as_ref().is_some_and(|x| x.display().to_string() == side.path))
+            };
+            let by_name = |(i, d): (usize, &Doc)| {
+                Some(i) != base_tab && matches!(d, Doc::Profile(p) if p.profile.name == side.name)
+            };
+            self.docs
+                .iter()
+                .enumerate()
+                .position(by_path)
+                .or_else(|| self.docs.iter().enumerate().position(by_name))
+        } else {
+            base_tab
+        };
+        let side = if other { &diff.other } else { &diff.base };
+        match tab {
+            Some(i) => self.active = i,
+            None if !side.path.is_empty() && Path::new(&side.path).is_file() => {
+                self.open_path(PathBuf::from(&side.path));
+            }
+            None => match PRESETS.iter().find(|p| p.0 == side.name) {
+                Some(&(name, text)) => {
+                    let profile = Profile::parse(text, name)
+                        .unwrap_or_else(|_| Profile::from_defaults(name, &self.catalog));
+                    let doc = ProfileDoc::new(profile, None, &self.catalog);
+                    self.docs.push(Doc::Profile(Box::new(doc)));
+                    self.active = self.docs.len() - 1;
+                }
+                None => {
+                    self.status = trf(
+                        "The profile {name} is not open and has no file to open",
+                        &[("name", &side.name)],
+                    );
+                    return;
+                }
+            },
+        }
+        let sel = sel_from_diff_key(&self.catalog, key);
+        if let Some(doc) = self.active_profile() {
+            doc.select(sel);
+        }
+        self.reveal_selection();
+    }
+
+    /// Sets one item of the active diff in the profile of its base and stays on the diff.
+    fn apply_diff_item(&mut self, key: &str) {
+        let Some(Doc::Diff(d)) = self.docs.get(self.active) else {
+            return;
+        };
+        let diff = d.diff.clone();
+        let Some(i) = self.diff_target(&diff) else {
+            self.status = tr("Apply: open the profile to change first").to_owned();
+            return;
+        };
+        let catalog = &self.catalog;
+        if let Some(Doc::Profile(p)) = self.docs.get_mut(i) {
+            diff.apply_item(key, &mut p.profile);
+            p.refresh(catalog);
+            self.status = trf("Applied one difference to {name}", &[("name", &p.title())]);
+        }
     }
 
     fn save_active_diff(&mut self) {
@@ -1984,6 +3002,8 @@ impl App {
                 Doc::Profile(d) => d.path.clone(),
                 Doc::Diff(d) => d.path.clone(),
                 Doc::Markdown(d) => d.path.clone(),
+                Doc::Catalog(c) => c.path.clone(),
+                Doc::Theme(t) => t.theme.path.clone(),
                 Doc::Bookmarks | Doc::Mcp | Doc::Settings => None,
             };
             if let Some(p) = path {
@@ -2132,6 +3152,166 @@ impl App {
         }
     }
 
+    /// The theme of the settings: a colour theme over its light or dark base, or the plain theme.
+    /// The id of the theme the settings choose for a side when they follow Windows.
+    fn shown_theme_id(&self, dark_mode: bool) -> String {
+        if !self.settings.custom_theme.is_empty() {
+            return self.settings.custom_theme.clone();
+        }
+        let dark = match self.settings.theme {
+            ThemeChoice::System => dark_mode,
+            ThemeChoice::Light => false,
+            ThemeChoice::Dark => true,
+        };
+        if dark { "dark" } else { "light" }.to_owned()
+    }
+
+    /// The light and dark themes of the window and the preference: the theme in the editor in
+    /// front, else the one of the settings, else Light and Dark as Windows shows its apps.
+    fn wanted_theme(&self) -> (themes::Theme, themes::Theme, egui::ThemePreference) {
+        let light = themes::find(&self.themes, "light");
+        let dark = themes::find(&self.themes, "dark");
+        let chosen = match self.docs.get(self.active) {
+            Some(Doc::Theme(d)) => Some(d.theme.clone()),
+            _ => (!self.settings.custom_theme.is_empty())
+                .then(|| themes::find(&self.themes, &self.settings.custom_theme)),
+        };
+        match chosen {
+            Some(t) if t.dark => (light, t, egui::ThemePreference::Dark),
+            Some(t) => (t, dark, egui::ThemePreference::Light),
+            None => (light, dark, self.settings.theme.preference()),
+        }
+    }
+
+    fn apply_theme(&mut self, ctx: &egui::Context) {
+        let wanted = self.wanted_theme();
+        if self.applied_theme.as_ref() == Some(&wanted) {
+            return;
+        }
+        let (light, dark, preference) = &wanted;
+        style::apply(
+            ctx,
+            (light.palette(), light.fonts()),
+            (dark.palette(), dark.fonts()),
+        );
+        ctx.set_theme(*preference);
+        self.applied_theme = Some(wanted);
+    }
+
+    /// Moves a tab to another place of the row; the tab in front stays in front.
+    fn move_tab(&mut self, from: usize, to: usize) {
+        let n = self.docs.len();
+        if from >= n || to >= n || from == to {
+            return;
+        }
+        let doc = self.docs.remove(from);
+        self.docs.insert(to, doc);
+        self.active = if self.active == from {
+            to
+        } else if from < self.active && self.active <= to {
+            self.active - 1
+        } else if to <= self.active && self.active < from {
+            self.active + 1
+        } else {
+            self.active
+        };
+    }
+
+    /// Opens the editor of a theme, or brings its tab to the front.
+    fn edit_theme(&mut self, theme: themes::Theme) {
+        if let Some(i) = self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Theme(t) if t.theme.id == theme.id))
+        {
+            self.active = i;
+            return;
+        }
+        self.docs
+            .push(Doc::Theme(Box::new(themeview::ThemeDoc::new(theme))));
+        self.active = self.docs.len() - 1;
+    }
+
+    fn open_theme_path(&mut self, path: PathBuf) {
+        match themes::Theme::load(&path) {
+            Ok(theme) => {
+                self.edit_theme(theme);
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+        }
+    }
+
+    /// Writes the theme of the active tab to its file, or to one the user names.
+    fn save_theme(&mut self, ask: bool) {
+        let Some(Doc::Theme(d)) = self.docs.get(self.active) else {
+            return;
+        };
+        let dir = themes_dir();
+        let path = if ask {
+            let proposed = format!("{}.{}", file_stem(&d.theme.name), themes::EXTENSION);
+            let dialog = rfd::FileDialog::new()
+                .add_filter(tr("WinWeaver theme"), &[themes::EXTENSION])
+                .set_title(tr("Save the theme as"))
+                .set_file_name(proposed);
+            let dialog = if std::fs::create_dir_all(&dir).is_ok() {
+                dialog.set_directory(&dir)
+            } else {
+                dialog
+            };
+            let Some(path) = dialog.save_file() else {
+                return;
+            };
+            if path.extension().is_some() {
+                path
+            } else {
+                path.with_extension(themes::EXTENSION)
+            }
+        } else {
+            d.theme.file_in(&dir)
+        };
+        let Some(Doc::Theme(d)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        match d.theme.save(&path) {
+            Ok(()) => {
+                d.theme.id = path
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                d.theme.path = Some(path.clone());
+                d.dirty = false;
+                self.status = trf("Saved {path}", &[("path", &path.display())]);
+                self.themes = themes::themes(&dir);
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+        }
+    }
+
+    /// The title bar in the colours of the theme (Windows 11; the dark frame on Windows 10), given
+    /// again whenever the colours change, also when the theme follows Windows.
+    fn color_title_bar(&mut self, ui: &egui::Ui, frame: &eframe::Frame) {
+        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        let v = ui.visuals();
+        let rgb = |c: egui::Color32| [c.r(), c.g(), c.b()];
+        let colors = (
+            v.dark_mode,
+            rgb(v.panel_fill),
+            rgb(v.text_color()),
+            rgb(v.window_stroke.color),
+        );
+        if self.title_colors == Some(colors) {
+            return;
+        }
+        if let Ok(handle) = frame.window_handle()
+            && let RawWindowHandle::Win32(w) = handle.as_raw()
+        {
+            winweaver_win::color_title_bar(w.hwnd.get(), colors.0, colors.1, colors.2, colors.3);
+            self.title_colors = Some(colors);
+        }
+    }
+
     fn persist_settings(&mut self) {
         if !self.settings_dirty {
             return;
@@ -2151,14 +3331,12 @@ impl App {
 }
 
 impl eframe::App for App {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         if self.exit {
             ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
         }
-        if !self.theme_applied {
-            ui.ctx().set_theme(self.settings.theme.preference());
-            self.theme_applied = true;
-        }
+        self.apply_theme(ui.ctx());
+        self.color_title_bar(ui, frame);
         let title = self.window_title();
         if title != self.last_title {
             ui.ctx()
@@ -2166,14 +3344,40 @@ impl eframe::App for App {
             self.last_title = title;
         }
         let mut acts = self.shortcuts(ui.ctx());
-        egui::Panel::top("tabs").show(ui, |ui| self.tabs_row(ui, &mut acts));
+        let (tabs_frame, tool_frame, nav_frame, status_frame) = Self::chrome_frames(ui);
+        egui::Panel::top("tabs")
+            .frame(tabs_frame)
+            .show_separator_line(false)
+            .show(ui, |ui| self.tabs_row(ui, &mut acts));
         let compact = ui.available_width() < COMPACT_WIDTH;
-        if !compact {
-            egui::Panel::top("toolbar").show(ui, |ui| self.toolbar(ui, &mut acts));
+        if !compact && self.has_tools() {
+            let search_here = !self.has_nav() && self.has_search();
+            let hint = self.search_hint_now();
+            egui::Panel::top("toolbar")
+                .frame(tool_frame)
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        self.toolbar(ui, &mut acts, false);
+                        if search_here {
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    self.search_field(ui, &mut acts, hint, 0.0);
+                                },
+                            );
+                        }
+                    });
+                });
         }
-        egui::Panel::top("nav").show(ui, |ui| self.nav_row(ui, &mut acts, compact));
+        if self.has_nav() || (compact && self.has_tools()) {
+            egui::Panel::top("nav")
+                .frame(nav_frame)
+                .show(ui, |ui| self.nav_row(ui, &mut acts, compact));
+        }
         self.messages_panel(ui, &mut acts);
-        egui::Panel::bottom("status").show(ui, |ui| self.status_bar(ui));
+        egui::Panel::bottom("status")
+            .frame(status_frame)
+            .show(ui, |ui| self.status_bar(ui));
         let kind = match self.docs.get(self.active) {
             Some(Doc::Profile(_)) => 0,
             Some(Doc::Settings) => 1,
@@ -2181,41 +3385,66 @@ impl eframe::App for App {
             Some(Doc::Markdown(_)) => 4,
             Some(Doc::Bookmarks) => 5,
             Some(Doc::Mcp) => 6,
+            Some(Doc::Catalog(_)) => 7,
+            Some(Doc::Theme(_)) => 8,
             None => 2,
         };
         if kind == 0 {
             let catalog = &self.catalog;
             let texts = texts_for(&self.texts, &i18n::current());
-            let search = &self.search;
             let settings = &self.settings;
             if let Some(Doc::Profile(doc)) = self.docs.get(self.active) {
                 let doc: &ProfileDoc = doc;
+                let p = style::palette(ui);
                 egui::Panel::left("tree")
                     .resizable(true)
                     .default_size(380.0)
+                    .frame(
+                        egui::Frame::new()
+                            .fill(p.card)
+                            .inner_margin(egui::Margin::symmetric(0, 4)),
+                    )
                     .show(ui, |ui| {
                         views::tree_view(
                             ui,
                             catalog,
                             texts,
                             doc,
-                            search,
+                            &doc.search,
                             settings.inline_switches,
                             &mut acts,
                         );
                     });
-                egui::CentralPanel::default().show(ui, |ui| {
-                    views::detail_view(ui, catalog, texts, doc, settings, &mut acts);
-                });
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::new().fill(p.bg))
+                    .show(ui, |ui| {
+                        views::detail_view(ui, catalog, texts, doc, settings, &mut acts);
+                    });
             }
         } else if kind == 3 {
             let catalog = &self.catalog;
             let texts = texts_for(&self.texts, &i18n::current());
+            let settings = &self.settings;
+            let marked = self
+                .current_bookmark()
+                .is_some_and(|b| self.marks.find(&b).is_some());
             if let Some(Doc::Diff(doc)) = self.docs.get(self.active) {
                 let doc: &DiffDoc = doc;
-                egui::CentralPanel::default().show(ui, |ui| {
-                    diffview::diff_view(ui, catalog, texts, doc, &mut acts);
-                });
+                let p = style::palette(ui);
+                let (default, range) = list_split(ui);
+                egui::Panel::left("diff-list")
+                    .resizable(true)
+                    .default_size(default)
+                    .size_range(range)
+                    .frame(egui::Frame::new().fill(p.card))
+                    .show(ui, |ui| {
+                        diffview::diff_view(ui, catalog, texts, doc, &mut acts);
+                    });
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::new().fill(p.bg))
+                    .show(ui, |ui| {
+                        diffview::diff_detail(ui, catalog, texts, doc, settings, marked, &mut acts);
+                    });
             }
         } else if kind == 4 {
             if let Some(Doc::Markdown(doc)) = self.docs.get_mut(self.active) {
@@ -2223,27 +3452,112 @@ impl eframe::App for App {
             }
         } else if kind == 6 {
             let panel = &mut self.mcp;
-            egui::CentralPanel::default().show(ui, |ui| {
-                egui::ScrollArea::vertical()
-                    .auto_shrink(false)
+            let search = &self.mcp_search;
+            let p = style::palette(ui);
+            let settings_frame = egui::Frame::new().fill(p.bg);
+            if panel.run.is_some() {
+                let max = (ui.available_height() - 120.0).max(160.0);
+                egui::Panel::top("mcp-settings")
+                    .resizable(true)
+                    .default_size(420.0)
+                    .size_range(120.0..=max)
+                    .frame(settings_frame)
                     .show(ui, |ui| {
-                        mcpview::mcp_view(ui, panel, &mut acts);
+                        egui::ScrollArea::vertical()
+                            .auto_shrink(false)
+                            .show(ui, |ui| mcpview::mcp_view(ui, panel, &mut acts));
                     });
-            });
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::new().fill(p.card))
+                    .show(ui, |ui| mcpview::journal_view(ui, panel, search));
+            } else {
+                egui::CentralPanel::default()
+                    .frame(settings_frame)
+                    .show(ui, |ui| {
+                        egui::ScrollArea::vertical()
+                            .auto_shrink(false)
+                            .show(ui, |ui| mcpview::mcp_view(ui, panel, &mut acts));
+                    });
+            }
         } else if kind == 5 {
+            let catalog = &self.catalog;
+            let texts = texts_for(&self.texts, &i18n::current());
+            let imports = &self.imports;
+            let settings = &self.settings;
             let marks = &self.marks;
             let path = &self.marks_path;
-            egui::CentralPanel::default().show(ui, |ui| {
-                marksview::marks_view(ui, marks, path, &mut acts);
-            });
+            let search = &self.marks_search;
+            let tab = &self.marks_tab;
+            let p = style::palette(ui);
+            let (default, range) = list_split(ui);
+            egui::Panel::left("marks-list")
+                .resizable(true)
+                .default_size(default)
+                .size_range(range)
+                .frame(egui::Frame::new().fill(p.card))
+                .show(ui, |ui| {
+                    marksview::marks_view(
+                        ui, catalog, texts, imports, marks, path, search, tab, &mut acts,
+                    );
+                });
+            egui::CentralPanel::default()
+                .frame(egui::Frame::new().fill(p.bg))
+                .show(ui, |ui| {
+                    marksview::marks_detail(
+                        ui, catalog, texts, imports, marks, tab, settings, &mut acts,
+                    );
+                });
+        } else if kind == 7 {
+            let shown = match self.docs.get(self.active) {
+                Some(Doc::Catalog(doc)) => doc.catalog(&self.imports).map(|f| (f, doc)),
+                _ => None,
+            };
+            match shown {
+                Some((file, doc)) => catalogview::catalog_view(ui, file, doc, &mut acts),
+                None => {
+                    egui::CentralPanel::default().show(ui, |ui| {
+                        ui.label(tr("This import is no longer there."));
+                    });
+                }
+            }
+        } else if kind == 8 {
+            let families = style::installed_families();
+            let p = style::palette(ui);
+            if let Some(Doc::Theme(doc)) = self.docs.get_mut(self.active) {
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::new().fill(p.bg))
+                    .show(ui, |ui| {
+                        themeview::theme_view(ui, doc, &families, &mut acts);
+                    });
+            }
         } else if kind == 1 {
-            egui::CentralPanel::default().show(ui, |ui| self.settings_view(ui));
+            let p = style::palette(ui);
+            egui::CentralPanel::default()
+                .frame(egui::Frame::new().fill(p.bg))
+                .show(ui, |ui| self.settings_view(ui));
         } else {
             egui::CentralPanel::default().show(ui, |ui| {
                 ui.label(tr("No document is open. Use Menu, New or Ctrl+N."));
             });
         }
+        self.confirm_view(ui.ctx(), &mut acts);
+        self.ask_view(ui.ctx(), &mut acts);
+        let links: Vec<String> = ui.ctx().output_mut(|o| {
+            let mut found = Vec::new();
+            o.commands.retain(|c| match c {
+                egui::OutputCommand::OpenUrl(u) if is_doc_link(&u.url) => {
+                    found.push(u.url.clone());
+                    false
+                }
+                _ => true,
+            });
+            found
+        });
+        acts.extend(links.into_iter().map(Act::OpenDoc));
+        acts.append(&mut self.pending_acts);
         self.apply(acts);
+        self.poll_running(ui.ctx());
+        self.poll_import(ui.ctx());
         let closing = self.exit || ui.ctx().input(|i| i.viewport().close_requested());
         self.write_drafts(closing);
         if closing {
@@ -2254,7 +3568,39 @@ impl eframe::App for App {
     }
 }
 
+/// Whether a link points into the documentation of the program (a Markdown page or a heading)
+/// rather than to the web.
+fn is_doc_link(url: &str) -> bool {
+    !url.contains("://")
+        && (url.starts_with('#')
+            || url.to_ascii_lowercase().ends_with(".md")
+            || url.to_ascii_lowercase().contains(".md#"))
+}
+
 /// The selection a bookmark item names: a form id, a rule id or a group id.
+/// The first width of the list of a diff or of the bookmarks and the widths its divider may take:
+/// the detail on the right keeps at least 300 points.
+fn list_split(ui: &egui::Ui) -> (f32, std::ops::RangeInclusive<f32>) {
+    let width = ui.available_width();
+    let max = (width - 300.0).max(320.0);
+    ((width * 0.55).clamp(320.0, max), 320.0..=max)
+}
+
+/// What a profile tab selects for an item of a diff ([`Diff::keys`]).
+fn sel_from_diff_key(catalog: &Catalog, key: &str) -> Sel {
+    if let Some(id) = key.strip_prefix("rule:") {
+        sel_from_item(catalog, id)
+    } else if key.starts_with("install:") {
+        Sel::Form(Form::Install)
+    } else if key.starts_with("languages:") {
+        Sel::Form(Form::Languages)
+    } else if key == "accounts" {
+        Sel::Form(Form::Accounts)
+    } else {
+        Sel::None
+    }
+}
+
 fn sel_from_item(catalog: &Catalog, item: &str) -> Sel {
     if item.is_empty() {
         Sel::None
@@ -2267,6 +3613,16 @@ fn sel_from_item(catalog: &Catalog, item: &str) -> Sel {
     } else {
         Sel::None
     }
+}
+
+/// The folder of the imports of policy templates next to the executable.
+pub fn imports_dir() -> PathBuf {
+    exe_dir().join("imports")
+}
+
+/// The folder of the colour themes next to the executable.
+pub fn themes_dir() -> PathBuf {
+    exe_dir().join("themes")
 }
 
 /// The folder of the translations next to the executable.
@@ -2345,8 +3701,15 @@ fn pick_any() -> Option<PathBuf> {
         .set_title(tr("Open"))
         .add_filter(
             tr("WinWeaver files"),
-            &[profile::EXTENSION, diff::EXTENSION, bookmarks::EXTENSION],
+            &[
+                profile::EXTENSION,
+                diff::EXTENSION,
+                bookmarks::EXTENSION,
+                admx::CATALOG_EXTENSION,
+                themes::EXTENSION,
+            ],
         )
+        .add_filter(tr("Policy templates (opened without importing)"), &["admx"])
         .add_filter(tr("Answer files (the profile they embed)"), &["xml"])
         .add_filter(tr("WinKickOff profiles and audit reports"), &["json"])
         .add_filter(tr("Markdown pages"), &["md"]);
@@ -2384,7 +3747,8 @@ pub fn run() -> Result<(), String> {
     eframe::run_native(
         "WinWeaver",
         options,
-        Box::new(move |_cc| {
+        Box::new(move |cc| {
+            style::install_fonts(&cc.egui_ctx);
             let mut app = App::new(catalog, texts, settings);
             app.mcp.port = app.settings.mcp_port;
             app.mcp.token = app.settings.mcp_token.clone();
@@ -2396,6 +3760,7 @@ pub fn run() -> Result<(), String> {
                 Ok(marks) => app.marks = marks,
                 Err(e) => app.status = format!("Bookmarks not read: {e}"),
             }
+            app.load_imports();
             app.restore_session();
             if app.settings.show_guide_at_start {
                 app.open_guide();
@@ -2458,6 +3823,245 @@ mod tests {
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
+    /// Draws frames of the whole window without a screen (egui_kittest): every kind of tab is
+    /// drawn and shows its texts, and a click on a rule of the tree selects it.
+    #[test]
+    fn every_kind_of_tab_draws_without_a_screen() {
+        use egui_kittest::kittest::Queryable;
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(
+            catalog,
+            CatalogTexts::embedded().unwrap(),
+            Settings::default(),
+        );
+        let empty = admx::to_catalog_file(
+            &admx::Templates::default(),
+            "empty",
+            "Empty templates",
+            "",
+            "now",
+        );
+        app.imports.push(empty);
+        app.rebuild_catalog();
+        let mut harness = egui_kittest::Harness::new_eframe(|_| app);
+        harness.step();
+        let has = |h: &egui_kittest::Harness<'_, App>, label: &str| {
+            h.query_all_by_label(label).next().is_some()
+        };
+        assert!(has(&harness, "Menu"));
+        for (act, label) in [
+            (Act::OpenSettings, Some("General")),
+            (
+                Act::OpenCatalog("empty".to_owned()),
+                Some("Select a policy in the tree."),
+            ),
+            (Act::OpenMarks, None),
+            (Act::OpenMcp, None),
+            (Act::OpenGuide, None),
+            (Act::EditTheme("matrix".to_owned()), Some("Use this theme")),
+            (Act::Activate(0), None),
+        ] {
+            harness.state_mut().apply(vec![act]);
+            harness.step();
+            harness.step();
+            if let Some(label) = label {
+                assert!(has(&harness, label), "{label} is not drawn");
+            }
+        }
+        assert_eq!(harness.state().docs.len(), 7);
+        assert_eq!(
+            harness.state().docs[harness.state().active].title(),
+            "Office.wwprofile"
+        );
+        harness.state_mut().apply(vec![
+            Act::Expand("unattend".to_owned(), true),
+            Act::Expand("install".to_owned(), true),
+        ]);
+        harness.step();
+        harness.step();
+        let title = "Bypass the TPM 2.0 check";
+        assert!(has(&harness, title), "the rules of an open group are drawn");
+        harness.query_all_by_label(title).next().unwrap().click();
+        harness.step();
+        harness.step();
+        assert!(
+            matches!(harness.state().docs[0], Doc::Profile(ref d) if d.sel == Sel::Rule("install.bypass-tpm".into())),
+            "a click on a rule selects it"
+        );
+        harness.state_mut().apply(vec![Act::CompareWith("Strict")]);
+        harness.step();
+        harness.step();
+        assert!(has(&harness, "Select a difference to see it here."));
+        let key = first_rule_key(harness.state()).expect("Strict differs in a rule");
+        harness.state_mut().apply(vec![Act::DiffSelect(key)]);
+        harness.step();
+        harness.step();
+        assert!(
+            has(&harness, "Apply this difference"),
+            "the item is shown on the right"
+        );
+    }
+
+    /// The key of the first rule of the diff in the last tab.
+    fn first_rule_key(app: &App) -> Option<String> {
+        match app.docs.last() {
+            Some(Doc::Diff(d)) => d.diff.keys().into_iter().find(|k| k.starts_with("rule:")),
+            _ => None,
+        }
+    }
+
+    /// The divider between the differences and the item on the right stays where it is whatever
+    /// item is selected: the item never widens the list or pushes into it.
+    #[test]
+    fn the_divider_of_a_diff_stays_put_whatever_item_is_shown() {
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(
+            catalog,
+            CatalogTexts::embedded().unwrap(),
+            Settings::default(),
+        );
+        app.apply(vec![Act::CompareWith("Strict")]);
+        let keys = match app.docs.last() {
+            Some(Doc::Diff(d)) => d.diff.keys(),
+            _ => Vec::new(),
+        };
+        assert!(keys.len() > 3, "{keys:?}");
+        let mut harness = egui_kittest::Harness::builder()
+            .with_size(egui::vec2(1200.0, 800.0))
+            .build_eframe(|_| app);
+        let list = egui::Id::new(("diff-list", "Office", "Strict"));
+        let width =
+            |h: &egui_kittest::Harness<'_, App>| h.ctx.read_response(list).map(|r| r.rect.width());
+        harness.step();
+        harness.step();
+        let first = width(&harness).expect("the list is drawn");
+        for key in keys {
+            harness
+                .state_mut()
+                .apply(vec![Act::DiffSelect(key.clone())]);
+            harness.step();
+            harness.step();
+            assert_eq!(width(&harness), Some(first), "the divider moved for {key}");
+        }
+    }
+
+    /// Pictures of the window for the review of its design. Only when `WINWEAVER_SCREENSHOTS` names
+    /// a folder (CI sets it on the Windows runner): the main tabs are drawn with wgpu without a
+    /// screen and saved there as PNG files; a renderer that cannot start writes `error.txt`.
+    #[test]
+    fn screenshots_of_the_window() {
+        let Some(dir) = std::env::var_os("WINWEAVER_SCREENSHOTS") else {
+            return;
+        };
+        let dir = PathBuf::from(dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let catalog = Catalog::embedded().unwrap();
+        let app = App::new(
+            catalog,
+            CatalogTexts::embedded().unwrap(),
+            Settings::default(),
+        );
+        let mut harness = egui_kittest::Harness::builder()
+            .with_size(egui::vec2(1440.0, 900.0))
+            .with_pixels_per_point(1.0)
+            .wgpu()
+            .build_eframe(|cc| {
+                style::install_fonts(&cc.egui_ctx);
+                app
+            });
+        let shot = |h: &mut egui_kittest::Harness<'_, App>, name: &str| {
+            for _ in 0..4 {
+                h.step();
+            }
+            match h.render() {
+                Ok(image) => {
+                    if let Err(e) = image.save(dir.join(format!("{name}.png"))) {
+                        let _ = std::fs::write(dir.join("error.txt"), format!("{name}: {e}"));
+                    }
+                }
+                Err(e) => {
+                    let _ = std::fs::write(dir.join("error.txt"), format!("{name}: {e}"));
+                }
+            }
+        };
+        shot(&mut harness, "01-profile");
+        harness.state_mut().apply(vec![
+            Act::Expand("policies".to_owned(), true),
+            Act::Expand("defender".to_owned(), true),
+            Act::Select(Sel::Rule("defender.pua".to_owned())),
+        ]);
+        shot(&mut harness, "02-rule");
+        harness.state_mut().apply(vec![
+            Act::ToggleBookmark,
+            Act::SetMarkComment(0, "Ask the customer about the Audit mode".into()),
+            Act::Check,
+        ]);
+        shot(&mut harness, "03-checked");
+        harness.state_mut().apply(vec![Act::CompareWith("Strict")]);
+        if let Some(key) = first_rule_key(harness.state()) {
+            harness.state_mut().apply(vec![Act::DiffSelect(key)]);
+        }
+        shot(&mut harness, "04-diff");
+        for (act, name) in [
+            (Act::OpenSettings, "05-settings"),
+            (Act::OpenMcp, "06-mcp"),
+            (Act::OpenMarks, "07-bookmarks"),
+            (Act::OpenGuide, "08-guide"),
+        ] {
+            harness.state_mut().apply(vec![act]);
+            if name == "07-bookmarks" {
+                harness.state_mut().apply(vec![Act::MarkSelect(0)]);
+            }
+            shot(&mut harness, name);
+        }
+        harness
+            .state_mut()
+            .apply(vec![Act::EditTheme("latte".to_owned())]);
+        shot(&mut harness, "10-theme-editor");
+        harness
+            .state_mut()
+            .apply(vec![Act::UseTheme("matrix".to_owned()), Act::Activate(0)]);
+        shot(&mut harness, "11-matrix");
+        harness
+            .state_mut()
+            .apply(vec![Act::UseTheme("light".to_owned())]);
+        harness.set_size(egui::vec2(1000.0, 700.0));
+        shot(&mut harness, "09-compact");
+    }
+
+    #[test]
+    fn a_theme_tab_previews_its_theme_and_a_theme_can_be_chosen() {
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        let (light, _, preference) = app.wanted_theme();
+        assert_eq!(light.id, "light");
+        assert_eq!(preference, egui::ThemePreference::System);
+        app.apply(vec![Act::EditTheme("matrix".into())]);
+        assert!(matches!(&app.docs[1], Doc::Theme(t) if t.theme.id == "matrix"));
+        assert_eq!(app.docs[1].title(), "matrix.wwtheme");
+        if let Some(Doc::Theme(t)) = app.docs.get_mut(1) {
+            t.theme.font_size = 16.0;
+        }
+        let (_, dark, preference) = app.wanted_theme();
+        assert_eq!(
+            dark.id, "matrix",
+            "the edited theme shows while its tab is in front"
+        );
+        assert_eq!(dark.font_size, 16.0);
+        assert_eq!(preference, egui::ThemePreference::Dark);
+        app.apply(vec![Act::EditTheme("matrix".into())]);
+        assert_eq!(app.docs.len(), 2, "one tab per theme");
+        app.apply(vec![Act::Activate(0)]);
+        assert_eq!(app.wanted_theme().0.id, "light", "the settings theme again");
+        app.apply(vec![Act::UseTheme("latte".into())]);
+        assert_eq!(app.settings.custom_theme, "latte");
+        assert_eq!(app.settings.theme, ThemeChoice::Light);
+        let (light, _, preference) = app.wanted_theme();
+        assert_eq!(light.name, "Latte");
+        assert_eq!(preference, egui::ThemePreference::Light);
+        assert_eq!(app.shown_theme_id(true), "latte");
+    }
+
     #[test]
     fn bookmarks_toggle_and_lead_back() {
         let catalog = Catalog::embedded().unwrap();
@@ -2471,7 +4075,14 @@ mod tests {
         ]);
         assert_eq!(app.marks.items.len(), 1, "{}", app.status);
         assert_eq!(app.marks.items[0].item, "install.bypass-tpm");
-        assert_eq!(app.marks.items[0].path, "Office.wwprofile");
+        assert_eq!(
+            app.marks.items[0].path, "",
+            "an unsaved profile has no file to link"
+        );
+        assert_eq!(
+            app.marks.items[0].title, "",
+            "the title comes from the catalog"
+        );
         assert!(
             app.marks_path.exists(),
             "the default file is created at the first bookmark"
@@ -2488,6 +4099,28 @@ mod tests {
         );
         app.apply(vec![Act::ToggleBookmark]);
         assert!(app.marks.items.is_empty());
+        app.apply(vec![
+            Act::ToggleBookmark,
+            Act::SetMarkComment(0, "Ask the customer\nabout the TPM".into()),
+            Act::ToggleBookmark,
+        ]);
+        assert_eq!(
+            app.marks.items.len(),
+            1,
+            "a bookmark with a comment asks first"
+        );
+        assert!(app.ask.is_some());
+        app.apply(vec![Act::AskNo]);
+        assert_eq!(app.marks.items.len(), 1);
+        app.apply(vec![
+            Act::OpenMarks,
+            Act::MarkSelect(0),
+            Act::RemoveMarkAsk(0),
+        ]);
+        assert!(app.ask.is_some());
+        app.apply(vec![Act::AskYes]);
+        assert!(app.marks.items.is_empty());
+        assert_eq!(app.marks_tab.sel, None);
         std::fs::remove_dir_all(&dir).unwrap();
     }
 
@@ -2555,6 +4188,82 @@ mod tests {
         assert!(office.dirty);
         let strict = Profile::parse(PRESETS[1].1, "Strict").unwrap();
         assert_eq!(office.profile.rules, strict.rules);
+    }
+
+    #[test]
+    fn an_item_of_a_diff_takes_a_comment_applies_alone_and_leads_to_both_profiles() {
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        app.apply(vec![Act::CompareWith("Strict")]);
+        let Doc::Diff(d) = &app.docs[1] else {
+            panic!("the second tab is the diff");
+        };
+        let key = d
+            .diff
+            .keys()
+            .into_iter()
+            .find(|k| k.starts_with("rule:"))
+            .expect("Strict differs in a rule");
+        let id = key.trim_start_matches("rule:").to_owned();
+        app.apply(vec![
+            Act::DiffSelect(key.clone()),
+            Act::DiffComment(
+                key.clone(),
+                "Checked with the lab
+and kept"
+                    .into(),
+            ),
+        ]);
+        let Doc::Diff(d) = &app.docs[1] else {
+            panic!("the second tab is the diff");
+        };
+        assert_eq!(d.sel.as_deref(), Some(key.as_str()));
+        assert_eq!(
+            d.diff.comments[&key],
+            "Checked with the lab
+and kept"
+        );
+        assert!(d.dirty);
+        app.apply(vec![Act::DiffComment(key.clone(), "  ".into())]);
+        assert!(matches!(&app.docs[1], Doc::Diff(d) if d.diff.comments.is_empty()));
+        app.apply(vec![Act::DiffApplyItem(key.clone())]);
+        assert_eq!(app.active, 1, "the diff stays in front");
+        let strict = Profile::parse(PRESETS[1].1, "Strict").unwrap();
+        let Doc::Profile(office) = &app.docs[0] else {
+            panic!("the first tab is the profile");
+        };
+        assert_eq!(office.profile.rules.get(&id), strict.rules.get(&id));
+        app.apply(vec![Act::DiffGoTo(key.clone(), true)]);
+        assert_eq!(app.docs.len(), 3, "the preset Strict opens in a new tab");
+        assert_eq!(app.active, 2);
+        assert_eq!(app.active_profile().unwrap().sel, Sel::Rule(id.clone()));
+        app.active = 1;
+        app.apply(vec![Act::DiffGoTo(key, false)]);
+        assert_eq!(app.active, 0);
+        assert_eq!(app.active_profile().unwrap().sel, Sel::Rule(id));
+    }
+
+    #[test]
+    fn tabs_move_and_the_tab_in_front_stays_in_front() {
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        app.apply(vec![Act::OpenGuide, Act::OpenMarks, Act::OpenSettings]);
+        let titles = |app: &App| app.docs.iter().map(Doc::title).collect::<Vec<_>>();
+        let start = titles(&app);
+        assert_eq!(start.len(), 4);
+        assert_eq!(app.active, 3);
+        app.apply(vec![Act::MoveTab(3, 0)]);
+        assert_eq!(app.active, 0, "the moved tab stays in front");
+        assert_eq!(titles(&app)[0], start[3]);
+        assert_eq!(titles(&app)[1..], start[..3]);
+        app.apply(vec![Act::Activate(2), Act::MoveTab(0, 3)]);
+        assert_eq!(
+            app.active, 1,
+            "the tab in front shifts left when a tab before it moves after it"
+        );
+        assert_eq!(titles(&app), start);
+        app.apply(vec![Act::MoveTab(1, 1), Act::MoveTab(0, 9)]);
+        assert_eq!(titles(&app), start, "nothing moves out of the row");
     }
 
     #[test]

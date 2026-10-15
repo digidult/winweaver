@@ -47,6 +47,8 @@ pub struct Settings {
     pub show_guide_at_start: bool,
     /// The rules of the selected group show a switch at the end of their rows.
     pub inline_switches: bool,
+    /// The id of a colour theme of themes/ or the embedded ones, empty for the colours of the theme.
+    pub custom_theme: String,
     /// The tabs with files open at the last close are opened again at the start.
     pub restore_tabs: bool,
     /// The files of the tabs open at the last close, and the active one among them.
@@ -55,6 +57,8 @@ pub struct Settings {
     /// The port and the token of the MCP server of the window.
     pub mcp_port: u16,
     pub mcp_token: String,
+    /// The ids of the imports of policy templates that are hidden.
+    pub hidden_imports: Vec<String>,
 }
 
 impl Default for Settings {
@@ -69,11 +73,13 @@ impl Default for Settings {
             search_history: Vec::new(),
             show_guide_at_start: true,
             inline_switches: true,
+            custom_theme: String::new(),
             restore_tabs: true,
             open_tabs: Vec::new(),
             active_tab: 0,
             mcp_port: 8765,
             mcp_token: String::new(),
+            hidden_imports: Vec::new(),
         }
     }
 }

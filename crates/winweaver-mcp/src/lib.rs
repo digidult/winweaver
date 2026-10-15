@@ -302,9 +302,12 @@ impl Server {
                     uri.chars().take(80).collect(),
                     "ok".to_owned(),
                 );
-                Ok(
-                    json!({ "contents": [{ "uri": uri, "mimeType": "application/json", "text": text }] }),
-                )
+                let mime = if uri == "winweaver://skill" {
+                    "text/markdown"
+                } else {
+                    "application/json"
+                };
+                Ok(json!({ "contents": [{ "uri": uri, "mimeType": mime, "text": text }] }))
             }
             None => Err((-32002, format!("unknown resource {uri}"))),
         }

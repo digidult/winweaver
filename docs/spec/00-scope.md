@@ -91,9 +91,15 @@ the user imports them from their Windows.
 - Documentation changes go in the same pull request as the code they describe; `AGENTS.md` is the map and
   is updated with every change of structure or status.
 
+## Decisions
+
+- 14.10.2026: the supported systems are Windows 10 and 11, the systems the Rust toolchain supports;
+  among the Windows desktops in use online these are almost all (the customer left the choice to the
+  agent, guided by the versions in use).
+- 14.10.2026: the runtime templates of the predecessor (the PowerShell of the answer file and of the
+  stand-alone scripts) are carried over as data in `data/templates/`.
+
 ## Open questions
 
-1. Minimum Windows 10 version to support: 1809 (the oldest still seen in the field) or 21H2 (the last
-   Windows 10, in support until October 2025, extended security updates later)?
-2. Should the executable be signed (a code signing certificate is needed) or is SmartScreen's warning
+1. Should the executable be signed (a code signing certificate is needed) or is SmartScreen's warning
    acceptable for an internal tool?

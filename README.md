@@ -16,10 +16,15 @@ Licence: [MIT](LICENSE).
 
 ## Status
 
-Alpha (October 2026): the window with the profile editor builds in CI (`WinWeaver-<version>.zip` in the
-artifacts of every run; a tag `v<version>` publishes a release). Profiles, check, forms, comparison and
-diff files, bookmarks, the guide and Markdown tabs work; the build of `autounattend.xml`, This PC, policy
-templates and the MCP server come next. The specification is the plan.
+Alpha (October 2026): the window builds in CI (`WinWeaver-<version>.zip` in the artifacts of every run; a
+tag `v<version>` publishes a release). Profiles, the check, the forms, the build of `autounattend.xml`,
+comparison and diff files, the native read of this PC and its native apply, return to defaults and undo
+(with a backup the stand-alone scripts understand, the default user profile included), the stand-alone
+apply, revert and audit scripts, the import of policy templates (lists included) and catalog files,
+bookmarks of options, diff files with comments, the guide and the reference, themes with their fonts and
+an editor, the MCP server (stdio and loopback HTTP) and the interface in English, Ukrainian and Russian
+work; the window follows the mockups of variant A and is used with the keyboard as well. Nothing has been accepted in a virtual machine yet. The specification is the
+plan; `AGENTS.md` keeps the state.
 
 | What | Where |
 |---|---|

@@ -1,13 +1,16 @@
-//! The profile views: the tree on the left and the detail panel on the right.
+//! The profile views: the tree on the left (`tree.rs` paints it) and the detail panel on the right,
+//! in the cards of the mockups.
 
-use eframe::egui::{self, RichText};
+use eframe::egui::{self, CornerRadius, Margin, RichText, Stroke};
 use serde_json::Value;
-use winweaver_core::catalog::{Action, Catalog, Group, Param, ROOT_UNATTEND, Rule, check};
+use winweaver_core::catalog::{
+    Action, Catalog, Group, ListNames, Param, ROOT_UNATTEND, Rule, check,
+};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::resolver::State;
 
 use crate::i18n::{tr, trf};
-use crate::{Act, ProfileDoc, ScriptKind, Search, Sel, Settings};
+use crate::{Act, Form, ProfileDoc, ScriptKind, Search, Sel, Settings, style, tree};
 
 pub fn rtitle<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule) -> &'a str {
     texts.map_or(rule.title.as_str(), |t| t.rule_title(rule))
@@ -61,16 +64,22 @@ fn switch(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
         response.mark_changed();
     }
     if ui.is_rect_visible(rect) {
+        let p = style::palette(ui);
         let t = ui.ctx().animate_bool_responsive(response.id, *on);
-        let visuals = ui.style().interact_selectable(&response, *on);
         let radius = rect.height() / 2.0;
-        ui.painter().rect_filled(rect, radius, visuals.bg_fill);
+        let track = if *on { p.check } else { p.off };
+        ui.painter().rect_filled(rect, radius, track);
+        if response.has_focus() {
+            ui.painter().rect_stroke(
+                rect.expand(2.0),
+                radius + 2.0,
+                Stroke::new(1.5, p.accent),
+                egui::StrokeKind::Outside,
+            );
+        }
         let x = egui::lerp((rect.left() + radius)..=(rect.right() - radius), t);
-        ui.painter().circle_filled(
-            egui::pos2(x, rect.center().y),
-            radius * 0.72,
-            visuals.fg_stroke.color,
-        );
+        ui.painter()
+            .circle_filled(egui::pos2(x, rect.center().y), radius * 0.72, p.check_mark);
     }
     response
 }
@@ -105,10 +114,156 @@ fn level_title(l: winweaver_core::catalog::Level) -> &'static str {
     }
 }
 
-fn twisty(ui: &mut egui::Ui, open: bool) -> bool {
-    let (_rect, response) = ui.allocate_exact_size(egui::vec2(14.0, 14.0), egui::Sense::click());
-    egui::collapsing_header::paint_default_icon(ui, if open { 1.0 } else { 0.0 }, &response);
-    response.clicked()
+/// The parameter of a rule in a few words, for the right end of its row.
+fn param_summary(catalog: &Catalog, doc: &ProfileDoc, rule: &Rule) -> String {
+    let Some((name, param)) = rule.params.iter().next() else {
+        return String::new();
+    };
+    let value = doc
+        .profile
+        .param(catalog, &rule.id, name)
+        .unwrap_or(Value::Null);
+    let text = match param {
+        Param::Enum { values, .. } => values
+            .iter()
+            .find(|v| check::same_value(&v.value, &value))
+            .map_or_else(|| value.to_string(), |v| v.title.clone()),
+        Param::List { .. } => {
+            let n = value.as_array().map_or(0, |a| {
+                a.iter()
+                    .filter(|v| v.as_str().is_some_and(|t| !t.trim().is_empty()))
+                    .count()
+            });
+            trf("{n} items", &[("n", &n)])
+        }
+        _ => match &value {
+            Value::String(s) => s.clone(),
+            other => other.to_string(),
+        },
+    };
+    let mut short: String = text.chars().take(24).collect();
+    if text.chars().count() > 24 {
+        short.push_str("...");
+    }
+    short
+}
+
+fn form_icon(form: Form) -> &'static str {
+    match form {
+        Form::Install => "\u{1F4CB}",
+        Form::Accounts => "\u{1F464}",
+        Form::Languages => "\u{1F310}",
+    }
+}
+
+/// The rows of the profile tree under a group, in the order they are shown.
+#[allow(clippy::too_many_arguments)]
+fn tree_rows(
+    rows: &mut Vec<tree::Row<Sel>>,
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    doc: &ProfileDoc,
+    words: &[String],
+    gid: &str,
+    depth: usize,
+    inline: bool,
+) {
+    let Some(group) = catalog.group(gid) else {
+        return;
+    };
+    let rules = catalog.rules_under(gid);
+    if !words.is_empty() && !rules.iter().any(|r| matches(texts, r, words)) {
+        return;
+    }
+    let total = rules.len();
+    let on = rules
+        .iter()
+        .filter(|r| doc.resolution.shown_on(&r.id))
+        .count();
+    let open = !words.is_empty() || doc.expanded.contains(gid);
+    let check = if total > 0 && on == total {
+        tree::Check::On
+    } else if on > 0 {
+        tree::Check::Mixed
+    } else {
+        tree::Check::Off
+    };
+    rows.push(tree::Row {
+        key: Sel::Group(gid.to_owned()),
+        depth,
+        title: gtitle(texts, group).to_owned(),
+        right: format!("{on}/{total}"),
+        check,
+        open: Some(open),
+        muted: false,
+        icon: None,
+        switch: None,
+    });
+    if !open {
+        return;
+    }
+    if gid == ROOT_UNATTEND && words.is_empty() {
+        for form in Form::ALL {
+            rows.push(tree::Row {
+                key: Sel::Form(form),
+                depth: depth + 1,
+                title: tr(form.title()).to_owned(),
+                right: String::new(),
+                check: tree::Check::None,
+                open: None,
+                muted: false,
+                icon: Some(form_icon(form)),
+                switch: None,
+            });
+        }
+    }
+    for child in catalog.child_groups(Some(gid)) {
+        tree_rows(
+            rows,
+            catalog,
+            texts,
+            doc,
+            words,
+            &child.id,
+            depth + 1,
+            inline,
+        );
+    }
+    let group_selected = matches!(&doc.sel, Sel::Group(g) if g == gid);
+    for rule in catalog.rules_in(gid) {
+        if !matches(texts, rule, words) {
+            continue;
+        }
+        let linked = linked_rule(doc, rule).is_some();
+        let chosen = doc.profile.is_on(&rule.id);
+        let blocked = matches!(doc.resolution.state(&rule.id), State::Blocked { .. });
+        let check = if linked {
+            tree::Check::Linked
+        } else if chosen && blocked {
+            tree::Check::Blocked
+        } else if chosen {
+            tree::Check::On
+        } else {
+            tree::Check::Off
+        };
+        let switch =
+            (inline && group_selected && rule.params.is_empty() && !linked).then_some(chosen);
+        rows.push(tree::Row {
+            key: Sel::Rule(rule.id.clone()),
+            depth: depth + 1,
+            title: rtitle(texts, rule).to_owned(),
+            right: if switch.is_some() {
+                String::new()
+            } else {
+                param_summary(catalog, doc, rule)
+            },
+            check,
+            open: None,
+            muted: blocked,
+            icon: None,
+            switch,
+        });
+    }
 }
 
 pub fn tree_view(
@@ -121,185 +276,214 @@ pub fn tree_view(
     acts: &mut Vec<Act>,
 ) {
     let words = search.words();
-    egui::ScrollArea::vertical()
-        .auto_shrink(false)
-        .show(ui, |ui| {
-            for root in catalog.child_groups(None) {
-                group_rows(ui, catalog, texts, doc, &words, &root.id, inline, acts);
+    let mut rows = Vec::new();
+    for root in catalog.child_groups(None) {
+        tree_rows(&mut rows, catalog, texts, doc, &words, &root.id, 0, inline);
+    }
+    if !words.is_empty() && rows.is_empty() {
+        ui.weak(tr("Nothing matches the search."));
+    }
+    let selected = rows.iter().position(|r| r.key == doc.sel);
+    let scroll = if doc.reveal {
+        tree::Scroll::Center
+    } else if doc.follow {
+        tree::Scroll::Near
+    } else {
+        tree::Scroll::None
+    };
+    if selected.is_none() && scroll != tree::Scroll::None {
+        acts.push(Act::Revealed);
+    }
+    let id = egui::Id::new(("profile-tree", doc.draft_key.as_str()));
+    let out = tree::show(ui, id, &rows, selected, scroll);
+    for event in out.events {
+        match event {
+            tree::Event::Select(sel) => acts.push(Act::Select(sel)),
+            tree::Event::Expand(Sel::Group(g), open) => acts.push(Act::Expand(g, open)),
+            tree::Event::Toggle(Sel::Rule(id)) => {
+                let on = !doc.profile.is_on(&id);
+                acts.push(Act::Toggle(id, on));
             }
-        });
+            tree::Event::Switch(Sel::Rule(id), on) => acts.push(Act::Toggle(id, on)),
+            tree::Event::Toggle(Sel::Group(g)) => {
+                let rules = catalog.rules_under(&g);
+                let all = !rules.is_empty() && rules.iter().all(|r| doc.resolution.shown_on(&r.id));
+                acts.push(Act::SetGroup(g, !all));
+            }
+            _ => {}
+        }
+    }
+    if out.moved {
+        acts.push(Act::Follow);
+    }
+    if out.scrolled {
+        acts.push(Act::Revealed);
+    }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn group_rows(
+/// The built-in rule that writes the values of an imported policy chosen off, when one does.
+fn linked_rule<'a>(doc: &'a ProfileDoc, rule: &Rule) -> Option<&'a str> {
+    doc.resolution
+        .linked_by(&rule.id)
+        .filter(|_| !doc.profile.is_on(&rule.id))
+}
+
+/// The check box of a rule. A linked policy (a built-in rule in effect writes its values) is drawn
+/// checked and cannot be changed here; its tip names the built-in rule.
+fn rule_checkbox(
     ui: &mut egui::Ui,
     catalog: &Catalog,
-    texts: Option<&CatalogTexts>,
-    doc: &ProfileDoc,
-    words: &[String],
-    gid: &str,
-    inline: bool,
-    acts: &mut Vec<Act>,
-) {
-    let Some(group) = catalog.group(gid) else {
-        return;
-    };
-    let rules = catalog.rules_under(gid);
-    if !words.is_empty() && !rules.iter().any(|r| matches(texts, r, words)) {
-        return;
-    }
-    let total = rules.len();
-    let on = rules
-        .iter()
-        .filter(|r| doc.resolution.in_effect(&r.id))
-        .count();
-    let expanded = !words.is_empty() || doc.expanded.contains(gid);
-    ui.horizontal(|ui| {
-        if twisty(ui, expanded) {
-            acts.push(Act::Expand(gid.to_owned(), !expanded));
-        }
-        let mut checked = total > 0 && on == total;
-        let mixed = on > 0 && on < total;
-        if ui
-            .add(egui::Checkbox::without_text(&mut checked).indeterminate(mixed))
-            .changed()
-        {
-            acts.push(Act::SetGroup(gid.to_owned(), checked));
-        }
-        let selected = matches!(&doc.sel, Sel::Group(id) if id == gid);
-        if ui
-            .selectable_label(selected, gtitle(texts, group))
-            .clicked()
-        {
-            acts.push(Act::Select(Sel::Group(gid.to_owned())));
-        }
-        ui.weak(format!("{on}/{total}"));
-    });
-    if expanded {
-        ui.indent(gid, |ui| {
-            if gid == ROOT_UNATTEND && words.is_empty() {
-                for form in crate::forms::Form::ALL {
-                    ui.horizontal(|ui| {
-                        ui.add_space(14.0);
-                        let selected = matches!(&doc.sel, Sel::Form(f) if *f == form);
-                        if ui.selectable_label(selected, tr(form.title())).clicked() {
-                            acts.push(Act::Select(Sel::Form(form)));
-                        }
-                    });
-                }
-            }
-            for child in catalog.child_groups(Some(gid)) {
-                group_rows(ui, catalog, texts, doc, words, &child.id, inline, acts);
-            }
-            for rule in catalog.rules_in(gid) {
-                if matches(texts, rule, words) {
-                    rule_row(ui, texts, doc, rule, inline, acts);
-                }
-            }
-        });
-    }
-}
-
-fn rule_row(
-    ui: &mut egui::Ui,
     texts: Option<&CatalogTexts>,
     doc: &ProfileDoc,
     rule: &Rule,
-    inline: bool,
+    label: &str,
     acts: &mut Vec<Act>,
 ) {
-    ui.horizontal(|ui| {
-        ui.add_space(14.0);
-        let mut on = doc.profile.is_on(&rule.id);
-        if ui.checkbox(&mut on, tr("")).changed() {
-            acts.push(Act::Toggle(rule.id.clone(), on));
-        }
-        let state = doc.resolution.state(&rule.id);
-        let title = rtitle(texts, rule);
-        let text = match state {
-            State::Blocked { .. } => RichText::new(title).weak(),
-            _ => RichText::new(title),
-        };
-        let selected = matches!(&doc.sel, Sel::Rule(id) if id == &rule.id);
-        let response = ui.selectable_label(selected, text);
-        let clicked = response.clicked();
-        if let State::Blocked { by } = state {
-            response.on_hover_text(trf("Blocked: needs {by}", &[("by", by)]));
-        }
-        if clicked {
-            acts.push(Act::Select(Sel::Rule(rule.id.clone())));
-        }
-        if !rule.params.is_empty() {
-            ui.weak(trf("{n} parameters", &[("n", &rule.params.len())]));
-        } else if inline && matches!(&doc.sel, Sel::Group(g) if g == &rule.group) {
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                let mut on = doc.profile.is_on(&rule.id);
-                if switch(ui, &mut on).on_hover_text(tr("On or off")).changed() {
-                    acts.push(Act::Toggle(rule.id.clone(), on));
-                }
-            });
-        }
-    });
+    if let Some(by) = linked_rule(doc, rule) {
+        let by_title = catalog.rule(by).map_or(by, |r| rtitle(texts, r));
+        let mut shown = true;
+        ui.add_enabled(false, egui::Checkbox::new(&mut shown, label))
+            .on_disabled_hover_text(trf(
+                "Set by the built-in rule {rule}",
+                &[("rule", &by_title)],
+            ));
+        return;
+    }
+    let mut on = doc.profile.is_on(&rule.id);
+    if ui.checkbox(&mut on, label).changed() {
+        acts.push(Act::Toggle(rule.id.clone(), on));
+    }
 }
 
-pub fn detail_view(
-    ui: &mut egui::Ui,
-    catalog: &Catalog,
-    texts: Option<&CatalogTexts>,
-    doc: &ProfileDoc,
-    settings: &Settings,
-    acts: &mut Vec<Act>,
-) {
-    egui::ScrollArea::vertical()
-        .auto_shrink(false)
-        .show(ui, |ui| match &doc.sel {
-            Sel::None => profile_detail(ui, doc),
-            Sel::Group(id) => group_detail(ui, catalog, texts, doc, id, acts),
-            Sel::Rule(id) => rule_detail(ui, catalog, texts, doc, settings, id, acts),
-            Sel::Form(form) => {
-                crate::forms::form_view(ui, doc, *form, &crate::i18n::current(), acts);
-            }
+/// The head of the detail panel: the card colour across the width.
+pub(crate) fn header(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
+    let p = style::palette(ui);
+    egui::Frame::new()
+        .fill(p.card)
+        .inner_margin(Margin {
+            left: 18,
+            right: 18,
+            top: 14,
+            bottom: 12,
+        })
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            add(ui);
         });
+    ui.painter().hline(
+        ui.min_rect().x_range(),
+        ui.cursor().top(),
+        Stroke::new(1.0, p.border),
+    );
+}
+
+/// A card of the detail panel, with the margins of the mockups.
+pub(crate) fn block(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
+    egui::Frame::new()
+        .outer_margin(Margin {
+            left: 18,
+            right: 18,
+            top: 10,
+            bottom: 0,
+        })
+        .show(ui, |ui| {
+            style::card(ui, add);
+        });
+}
+
+/// A part of the description: a card that folds.
+fn section(ui: &mut egui::Ui, id: &str, title: &str, open: bool, add: impl FnOnce(&mut egui::Ui)) {
+    let p = style::palette(ui);
+    egui::Frame::new()
+        .outer_margin(Margin {
+            left: 18,
+            right: 18,
+            top: 0,
+            bottom: 6,
+        })
+        .fill(p.card)
+        .stroke(Stroke::new(1.0, p.border))
+        .corner_radius(CornerRadius::same(6))
+        .inner_margin(Margin::symmetric(12, 6))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            egui::CollapsingHeader::new(style::strong(ui, title, 13.0))
+                .id_salt(id)
+                .default_open(open)
+                .show(ui, add);
+        });
+}
+
+/// The id of an item, selectable, with a button that copies it.
+pub(crate) fn id_line(ui: &mut egui::Ui, id: &str) {
+    let p = style::palette(ui);
+    ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 2.0;
+        style::copy_label(
+            ui,
+            RichText::new(id).font(style::mono(ui, 12.0)).color(p.muted),
+            false,
+        );
+        if style::icon_button(ui, "\u{1F4CB}", tr("Copy the id"), true, None).clicked() {
+            ui.ctx().copy_text(id.to_owned());
+        }
+    });
 }
 
 fn profile_detail(ui: &mut egui::Ui, doc: &ProfileDoc) {
     let p = &doc.profile;
-    ui.heading(&p.name);
-    ui.weak(trf("Catalog {version}", &[("version", &p.catalog)]));
-    if !p.comment.is_empty() {
-        ui.label(&p.comment);
-    }
-    ui.add_space(8.0);
-    ui.strong(tr("Installation"));
-    ui.label(trf(
-        "Edition {edition}, product key {key}, time zone {zone}, computer name {name}, accounts {accounts}, disk {disk}",
-        &[
-            ("edition", &p.install.edition),
-            ("key", &p.install.product_key_mode),
-            ("zone", &p.install.time_zone),
-            ("name", &p.install.computer_name_mode),
-            ("accounts", &p.install.account_mode),
-            ("disk", &p.install.disk_mode),
-        ],
-    ));
-    ui.strong(tr("Languages"));
-    ui.label(trf(
-        "Display {ui}, system {system}, user {user}, input {input}",
-        &[
-            ("ui", &p.languages.ui_language),
-            ("system", &p.languages.system_locale),
-            ("user", &p.languages.user_locale),
-            ("input", &p.languages.input.join(", ")),
-        ],
-    ));
-    ui.strong(tr("Accounts"));
-    for a in &p.accounts {
-        ui.label(format!("{} ({})", a.name, a.group));
-    }
-    ui.add_space(8.0);
-    ui.weak(
-        "The forms become editable with the next milestone. Select a group or a rule in the tree.",
-    );
+    header(ui, |ui| {
+        ui.label(style::strong(ui, p.name.as_str(), 18.0));
+        ui.horizontal_wrapped(|ui| {
+            style::chip(
+                ui,
+                &trf("Catalog {version}", &[("version", &p.catalog)]),
+                true,
+            );
+        });
+        if !p.comment.is_empty() {
+            ui.add_space(4.0);
+            style::selectable_text(ui, "profile-comment", &p.comment);
+        }
+    });
+    block(ui, |ui| {
+        style::section_title(ui, tr("Installation"));
+        ui.label(trf(
+            "Edition {edition}, product key {key}, time zone {zone}, computer name {name}, accounts {accounts}, disk {disk}",
+            &[
+                ("edition", &p.install.edition),
+                ("key", &p.install.product_key_mode),
+                ("zone", &p.install.time_zone),
+                ("name", &p.install.computer_name_mode),
+                ("accounts", &p.install.account_mode),
+                ("disk", &p.install.disk_mode),
+            ],
+        ));
+    });
+    block(ui, |ui| {
+        style::section_title(ui, tr("Languages"));
+        ui.label(trf(
+            "Display {ui}, system {system}, user {user}, input {input}",
+            &[
+                ("ui", &p.languages.ui_language),
+                ("system", &p.languages.system_locale),
+                ("user", &p.languages.user_locale),
+                ("input", &p.languages.input.join(", ")),
+            ],
+        ));
+    });
+    block(ui, |ui| {
+        style::section_title(ui, tr("Accounts"));
+        for a in &p.accounts {
+            ui.label(format!("{} ({})", a.name, a.group));
+        }
+    });
+    ui.add_space(10.0);
+    egui::Frame::new()
+        .inner_margin(Margin::symmetric(18, 0))
+        .show(ui, |ui| {
+            ui.weak(tr("Select a form, a group or a rule in the tree."));
+        });
 }
 
 fn group_detail(
@@ -313,71 +497,83 @@ fn group_detail(
     let Some(group) = catalog.group(id) else {
         return;
     };
-    ui.heading(gtitle(texts, group));
-    ui.monospace(&group.id);
     let rules = catalog.rules_under(id);
     let on = rules
         .iter()
-        .filter(|r| doc.resolution.in_effect(&r.id))
+        .filter(|r| doc.resolution.shown_on(&r.id))
         .count();
-    ui.weak(trf(
-        "{n} rules, {on} in effect",
-        &[("n", &rules.len()), ("on", &on)],
-    ));
-    ui.horizontal(|ui| {
-        if ui.button(tr("Turn all on")).clicked() {
-            acts.push(Act::SetGroup(id.to_owned(), true));
-        }
-        if ui.button(tr("Turn all off")).clicked() {
-            acts.push(Act::SetGroup(id.to_owned(), false));
-        }
+    header(ui, |ui| {
+        ui.label(style::strong(ui, gtitle(texts, group), 18.0));
+        id_line(ui, &group.id);
+        ui.horizontal_wrapped(|ui| {
+            style::chip(
+                ui,
+                &trf(
+                    "{n} rules, {on} in effect",
+                    &[("n", &rules.len()), ("on", &on)],
+                ),
+                true,
+            );
+        });
+        ui.add_space(8.0);
+        ui.horizontal(|ui| {
+            if ui.button(tr("Turn all on")).clicked() {
+                acts.push(Act::SetGroup(id.to_owned(), true));
+            }
+            if ui.button(tr("Turn all off")).clicked() {
+                acts.push(Act::SetGroup(id.to_owned(), false));
+            }
+        });
     });
     let summary = gsummary(texts, group);
     if !summary.is_empty() {
-        ui.add_space(6.0);
-        ui.label(summary);
-    }
-    ui.add_space(8.0);
-    this_pc_card(ui, acts);
-    ui.add_space(8.0);
-    ui.strong(tr("Rules of this group"));
-    for rule in catalog.rules_in(id) {
-        ui.horizontal(|ui| {
-            let mut on = doc.profile.is_on(&rule.id);
-            if ui.checkbox(&mut on, rtitle(texts, rule)).changed() {
-                acts.push(Act::Toggle(rule.id.clone(), on));
-            }
-            if ui.small_button(tr("open")).clicked() {
-                acts.push(Act::Select(Sel::Rule(rule.id.clone())));
-            }
+        block(ui, |ui| {
+            style::selectable_text(ui, ("group-summary", id), summary)
         });
     }
-}
-
-/// The commands of This PC for the selected rule or group.
-fn this_pc_card(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
-    ui.add_space(8.0);
-    ui.strong(tr("This PC, this selection"));
-    ui.horizontal_wrapped(|ui| {
-        if ui.button(tr("Check on this PC")).clicked() {
-            acts.push(Act::CheckOnPc);
-        }
-        if ui.button(tr("Read into the profile")).clicked() {
-            acts.push(Act::ReadSelection);
-        }
-        if ui.button(tr("Save an apply script...")).clicked() {
-            acts.push(Act::SaveScript(ScriptKind::Apply));
-        }
-        if ui
-            .button(tr("Save a return-to-defaults script..."))
-            .clicked()
-        {
-            acts.push(Act::SaveScript(ScriptKind::Revert));
+    block(ui, |ui| {
+        style::section_title(ui, tr("This PC, this selection"));
+        ui.add_space(4.0);
+        this_pc_buttons(ui, acts);
+    });
+    block(ui, |ui| {
+        style::section_title(ui, tr("Rules of this group"));
+        for rule in catalog.rules_in(id) {
+            ui.horizontal(|ui| {
+                rule_checkbox(ui, catalog, texts, doc, rule, rtitle(texts, rule), acts);
+                if ui.small_button(tr("open")).clicked() {
+                    acts.push(Act::Select(Sel::Rule(rule.id.clone())));
+                }
+            });
         }
     });
 }
 
-fn describe(action: &Action) -> String {
+/// The commands of This PC for the selected rule or group.
+fn this_pc_buttons(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    ui.horizontal_wrapped(|ui| {
+        for (text, act) in [
+            (tr("Check on this PC"), Act::CheckOnPc),
+            (tr("Read into the profile"), Act::ReadSelection),
+            (tr("Apply to this PC..."), Act::PlanNative(false)),
+            (tr("Return to Windows defaults..."), Act::PlanNative(true)),
+            (
+                tr("Save an apply script..."),
+                Act::SaveScript(ScriptKind::Apply),
+            ),
+            (
+                tr("Save a return-to-defaults script..."),
+                Act::SaveScript(ScriptKind::Revert),
+            ),
+        ] {
+            if ui.button(text).clicked() {
+                acts.push(act);
+            }
+        }
+    });
+}
+
+pub(crate) fn describe(action: &Action) -> String {
     match action {
         Action::Reg {
             path,
@@ -387,6 +583,16 @@ fn describe(action: &Action) -> String {
             ..
         } => format!("reg  {path}\\{name} = {value} ({kind:?})"),
         Action::RegRemove { path, name, .. } => format!("reg-remove  {path}\\{name}"),
+        Action::RegList {
+            path,
+            param,
+            names,
+            additive,
+            ..
+        } => {
+            let add = if *additive { ", additive" } else { "" };
+            format!("reg-list  {path} from {param} ({names:?}{add})")
+        }
         Action::Service { name, start, .. } => format!("service  {name}: start type {start}"),
         Action::Exe { file, args } => format!("exe  {file} {}", args.join(" ")),
         Action::Feature { name, state, .. } => format!("feature  {name}: {state}"),
@@ -406,6 +612,110 @@ fn describe(action: &Action) -> String {
     }
 }
 
+fn value_text(value: &Value) -> String {
+    match value {
+        Value::String(s) => s.clone(),
+        other => other.to_string(),
+    }
+}
+
+fn default_text(default: &Option<Value>) -> String {
+    match default {
+        None => String::new(),
+        Some(Value::String(s)) if s == "absent" => tr("absent").to_owned(),
+        Some(Value::String(s)) if s == "unknown" => tr("unknown").to_owned(),
+        Some(v) => value_text(v),
+    }
+}
+
+/// What a rule writes: the registry values as a table of key, name, value and the default of
+/// Windows, as in the mockups; the other actions as one line each under it.
+fn writes(ui: &mut egui::Ui, rule: &Rule) {
+    let p = style::palette(ui);
+    let mut rows = Vec::new();
+    let mut others = Vec::new();
+    for action in &rule.actions {
+        match action {
+            Action::Reg {
+                path,
+                name,
+                value,
+                default,
+                ..
+            } => rows.push((
+                path.as_str(),
+                name.clone(),
+                value_text(value),
+                default_text(default),
+            )),
+            Action::RegRemove {
+                path,
+                name,
+                default,
+            } => rows.push((
+                path.as_str(),
+                name.clone(),
+                tr("removed").to_owned(),
+                default_text(default),
+            )),
+            Action::RegList { path, param, .. } => rows.push((
+                path.as_str(),
+                String::new(),
+                trf("the items of the parameter {param}", &[("param", param)]),
+                String::new(),
+            )),
+            other => others.push(describe(other)),
+        }
+    }
+    if !rows.is_empty() {
+        let room = (ui.available_width() - 3.0 * 16.0).max(240.0);
+        let widths = [room * 0.4, room * 0.22, room * 0.22, room * 0.16];
+        let cell = |ui: &mut egui::Ui, text: &str, mono: bool, muted: bool, width: f32| {
+            ui.scope(|ui| {
+                ui.set_max_width(width);
+                let mut rich = RichText::new(text);
+                rich = if mono {
+                    rich.font(style::mono(ui, 12.0))
+                } else {
+                    rich.font(style::font(ui, 12.5))
+                };
+                if muted {
+                    rich = rich.color(p.muted);
+                }
+                style::copy_label(ui, rich, true);
+            });
+        };
+        egui::Grid::new(("writes", rule.id.as_str()))
+            .num_columns(4)
+            .spacing([16.0, 6.0])
+            .show(ui, |ui| {
+                for (title, width) in [tr("Key"), tr("Name"), tr("Value"), tr("Windows default")]
+                    .into_iter()
+                    .zip(widths)
+                {
+                    ui.scope(|ui| {
+                        ui.set_max_width(width);
+                        ui.add(
+                            egui::Label::new(style::strong(ui, title, 12.0).color(p.muted)).wrap(),
+                        );
+                    });
+                }
+                ui.end_row();
+                for (path, name, value, default) in &rows {
+                    cell(ui, path, true, false, widths[0]);
+                    cell(ui, name, false, false, widths[1]);
+                    cell(ui, value, false, false, widths[2]);
+                    cell(ui, default, false, true, widths[3]);
+                    ui.end_row();
+                }
+            });
+    }
+    for line in others {
+        ui.add_space(4.0);
+        style::copy_label(ui, RichText::new(line).font(style::mono(ui, 12.0)), true);
+    }
+}
+
 fn rule_detail(
     ui: &mut egui::Ui,
     catalog: &Catalog,
@@ -418,77 +728,132 @@ fn rule_detail(
     let Some(rule) = catalog.rule(id) else {
         return;
     };
-    ui.label(RichText::new(rtitle(texts, rule)).size(18.0).strong());
-    ui.monospace(&rule.id);
-    ui.horizontal(|ui| {
-        ui.weak(tr(mechanism_title(Catalog::mechanism(rule))));
-        ui.weak(phase_title(rule.phase));
-        ui.weak(tr(level_title(rule.level)));
-        if rule.default {
-            ui.weak(tr("on by default"));
-        }
-    });
-    ui.add_space(6.0);
-    ui.horizontal(|ui| {
-        let mut on = doc.profile.is_on(&rule.id);
-        if ui.checkbox(&mut on, tr("On")).changed() {
-            acts.push(Act::Toggle(rule.id.clone(), on));
-        }
-        match doc.resolution.state(&rule.id) {
-            State::On => ui.weak(tr("in effect")),
-            State::Off => ui.weak(tr("off")),
-            State::Blocked { by } => {
-                ui.weak(tr("blocked: needs"));
-                let title = catalog.rule(by).map_or(by.as_str(), |r| rtitle(texts, r));
-                if ui.link(title).clicked() {
-                    acts.push(Act::Select(Sel::Rule(by.clone())));
-                }
-                ui.weak(tr(""))
+    header(ui, |ui| {
+        ui.label(style::strong(ui, rtitle(texts, rule), 18.0));
+        id_line(ui, &rule.id);
+        ui.horizontal_wrapped(|ui| {
+            style::chip(ui, tr(mechanism_title(Catalog::mechanism(rule))), true);
+            style::chip(ui, phase_title(rule.phase), false);
+            style::chip(ui, tr(level_title(rule.level)), false);
+            if rule.default {
+                style::chip(ui, tr("on by default"), false);
             }
-        };
+        });
+        ui.add_space(8.0);
+        ui.horizontal(|ui| {
+            let mut on = doc.profile.is_on(&rule.id);
+            if switch(ui, &mut on).changed() {
+                acts.push(Act::Toggle(rule.id.clone(), on));
+            }
+            ui.label(if on { tr("On") } else { tr("Off") });
+            ui.add_space(8.0);
+            match doc.resolution.state(&rule.id) {
+                State::On => {
+                    ui.label(style::muted(ui, tr("in effect"), 12.0));
+                }
+                State::Off => match doc.resolution.linked_by(&rule.id) {
+                    Some(by) => {
+                        ui.label(style::muted(ui, tr("set by the built-in rule"), 12.0));
+                        let title = catalog.rule(by).map_or(by, |r| rtitle(texts, r));
+                        if ui.link(title).clicked() {
+                            acts.push(Act::Select(Sel::Rule(by.to_owned())));
+                        }
+                    }
+                    None => {
+                        ui.label(style::muted(ui, tr("off"), 12.0));
+                    }
+                },
+                State::Blocked { by } => {
+                    ui.label(style::muted(ui, tr("blocked: needs"), 12.0));
+                    let title = catalog.rule(by).map_or(by.as_str(), |r| rtitle(texts, r));
+                    if ui.link(title).clicked() {
+                        acts.push(Act::Select(Sel::Rule(by.clone())));
+                    }
+                }
+            }
+        });
     });
     if !rule.params.is_empty() {
-        ui.add_space(6.0);
-        ui.strong(tr("Parameters"));
-        for (name, param) in &rule.params {
-            param_editor(ui, catalog, texts, doc, rule, name, param, acts);
-        }
+        block(ui, |ui| {
+            style::section_title(ui, tr("Parameters"));
+            ui.add_space(4.0);
+            egui::Grid::new(("params", rule.id.as_str()))
+                .num_columns(3)
+                .spacing([14.0, 8.0])
+                .show(ui, |ui| {
+                    for (name, param) in &rule.params {
+                        param_editor(ui, catalog, texts, doc, rule, name, param, acts);
+                        ui.end_row();
+                    }
+                });
+        });
     }
-    this_pc_card(ui, acts);
-    if !settings.desc_open {
-        ui.add_space(6.0);
-        ui.weak(tr("Description folded (Ctrl+D)"));
+    block(ui, |ui| {
+        style::section_title(ui, tr("This PC, this rule"));
+        ui.add_space(4.0);
+        this_pc_buttons(ui, acts);
+    });
+    rule_description(ui, catalog, texts, rule, settings.desc_open, true, acts);
+}
+
+/// The description of a rule under its title, folded with Ctrl+D: what it does, the risk, what it
+/// writes, its dependencies (links that select them when `links`), versions and the reference.
+pub(crate) fn rule_description(
+    ui: &mut egui::Ui,
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    rule: &Rule,
+    open: bool,
+    links: bool,
+    acts: &mut Vec<Act>,
+) {
+    ui.add_space(6.0);
+    egui::Frame::new()
+        .inner_margin(Margin {
+            left: 20,
+            right: 18,
+            top: 8,
+            bottom: 4,
+        })
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                style::section_title(ui, tr("Description"));
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let (icon, hint) = if open {
+                        ("\u{25BE}", tr("Fold the description (Ctrl+D)"))
+                    } else {
+                        ("\u{25B8}", tr("Show the description (Ctrl+D)"))
+                    };
+                    if style::icon_button(ui, icon, hint, true, None).clicked() {
+                        acts.push(Act::Fold);
+                    }
+                });
+            });
+        });
+    if !open {
         return;
     }
-    ui.add_space(10.0);
-    egui::CollapsingHeader::new(tr("What it does"))
-        .id_salt("desc-what")
-        .default_open(true)
-        .show(ui, |ui| {
-            ui.label(rsummary(texts, rule));
-            if !rule.effect.is_empty() {
-                ui.label(&rule.effect);
-            }
-        });
+    section(ui, "desc-what", tr("What it does"), true, |ui| {
+        style::selectable_text(ui, ("what", rule.id.as_str()), rsummary(texts, rule));
+        if !rule.effect.is_empty() {
+            style::selectable_text(ui, ("effect", rule.id.as_str()), &rule.effect);
+        }
+    });
     if !rule.risk.is_empty() {
-        egui::CollapsingHeader::new(tr("Risk"))
-            .id_salt("desc-risk")
-            .default_open(true)
-            .show(ui, |ui| {
-                ui.label(&rule.risk);
-            });
-    }
-    egui::CollapsingHeader::new(tr("What it writes"))
-        .id_salt("desc-writes")
-        .show(ui, |ui| {
-            for action in &rule.actions {
-                ui.monospace(describe(action));
-            }
+        section(ui, "desc-risk", tr("Risk"), true, |ui| {
+            style::selectable_text(ui, ("risk", rule.id.as_str()), &rule.risk);
         });
+    }
+    section(ui, "desc-writes", tr("What it writes"), true, |ui| {
+        writes(ui, rule)
+    });
     if !rule.requires.is_empty() || !rule.conflicts.is_empty() {
-        egui::CollapsingHeader::new(tr("Dependencies and conflicts"))
-            .id_salt("desc-deps")
-            .show(ui, |ui| {
+        section(
+            ui,
+            "desc-deps",
+            tr("Dependencies and conflicts"),
+            false,
+            |ui| {
                 for (label, list) in [
                     (tr("Needs"), &rule.requires),
                     (tr("Conflicts with"), &rule.conflicts),
@@ -499,31 +864,41 @@ fn rule_detail(
                             let title = catalog
                                 .rule(other)
                                 .map_or(other.as_str(), |r| rtitle(texts, r));
-                            if ui.link(title).clicked() {
+                            if !links {
+                                ui.label(title);
+                            } else if ui.link(title).clicked() {
                                 acts.push(Act::Select(Sel::Rule(other.clone())));
                             }
                         });
                     }
                 }
-            });
+            },
+        );
     }
     if !rule.versions.is_empty() || !rule.rollback.is_empty() || !rule.verify.is_empty() {
-        egui::CollapsingHeader::new(tr("Versions, check and rollback"))
-            .id_salt("desc-more")
-            .show(ui, |ui| {
-                for text in [&rule.versions, &rule.verify, &rule.rollback] {
+        section(
+            ui,
+            "desc-more",
+            tr("Versions, check and rollback"),
+            false,
+            |ui| {
+                for (i, text) in [&rule.versions, &rule.verify, &rule.rollback]
+                    .into_iter()
+                    .enumerate()
+                {
                     if !text.is_empty() {
-                        ui.label(text);
+                        style::selectable_text(ui, ("more", rule.id.as_str(), i), text);
                     }
                 }
-            });
+            },
+        );
     }
     if !rule.doc.is_empty() {
-        egui::CollapsingHeader::new(tr("Reference"))
-            .id_salt("desc-ref")
-            .show(ui, |ui| {
-                ui.weak(trf("Documentation: {doc}", &[("doc", &rule.doc)]));
-            });
+        section(ui, "desc-ref", tr("Reference"), false, |ui| {
+            if ui.link(rule.doc.as_str()).clicked() {
+                acts.push(Act::OpenDoc(rule.doc.clone()));
+            }
+        });
     }
 }
 
@@ -542,60 +917,130 @@ fn param_editor(
         .profile
         .param(catalog, &rule.id, name)
         .unwrap_or(Value::Null);
-    ui.horizontal(|ui| {
-        ui.label(ptitle(texts, rule, name));
-        match param {
-            Param::Enum { values, .. } => {
-                let shown = values
-                    .iter()
-                    .find(|v| check::same_value(&v.value, &current))
-                    .map_or_else(|| current.to_string(), |v| v.title.clone());
-                egui::ComboBox::from_id_salt(format!("{}.{name}", rule.id))
-                    .selected_text(shown)
-                    .show_ui(ui, |ui| {
-                        for v in values {
-                            let chosen = check::same_value(&v.value, &current);
-                            if ui.selectable_label(chosen, &v.title).clicked() && !chosen {
-                                acts.push(Act::SetParam(
-                                    rule.id.clone(),
-                                    name.to_owned(),
-                                    v.value.clone(),
-                                ));
-                            }
+    ui.label(ptitle(texts, rule, name));
+    match param {
+        Param::Enum { values, .. } => {
+            let shown = values
+                .iter()
+                .find(|v| check::same_value(&v.value, &current))
+                .map_or_else(|| current.to_string(), |v| v.title.clone());
+            egui::ComboBox::from_id_salt(format!("{}.{name}", rule.id))
+                .selected_text(shown)
+                .width((ui.available_width() - 120.0).max(160.0))
+                .show_ui(ui, |ui| {
+                    for v in values {
+                        let chosen = check::same_value(&v.value, &current);
+                        if ui.selectable_label(chosen, &v.title).clicked() && !chosen {
+                            acts.push(Act::SetParam(
+                                rule.id.clone(),
+                                name.to_owned(),
+                                v.value.clone(),
+                            ));
                         }
-                    });
-            }
-            Param::Int { min, max, .. } => {
-                let mut v = current.as_i64().unwrap_or(*min);
-                if ui
-                    .add(egui::DragValue::new(&mut v).range(*min..=*max))
-                    .changed()
-                {
-                    acts.push(Act::SetParam(
-                        rule.id.clone(),
-                        name.to_owned(),
-                        Value::from(v),
-                    ));
-                }
-            }
-            Param::Text { .. } => {
-                let mut s = current.as_str().unwrap_or("").to_owned();
-                if ui
-                    .add(
-                        egui::TextEdit::singleline(&mut s)
-                            .id_salt(format!("{}.{name}", rule.id))
-                            .desired_width(240.0),
-                    )
-                    .changed()
-                {
-                    acts.push(Act::SetParam(
-                        rule.id.clone(),
-                        name.to_owned(),
-                        Value::from(s),
-                    ));
-                }
+                    }
+                });
+        }
+        Param::Int { min, max, .. } => {
+            let mut v = current.as_i64().unwrap_or(*min);
+            if ui
+                .add(egui::DragValue::new(&mut v).range(*min..=*max))
+                .changed()
+            {
+                acts.push(Act::SetParam(
+                    rule.id.clone(),
+                    name.to_owned(),
+                    Value::from(v),
+                ));
             }
         }
-        ui.weak(trf("default {value}", &[("value", &param.default_value())]));
-    });
+        Param::List { .. } => {
+            let pairs = rule.actions.iter().any(|a| {
+                matches!(a, Action::RegList { param, names: ListNames::Pairs, .. } if param == name)
+            });
+            let mut text = current
+                .as_array()
+                .map(|items| {
+                    items
+                        .iter()
+                        .map(|v| v.as_str().unwrap_or_default())
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                })
+                .unwrap_or_default();
+            let hint = if pairs {
+                tr("One name=value per line")
+            } else {
+                tr("One item per line")
+            };
+            if ui
+                .add(
+                    egui::TextEdit::multiline(&mut text)
+                        .id_salt(format!("{}.{name}", rule.id))
+                        .desired_rows(4)
+                        .desired_width(320.0)
+                        .hint_text(hint),
+                )
+                .changed()
+            {
+                let items: Vec<Value> = if text.is_empty() {
+                    Vec::new()
+                } else {
+                    text.split('\n')
+                        .map(|l| Value::from(l.trim_end_matches('\r')))
+                        .collect()
+                };
+                acts.push(Act::SetParam(
+                    rule.id.clone(),
+                    name.to_owned(),
+                    Value::Array(items),
+                ));
+            }
+        }
+        Param::Text { .. } => {
+            let mut s = current.as_str().unwrap_or("").to_owned();
+            if ui
+                .add(
+                    egui::TextEdit::singleline(&mut s)
+                        .id_salt(format!("{}.{name}", rule.id))
+                        .desired_width(240.0),
+                )
+                .changed()
+            {
+                acts.push(Act::SetParam(
+                    rule.id.clone(),
+                    name.to_owned(),
+                    Value::from(s),
+                ));
+            }
+        }
+    }
+    ui.label(style::muted(
+        ui,
+        trf("default: {value}", &[("value", &param.default_value())]),
+        11.0,
+    ));
+}
+
+pub fn detail_view(
+    ui: &mut egui::Ui,
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    doc: &ProfileDoc,
+    settings: &Settings,
+    acts: &mut Vec<Act>,
+) {
+    egui::ScrollArea::vertical()
+        .auto_shrink(false)
+        .show(ui, |ui| match &doc.sel {
+            Sel::None => profile_detail(ui, doc),
+            Sel::Group(id) => group_detail(ui, catalog, texts, doc, id, acts),
+            Sel::Rule(id) => rule_detail(ui, catalog, texts, doc, settings, id, acts),
+            Sel::Form(form) => {
+                egui::Frame::new()
+                    .inner_margin(Margin::symmetric(18, 12))
+                    .show(ui, |ui| {
+                        crate::forms::form_view(ui, doc, *form, &crate::i18n::current(), acts);
+                    });
+            }
+        });
 }

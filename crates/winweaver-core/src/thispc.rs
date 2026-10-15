@@ -90,6 +90,15 @@ pub enum Probe {
         name: String,
         default: Option<Value>,
     },
+    /// A key that holds a list of values: every name holds its value, and without `additive`
+    /// the key holds nothing else.
+    RegList {
+        path: String,
+        kind: RegKind,
+        names: Vec<String>,
+        values: Vec<String>,
+        additive: bool,
+    },
     Service {
         name: String,
         start: u32,
@@ -126,6 +135,13 @@ impl Check {
             Probe::Reg { path, name, .. } | Probe::RegAbsent { path, name, .. } => {
                 format!("{path}\\{name}")
             }
+            Probe::RegList { path, additive, .. } => {
+                if *additive {
+                    format!("{path} (list, other values allowed)")
+                } else {
+                    format!("{path} (list)")
+                }
+            }
             Probe::Service { name, .. } => format!("service {name}"),
             Probe::Feature { name, .. } => format!("feature {name}"),
             Probe::CapabilityAbsent { pattern } => format!("capability {pattern}"),
@@ -160,16 +176,6 @@ fn single_placeholder(rule: &Rule, value: &Value) -> Option<String> {
     rule.params.contains_key(inner).then(|| inner.to_owned())
 }
 
-fn substitute_value(value: &Value, params: &std::collections::BTreeMap<String, Value>) -> Value {
-    match value {
-        Value::String(s) => Value::String(render::substitute(s, params)),
-        Value::Array(items) => {
-            Value::Array(items.iter().map(|v| substitute_value(v, params)).collect())
-        }
-        other => other.clone(),
-    }
-}
-
 fn checks_of(
     rule: &Rule,
     action: &Action,
@@ -195,7 +201,7 @@ fn checks_of(
                     path,
                     name: name.clone(),
                     kind: *kind,
-                    expected: substitute_value(value, params),
+                    expected: render::fill_value(value, params),
                     param: single_placeholder(rule, value),
                     default: default.clone(),
                 },
@@ -216,6 +222,30 @@ fn checks_of(
                 },
                 note,
             )]
+        }
+        Action::RegList {
+            path,
+            param,
+            names,
+            prefix,
+            additive,
+            kind,
+        } => {
+            let (path, note) = audit_path(path);
+            let items = render::list_values(params, param);
+            match render::list_entries(*names, prefix, &items) {
+                Ok((names, values)) => vec![check(
+                    Probe::RegList {
+                        path,
+                        kind: *kind,
+                        names,
+                        values,
+                        additive: *additive,
+                    },
+                    note,
+                )],
+                Err(_) => vec![check(Probe::Unknown { what: "reg-list" }, note)],
+            }
         }
         Action::Service {
             name,
@@ -328,6 +358,8 @@ pub trait Machine {
     fn value(&self, path: &str, name: &str) -> Result<Option<RegData>, String>;
     /// The names of the subkeys, `None` when the key does not exist.
     fn subkeys(&self, path: &str) -> Result<Option<Vec<String>>, String>;
+    /// The values of a key with their names, `None` when the key does not exist.
+    fn values(&self, path: &str) -> Result<Option<Vec<(String, RegData)>>, String>;
     fn is_admin(&self) -> bool;
     fn computer_name(&self) -> String;
     /// The data of the forms (edition, time zone, languages).
@@ -514,10 +546,21 @@ fn expected_text(expected: &Value) -> String {
     }
 }
 
+/// `name=value` for every item, joined by commas as the audit script writes them.
+fn pairs_text(names: &[String], values: &[String]) -> String {
+    names
+        .iter()
+        .zip(values)
+        .map(|(n, v)| format!("{n}={v}"))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
 fn result(check: &Check, status: Status, current: String, note: &str) -> CheckResult {
     let expected = match &check.probe {
         Probe::Reg { expected, .. } => expected_text(expected),
         Probe::RegAbsent { .. } | Probe::AppAbsent { .. } => "(absent)".to_owned(),
+        Probe::RegList { names, values, .. } => pairs_text(names, values),
         Probe::Service { start, .. } => start.to_string(),
         Probe::Feature { state, .. } => state.clone(),
         Probe::CapabilityAbsent { .. } => "NotPresent".to_owned(),
@@ -581,6 +624,39 @@ fn evaluate(machine: &dyn Machine, check: &Check) -> CheckResult {
             Err(e) => result(check, Status::Unknown, String::new(), &e),
             Ok(None) => result(check, Status::Ok, String::new(), ""),
             Ok(Some(data)) => result(check, Status::Differs, data.text(), ""),
+        },
+        Probe::RegList {
+            path,
+            names,
+            values,
+            additive,
+            ..
+        } => match machine.values(path) {
+            Err(e) => result(check, Status::Unknown, String::new(), &e),
+            Ok(present) => {
+                let present = present.unwrap_or_default();
+                let read = |n: &str| {
+                    present
+                        .iter()
+                        .find(|(p, _)| p.eq_ignore_ascii_case(n))
+                        .map(|(_, d)| d.text())
+                };
+                let listed = names
+                    .iter()
+                    .zip(values)
+                    .all(|(n, v)| read(n).is_some_and(|t| t.eq_ignore_ascii_case(v)));
+                let extra = present
+                    .iter()
+                    .any(|(p, _)| !names.iter().any(|n| n.eq_ignore_ascii_case(p)));
+                let ok = listed && (*additive || !extra);
+                let current = present
+                    .iter()
+                    .map(|(n, d)| format!("{n}={}", d.text()))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let status = if ok { Status::Ok } else { Status::Differs };
+                result(check, status, current, "")
+            }
         },
         Probe::Service { name, start, .. } => {
             match machine.value(&format!("{SERVICES}\\{name}"), "Start") {
@@ -718,6 +794,7 @@ fn param_value(param: &Param, current: &str) -> Option<Value> {
         Param::Text { required, .. } => {
             (!*required || !current.is_empty()).then(|| Value::from(current))
         }
+        Param::List { .. } => None,
     }
 }
 
@@ -745,6 +822,7 @@ fn evidence(probe: &Probe, value: Option<&Value>) -> bool {
         Probe::RegAbsent { default, .. } => {
             matches!(default, Some(d) if d.as_str() != Some("absent"))
         }
+        Probe::RegList { names, .. } => !names.is_empty(),
         Probe::Service { start, default, .. } => match concrete(default) {
             Some(d) => d.as_u64() != Some(u64::from(*start)),
             None => true,
@@ -981,9 +1059,15 @@ fn capture_forms(profile: &mut Profile, info: &SystemInfo, summary: &mut Capture
         })
         .collect();
     if accounts.is_empty() {
-        summary
-            .notes
-            .push("the accounts of the profile were kept".to_owned());
+        let note = if info.accounts_error.is_empty() {
+            "the accounts of the profile were kept".to_owned()
+        } else {
+            format!(
+                "the accounts of the profile were kept, the local accounts could not be read: {}",
+                info.accounts_error
+            )
+        };
+        summary.notes.push(note);
     } else {
         summary
             .forms
@@ -1027,6 +1111,22 @@ impl Machine for MemoryMachine {
             return Err("access is denied".to_owned());
         }
         Ok(self.keys.get(&p).cloned())
+    }
+
+    fn values(&self, path: &str) -> Result<Option<Vec<(String, RegData)>>, String> {
+        let p = path.to_lowercase();
+        if self.denied.iter().any(|d| p.starts_with(d)) {
+            return Err("access is denied".to_owned());
+        }
+        let mut found: Vec<(String, RegData)> = self
+            .values
+            .iter()
+            .filter(|((key, _), _)| *key == p)
+            .map(|((_, name), data)| (name.clone(), data.clone()))
+            .collect();
+        found.sort_by(|a, b| a.0.cmp(&b.0));
+        let exists = !found.is_empty() || self.keys.contains_key(&p);
+        Ok(exists.then_some(found))
     }
 
     fn is_admin(&self) -> bool {

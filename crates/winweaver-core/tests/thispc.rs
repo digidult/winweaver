@@ -294,6 +294,39 @@ fn the_forms_take_what_a_profile_can_hold() {
 }
 
 #[test]
+fn accounts_outside_the_two_groups_are_left_out_and_a_failure_is_told() {
+    let catalog = Catalog::embedded().unwrap();
+    let info = SystemInfo {
+        accounts: vec![
+            ReadAccount {
+                name: "Admin".into(),
+                group: "Administrators".into(),
+                ..ReadAccount::default()
+            },
+            ReadAccount {
+                name: "Service".into(),
+                ..ReadAccount::default()
+            },
+        ],
+        ..SystemInfo::default()
+    };
+    let (p, _) = thispc::capture(&catalog, &office(), &[], Some(&info));
+    let names: Vec<&str> = p.accounts.iter().map(|a| a.name.as_str()).collect();
+    assert_eq!(names, ["Admin"]);
+    let failed = SystemInfo {
+        accounts_error: "error 5".into(),
+        ..SystemInfo::default()
+    };
+    let (p, summary) = thispc::capture(&catalog, &office(), &[], Some(&failed));
+    assert_eq!(p.accounts, office().accounts);
+    assert!(
+        summary.notes.iter().any(|n| n.contains("error 5")),
+        "{:?}",
+        summary.notes
+    );
+}
+
+#[test]
 fn a_report_of_the_audit_script_is_judged_like_a_native_read() {
     let catalog = Catalog::embedded().unwrap();
     let ids = vec![
