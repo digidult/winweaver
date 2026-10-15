@@ -3421,9 +3421,7 @@ impl eframe::App for App {
             let panel = &mut self.mcp;
             let search = &self.mcp_search;
             let p = style::palette(ui);
-            let settings_frame = egui::Frame::new()
-                .fill(p.bg)
-                .inner_margin(egui::Margin::symmetric(18, 12));
+            let settings_frame = egui::Frame::new().fill(p.bg);
             if panel.run.is_some() {
                 let max = (ui.available_height() - 120.0).max(160.0);
                 egui::Panel::top("mcp-settings")
@@ -3916,7 +3914,11 @@ mod tests {
             Act::Select(Sel::Rule("defender.pua".to_owned())),
         ]);
         shot(&mut harness, "02-rule");
-        harness.state_mut().apply(vec![Act::Check]);
+        harness.state_mut().apply(vec![
+            Act::ToggleBookmark,
+            Act::SetMarkComment(0, "Ask the customer about the Audit mode".into()),
+            Act::Check,
+        ]);
         shot(&mut harness, "03-checked");
         harness.state_mut().apply(vec![Act::CompareWith("Strict")]);
         if let Some(key) = first_rule_key(harness.state()) {
@@ -3930,6 +3932,9 @@ mod tests {
             (Act::OpenGuide, "08-guide"),
         ] {
             harness.state_mut().apply(vec![act]);
+            if name == "07-bookmarks" {
+                harness.state_mut().apply(vec![Act::MarkSelect(0)]);
+            }
             shot(&mut harness, name);
         }
         harness

@@ -57,9 +57,23 @@ fn masked(token: &str) -> String {
 }
 
 pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
-    ui.heading(tr("MCP server"));
-    ui.weak(tr("AI agents read and, when the mode allows, edit profiles through this server. It has its own workspace of profiles and never applies settings to this PC."));
-    ui.add_space(8.0);
+    crate::views::header(ui, |ui| {
+        ui.label(style::strong(ui, tr("MCP server"), 18.0));
+        ui.label(style::muted(ui, tr("AI agents read and, when the mode allows, edit profiles through this server. It has its own workspace of profiles and never applies settings to this PC."), 12.0));
+    });
+    crate::views::block(ui, |ui| server_card(ui, panel, acts));
+    if panel.run.is_some() {
+        crate::views::block(ui, |ui| workspace_card(ui, panel, acts));
+    }
+    ui.add_space(12.0);
+    ui.ctx()
+        .request_repaint_after(std::time::Duration::from_secs(1));
+}
+
+/// The server: its state, port, mode, the read of this PC, the token and the configurations.
+fn server_card(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
+    style::section_title(ui, tr("Server"));
+    ui.add_space(4.0);
     let running = panel.run.is_some();
     egui::Grid::new("mcp-grid")
         .num_columns(2)
@@ -174,11 +188,15 @@ pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
         ui.colored_label(ui.visuals().warn_fg_color, &panel.error);
     }
     ui.weak(tr("The copied configuration holds the token; the clipboard history of Windows keeps what is copied."));
+}
+
+/// The documents of the workspace of the running server.
+fn workspace_card(ui: &mut egui::Ui, panel: &McpPanel, acts: &mut Vec<Act>) {
     let Some(run) = &panel.run else {
         return;
     };
-    ui.add_space(10.0);
-    ui.strong(tr("Workspace of the server"));
+    style::section_title(ui, tr("Workspace of the server"));
+    ui.add_space(4.0);
     for (name, dirty, file) in run.server.workspace() {
         ui.horizontal(|ui| {
             ui.label(&name);
@@ -193,8 +211,6 @@ pub fn mcp_view(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
             }
         });
     }
-    ui.ctx()
-        .request_repaint_after(std::time::Duration::from_secs(1));
 }
 
 /// The journal of the running server, the newest call first, as the search of the tab filters it.

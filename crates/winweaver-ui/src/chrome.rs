@@ -236,10 +236,7 @@ impl App {
 
     /// Whether the active tab has commands in the command bar.
     pub(crate) fn has_tools(&self) -> bool {
-        !matches!(
-            self.docs.get(self.active),
-            Some(Doc::Settings) | Some(Doc::Mcp)
-        )
+        !matches!(self.docs.get(self.active), Some(Doc::Settings))
     }
 
     /// The command bar of the active tab; `compact` draws the icons alone.
@@ -327,6 +324,15 @@ impl App {
             Some(Doc::Markdown(_)) | Some(Doc::Bookmarks) => {
                 if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
                     acts.push(Act::Open);
+                }
+            }
+            Some(Doc::Mcp) => {
+                let running = self.mcp.run.is_some();
+                if tool(ui, "\u{25B6}", tr("Start"), "", !running) {
+                    acts.push(Act::McpStart);
+                }
+                if tool(ui, "\u{25A0}", tr("Stop"), "", running) {
+                    acts.push(Act::McpStop);
                 }
             }
             Some(Doc::Theme(_)) => {

@@ -407,5 +407,6 @@
   "Fonts of the theme {name}": "Шрифти теми {name}",
   "no policies": "політик немає",
   "Policy templates (opened without importing)": "Шаблони політик (відкриваються без імпорту)",
-  "The other parts of the path": "Інші частини шляху"
+  "The other parts of the path": "Інші частини шляху",
+  "Server": "Сервер"
 }
