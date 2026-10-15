@@ -422,7 +422,7 @@ pub(crate) fn id_line(ui: &mut egui::Ui, id: &str) {
     let p = style::palette(ui);
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 2.0;
-        ui.add(egui::Label::new(RichText::new(id).font(style::mono(ui, 12.0)).color(p.muted)).selectable(true));
+        style::copy_label(ui, RichText::new(id).font(style::mono(ui, 12.0)).color(p.muted), false);
         if style::icon_button(ui, "\u{1F4CB}", tr("Copy the id"), true, None).clicked() {
             ui.ctx().copy_text(id.to_owned());
         }
@@ -675,7 +675,7 @@ fn writes(ui: &mut egui::Ui, rule: &Rule) {
                 if muted {
                     rich = rich.color(p.muted);
                 }
-                ui.add(egui::Label::new(rich).wrap().selectable(true));
+                style::copy_label(ui, rich, true);
             });
         };
         egui::Grid::new(("writes", rule.id.as_str()))
@@ -697,11 +697,7 @@ fn writes(ui: &mut egui::Ui, rule: &Rule) {
     }
     for line in others {
         ui.add_space(4.0);
-        ui.add(
-            egui::Label::new(RichText::new(line).font(style::mono(ui, 12.0)))
-                .wrap()
-                .selectable(true),
-        );
+        style::copy_label(ui, RichText::new(line).font(style::mono(ui, 12.0)), true);
     }
 }
 

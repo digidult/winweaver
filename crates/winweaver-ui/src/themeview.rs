@@ -232,12 +232,10 @@ pub fn theme_view(
                                 theme.colors.insert(name.to_owned(), themes::color_text(c));
                                 changed = true;
                             }
-                            ui.add(
-                                egui::Label::new(
-                                    egui::RichText::new(themes::color_text(c))
-                                        .font(style::mono(ui, 12.0)),
-                                )
-                                .selectable(true),
+                            style::copy_label(
+                                ui,
+                                egui::RichText::new(themes::color_text(c)).font(style::mono(ui, 12.0)),
+                                false,
                             );
                             if theme.colors.contains_key(name) {
                                 if ui

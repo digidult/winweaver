@@ -755,6 +755,23 @@ pub fn selectable_text(ui: &mut egui::Ui, id: impl std::hash::Hash + std::fmt::D
     });
 }
 
+/// A text that can be selected with the mouse, with a menu on the right button that copies it.
+pub fn copy_label(ui: &mut egui::Ui, text: RichText, wrap: bool) -> egui::Response {
+    let plain = text.text().to_owned();
+    let mut label = egui::Label::new(text).selectable(true);
+    if wrap {
+        label = label.wrap();
+    }
+    let response = ui.add(label);
+    response.context_menu(|ui| {
+        if ui.button(crate::i18n::tr("Copy")).clicked() {
+            ui.ctx().copy_text(plain.clone());
+            ui.close();
+        }
+    });
+    response
+}
+
 /// Muted text of a size.
 pub fn muted(ui: &egui::Ui, text: impl Into<String>, at: f32) -> RichText {
     RichText::new(text).size(size(ui, at)).color(palette(ui).muted)
