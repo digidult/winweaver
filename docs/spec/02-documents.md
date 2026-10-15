@@ -75,12 +75,15 @@ unknown extension, by its content.
   "other": { "name": "Strict", "path": "profiles/strict.wwprofile", "modified": "..." },
   "rules": { "asr.usb-untrusted": { "base": { "on": false }, "other": { "on": true } } },
   "install": { "key_mode": { "base": "generic", "other": "ask" } },
-  "accounts": { }, "languages": { }
+  "accounts": { }, "languages": { },
+  "comments": { "rule:asr.usb-untrusted": "Strict blocks USB sticks\nask the customer first" }
 }
 ```
 
 A diff applied to a profile sets the `other` side of every entry; the resolver then disables what the new
-states make impossible and the message bar lists it.
+states make impossible and the message bar lists it. One item can be applied alone. `comments` keeps an
+optional comment of several lines by the key of an item: `rule:<id>`, `install:<field>`,
+`languages:<field>` or `accounts`.
 
 ## 5. Catalog file
 
@@ -97,8 +100,7 @@ Plain, gzip or xz; the compression is detected by the first bytes.
   "format": "winweaver-bookmarks",
   "version": 1,
   "items": [
-    { "document": "profile", "path": "profiles/office.wwprofile", "item": "defender.pua", "comment": "Ask the customer about Audit mode
-and note the answer", "created": "..." }
+    { "document": "profile", "path": "profiles/office.wwprofile", "item": "defender.pua", "comment": "Ask the customer about Audit mode\nand note the answer", "created": "..." }
   ]
 }
 ```
