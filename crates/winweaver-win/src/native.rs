@@ -380,9 +380,28 @@ impl Machine for NativeMachine {
         ) {
             Ok(Some(RegData::Multi(tags))) => tags
                 .into_iter()
-                .map(|tag| InputLanguage {
-                    tag,
-                    tips: Vec::new(),
+                .map(|tag| {
+                    // The layouts of a language are the values named like 0422:00020422 of its
+                    // key, as Get-WinUserLanguageList lists them in InputMethodTips.
+                    let mut tips: Vec<(i64, String)> = self
+                        .values(&format!(
+                            "HKCU:\\Control Panel\\International\\User Profile\\{tag}"
+                        ))
+                        .ok()
+                        .flatten()
+                        .unwrap_or_default()
+                        .into_iter()
+                        .filter(|(name, _)| name.contains(':'))
+                        .map(|(name, data)| match data {
+                            RegData::Dword(order) => (i64::from(order), name),
+                            _ => (i64::MAX, name),
+                        })
+                        .collect();
+                    tips.sort();
+                    InputLanguage {
+                        tag,
+                        tips: tips.into_iter().map(|(_, name)| name).collect(),
+                    }
                 })
                 .collect(),
             _ => Vec::new(),

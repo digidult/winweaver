@@ -305,9 +305,29 @@ pub fn plan(catalog: &Catalog, profile: &Profile, rule_ids: &[String]) -> Plan {
         }
         out.rules.push(rule.id.clone());
         let params = render::params_of(catalog, profile, rule);
-        for action in &rule.actions {
-            out.checks.extend(checks_of(rule, action, &params));
-        }
+        let mut checks: Vec<Check> = rule
+            .actions
+            .iter()
+            .flat_map(|action| checks_of(rule, action, &params))
+            .collect();
+        // Of the actions of a rule on one value (a removal for a clean start, then the value)
+        // only the last is what the rule leaves, so only the last is checked.
+        let value_of = |c: &Check| match &c.probe {
+            Probe::Reg { path, name, .. } | Probe::RegAbsent { path, name, .. } => {
+                Some((path.to_lowercase(), name.to_lowercase()))
+            }
+            _ => None,
+        };
+        let values: Vec<Option<(String, String)>> = checks.iter().map(value_of).collect();
+        let mut k = 0;
+        checks.retain(|_| {
+            let i = k;
+            k += 1;
+            values[i]
+                .as_ref()
+                .is_none_or(|v| !values[i + 1..].iter().any(|w| w.as_ref() == Some(v)))
+        });
+        out.checks.extend(checks);
     }
     out
 }
@@ -769,6 +789,8 @@ pub struct Reading {
     pub ok: usize,
     pub differs: usize,
     pub unknown: usize,
+    /// The checks that differ: what was read where, and what the rule wants.
+    pub differing: Vec<String>,
 }
 
 /// The value read for a parameter, when it is one the parameter accepts.
@@ -861,6 +883,7 @@ pub fn judge(catalog: &Catalog, plan: &Plan, results: &[CheckResult]) -> Vec<Rea
             ok: 0,
             differs: 0,
             unknown: 0,
+            differing: Vec::new(),
         };
         let mut any_evidence = false;
         let mut ok_evidence = 0;
@@ -888,7 +911,18 @@ pub fn judge(catalog: &Catalog, plan: &Plan, results: &[CheckResult]) -> Vec<Rea
                         ok_evidence += 1;
                     }
                 }
-                Status::Differs => reading.differs += 1,
+                Status::Differs => {
+                    reading.differs += 1;
+                    let current = if res.current.is_empty() {
+                        "(absent)"
+                    } else {
+                        res.current.as_str()
+                    };
+                    reading.differing.push(format!(
+                        "{} = {current}, the rule wants {}",
+                        res.check, res.expected
+                    ));
+                }
                 Status::Unknown => reading.unknown += 1,
             }
         }
@@ -916,6 +950,9 @@ pub struct CaptureSummary {
     pub counts: IndexMap<&'static str, usize>,
     pub forms: Vec<String>,
     pub notes: Vec<String>,
+    /// The rules partly in effect, with what differs: a rule that was applied and of which
+    /// Windows or another program changed a value since.
+    pub partly: Vec<(String, Vec<String>)>,
 }
 
 impl CaptureSummary {
@@ -974,7 +1011,13 @@ pub fn capture(
                     }
                 }
             }
-            Verdict::Partly | Verdict::NotInEffect => profile.set_on(&reading.rule, false),
+            Verdict::Partly => {
+                profile.set_on(&reading.rule, false);
+                summary
+                    .partly
+                    .push((reading.rule.clone(), reading.differing.clone()));
+            }
+            Verdict::NotInEffect => profile.set_on(&reading.rule, false),
             Verdict::NotReadable | Verdict::AsDefault => {}
         }
     }
@@ -1022,18 +1065,15 @@ fn capture_forms(profile: &mut Profile, info: &SystemInfo, summary: &mut Capture
             summary.forms.push(format!("{what} {value}"));
         }
     }
-    let known: Vec<String> = info
-        .input
-        .iter()
-        .map(|i| i.tag.clone())
-        .filter(|t| resources::keyboard(t).is_some())
-        .collect();
-    let unknown: Vec<&str> = info
-        .input
-        .iter()
-        .map(|i| i.tag.as_str())
-        .filter(|t| resources::keyboard(t).is_none())
-        .collect();
+    let mut known: Vec<String> = Vec::new();
+    let mut unknown: Vec<&str> = Vec::new();
+    for language in &info.input {
+        match resources::keyboard_of_read(&language.tag, &language.tips) {
+            Some(k) if !known.contains(&k.tag) => known.push(k.tag.clone()),
+            Some(_) => {}
+            None => unknown.push(language.tag.as_str()),
+        }
+    }
     if !unknown.is_empty() {
         summary.notes.push(format!(
             "input languages the catalog has no layout for were left out: {}",

@@ -50,6 +50,7 @@
         {
           "type": "ps",
           "script": [
+            "$optOut = (Get-ItemProperty -LiteralPath 'HKCU:\\Control Panel\\International\\User Profile' -Name HttpAcceptLanguageOptOut -ErrorAction SilentlyContinue).HttpAcceptLanguageOptOut",
             "$done = $false",
             "try {",
             "    $list = New-WinUserLanguageList $InputLanguages[0]",
@@ -71,6 +72,12 @@
             "        Set-WinUserLanguageList -LanguageList $list -Force 3>$null",
             "        Write-Log ('fallback applied: ' + ($InputFallback -join ', '))",
             "    } catch { Write-Log \"fallback failed: $($_.Exception.Message)\" }",
+            "}",
+            "if ($optOut -eq 1) {",
+            "    try {",
+            "        Set-WinAcceptLanguageFromLanguageListOptOut -OptOut $true",
+            "        Write-Log 'the opt-out of the Accept-Language list from the default profile is kept'",
+            "    } catch { Write-Log \"the opt-out of the Accept-Language list was not kept: $($_.Exception.Message)\" }",
             "}"
           ]
         }

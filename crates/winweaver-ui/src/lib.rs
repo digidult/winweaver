@@ -1424,15 +1424,7 @@ impl App {
         let readings = thispc::judge(&self.catalog, &plan, &report.results);
         let (mut profile, summary) =
             thispc::capture(&self.catalog, &base, &readings, report.system.as_ref());
-        let mut issues: Vec<Issue> = summary
-            .notes
-            .iter()
-            .map(|n| Issue {
-                severity: Severity::Info,
-                target: Target::Profile,
-                text: trf("This PC: {n}", &[("n", &n)]),
-            })
-            .collect();
+        let mut issues = capture_issues(&summary);
         if !plan.excluded.is_empty() {
             issues.push(Issue {
                 severity: Severity::Info,
@@ -1633,6 +1625,7 @@ impl App {
         };
         let mut doc = ProfileDoc::new(profile, None, &self.catalog);
         doc.dirty = true;
+        doc.issues = capture_issues(&summary);
         self.docs.push(Doc::Profile(Box::new(doc)));
         self.active = self.docs.len() - 1;
         self.status = format!("Read the report {}: {}", path.display(), summary.line());
@@ -3584,6 +3577,41 @@ fn list_split(ui: &egui::Ui) -> (f32, std::ops::RangeInclusive<f32>) {
     let width = ui.available_width();
     let max = (width - 300.0).max(320.0);
     ((width * 0.55).clamp(320.0, max), 320.0..=max)
+}
+
+/// The messages of a read of this PC or of a report: its notes, and every rule partly in effect
+/// with the values that differ, so a value Windows or a program changed after the installation
+/// shows where it is.
+fn capture_issues(summary: &thispc::CaptureSummary) -> Vec<Issue> {
+    let mut issues: Vec<Issue> = summary
+        .notes
+        .iter()
+        .map(|n| Issue {
+            severity: Severity::Info,
+            target: Target::Profile,
+            text: trf("This PC: {n}", &[("n", &n)]),
+        })
+        .collect();
+    for (rule, differing) in &summary.partly {
+        let mut what = differing
+            .iter()
+            .take(3)
+            .cloned()
+            .collect::<Vec<_>>()
+            .join("; ");
+        if differing.len() > 3 {
+            what.push_str(&format!("; +{}", differing.len() - 3));
+        }
+        issues.push(Issue {
+            severity: Severity::Warning,
+            target: Target::Rule(rule.clone()),
+            text: trf(
+                "This PC: partly in effect, so read as off: {what}",
+                &[("what", &what)],
+            ),
+        });
+    }
+    issues
 }
 
 /// What a profile tab selects for an item of a diff ([`Diff::keys`]).

@@ -186,6 +186,13 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   sign-in screen (`HKU:\.DEFAULT`). The audit script and the native read produce the same checks in the same
   order, so a report of the script on another PC pairs with the plan (rule by rule, check by check).
 - Features and capabilities are not read natively yet (they need DISM); the audit script reads them.
+- Input languages are read as Windows lists them: it shortens a tag whose region is the main one of its
+  language (`uk` for `uk-UA`), so `resources::keyboard_of_read` maps a tag without a region to the
+  keyboards of its language and picks the one whose layout is among the input method tips (the values
+  named like `0422:00020422` of `User Profile\<tag>`, the `InputMethodTips` of the audit script).
+- Of the actions of one rule on one value (a removal for a clean start, then the value) only the last is
+  checked (`thispc::plan`). A rule partly in effect is read as off, and the read names what differs
+  (`Reading::differing`, `CaptureSummary::partly`, a warning on the rule in the message bar).
 - The local accounts are read natively the way the audit script reads them: `NetUserEnum` (level 20, normal
   accounts) without the disabled ones and the relative ids 500, 501, 503 and 504; the group is Administrators
   or Users by direct membership (`NetUserGetLocalGroups`) in the groups S-1-5-32-544 and S-1-5-32-545, whose
