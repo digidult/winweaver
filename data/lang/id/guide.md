@@ -67,12 +67,32 @@ Buka menerima profil (`.wwprofile`), perbandingan (`.wwdiff`), file penanda (`.w
 file jawaban yang dibuat oleh WinWeaver atau WinKickOff (profil yang tersemat di dalamnya), profil WinKickOff,
 dan laporan audit (`.json`).
 
+## Templat kebijakan
+
+**Pengaturan, Templat kebijakan** mengimpor templat ADMX Windows ini, sebuah folder, atau file katalog;
+kebijakannya menjadi aturan di bawah Kebijakan standar, dan impor disimpan di `imports/`. Hanya impor
+yang dicentang yang dibaca dan dimuat; yang lain tidak memakai memori. Profil dapat memuat opsi dari
+impor yang tidak dimuat: opsi tetap di profil tanpa perubahan, tercantum di **Opsi tidak dikenal** di akhir
+pohon, dan tidak disertakan dalam pembuatan, dengan peringatan saat profil dibuka dan saat file jawaban
+dibuat. **Muat katalog** di grup itu menemukan impor yang memuatnya dan hanya memuat impor tersebut.
+Sebuah pengaturan (Umum, Jendela) menyembunyikan grup itu.
+
 ## Server MCP
 
 **Menu, Server MCP** membuka tab server yang digunakan agen AI untuk membaca profil dan, bila mode
 mengizinkan, mengubahnya. Server dimulai dalam mode baca (read); mode edit memungkinkannya mengubah profil
 di memori, mode file (files) memungkinkannya menyimpan profil dan menulis file jawaban. Membaca PC ini
 memerlukan izin tersendiri, yang nonaktif setiap kali program dimulai.
+
+## Perender
+
+Jendela digambar dengan OpenGL atau DirectX 12. **Otomatis** (Pengaturan, Umum, Jendela) mencoba OpenGL
+lebih dulu, yang memakai lebih sedikit memori, lalu beralih ke DirectX 12 bila OpenGL tidak berjalan: di
+mesin virtual tanpa akselerasi 3D, di instalasi baru tanpa driver kartu grafis, di beberapa sesi jarak
+jauh. DirectX 12 juga menggambar di sana, dengan rasterizer perangkat lunak Windows. Jika jendela tampil
+salah dengan OpenGL (driver lama), pilih DirectX 12. Perubahan berlaku pada start berikutnya;
+`winweaver.exe --renderer directx` (atau `opengl`, `auto`) memilih hanya untuk satu start. Log di `logs/`
+menyebutkan apa yang dipakai jendela untuk menggambar.
 
 ## Keyboard
 
@@ -98,5 +118,4 @@ ditulis di tempat lain.
 
 ## Belum tersedia
 
-Penerapan pengaturan ke PC ini langsung dari program (sementara itu gunakan skrip penerapan) dan impor
-templat kebijakan (ADMX) akan hadir di versi berikutnya.
+Membaca fitur dan kemampuan Windows langsung dari program: sementara ini skrip audit yang membacanya.

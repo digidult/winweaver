@@ -72,12 +72,33 @@ Abrir acepta perfiles (`.wwprofile`), comparaciones (`.wwdiff`), archivos de mar
 páginas Markdown, archivos de respuesta generados por WinWeaver o WinKickOff (el perfil que incluyen),
 perfiles de WinKickOff e informes de auditoría (`.json`).
 
+## Plantillas de directivas
+
+**Configuración, Plantillas de directivas** importa las plantillas ADMX de este Windows, de una carpeta o
+de un archivo de catálogo; sus directivas se convierten en reglas dentro de Directivas estándar, y las
+importaciones se guardan en `imports/`. Solo se leen y cargan las importaciones marcadas; las demás no
+ocupan memoria. Un perfil puede tener opciones de una importación que no está cargada: se conservan sin
+cambios en el perfil, aparecen en **Opciones desconocidas** al final del árbol y quedan fuera de la
+generación, con un aviso al abrir el perfil y al generar el archivo de respuesta. **Cargar catálogos** en
+ese grupo encuentra las importaciones que las contienen y carga solo esas. Un ajuste (General, Ventana)
+oculta el grupo.
+
 ## El servidor MCP
 
 **Menú, Servidor MCP** abre la pestaña del servidor a través del cual los agentes de IA leen perfiles y,
 cuando el modo lo permite, los cambian. El servidor se inicia en el modo lectura; edición le permite
 cambiar perfiles en memoria y archivos le permite guardarlos y escribir el archivo de respuesta. Leer este
 equipo requiere un permiso propio, que está desactivado en cada inicio.
+
+## El renderizador
+
+La ventana dibuja con OpenGL o con DirectX 12. **Automático** (Configuración, General, Ventana) prueba
+primero OpenGL, que ocupa menos memoria, y pasa a DirectX 12 cuando OpenGL no se inicia: en una máquina
+virtual sin aceleración 3D, en una instalación nueva sin el controlador de la tarjeta gráfica, en algunas
+sesiones remotas. DirectX 12 también dibuja allí, con el rasterizador por software de Windows. Si la
+ventana se dibuja mal con OpenGL (un controlador antiguo), elija DirectX 12. Un cambio se aplica en el
+siguiente inicio; `winweaver.exe --renderer directx` (o `opengl`, `auto`) elige solo para un inicio. El
+registro de `logs/` indica con qué dibuja la ventana.
 
 ## Teclado
 
@@ -103,5 +124,5 @@ escribe nada en ningún otro sitio.
 
 ## Todavía no disponible
 
-La aplicación de la configuración a este equipo directamente desde el programa (mientras tanto, usa el
-script de aplicación) y la importación de plantillas de directivas (ADMX) llegarán en las próximas versiones.
+Leer las características y funcionalidades de Windows directamente desde el programa: mientras tanto las
+lee el script de auditoría.

@@ -428,5 +428,10 @@
   "These options of the profile belong to catalogs of policy templates that are not loaded. They stay in the profile unchanged and are left out of the build. Load catalogs looks for them in the imported catalogs that are not loaded and loads only the ones that have them.": "Queste opzioni del profilo appartengono a cataloghi di modelli di criteri non caricati. Restano invariate nel profilo e sono escluse dalla generazione. Carica cataloghi le cerca nei cataloghi importati non caricati e carica solo quelli che le contengono.",
   "Options": "Opzioni",
   "Unknown option": "Opzione sconosciuta",
-  "This option belongs to a catalog of policy templates that is not loaded. It stays in the profile unchanged and is left out of the build.": "Questa opzione appartiene a un catalogo di modelli di criteri non caricato. Resta invariata nel profilo ed è esclusa dalla generazione."
+  "This option belongs to a catalog of policy templates that is not loaded. It stays in the profile unchanged and is left out of the build.": "Questa opzione appartiene a un catalogo di modelli di criteri non caricato. Resta invariata nel profilo ed è esclusa dalla generazione.",
+  "Renderer": "Renderer",
+  "Automatic": "Automatico",
+  "A change takes effect at the next start. Automatic tries {order} in this order and takes the first that starts; OpenGL takes less memory, DirectX 12 also draws without a driver of the graphics card.": "Una modifica vale dall'avvio successivo. Automatico prova {order} in quest'ordine e usa il primo che si avvia; OpenGL occupa meno memoria, DirectX 12 disegna anche senza il driver della scheda grafica.",
+  "Draws now with {graphics}": "Ora disegna con {graphics}",
+  "{failed}; the window draws with {renderer}": "{failed}; la finestra disegna con {renderer}"
 }

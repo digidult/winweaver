@@ -70,12 +70,32 @@ Aç komutu; profilleri (`.wwprofile`), karşılaştırmaları (`.wwdiff`), yer i
 (`.wwmarks`), Markdown sayfalarını, WinWeaver veya WinKickOff tarafından oluşturulan yanıt dosyalarını
 (içerdikleri profil), WinKickOff profillerini ve denetim raporlarını (`.json`) kabul eder.
 
+## İlke şablonları
+
+**Ayarlar, İlke şablonları** bu Windows'un, bir klasörün veya bir katalog dosyasının ADMX şablonlarını
+içeri aktarır; ilkeleri Standart ilkeler altında kurallara dönüşür ve içeri aktarımlar `imports/` içinde
+saklanır. Yalnızca işaretli içeri aktarımlar okunur ve yüklenir; diğerleri bellek kullanmaz. Bir profil,
+yüklenmemiş bir içeri aktarımın seçeneklerini içerebilir: bunlar profilde değişmeden kalır, ağacın
+sonunda **Bilinmeyen seçenekler** altında listelenir ve oluşturmaya alınmaz; profil açılırken ve yanıt
+dosyası oluşturulurken bir uyarı verilir. Bu gruptaki **Katalogları yükle**, onları içeren içeri
+aktarımları bulur ve yalnızca bunları yükler. Bir ayar (Genel, Pencere) grubu gizler.
+
 ## MCP sunucusu
 
 **Menü, MCP sunucusu**, yapay zeka aracılarının profilleri okuduğu ve mod izin verdiğinde değiştirdiği
 sunucunun sekmesini açar. Sunucu okuma modunda başlar; düzenleme modu profilleri bellekte değiştirmesine,
 dosyalar modu ise profilleri kaydetmesine ve yanıt dosyasını yazmasına izin verir. Bu bilgisayarı okumak,
 her başlangıçta kapalı olan ayrı bir izin gerektirir.
+
+## Oluşturucu
+
+Pencere OpenGL veya DirectX 12 ile çizilir. **Otomatik** (Ayarlar, Genel, Pencere) önce daha az bellek
+kullanan OpenGL'i dener, OpenGL başlamazsa DirectX 12'ye geçer: 3D hızlandırması olmayan bir sanal
+makinede, ekran kartı sürücüsü olmayan yeni bir kurulumda, bazı uzak oturumlarda. DirectX 12 orada da
+Windows'un yazılım rasterleştiricisiyle çizer. Pencere OpenGL ile hatalı çiziliyorsa (eski bir sürücü),
+DirectX 12'yi seçin. Bir değişiklik sonraki başlatmada geçerli olur; `winweaver.exe --renderer directx`
+(veya `opengl`, `auto`) yalnızca bir başlatma için seçer. `logs/` içindeki günlük, pencerenin neyle
+çizildiğini belirtir.
 
 ## Klavye
 
@@ -101,5 +121,4 @@ kaydedilmemiş değişiklikler), `logs/` (programın yaptıkları), `bookmarks.w
 
 ## Henüz yok
 
-Ayarları doğrudan programdan bu bilgisayara uygulamak (bu arada uygulama betiğini kullanın) ve ilke
-şablonlarını (ADMX) içeri aktarmak sonraki sürümlerle gelecek.
+Windows özelliklerini ve yeteneklerini doğrudan programdan okuma: o zamana kadar denetim betiği okur.

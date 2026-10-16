@@ -14,12 +14,16 @@ use winweaver_core::i18n::CatalogTexts;
 const USAGE: &str = "WinWeaver
 
   winweaver                   open the window
+  winweaver --renderer auto|opengl|directx
+                              open the window, trying that renderer first (this start only)
   winweaver --version         print the version
   winweaver --check-catalog   load the embedded catalog and report its problems
   winweaver --mcp stdio [--mode read|edit|files] [--read-pc] [--profile NAME]
                               serve MCP on standard input and output
   winweaver --mcp http --token TOKEN [--port N] [--mode ...] [--read-pc] [--profile NAME]
                               serve MCP on http://127.0.0.1:N/mcp (port 8765 by default)
+  winweaver --smoke-window [--renderer ...]
+                              open a small window, draw two frames, print what drew them
   winweaver --help            this text";
 
 /// Attaches to the console of the parent process, so that a release build prints in it.
@@ -218,18 +222,21 @@ fn main() -> ExitCode {
     let headless = args.first().map(String::as_str) == Some("--mcp");
     winweaver_mcp::log::init(&winweaver_ui::exe_dir().join("logs"), headless);
     match args.first().map(String::as_str) {
-        None => match winweaver_ui::run() {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(e) => {
-                eprintln!("{e}");
-                winweaver_mcp::log::window_line("ERROR", &format!("the window failed: {e}"));
-                ExitCode::FAILURE
+        None => window(None),
+        Some(a) if a == "--renderer" || a.starts_with("--renderer=") => {
+            match option(&args, "--renderer") {
+                Some(name) if args.len() <= 2 => window(Some(&name)),
+                _ => {
+                    attach_console();
+                    eprintln!("--renderer needs a name: auto, opengl or directx\n{USAGE}");
+                    ExitCode::from(2)
+                }
             }
-        },
+        }
         Some("--mcp") => mcp(&args[1..]),
         Some("--smoke-window") => {
             attach_console();
-            match winweaver_ui::smoke_window() {
+            match winweaver_ui::smoke_window(option(&args, "--renderer").as_deref()) {
                 Ok(info) => {
                     println!("the window started: {info}");
                     ExitCode::SUCCESS
@@ -258,6 +265,19 @@ fn main() -> ExitCode {
         Some(other) => {
             eprintln!("unknown argument {other}\n{USAGE}");
             ExitCode::from(2)
+        }
+    }
+}
+
+/// Opens the window; its failure goes to the log, and to the console of the parent if there is one.
+fn window(renderer: Option<&str>) -> ExitCode {
+    match winweaver_ui::run(renderer) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            attach_console();
+            eprintln!("{e}");
+            winweaver_mcp::log::window_line("ERROR", &format!("the window failed: {e}"));
+            ExitCode::FAILURE
         }
     }
 }

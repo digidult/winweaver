@@ -75,12 +75,33 @@ lässt.
 Markdown-Seiten, von WinWeaver oder WinKickOff erstellte Antwortdateien (das darin eingebettete Profil),
 WinKickOff-Profile und Prüfberichte (`.json`).
 
+## Richtlinienvorlagen
+
+**Einstellungen, Richtlinienvorlagen** importiert die ADMX-Vorlagen dieses Windows, eines Ordners oder
+einer Katalogdatei; ihre Richtlinien werden zu Regeln unter Standardrichtlinien, und die Importe liegen in
+`imports/`. Nur die markierten Importe werden gelesen und geladen; die anderen belegen keinen Speicher.
+Ein Profil kann Optionen eines Imports enthalten, der nicht geladen ist: Sie bleiben unverändert im
+Profil, stehen unter **Unbekannte Optionen** am Ende der Struktur und werden beim Erstellen ausgelassen,
+mit einer Warnung beim Öffnen des Profils und beim Erstellen der Antwortdatei. **Kataloge laden** in
+dieser Gruppe findet die Importe, die sie enthalten, und lädt nur diese. Eine Einstellung (Allgemein,
+Fenster) blendet die Gruppe aus.
+
 ## Der MCP-Server
 
 **Menü, MCP-Server** öffnet die Registerkarte des Servers, über den KI-Agents Profile lesen und, wenn der
 Modus es zulässt, ändern. Der Server startet im Modus „Lesen“; „Bearbeiten“ erlaubt ihm, Profile im
 Arbeitsspeicher zu ändern, „Dateien“ erlaubt ihm, sie zu speichern und die Antwortdatei zu schreiben. Das
 Einlesen dieses PCs erfordert eine eigene Berechtigung, die bei jedem Start ausgeschaltet ist.
+
+## Der Renderer
+
+Das Fenster zeichnet mit OpenGL oder mit DirectX 12. **Automatisch** (Einstellungen, Allgemein, Fenster)
+versucht zuerst OpenGL, das weniger Speicher braucht, und wechselt zu DirectX 12, wenn OpenGL nicht
+startet: in einer virtuellen Maschine ohne 3D-Beschleunigung, in einer frischen Installation ohne Treiber
+der Grafikkarte, in manchen Remotesitzungen. DirectX 12 zeichnet auch dort, mit dem Software-Rasterizer
+von Windows. Zeichnet das Fenster mit OpenGL fehlerhaft (ein alter Treiber), wählen Sie DirectX 12. Eine
+Änderung gilt ab dem nächsten Start; `winweaver.exe --renderer directx` (oder `opengl`, `auto`) wählt nur
+für einen Start. Das Protokoll in `logs/` nennt, womit das Fenster zeichnet.
 
 ## Tastatur
 
@@ -106,5 +127,5 @@ Einlesen dieses PCs erfordert eine eigene Berechtigung, die bei jedem Start ausg
 
 ## Noch nicht verfügbar
 
-Das direkte Anwenden von Einstellungen auf diesen PC aus dem Programm (verwenden Sie bis dahin das
-Anwendungsskript) und der Import von Richtlinienvorlagen (ADMX) folgen in den nächsten Versionen.
+Das Lesen der Features und Funktionen von Windows direkt im Programm: Bis dahin liest sie das
+Auditskript.

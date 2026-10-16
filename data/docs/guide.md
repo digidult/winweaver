@@ -67,12 +67,32 @@ Open accepts profiles (`.wwprofile`), diffs (`.wwdiff`), bookmark files (`.wwmar
 answer files built by WinWeaver or WinKickOff (the profile they embed), WinKickOff profiles and audit
 reports (`.json`).
 
+## Policy templates
+
+**Settings, Policy templates** imports the ADMX templates of this Windows, of a folder or a catalog file;
+their policies become rules under Standard policies, and the imports are kept in `imports/`. Only the
+checked imports are read and loaded; the others take no memory. A profile can hold options of an import
+that is not loaded: they stay in the profile unchanged, are listed under **Unknown options** at the end of
+the tree and are left out of the build, with a warning when the profile opens and when the answer file is
+built. **Load catalogs** in that group finds the imports that hold them and loads only those. A setting
+(General, Window) hides the group.
+
 ## The MCP server
 
 **Menu, MCP server** opens the tab of the server through which AI agents read profiles and, when the
 mode allows, change them. The server starts in the mode read; edit lets it change profiles in memory,
 files lets it save them and write the answer file. Reading this PC needs its own permission, which is
 off at every start.
+
+## The renderer
+
+The window draws with OpenGL or with DirectX 12. **Automatic** (Settings, General, Window) tries OpenGL
+first, which takes less memory, and switches to DirectX 12 when OpenGL does not start: in a virtual
+machine without 3D acceleration, on a fresh installation without the driver of the graphics card, in
+some remote sessions. DirectX 12 draws there too, on the software rasterizer of Windows. If the window
+draws wrongly with OpenGL (an old driver), choose DirectX 12. A change takes effect at the next start;
+`winweaver.exe --renderer directx` (or `opengl`, `auto`) chooses for one start only. The log in `logs/`
+names what the window draws with.
 
 ## Keyboard
 
@@ -97,5 +117,5 @@ next start), `logs/` (what the program did), `bookmarks.wwmarks`. Nothing is wri
 
 ## Not there yet
 
-Applying settings to this PC directly from the program (use the apply script meanwhile) and importing
-policy templates (ADMX) come with the next versions.
+Reading the features and capabilities of Windows directly from the program: the audit script reads them
+meanwhile.

@@ -74,9 +74,9 @@ jobs:
       - name: Release build
         run: cargo build --release --workspace
       - name: Window smoke test
-        # The runner has no GPU: the release window must start on the software adapter of Windows.
+        # The runner has no driver of OpenGL 2.0: Automatic must fall back from OpenGL to DirectX 12,
+        # which draws on the software rasterizer of Windows.
         shell: pwsh
-        continue-on-error: true
         run: |
           $exe = 'target/release/winweaver.exe'
           "winweaver.exe: $((Get-Item $exe).Length) bytes"

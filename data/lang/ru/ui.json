@@ -414,7 +414,7 @@
   "The log of the server: {path}": "Журнал сервера: {path}",
   "Hide the options of the profile whose catalog is not loaded": "Скрывать опции профиля, каталог которых не загружен",
   "Unknown options": "Неизвестные опции",
-  "Imported ADMX templates become rules under Standard policies. Only the checked catalogs are read and loaded; when two of them hold a policy, the templates of this Windows win.": "Импортированные шаблоны ADMX становятся правилами в разделе «Стандартные политики». Читаются и загружаются только отмеченные каталоги; когда политику содержат два из них, преимущество у шаблонов этой Windows.",
+  "Imported ADMX templates become rules under Standard policies. Only the checked catalogs are read and loaded; when two of them hold a policy, the templates of this Windows win.": "Импортированные шаблоны ADMX становятся правилами в разделе «Штатные политики». Читаются и загружаются только отмеченные каталоги; когда политику содержат два из них, преимущество у шаблонов этой Windows.",
   "not loaded, {size}": "не загружен, {size}",
   "The import was not loaded: {e}": "Импорт не загружен: {e}",
   "No imported catalog has these options: import their policy templates in the settings": "Ни в одном импортированном каталоге нет этих опций: импортируйте их шаблоны политик в настройках",
@@ -428,5 +428,10 @@
   "These options of the profile belong to catalogs of policy templates that are not loaded. They stay in the profile unchanged and are left out of the build. Load catalogs looks for them in the imported catalogs that are not loaded and loads only the ones that have them.": "Эти опции профиля относятся к каталогам шаблонов политик, которые не загружены. Они остаются в профиле без изменений и не входят в сборку. «Загрузить каталоги» ищет их в незагруженных импортированных каталогах и загружает только те, в которых они есть.",
   "Options": "Опции",
   "Unknown option": "Неизвестная опция",
-  "This option belongs to a catalog of policy templates that is not loaded. It stays in the profile unchanged and is left out of the build.": "Эта опция относится к каталогу шаблонов политик, который не загружен. Она остаётся в профиле без изменений и не входит в сборку."
+  "This option belongs to a catalog of policy templates that is not loaded. It stays in the profile unchanged and is left out of the build.": "Эта опция относится к каталогу шаблонов политик, который не загружен. Она остаётся в профиле без изменений и не входит в сборку.",
+  "Renderer": "Рендерер",
+  "Automatic": "Автоматически",
+  "A change takes effect at the next start. Automatic tries {order} in this order and takes the first that starts; OpenGL takes less memory, DirectX 12 also draws without a driver of the graphics card.": "Изменение действует со следующего запуска. «Автоматически» пробует {order} в этом порядке и берёт первый, который запустится; OpenGL занимает меньше памяти, DirectX 12 рисует и без драйвера видеокарты.",
+  "Draws now with {graphics}": "Сейчас рисует: {graphics}",
+  "{failed}; the window draws with {renderer}": "{failed}; окно рисуется через {renderer}"
 }

@@ -1,8 +1,9 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 16.10.2026 (the imports read
-only when checked in the settings, the unknown options of a profile with Load catalogs; eight built-in
+Updated with every change of structure, commands or task status. Last update: 16.10.2026 (two renderers,
+OpenGL and DirectX 12, with Automatic, the setting and --renderer; the imports read only when checked in the
+settings, the unknown options of a profile with Load catalogs; eight built-in
 languages besides English, the MCP log and the crash handlers, the files for AI
 agents in `agents/`, the README and the Belarusian example of the archive in `package/`, one archive from CI;
 before it on 15.10.2026 the list of
@@ -20,7 +21,7 @@ A commit made by an agent ends with the line `Co-Authored-By: <agent model> <nor
 WinWeaver is the successor of WinKickOff: a portable editor of Windows 11 installation profiles that builds
 `autounattend.xml`, compares profiles, reads the settings of this PC natively, generates stand-alone scripts
 that apply and revert them, and serves an MCP server; importing ADMX policy templates and applying natively
-come next. It is written in Rust with eframe (egui + wgpu + winit) for Windows 10 and 11, one executable with
+come next. It is written in Rust with eframe (egui + glow and wgpu + winit) for Windows 10 and 11, one executable with
 data folders next to it. The data of the predecessor's rule catalog, its runtime templates and its whole
 functionality carry over; the file formats are new and no program code is ported (clean room).
 
@@ -82,9 +83,11 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      style.rs (the palette of the mockups, Segoe UI and Consolas, the painted buttons,
 │   │                      cards and chips), tree.rs (the painted tree of a profile and of a catalog tab: one
 │   │                      stop of Tab, the keys inside), list.rs (the painted list with columns of the
-│   │                      diff, the bookmarks and the MCP journal: widths by drag, the keys, a mini button)
-│   └── winweaver/         the executable: the window, --mcp stdio, --mcp http, --elevated-apply <plan> <digest>
-│                          (the helper: only a plan-*.json of output/ with that SHA-256), --version, --check-catalog
+│   │                      diff, the bookmarks and the MCP journal: widths by drag, the keys, a mini button),
+│   │                      renderer.rs (the renderers built in, the order Automatic tries, the start of a window)
+│   └── winweaver/         the executable: the window, --renderer, --mcp stdio, --mcp http, --elevated-apply
+│                          <plan> <digest> (the helper: only a plan-*.json of output/ with that SHA-256),
+│                          --version, --check-catalog, --smoke-window (CI)
 ├── data/                  embedded into the executable at build time
 │   ├── reference/         the parameter reference of the predecessor (00-20 and README), carried over with the
 │   │                      catalog data; the `doc` field of a rule links into it with a heading anchor
@@ -157,6 +160,8 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo run -p winweaver -- --check-catalog
 cargo build --release --workspace
+# one renderer only: the features glow (OpenGL) and wgpu (DirectX 12), both by default
+cargo build --release -p winweaver --no-default-features --features wgpu
 ```
 
 CI runs them on every push to `main`, every pull request and every tag. When `cargo fmt` finds differences,
@@ -258,6 +263,16 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   profile wants ASCII items and refuses a pair without `=` or a name twice. An ADMX `list` element becomes
   such a rule (the Disabled rule clears a list that is not additive), `multiText` a MultiString value; lists
   come before the other values of a policy. The read of this PC checks lists but reads no list parameters.
+- Renderers (`renderer.rs`, the features `glow` and `wgpu` of winweaver-ui and winweaver, both by default):
+  OpenGL through glow took half the memory of the full wgpu (the customer, 16.10.2026); DirectX 12 is wgpu with its `dx12` backend alone (no
+  Vulkan, no OpenGL of wgpu) and draws without a driver of the graphics card on WARP (the CI runner shows
+  `Microsoft Basic Render Driver (Dx12, Cpu)`). Automatic tries OpenGL, then DirectX 12; a choice of the
+  settings (`Settings::renderer`) or of `--renderer` is tried first and the others follow. A renderer fails
+  when `run_native` ends with an error before the app is created (egui_glow refuses OpenGL below 2.0,
+  which is all Windows has without a driver); eframe keeps its event loop between the tries. The window
+  logs what it draws with (`renderer::graphics_text`) and puts the failures in the message bar. The CI
+  step Window smoke test runs `--smoke-window` and fails when no renderer starts; on the runner OpenGL fails
+  and DirectX 12 draws, so it tests the fall back. Tests and screenshots draw with the wgpu of egui_kittest.
 - Screenshots: the Windows job sets `WINWEAVER_SCREENSHOTS`, and the test `screenshots_of_the_window` draws the
   main tabs with wgpu (no screen) into `target/screenshots`, uploaded as the artifact `screenshots`
   (`gh run download <id> -n screenshots -D <folder>`); the way to see the window without starting it on the

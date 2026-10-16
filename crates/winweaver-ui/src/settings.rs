@@ -66,6 +66,9 @@ pub struct Settings {
     pub hidden_imports: Vec<String>,
     /// The options of a profile whose catalog is not loaded are left out of the tree.
     pub hide_unknown: bool,
+    /// The renderer the window tries first (`opengl`, `directx`), empty for Automatic; a name this
+    /// executable lacks is Automatic. `--renderer` overrides it for one start.
+    pub renderer: String,
 }
 
 impl Default for Settings {
@@ -89,6 +92,7 @@ impl Default for Settings {
             loaded_imports: None,
             hidden_imports: Vec::new(),
             hide_unknown: false,
+            renderer: String::new(),
         }
     }
 }

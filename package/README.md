@@ -77,6 +77,15 @@ Ctrl+D description, Ctrl+W close the tab, Ctrl+Tab next tab, Ctrl+Shift+PgUp and
 Alt+Right back and forward. In the tree and the lists: the arrows, Home, End, Page Up and Down, Space to switch, Enter
 to open.
 
+## Renderer
+
+The window draws with OpenGL or with DirectX 12. Automatic (Settings, General, Window) tries OpenGL first, which takes
+less memory, and switches to DirectX 12 when OpenGL does not start: a virtual machine without 3D acceleration, a fresh
+Windows without the driver of the graphics card, some remote sessions. DirectX 12 draws there on the software
+rasterizer of Windows. If the window draws wrongly with OpenGL (an old driver), choose DirectX 12; a change takes
+effect at the next start. For one start only: `winweaver.exe --renderer directx` (or `opengl`, `auto`). The log
+`logs/winweaver-<date>.log` names what the window draws with.
+
 ## Add a language
 
 1. Make a folder `lang/<code>` next to `winweaver.exe`, with the code of the language: `be`, `pl`, `de`.

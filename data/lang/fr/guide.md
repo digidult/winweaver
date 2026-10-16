@@ -75,12 +75,33 @@ Ouvrir accepte les profils (`.wwprofile`), les fichiers de différences (`.wwdif
 signets (`.wwmarks`), les pages Markdown, les fichiers de réponses générés par WinWeaver ou WinKickOff
 (le profil qu'ils contiennent), les profils WinKickOff et les rapports d'audit (`.json`).
 
+## Modèles de stratégie
+
+**Paramètres, Modèles de stratégie** importe les modèles ADMX de ce Windows, d'un dossier ou d'un fichier
+de catalogue ; leurs stratégies deviennent des règles sous Stratégies standard, et les importations sont
+gardées dans `imports/`. Seules les importations cochées sont lues et chargées ; les autres n'occupent pas
+de mémoire. Un profil peut contenir des options d'une importation non chargée : elles restent inchangées
+dans le profil, sont listées sous **Options inconnues** à la fin de l'arborescence et sont exclues de la
+génération, avec un avertissement à l'ouverture du profil et à la génération du fichier de réponses.
+**Charger les catalogues** dans ce groupe trouve les importations qui les contiennent et ne charge que
+celles-ci. Un paramètre (Général, Fenêtre) masque le groupe.
+
 ## Le serveur MCP
 
 **Menu, Serveur MCP** ouvre l'onglet du serveur par lequel les agents IA lisent les profils et, si le
 mode le permet, les modifient. Le serveur démarre en mode lecture ; le mode modification lui permet de
 modifier les profils en mémoire, le mode fichiers de les enregistrer et d'écrire le fichier de
 réponses. La lecture de ce PC nécessite sa propre autorisation, désactivée à chaque démarrage.
+
+## Le moteur de rendu
+
+La fenêtre dessine avec OpenGL ou avec DirectX 12. **Automatique** (Paramètres, Général, Fenêtre) essaie
+d'abord OpenGL, qui occupe moins de mémoire, et passe à DirectX 12 quand OpenGL ne démarre pas : dans une
+machine virtuelle sans accélération 3D, dans une installation neuve sans le pilote de la carte graphique,
+dans certaines sessions à distance. DirectX 12 dessine aussi là, avec le rastériseur logiciel de Windows.
+Si la fenêtre s'affiche mal avec OpenGL (un ancien pilote), choisissez DirectX 12. Un changement prend
+effet au démarrage suivant ; `winweaver.exe --renderer directx` (ou `opengl`, `auto`) choisit pour un seul
+démarrage. Le journal de `logs/` indique avec quoi la fenêtre dessine.
 
 ## Clavier
 
@@ -106,6 +127,5 @@ restaurées au démarrage suivant), `logs/` (ce qu'a fait le programme), `bookma
 
 ## Pas encore disponible
 
-L'application des paramètres à ce PC directement depuis le programme (utilisez le script
-d'application en attendant) et l'importation des modèles de stratégie (ADMX) arriveront dans les
-prochaines versions.
+La lecture des fonctionnalités et capacités de Windows directement depuis le programme : en attendant, le
+script d'audit les lit.

@@ -71,12 +71,33 @@ Apri accetta profili (`.wwprofile`), confronti (`.wwdiff`), file di segnalibri (
 Markdown, file di risposte generati da WinWeaver o WinKickOff (il profilo che incorporano), profili di
 WinKickOff e report di controllo (`.json`).
 
+## Modelli di criteri
+
+**Impostazioni, Modelli di criteri** importa i modelli ADMX di questo Windows, di una cartella o di un
+file di catalogo; i loro criteri diventano regole in Criteri standard e le importazioni sono conservate in
+`imports/`. Vengono letti e caricati solo le importazioni selezionate; le altre non occupano memoria. Un
+profilo può contenere opzioni di un'importazione non caricata: restano invariate nel profilo, sono
+elencate in **Opzioni sconosciute** alla fine dell'albero e sono escluse dalla generazione, con un avviso
+all'apertura del profilo e alla generazione del file di risposte. **Carica cataloghi** in quel gruppo trova
+le importazioni che le contengono e carica solo quelle. Un'impostazione (Generale, Finestra) nasconde il
+gruppo.
+
 ## Il server MCP
 
 **Menu, Server MCP** apre la scheda del server tramite il quale gli agenti di IA leggono i profili e,
 quando la modalità lo consente, li modificano. Il server si avvia in modalità lettura; modifica gli
 consente di cambiare i profili in memoria, file gli consente di salvarli e di scrivere il file di
 risposte. La lettura di questo PC richiede un'autorizzazione a parte, disattivata a ogni avvio.
+
+## Il renderer
+
+La finestra disegna con OpenGL o con DirectX 12. **Automatico** (Impostazioni, Generale, Finestra) prova
+prima OpenGL, che occupa meno memoria, e passa a DirectX 12 quando OpenGL non si avvia: in una macchina
+virtuale senza accelerazione 3D, in un'installazione nuova senza il driver della scheda grafica, in alcune
+sessioni remote. DirectX 12 disegna anche lì, con il rasterizzatore software di Windows. Se con OpenGL la
+finestra viene disegnata male (un driver vecchio), scegli DirectX 12. Una modifica vale dall'avvio
+successivo; `winweaver.exe --renderer directx` (oppure `opengl`, `auto`) sceglie per un solo avvio. Il log
+in `logs/` indica con che cosa disegna la finestra.
 
 ## Tastiera
 
@@ -102,5 +123,5 @@ scrive nulla altrove.
 
 ## Non ancora disponibile
 
-L'applicazione delle impostazioni a questo PC direttamente dal programma (nel frattempo usa lo script di
-applicazione) e l'importazione dei modelli di criteri (ADMX) arriveranno con le prossime versioni.
+La lettura delle funzionalità e delle capacità di Windows direttamente dal programma: nel frattempo le
+legge lo script di controllo.

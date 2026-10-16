@@ -14,6 +14,7 @@ mod list;
 mod marksview;
 mod mcpview;
 mod mdview;
+mod renderer;
 mod session;
 mod settings;
 mod style;
@@ -46,6 +47,7 @@ pub use diffview::DiffDoc;
 pub use forms::Form;
 pub use i18n::{tr, trf};
 pub use mdview::MdDoc;
+pub use renderer::Renderer;
 pub use settings::{Settings, ThemeChoice, exe_dir};
 
 /// The presets embedded in the executable: the name and the profile text.
@@ -420,6 +422,8 @@ pub struct App {
     exit: bool,
     drafts_dir: PathBuf,
     logs_dir: PathBuf,
+    /// What the window draws with (`renderer::graphics_text`), empty without a window.
+    graphics: String,
     mcp: mcpview::McpPanel,
     /// Actions requested by views that run without the list of the frame.
     pending_acts: Vec<Act>,
@@ -475,6 +479,7 @@ impl App {
             exit: false,
             drafts_dir: exe_dir().join("drafts"),
             logs_dir: exe_dir().join("logs"),
+            graphics: String::new(),
             confirm: None,
             pending_acts: Vec::new(),
             settings_section: 0,
@@ -1085,11 +1090,34 @@ impl App {
                 &mut self.settings.hide_unknown,
                 tr("Hide the options of the profile whose catalog is not loaded"),
             );
+            ui.add_space(4.0);
+            self.renderer_choice(ui);
             ui.checkbox(
                 &mut self.settings.restore_tabs,
                 tr("Open the tabs of the last session at the start"),
             );
         });
+    }
+
+    /// The renderer of the next start, among the ones of this executable.
+    fn renderer_choice(&mut self, ui: &mut egui::Ui) {
+        let current = Renderer::parse(&self.settings.renderer);
+        ui.horizontal(|ui| {
+            ui.label(tr("Renderer"));
+            egui::ComboBox::from_id_salt("renderer")
+                .selected_text(current.map_or(tr("Automatic"), Renderer::title))
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut self.settings.renderer, String::new(), tr("Automatic"));
+                    for &r in Renderer::ALL {
+                        ui.selectable_value(&mut self.settings.renderer, r.id().to_owned(), r.title());
+                    }
+                });
+        });
+        let order: Vec<&str> = Renderer::ALL.iter().map(|r| r.title()).collect();
+        ui.weak(trf("A change takes effect at the next start. Automatic tries {order} in this order and takes the first that starts; OpenGL takes less memory, DirectX 12 also draws without a driver of the graphics card.", &[("order", &order.join(", "))]));
+        if !self.graphics.is_empty() {
+            ui.weak(trf("Draws now with {graphics}", &[("graphics", &self.graphics)]));
+        }
     }
 
     fn language_and_theme(&mut self, ui: &mut egui::Ui) {
@@ -4016,37 +4044,26 @@ fn ask_save_path(proposed: &str) -> Option<PathBuf> {
         .save_file()
 }
 
-/// The graphics adapter the window draws with: its name, the backend of wgpu, the kind of device
-/// (a software one is `Cpu`), the driver and the other adapters found, for the log.
-fn adapter_text(cc: &eframe::CreationContext<'_>) -> String {
-    match &cc.wgpu_render_state {
-        Some(state) => {
-            let a = state.adapter.get_info();
-            let all: Vec<String> = state
-                .available_adapters
-                .iter()
-                .map(|o| {
-                    let o = o.get_info();
-                    format!("{} ({:?}, {:?})", o.name, o.backend, o.device_type)
-                })
-                .collect();
+/// The renderer of `--renderer` (an error for a name this executable lacks), else of the settings
+/// (Automatic for a name it lacks); `None` is Automatic.
+fn chosen_renderer(cli: Option<&str>, settings: &Settings) -> Result<Option<Renderer>, String> {
+    match cli.map(str::trim) {
+        Some("auto") => Ok(None),
+        Some(name) => Renderer::parse(name).map(Some).ok_or_else(|| {
+            let names: Vec<&str> = Renderer::ALL.iter().map(|r| r.id()).collect();
             format!(
-                "{} ({:?}, {:?}), driver {} {}; available: {}",
-                a.name,
-                a.backend,
-                a.device_type,
-                a.driver,
-                a.driver_info,
-                all.join(", ")
+                "unknown renderer {name}: this executable has auto, {}",
+                names.join(", ")
             )
-        }
-        None => "no wgpu adapter".to_owned(),
+        }),
+        None => Ok(Renderer::parse(&settings.renderer)),
     }
 }
 
-/// Opens a window with the renderer of the program, draws two frames and closes it: the adapter it
-/// got, or the reason it did not start. For CI (`--smoke-window`).
-pub fn smoke_window() -> Result<String, String> {
+/// Opens a small window with the renderers of `--renderer` or the settings, draws two frames and
+/// closes it: what it drew with and the renderers that did not start before. For CI
+/// (`--smoke-window`).
+pub fn smoke_window(cli_renderer: Option<&str>) -> Result<String, String> {
     struct Smoke {
         frames: u32,
     }
@@ -4061,50 +4078,52 @@ pub fn smoke_window() -> Result<String, String> {
             }
         }
     }
+    let settings = Settings::load_from(&Settings::path()).unwrap_or_default();
+    let order = renderer::order(chosen_renderer(cli_renderer, &settings)?);
     let info = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
-    let seen = info.clone();
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_title("WinWeaver smoke test")
-            .with_inner_size([400.0, 300.0]),
-        ..Default::default()
-    };
-    eframe::run_native(
-        "WinWeaver smoke test",
-        options,
+    let viewport = egui::ViewportBuilder::default()
+        .with_title("WinWeaver smoke test")
+        .with_inner_size([400.0, 300.0]);
+    let (_, failures) = renderer::start("WinWeaver smoke test", &viewport, &order, |_, _| {
+        let seen = info.clone();
         Box::new(move |cc| {
-            *seen.lock().unwrap_or_else(|e| e.into_inner()) = adapter_text(cc);
+            *seen.lock().unwrap_or_else(|e| e.into_inner()) = renderer::graphics_text(cc);
             Ok(Box::new(Smoke { frames: 0 }))
-        }),
-    )
-    .map_err(|e| e.to_string())?;
-    let text = info.lock().unwrap_or_else(|e| e.into_inner()).clone();
+        })
+    })?;
+    let mut text = info.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    for failure in failures {
+        text.push_str("; ");
+        text.push_str(&failure);
+    }
     Ok(text)
 }
 
-/// Opens the window; returns the error text when the catalog or the window cannot start.
-pub fn run() -> Result<(), String> {
+/// Opens the window with the renderer of `--renderer` or of the settings first; returns the
+/// error text when the catalog or the window cannot start.
+pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
     let catalog = Catalog::embedded().map_err(|e| format!("catalog: {e}"))?;
     let texts = CatalogTexts::embedded().map_err(|e| format!("translations: {e}"))?;
     let (settings, warning) = match Settings::load_from(&Settings::path()) {
         Ok(s) => (s, None),
         Err(e) => (Settings::default(), Some(e)),
     };
-    let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_title("WinWeaver")
-            .with_inner_size([1280.0, 800.0])
-            .with_min_inner_size([900.0, 560.0]),
-        ..Default::default()
-    };
-    eframe::run_native(
-        "WinWeaver",
-        options,
+    let order = renderer::order(chosen_renderer(cli_renderer, &settings)?);
+    let viewport = egui::ViewportBuilder::default()
+        .with_title("WinWeaver")
+        .with_inner_size([1280.0, 800.0])
+        .with_min_inner_size([900.0, 560.0]);
+    renderer::start("WinWeaver", &viewport, &order, |drawn, failures| {
+        let catalog = catalog.clone();
+        let texts = texts.clone();
+        let settings = settings.clone();
+        let warning = warning.clone();
+        let failures = failures.to_vec();
         Box::new(move |cc| {
             style::install_fonts(&cc.egui_ctx);
             let mut app = App::new(catalog, texts, settings);
-            let adapter = adapter_text(cc);
-            session::log(&app.logs_dir, "INFO", &format!("graphics: {adapter}"));
+            app.graphics = renderer::graphics_text(cc);
+            session::log(&app.logs_dir, "INFO", &format!("graphics: {}", app.graphics));
             app.mcp.port = app.settings.mcp_port;
             app.mcp.token = app.settings.mcp_token.clone();
             app.apply_language();
@@ -4122,10 +4141,16 @@ pub fn run() -> Result<(), String> {
                 app.settings.show_guide_at_start = false;
                 app.settings_dirty = true;
             }
+            if !failures.is_empty() {
+                app.status = trf(
+                    "{failed}; the window draws with {renderer}",
+                    &[("failed", &failures.join("; ")), ("renderer", &drawn.title())],
+                );
+            }
             Ok(Box::new(app))
-        }),
-    )
-    .map_err(|e| e.to_string())
+        })
+    })
+    .map(|_| ())
 }
 
 #[cfg(test)]

@@ -428,5 +428,10 @@
   "These options of the profile belong to catalogs of policy templates that are not loaded. They stay in the profile unchanged and are left out of the build. Load catalogs looks for them in the imported catalogs that are not loaded and loads only the ones that have them.": "Profilin bu seçenekleri yüklenmemiş ilke şablonu kataloglarına aittir. Profilde değişmeden kalır ve oluşturmaya alınmaz. Katalogları yükle, bunları yüklenmemiş içeri aktarılan kataloglarda arar ve yalnızca bunları içerenleri yükler.",
   "Options": "Seçenekler",
   "Unknown option": "Bilinmeyen seçenek",
-  "This option belongs to a catalog of policy templates that is not loaded. It stays in the profile unchanged and is left out of the build.": "Bu seçenek yüklenmemiş bir ilke şablonu kataloğuna aittir. Profilde değişmeden kalır ve oluşturmaya alınmaz."
+  "This option belongs to a catalog of policy templates that is not loaded. It stays in the profile unchanged and is left out of the build.": "Bu seçenek yüklenmemiş bir ilke şablonu kataloğuna aittir. Profilde değişmeden kalır ve oluşturmaya alınmaz.",
+  "Renderer": "Oluşturucu",
+  "Automatic": "Otomatik",
+  "A change takes effect at the next start. Automatic tries {order} in this order and takes the first that starts; OpenGL takes less memory, DirectX 12 also draws without a driver of the graphics card.": "Bir değişiklik sonraki başlatmada geçerli olur. Otomatik, {order} sırasıyla dener ve ilk başlayanı kullanır; OpenGL daha az bellek kullanır, DirectX 12 ekran kartı sürücüsü olmadan da çizer.",
+  "Draws now with {graphics}": "Şu anda çizen: {graphics}",
+  "{failed}; the window draws with {renderer}": "{failed}; pencere {renderer} ile çiziliyor"
 }
