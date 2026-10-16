@@ -244,6 +244,19 @@ fn main() -> ExitCode {
             }
         },
         Some("--mcp") => mcp(&args[1..]),
+        Some("--smoke-window") => {
+            attach_console();
+            match winweaver_ui::smoke_window() {
+                Ok(info) => {
+                    println!("the window started: {info}");
+                    ExitCode::SUCCESS
+                }
+                Err(e) => {
+                    println!("the window did not start: {e}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
         Some("--elevated-apply") => elevated_apply(&args[1..]),
         Some("--version") => {
             attach_console();

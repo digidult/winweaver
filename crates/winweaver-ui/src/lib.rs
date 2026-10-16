@@ -3757,6 +3757,72 @@ fn ask_save_path(proposed: &str) -> Option<PathBuf> {
         .save_file()
 }
 
+/// The graphics adapter the window draws with: its name, the backend of wgpu, the kind of device
+/// (a software one is `Cpu`), the driver and the other adapters found, for the log.
+fn adapter_text(cc: &eframe::CreationContext<'_>) -> String {
+    match &cc.wgpu_render_state {
+        Some(state) => {
+            let a = state.adapter.get_info();
+            let all: Vec<String> = state
+                .available_adapters
+                .iter()
+                .map(|o| {
+                    let o = o.get_info();
+                    format!("{} ({:?}, {:?})", o.name, o.backend, o.device_type)
+                })
+                .collect();
+            format!(
+                "{} ({:?}, {:?}), driver {} {}; available: {}",
+                a.name,
+                a.backend,
+                a.device_type,
+                a.driver,
+                a.driver_info,
+                all.join(", ")
+            )
+        }
+        None => "no wgpu adapter".to_owned(),
+    }
+}
+
+/// Opens a window with the renderer of the program, draws two frames and closes it: the adapter it
+/// got, or the reason it did not start. For CI (`--smoke-window`).
+pub fn smoke_window() -> Result<String, String> {
+    struct Smoke {
+        frames: u32,
+    }
+    impl eframe::App for Smoke {
+        fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+            egui::CentralPanel::default().show(ui, |ui| ui.label("WinWeaver"));
+            self.frames += 1;
+            if self.frames >= 2 {
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+            } else {
+                ui.ctx().request_repaint();
+            }
+        }
+    }
+    let info = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let seen = info.clone();
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_title("WinWeaver smoke test")
+            .with_inner_size([400.0, 300.0]),
+        ..Default::default()
+    };
+    eframe::run_native(
+        "WinWeaver smoke test",
+        options,
+        Box::new(move |cc| {
+            *seen.lock().unwrap_or_else(|e| e.into_inner()) = adapter_text(cc);
+            Ok(Box::new(Smoke { frames: 0 }))
+        }),
+    )
+    .map_err(|e| e.to_string())?;
+    let text = info.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    Ok(text)
+}
+
 /// Opens the window; returns the error text when the catalog or the window cannot start.
 pub fn run() -> Result<(), String> {
     let catalog = Catalog::embedded().map_err(|e| format!("catalog: {e}"))?;
@@ -3778,6 +3844,8 @@ pub fn run() -> Result<(), String> {
         Box::new(move |cc| {
             style::install_fonts(&cc.egui_ctx);
             let mut app = App::new(catalog, texts, settings);
+            let adapter = adapter_text(cc);
+            session::log(&app.logs_dir, "INFO", &format!("graphics: {adapter}"));
             app.mcp.port = app.settings.mcp_port;
             app.mcp.token = app.settings.mcp_token.clone();
             app.apply_language();
