@@ -145,7 +145,7 @@ WinWeaver/
 ├── profiles/              the user's profiles (the default folder of Open and Save)
 ├── docs/                  the user documentation in English (Markdown, served in the Markdown tabs)
 ├── drafts/                drafts of unsaved documents
-├── logs/                  winweaver-<date>.log, mcp-<transport>-<pid>.log
+├── logs/                  winweaver-<date>.log (the window), mcp-<date>.log (the MCP server, its crashes)
 └── output/                autounattend.xml and the generated scripts
 ```
 

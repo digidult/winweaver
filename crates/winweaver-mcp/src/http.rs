@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
-use crate::{MAX_MESSAGE, Server};
+use crate::{MAX_MESSAGE, Server, log};
 
 const MAX_HEADERS: usize = 16 * 1024;
 const MAX_CONNECTIONS: usize = 8;
@@ -26,9 +26,21 @@ pub struct HttpServer {
 impl HttpServer {
     /// Starts listening on 127.0.0.1 and the port (0: any free port).
     pub fn start(server: Arc<Server>, port: u16, token: String) -> io::Result<Self> {
-        let listener = TcpListener::bind(("127.0.0.1", port))?;
+        let listener = TcpListener::bind(("127.0.0.1", port)).inspect_err(|e| {
+            log::line("ERROR", &format!("the HTTP server cannot listen on port {port}: {e}"));
+        })?;
         listener.set_nonblocking(true)?;
         let port = listener.local_addr()?.port();
+        let options = server.options();
+        log::line(
+            "INFO",
+            &format!(
+                "HTTP server of WinWeaver {} on http://127.0.0.1:{port}/mcp, mode {}, reading this PC {}",
+                winweaver_core::APP_VERSION,
+                options.mode.name(),
+                if options.read_pc { "allowed" } else { "off" }
+            ),
+        );
         let stop = Arc::new(AtomicBool::new(false));
         let flag = stop.clone();
         let active = Arc::new(AtomicUsize::new(0));
@@ -36,10 +48,12 @@ impl HttpServer {
         let thread = std::thread::Builder::new()
             .name("mcp-http".to_owned())
             .spawn(move || {
+                let mut last_error = String::new();
                 while !flag.load(Ordering::Relaxed) {
                     match listener.accept() {
                         Ok((stream, peer)) => {
                             if !peer.ip().is_loopback() {
+                                log::line("WARN", &format!("a connection from {peer} was refused"));
                                 continue;
                             }
                             if active.load(Ordering::Relaxed) >= MAX_CONNECTIONS {
@@ -51,19 +65,46 @@ impl HttpServer {
                             let spawned = std::thread::Builder::new()
                                 .name("mcp-request".to_owned())
                                 .spawn(move || {
-                                    let _ = handle(&srv, stream, peer, port, &tok);
+                                    // The count goes down also when the request fails inside.
+                                    let done = std::panic::catch_unwind(
+                                        std::panic::AssertUnwindSafe(|| {
+                                            handle(&srv, stream, peer, port, &tok)
+                                        }),
+                                    );
                                     act.fetch_sub(1, Ordering::Relaxed);
+                                    match done {
+                                        Ok(Ok(())) => {}
+                                        Ok(Err(e)) => {
+                                            log::line("WARN", &format!("a request failed: {e}"))
+                                        }
+                                        Err(p) => log::line(
+                                            "ERROR",
+                                            &format!(
+                                                "a request failed inside the program: {}",
+                                                log::panic_text(p.as_ref())
+                                            ),
+                                        ),
+                                    }
                                 });
-                            if spawned.is_err() {
+                            if let Err(e) = spawned {
                                 active.fetch_sub(1, Ordering::Relaxed);
+                                log::line("ERROR", &format!("no thread for a request: {e}"));
                             }
                         }
                         Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
                             std::thread::sleep(Duration::from_millis(40));
                         }
-                        Err(_) => std::thread::sleep(Duration::from_millis(200)),
+                        Err(e) => {
+                            let text = e.to_string();
+                            if text != last_error {
+                                log::line("ERROR", &format!("accepting a connection failed: {text}"));
+                                last_error = text;
+                            }
+                            std::thread::sleep(Duration::from_millis(200));
+                        }
                     }
                 }
+                log::line("INFO", &format!("HTTP server on port {port} stopped"));
             })?;
         Ok(Self {
             port,
@@ -117,6 +158,9 @@ fn reason(status: u16) -> &'static str {
 }
 
 fn respond(mut stream: TcpStream, status: u16, body: &str, error: &str) -> io::Result<()> {
+    if status >= 400 {
+        log::line("WARN", &format!("HTTP {status} {}: {error}", reason(status)));
+    }
     let body = if body.is_empty() && !error.is_empty() {
         format!("{{\"error\": \"{}\"}}", error.replace('"', "'"))
     } else {

@@ -72,6 +72,7 @@ Windows 11 22H2 or later). That is a system setting: change it only on a machine
 
 | Symptom | Fix |
 |---|---|
+| The server stopped or answers with errors | `logs/mcp-<date>.log` next to `winweaver.exe` has the requests and the reason of a failure |
 | Connection refused | The window is closed, the server is stopped in the MCP tab, the port differs, or the loopback is not shared (section 3) |
 | 401 | The token was renewed: copy the client configuration again, then `/mcp reconnect winweaver` |
 | 421 | The URL must be `http://127.0.0.1:<port>/mcp` |

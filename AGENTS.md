@@ -110,7 +110,7 @@ functionality carry over; the file formats are new and no program code is ported
 
 Next to the executable at run time (never versioned): `settings.json`, `bookmarks.wwmarks`, `profiles/`,
 `output/` (the answer file, the scripts, plan and backup files of the native apply), `imports/` (catalog files of
-the imported policy templates), `drafts/` (unsaved profiles), `logs/` (winweaver-<date>.log),
+the imported policy templates), `drafts/` (unsaved profiles), `logs/` (winweaver-<date>.log, mcp-<date>.log),
 `lang/<code>/` (more or overriding translations), `themes/` (more themes, `<id>.wwtheme`, also `<id>.json`
 of the predecessor; the id of an embedded theme replaces it).
 
@@ -212,6 +212,13 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   Base64 (`Set-AccountText`), the profile is embedded as ASCII JSON in `Extensions/Profile`.
 - The language setting `""` follows the language of the Windows interface; it switches the interface and the
   catalog texts together (`i18n::current()`).
+- Logs and crashes (`winweaver_mcp::log`, set up first in `main`): the MCP server writes `logs/mcp-<date>.log`
+  (transport start and stop, every request with its time, refusals and transport errors; ids and switches
+  only, never a token, a password, a key or a free text). The panic hook and the filter of unhandled Windows
+  exceptions (`winweaver_win::on_fatal_exception`: access violation, stack overflow) write the crash into the
+  MCP log for a headless process or a thread named `mcp-*`, else into `winweaver-<date>.log`. A panic inside a
+  request is caught (`Server::handle_text`): the request gets the error -32603 and the server goes on; a
+  release build has no console, so `eprintln!` of a headless process also goes to the log (`refuse`).
 - MCP: the mode is never saved (read at every start), nor is read_pc; the token is saved in settings.json;
   errors start with not_allowed, not_found, invalid, write_failed or read_failed; passwords and the product
   key are replaced by `***` in every answer.

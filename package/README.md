@@ -64,7 +64,7 @@ generic key selects the edition during the installation; it does not activate Wi
 | `output/` | Answer files, scripts, plans and backups of changes of this PC |
 | `imports/` | Imported policy templates |
 | `themes/` | Your themes (`<name>.wwtheme`) |
-| `drafts/`, `logs/` | Unsaved changes and the log of each day |
+| `drafts/`, `logs/` | Unsaved changes; the logs of each day: `winweaver-<date>.log` of the window, `mcp-<date>.log` of the MCP server, with the reason when the program fails |
 
 ## Keys
 

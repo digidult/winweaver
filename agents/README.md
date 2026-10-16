@@ -52,6 +52,9 @@ You choose the mode in the MCP tab; the assistant never changes it.
 "Allow reading the settings of this PC" lets it read this PC (only reading, no administrator rights); it is off at
 every start. The assistant never applies settings, never runs commands and never sees passwords or product keys.
 
+The server writes what it does into `logs/mcp-<date>.log` next to `winweaver.exe` (no token, passwords or keys):
+look there when a client loses the connection or the server stops.
+
 ## 4. Before you rely on it
 
 The assistant asks before every change. A profile it calls valid only builds in memory: build the answer file in the

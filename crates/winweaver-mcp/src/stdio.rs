@@ -3,11 +3,26 @@
 
 use std::io::{self, BufRead, Write};
 
-use crate::Server;
+use crate::{Server, log};
 
 /// Serves until standard input ends.
 pub fn serve(server: &Server) -> io::Result<()> {
-    serve_on(server, io::stdin().lock(), io::stdout().lock())
+    let options = server.options();
+    log::line(
+        "INFO",
+        &format!(
+            "stdio server of WinWeaver {} started, mode {}, reading this PC {}",
+            winweaver_core::APP_VERSION,
+            options.mode.name(),
+            if options.read_pc { "allowed" } else { "off" }
+        ),
+    );
+    let result = serve_on(server, io::stdin().lock(), io::stdout().lock());
+    match &result {
+        Ok(()) => log::line("INFO", "the client closed standard input; the server stops"),
+        Err(e) => log::line("ERROR", &format!("standard input or output failed: {e}")),
+    }
+    result
 }
 
 /// Serves the messages of `input`, answering into `output`.
