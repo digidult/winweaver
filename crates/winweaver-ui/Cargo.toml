@@ -12,7 +12,8 @@ authors.workspace = true
 winweaver-core = { path = "../winweaver-core" }
 winweaver-win = { path = "../winweaver-win" }
 winweaver-mcp = { path = "../winweaver-mcp" }
-eframe = "0.36"
+# OpenGL through egui_glow instead of the default wgpu; the tests keep wgpu (egui_kittest below).
+eframe = { version = "0.36", default-features = false, features = ["glow", "accesskit", "default_fonts", "links"] }
 egui_commonmark = "0.25"
 rfd = "0.17"
 raw-window-handle = "0.6"

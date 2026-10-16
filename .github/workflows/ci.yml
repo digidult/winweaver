@@ -73,6 +73,18 @@ jobs:
         run: cargo run -p winweaver -- --check-catalog
       - name: Release build
         run: cargo build --release --workspace
+      - name: Window smoke test (glow)
+        # The runner has no GPU: the test shows whether the OpenGL of the window starts without one.
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $exe = 'target/release/winweaver.exe'
+          "winweaver.exe: $((Get-Item $exe).Length) bytes"
+          $p = Start-Process -FilePath $exe -ArgumentList '--smoke-window' -PassThru -RedirectStandardOutput smoke.txt -RedirectStandardError smoke-err.txt
+          if (-not $p.WaitForExit(60000)) { $p.Kill(); 'the window did not close within 60 s' }
+          Get-Content smoke.txt, smoke-err.txt -ErrorAction SilentlyContinue
+          "exit code: $($p.ExitCode)"
+          Get-ChildItem target/release/logs -ErrorAction SilentlyContinue | Get-Content -ErrorAction SilentlyContinue
       - name: Package
         shell: pwsh
         run: |

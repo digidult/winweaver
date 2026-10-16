@@ -3757,6 +3757,56 @@ fn ask_save_path(proposed: &str) -> Option<PathBuf> {
         .save_file()
 }
 
+/// Opens a window with the renderer of the program, draws two frames and closes it: the version of
+/// OpenGL it got, or the reason it did not start. For CI only (`--smoke-window`).
+pub fn smoke_window() -> Result<String, String> {
+    struct Smoke {
+        frames: u32,
+    }
+    impl eframe::App for Smoke {
+        fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+            egui::CentralPanel::default().show(ui, |ui| ui.label("WinWeaver"));
+            self.frames += 1;
+            if self.frames >= 2 {
+                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
+            } else {
+                ui.ctx().request_repaint();
+            }
+        }
+    }
+    let info = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
+    let seen = info.clone();
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_title("WinWeaver smoke test")
+            .with_inner_size([400.0, 300.0]),
+        renderer: eframe::Renderer::Glow,
+        ..Default::default()
+    };
+    eframe::run_native(
+        "WinWeaver smoke test",
+        options,
+        Box::new(move |cc| {
+            use eframe::glow::HasContext;
+            if let Some(gl) = &cc.gl {
+                // SAFETY: the context of the window is current while the app is created.
+                let (version, renderer) = unsafe {
+                    (
+                        gl.get_parameter_string(eframe::glow::VERSION),
+                        gl.get_parameter_string(eframe::glow::RENDERER),
+                    )
+                };
+                *seen.lock().unwrap_or_else(|e| e.into_inner()) =
+                    format!("OpenGL {version}, renderer {renderer}");
+            }
+            Ok(Box::new(Smoke { frames: 0 }))
+        }),
+    )
+    .map_err(|e| e.to_string())?;
+    let text = info.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    Ok(text)
+}
+
 /// Opens the window; returns the error text when the catalog or the window cannot start.
 pub fn run() -> Result<(), String> {
     let catalog = Catalog::embedded().map_err(|e| format!("catalog: {e}"))?;
@@ -3770,6 +3820,7 @@ pub fn run() -> Result<(), String> {
             .with_title("WinWeaver")
             .with_inner_size([1280.0, 800.0])
             .with_min_inner_size([900.0, 560.0]),
+        renderer: eframe::Renderer::Glow,
         ..Default::default()
     };
     eframe::run_native(

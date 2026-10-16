@@ -19,7 +19,8 @@ A commit made by an agent ends with the line `Co-Authored-By: <agent model> <nor
 WinWeaver is the successor of WinKickOff: a portable editor of Windows 11 installation profiles that builds
 `autounattend.xml`, compares profiles, reads the settings of this PC natively, generates stand-alone scripts
 that apply and revert them, and serves an MCP server; importing ADMX policy templates and applying natively
-come next. It is written in Rust with eframe (egui + glow + winit) for Windows 10 and 11, one executable with
+come next. It is written in Rust with eframe (egui + glow + winit; on `main` the renderer is still wgpu, the default of
+eframe 0.36) for Windows 10 and 11, one executable with
 data folders next to it. The data of the predecessor's rule catalog, its runtime templates and its whole
 functionality carry over; the file formats are new and no program code is ported (clean room).
 
