@@ -1442,7 +1442,11 @@ pub fn read_archive(path: &Path) -> Result<Archive, String> {
     if zip.len() > ARCHIVE_ENTRIES {
         return Err(format!("{name}: more than {ARCHIVE_ENTRIES} entries"));
     }
-    let names: Vec<String> = zip.file_names().map(str::to_owned).collect();
+    let names: Vec<String> = zip
+        .file_names()
+        .map(|n| n.map(std::borrow::Cow::into_owned))
+        .collect::<Result<_, _>>()
+        .map_err(|e| format!("{name}: {e}"))?;
     // The entries by their path with forward slashes in lower case, to find the ADML of an ADMX.
     let lower: HashMap<String, String> = names
         .iter()
@@ -1539,7 +1543,9 @@ fn entry_text<R: std::io::Read + std::io::Seek>(
         return Err(format!("{name}: larger than {} MB", limit >> 20));
     }
     *unpacked += bytes.len() as u64;
-    let text = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF][..]).unwrap_or(&bytes);
+    let text = bytes
+        .strip_prefix(&[0xEF, 0xBB, 0xBF][..])
+        .unwrap_or(&bytes);
     String::from_utf8(text.to_vec()).map_err(|_| format!("{name}: not UTF-8 text"))
 }
 
