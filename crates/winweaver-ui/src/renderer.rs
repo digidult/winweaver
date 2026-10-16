@@ -23,7 +23,7 @@ pub enum Renderer {
 
 impl Renderer {
     /// The renderers of this executable, in the order Automatic tries them.
-    pub const ALL: &'static [Renderer] = &[
+    pub const ALL: &[Renderer] = &[
         #[cfg(feature = "glow")]
         Renderer::OpenGl,
         #[cfg(feature = "wgpu")]
