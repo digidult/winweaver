@@ -25,7 +25,8 @@ keeps its settings and files in that folder. The guide opens at the first start 
 - **Policy templates**: import the ADMX templates of this Windows, of a folder or a catalog file; their policies
   become rules. An `.admx` or `.wwcatalog` file also opens as a tab without importing.
 - **Bookmarks** of rules with comments (`.wwmarks`), **themes** with their colours and fonts (`.wwtheme`) and an editor.
-- **Languages**: English, Ukrainian and Russian built in, Belarusian as a file, more as files (below).
+- **Languages**: English, Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish built in,
+  Belarusian as a file, more as files (below); "Follow Windows" takes the language of Windows when it is one of them.
 - **MCP server** for AI agents: they read and, when you allow it, change profiles. See `agents/README.md`.
 
 Every new answer file goes to a virtual machine first, never straight to working computers.
@@ -96,7 +97,7 @@ Its beginning:
 ```
 
 Keep the words in braces (`{e}`, `{n}`) and the keys in brackets (`(Ctrl+F)`) as they are. The titles and descriptions
-of the rules are built in for English, Ukrainian and Russian; another language shows them in English.
+of the rules are built in for the built-in languages; another language shows them in English.
 
 ## License
 

@@ -72,7 +72,7 @@ fn catalog_files_are_ascii_without_dashes() {
 fn translations_cover_every_rule() {
     let catalog = Catalog::embedded().unwrap();
     let texts = CatalogTexts::embedded().expect("the translations load");
-    assert_eq!(texts.len(), 2);
+    assert_eq!(texts.len(), embedded::TEXT_FILES.len());
     for t in &texts {
         assert!(!t.language.is_empty(), "{}: _language", t.code);
         assert!(!t.disabled.is_empty(), "{}: _disabled", t.code);

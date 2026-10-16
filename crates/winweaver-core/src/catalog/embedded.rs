@@ -89,9 +89,15 @@ pub const RULE_FILES: [(&str, &str); 18] = [
 ];
 
 /// The translations of the catalog: the language code and the file content.
-pub const TEXT_FILES: [(&str, &str); 2] = [
+pub const TEXT_FILES: [(&str, &str); 8] = [
     ("ru", include_str!("../../../../data/catalog/lang/ru.json")),
     ("uk", include_str!("../../../../data/catalog/lang/uk.json")),
+    ("de", include_str!("../../../../data/catalog/lang/de.json")),
+    ("es", include_str!("../../../../data/catalog/lang/es.json")),
+    ("fr", include_str!("../../../../data/catalog/lang/fr.json")),
+    ("id", include_str!("../../../../data/catalog/lang/id.json")),
+    ("it", include_str!("../../../../data/catalog/lang/it.json")),
+    ("tr", include_str!("../../../../data/catalog/lang/tr.json")),
 ];
 
 /// The catalog built from the embedded data.

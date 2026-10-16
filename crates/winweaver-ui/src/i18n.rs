@@ -9,10 +9,17 @@ use std::sync::RwLock;
 
 use winweaver_core::jsonfile;
 
-/// The embedded translations: the language code and the file.
-pub const EMBEDDED: [(&str, &str); 2] = [
+/// The embedded translations: the language code and the file. Every text of the interface has a
+/// translation in each of them (`every_text_of_the_interface_is_translated`).
+pub const EMBEDDED: [(&str, &str); 8] = [
     ("uk", include_str!("../../../data/lang/uk/ui.json")),
     ("ru", include_str!("../../../data/lang/ru/ui.json")),
+    ("de", include_str!("../../../data/lang/de/ui.json")),
+    ("es", include_str!("../../../data/lang/es/ui.json")),
+    ("fr", include_str!("../../../data/lang/fr/ui.json")),
+    ("id", include_str!("../../../data/lang/id/ui.json")),
+    ("it", include_str!("../../../data/lang/it/ui.json")),
+    ("tr", include_str!("../../../data/lang/tr/ui.json")),
 ];
 const MAX_BYTES: u64 = 4 * 1024 * 1024;
 
@@ -166,7 +173,10 @@ mod tests {
         }
         let dir = std::env::temp_dir().join("winweaver-no-lang-folder");
         let codes: Vec<String> = languages(&dir).into_iter().map(|l| l.code).collect();
-        assert_eq!(codes, vec!["en", "uk", "ru"]);
+        assert_eq!(
+            codes,
+            vec!["en", "uk", "ru", "de", "es", "fr", "id", "it", "tr"]
+        );
     }
 
     /// The literals of the `tr` and `trf` calls of a source text.

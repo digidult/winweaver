@@ -34,7 +34,17 @@ const DEPTH_MAX: usize = 64;
 const SUMMARY_MAX: usize = 4000;
 const NAME_MAX: usize = 255;
 /// The cultures whose texts an import keeps, with the language code of the catalog texts.
-pub const CULTURES: [(&str, &str); 3] = [("en-US", "en"), ("uk-UA", "uk"), ("ru-RU", "ru")];
+pub const CULTURES: [(&str, &str); 9] = [
+    ("en-US", "en"),
+    ("uk-UA", "uk"),
+    ("ru-RU", "ru"),
+    ("de-DE", "de"),
+    ("es-ES", "es"),
+    ("fr-FR", "fr"),
+    ("id-ID", "id"),
+    ("it-IT", "it"),
+    ("tr-TR", "tr"),
+];
 
 // ------------------------------------------------------------------------------------------------
 // A small tree of XML elements
