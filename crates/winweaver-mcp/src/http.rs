@@ -27,7 +27,10 @@ impl HttpServer {
     /// Starts listening on 127.0.0.1 and the port (0: any free port).
     pub fn start(server: Arc<Server>, port: u16, token: String) -> io::Result<Self> {
         let listener = TcpListener::bind(("127.0.0.1", port)).inspect_err(|e| {
-            log::line("ERROR", &format!("the HTTP server cannot listen on port {port}: {e}"));
+            log::line(
+                "ERROR",
+                &format!("the HTTP server cannot listen on port {port}: {e}"),
+            );
         })?;
         listener.set_nonblocking(true)?;
         let port = listener.local_addr()?.port();
@@ -66,11 +69,10 @@ impl HttpServer {
                                 .name("mcp-request".to_owned())
                                 .spawn(move || {
                                     // The count goes down also when the request fails inside.
-                                    let done = std::panic::catch_unwind(
-                                        std::panic::AssertUnwindSafe(|| {
-                                            handle(&srv, stream, peer, port, &tok)
-                                        }),
-                                    );
+                                    let done =
+                                        std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+                                            || handle(&srv, stream, peer, port, &tok),
+                                        ));
                                     act.fetch_sub(1, Ordering::Relaxed);
                                     match done {
                                         Ok(Ok(())) => {}
@@ -97,7 +99,10 @@ impl HttpServer {
                         Err(e) => {
                             let text = e.to_string();
                             if text != last_error {
-                                log::line("ERROR", &format!("accepting a connection failed: {text}"));
+                                log::line(
+                                    "ERROR",
+                                    &format!("accepting a connection failed: {text}"),
+                                );
                                 last_error = text;
                             }
                             std::thread::sleep(Duration::from_millis(200));
@@ -159,7 +164,10 @@ fn reason(status: u16) -> &'static str {
 
 fn respond(mut stream: TcpStream, status: u16, body: &str, error: &str) -> io::Result<()> {
     if status >= 400 {
-        log::line("WARN", &format!("HTTP {status} {}: {error}", reason(status)));
+        log::line(
+            "WARN",
+            &format!("HTTP {status} {}: {error}", reason(status)),
+        );
     }
     let body = if body.is_empty() && !error.is_empty() {
         format!("{{\"error\": \"{}\"}}", error.replace('"', "'"))

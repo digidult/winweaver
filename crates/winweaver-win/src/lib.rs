@@ -125,7 +125,10 @@ pub fn on_fatal_exception(report: fn(u32, usize)) {
             // SAFETY: Windows passes the records of the exception, or a null pointer is skipped.
             let (code, address) = unsafe {
                 match info.as_ref().and_then(|i| i.ExceptionRecord.as_ref()) {
-                    Some(record) => (record.ExceptionCode as u32, record.ExceptionAddress as usize),
+                    Some(record) => (
+                        record.ExceptionCode as u32,
+                        record.ExceptionAddress as usize,
+                    ),
                     None => (0, 0),
                 }
             };

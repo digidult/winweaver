@@ -206,7 +206,10 @@ impl Server {
         let value: Value = match winweaver_core::jsonfile::parse(text, "message") {
             Ok(v) => v,
             Err(e) => {
-                log::line("WARN", &format!("a message that is not JSON was refused: {e}"));
+                log::line(
+                    "WARN",
+                    &format!("a message that is not JSON was refused: {e}"),
+                );
                 return Some(error(Value::Null, -32700, &e.to_string()).to_string());
             }
         };
