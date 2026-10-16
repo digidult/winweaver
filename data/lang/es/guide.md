@@ -30,6 +30,8 @@ las páginas de documentación se abren del mismo modo, cada una en su propia pe
   marcadores, el servidor MCP, la configuración. El botón de menú del extremo izquierdo de la fila de
   pestañas contiene Nuevo, Abrir, Guardar, Comparar, la guía, el servidor MCP, los marcadores,
   Configuración y Salir.
+- **Acerca de y Licencia** en el menú: la versión con el commit de la compilación y la licencia (MIT),
+  integrada en el programa, así que se queda con `winweaver.exe` aunque solo se mueva ese archivo.
 - **Barra de comandos**: Nuevo, Abrir, Guardar, Comprobar, Generar, Este equipo, Comparar. En una ventana
   estrecha solo muestra iconos, en la fila de navegación.
 - **Fila de navegación**: Atrás y Adelante recorren los elementos que has seleccionado; la ruta de
@@ -82,6 +84,9 @@ cambios en el perfil, aparecen en **Opciones desconocidas** al final del árbol 
 generación, con un aviso al abrir el perfil y al generar el archivo de respuesta. **Cargar catálogos** en
 ese grupo encuentra las importaciones que las contienen y carga solo esas. Un ajuste (General, Ventana)
 oculta el grupo.
+
+Un archivo zip de plantillas, como las publican Chrome, Edge y Firefox, o de un archivo de catálogo se
+importa con **Importar un archivo comprimido...** y se lee sin descomprimirlo.
 
 ## El servidor MCP
 

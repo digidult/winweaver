@@ -1,17 +1,32 @@
 name: CI
 
+# CI does not run at every push (AGENTS.md, section 5): a draft pull request runs nothing; a pull request
+# runs when it is opened ready, marked ready for review or pushed while ready; main runs after a merge, a
+# tag v* for the release; any branch on demand (Actions, CI, Run workflow, or gh workflow run ci.yml --ref
+# <branch>). A newer push cancels the run of the same pull request or branch, and a head commit with
+# [skip ci] in its message runs nothing.
 on:
   push:
     branches: [main]
     tags: ["v*"]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
+  # The commit the build names (--version, About, the logs): the head of a pull request, not the merge
+  # commit GitHub tests.
+  WINWEAVER_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
   check:
     name: Format, clippy, tests (Linux)
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,12 +58,15 @@ jobs:
             fmt.patch
           if-no-files-found: ignore
       - name: Format result
+        # An unformatted push stops here, before the Windows job spends its minutes.
         if: steps.fmt.outcome == 'failure'
         run: |
-          echo "::warning::cargo fmt found differences; apply fmt.patch from the ci-files artifact"
+          echo "::error::cargo fmt found differences; apply fmt.patch from the ci-files artifact"
+          exit 1
 
   build-windows:
     name: Build and tests (Windows)
+    needs: check
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -93,7 +111,8 @@ jobs:
           # The folder of the program: the artifact zips it once, so its download is the archive itself.
           $root = 'dist/WinWeaver'
           New-Item -ItemType Directory -Force $root | Out-Null
-          Copy-Item target/release/winweaver.exe, LICENSE "$root/"
+          # The license is built into the executable (Menu, License), so the exe alone carries it.
+          Copy-Item target/release/winweaver.exe "$root/"
           Copy-Item package/README.md "$root/README.md"
           Copy-Item -Recurse data/presets "$root/profiles"
           Copy-Item -Recurse package/lang "$root/lang"

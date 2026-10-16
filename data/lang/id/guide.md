@@ -28,6 +28,8 @@ ini adalah file Markdown; halaman dokumentasi terbuka dengan cara yang sama, mas
 - **Tab**: setiap dokumen yang terbuka adalah tab: profil, perbandingan, panduan ini, penanda, server MCP,
   pengaturan. Tombol menu di ujung kiri baris tab berisi Baru, Buka, Simpan, Bandingkan, panduan,
   server MCP, penanda, Pengaturan, dan Keluar.
+- **Tentang dan Lisensi** di menu: versi dengan commit build-nya dan lisensi (MIT) yang tertanam di
+  program, sehingga tetap ikut `winweaver.exe` meski hanya file itu yang dipindahkan.
 - **Bilah perintah**: Baru, Buka, Simpan, Periksa, Buat, PC Ini, Bandingkan. Di jendela yang sempit,
   bilah ini hanya menampilkan ikon, di baris navigasi.
 - **Baris navigasi**: Kembali dan Maju berpindah di antara item yang telah Anda pilih; jalur navigasi
@@ -76,6 +78,9 @@ impor yang tidak dimuat: opsi tetap di profil tanpa perubahan, tercantum di **Op
 pohon, dan tidak disertakan dalam pembuatan, dengan peringatan saat profil dibuka dan saat file jawaban
 dibuat. **Muat katalog** di grup itu menemukan impor yang memuatnya dan hanya memuat impor tersebut.
 Sebuah pengaturan (Umum, Jendela) menyembunyikan grup itu.
+
+Arsip zip berisi templat, seperti yang dirilis Chrome, Edge, dan Firefox, atau berisi file katalog diimpor
+dengan **Impor arsip...** dan dibaca tanpa diekstrak.
 
 ## Server MCP
 

@@ -39,7 +39,7 @@ impl HttpServer {
             "INFO",
             &format!(
                 "HTTP server of WinWeaver {} on http://127.0.0.1:{port}/mcp, mode {}, reading this PC {}",
-                winweaver_core::APP_VERSION,
+                winweaver_core::BUILD,
                 options.mode.name(),
                 if options.read_pc { "allowed" } else { "off" }
             ),

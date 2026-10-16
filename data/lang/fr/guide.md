@@ -31,6 +31,8 @@ les pages de documentation s'ouvrent de la même façon, chacune dans son propre
   signets, le serveur MCP, les paramètres. Le bouton de menu à l'extrémité gauche de la rangée
   d'onglets contient Nouveau, Ouvrir, Enregistrer, Comparer, le guide, le serveur MCP, les signets,
   Paramètres et Quitter.
+- **À propos et Licence** dans le menu : la version avec le commit de la compilation et la licence (MIT),
+  intégrée au programme, qui reste donc avec `winweaver.exe` même déplacé seul.
 - **Barre de commandes** : Nouveau, Ouvrir, Enregistrer, Vérifier, Générer, Ce PC, Comparer. Dans une
   fenêtre étroite, elle n'affiche que des icônes, dans la ligne de navigation.
 - **Ligne de navigation** : Précédent et Suivant parcourent les éléments que vous avez sélectionnés ;
@@ -85,6 +87,9 @@ dans le profil, sont listées sous **Options inconnues** à la fin de l'arboresc
 génération, avec un avertissement à l'ouverture du profil et à la génération du fichier de réponses.
 **Charger les catalogues** dans ce groupe trouve les importations qui les contiennent et ne charge que
 celles-ci. Un paramètre (Général, Fenêtre) masque le groupe.
+
+Une archive zip de modèles, comme Chrome, Edge et Firefox les distribuent, ou d'un fichier de catalogue
+s'importe avec **Importer une archive...** et se lit sans être décompressée.
 
 ## Le serveur MCP
 

@@ -29,6 +29,8 @@ della documentazione si aprono allo stesso modo, ognuna nella propria scheda.
 - **Schede**: ogni documento aperto è una scheda: un profilo, un confronto, questa guida, i segnalibri,
   il server MCP, le impostazioni. Il pulsante del menu all'estremità sinistra della riga delle schede
   contiene Nuovo, Apri, Salva, Confronta, la guida, il server MCP, i segnalibri, Impostazioni ed Esci.
+- **Informazioni e Licenza** nel menu: la versione con il commit della build e la licenza (MIT), integrata
+  nel programma, che resta quindi con `winweaver.exe` anche se si sposta solo quel file.
 - **Barra dei comandi**: Nuovo, Apri, Salva, Verifica, Genera, Questo PC, Confronta. In una finestra
   stretta mostra solo le icone, nella riga di navigazione.
 - **Riga di navigazione**: Indietro e Avanti scorrono gli elementi selezionati; il percorso mostra dove
@@ -81,6 +83,9 @@ elencate in **Opzioni sconosciute** alla fine dell'albero e sono escluse dalla g
 all'apertura del profilo e alla generazione del file di risposte. **Carica cataloghi** in quel gruppo trova
 le importazioni che le contengono e carica solo quelle. Un'impostazione (Generale, Finestra) nasconde il
 gruppo.
+
+Un archivio zip di modelli, come li distribuiscono Chrome, Edge e Firefox, o di un file di catalogo si
+importa con **Importa un archivio...** e si legge senza estrarlo.
 
 ## Il server MCP
 

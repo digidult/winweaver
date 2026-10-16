@@ -123,7 +123,7 @@ pub fn init(dir: &Path, headless: bool) {
 fn process_line() -> String {
     format!(
         "WinWeaver {} process {}",
-        winweaver_core::APP_VERSION,
+        winweaver_core::BUILD,
         std::process::id()
     )
 }

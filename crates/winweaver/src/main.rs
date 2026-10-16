@@ -77,7 +77,7 @@ fn mcp(args: &[String]) -> ExitCode {
         "INFO",
         &format!(
             "WinWeaver {} started for MCP over {transport} (process {})",
-            winweaver_core::APP_VERSION,
+            winweaver_core::BUILD,
             std::process::id()
         ),
     );
@@ -250,7 +250,7 @@ fn main() -> ExitCode {
         Some("--elevated-apply") => elevated_apply(&args[1..]),
         Some("--version") => {
             attach_console();
-            println!("WinWeaver {}", winweaver_core::APP_VERSION);
+            println!("WinWeaver {}", winweaver_core::BUILD);
             ExitCode::SUCCESS
         }
         Some("--check-catalog") => {

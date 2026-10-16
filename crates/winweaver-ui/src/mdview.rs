@@ -147,6 +147,26 @@ impl MdDoc {
     pub fn is_guide(&self) -> bool {
         self.path.is_none() && self.title == GUIDE_TITLE
     }
+
+    /// The license of the program, built into the executable, so that it travels with the exe alone.
+    pub fn license() -> Self {
+        Self::new(LICENSE_TITLE, None, license_text())
+    }
+
+    pub fn is_license(&self) -> bool {
+        self.path.is_none() && self.title == LICENSE_TITLE
+    }
+}
+
+const LICENSE_TITLE: &str = "LICENSE";
+
+/// The text of `LICENSE` as a Markdown page: its first line (the name of the license) a heading.
+pub fn license_text() -> String {
+    let text = include_str!("../../../LICENSE").replace("\r\n", "\n");
+    match text.split_once('\n') {
+        Some((first, rest)) if !first.starts_with('#') => format!("# {first}\n{rest}"),
+        _ => text,
+    }
 }
 
 /// The guide in a language: a file `lang/<code>/guide.md` next to the executable, the embedded
@@ -279,6 +299,14 @@ pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_license_is_built_in_as_a_page() {
+        let text = license_text();
+        assert!(text.starts_with("# MIT License\n"), "{text}");
+        assert!(text.contains("Permission is hereby granted"));
+        assert!(MdDoc::license().is_license() && !MdDoc::guide().is_license());
+    }
 
     #[test]
     fn a_search_finds_the_blocks_with_their_headings() {

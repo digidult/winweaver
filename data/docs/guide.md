@@ -28,6 +28,8 @@ documentation pages open the same way, each in its own tab.
 - **Tabs**: every open document is a tab: a profile, a diff, this guide, the bookmarks, the MCP
   server, the settings. The menu button at the left end of the tab row holds New, Open, Save,
   Compare, the guide, the MCP server, the bookmarks, Settings and Exit.
+- **About and License** in the menu: the version with the commit of the build, and the license (MIT),
+  built into the program, so it stays with `winweaver.exe` moved alone.
 - **Command bar**: New, Open, Save, Check, Build, This PC, Compare. In a narrow window it shows icons
   only, in the navigation row.
 - **Navigation row**: Back and Forward move through the items you selected; the breadcrumb shows
@@ -76,6 +78,9 @@ that is not loaded: they stay in the profile unchanged, are listed under **Unkno
 the tree and are left out of the build, with a warning when the profile opens and when the answer file is
 built. **Load catalogs** in that group finds the imports that hold them and loads only those. A setting
 (General, Window) hides the group.
+
+A zip archive of templates, as Chrome, Edge and Firefox ship them, or of a catalog file is imported with
+**Import an archive...** and read without unpacking it.
 
 ## The MCP server
 

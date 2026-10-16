@@ -95,6 +95,9 @@ NEW). Each item names the user-visible behaviour; the mechanism is in `04-archit
 - Trust order of imports when two hold the same policy: bundled, this Windows, folder, catalog file. A
   policy is one rule owned by the most trusted import, shown as an alias in the other trees.
 - Export the shown templates as a catalog file; import a catalog file as an import of the kind "package".
+- Import a zip archive in memory, nothing unpacked to the disk: its ADMX files with the ADML of the folders of
+  the cultures next to them (the archives of Chrome, Edge, Firefox), else its one catalog file; the size of
+  the archive, the count of its entries, each entry and all it unpacks to are limited.
 - Every record is checked on load: safe characters in keys, value names and values (no control characters,
   no U+FFFE and U+FFFF, no `]]>`), keys without empty, `.` or `..` segments, ranges, unique parameters,
   a category depth limit; a defect skips the policy and is logged, never stops the import.

@@ -1,7 +1,9 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 16.10.2026 (two renderers,
+Updated with every change of structure, commands or task status. Last update: 16.10.2026 (version 0.2.0 with
+the commit in every build, CI only for pull requests that are ready, archives of templates, the license in the
+executable; two renderers,
 OpenGL and DirectX 12, with Automatic, the setting and --renderer; the imports read only when checked in the
 settings, the unknown options of a profile with Load catalogs; eight built-in
 languages besides English, the MCP log and the crash handlers, the files for AI
@@ -149,6 +151,12 @@ of the predecessor; the id of an embedded theme replaces it).
     tr); the test `every_text_of_the_interface_is_translated` fails otherwise. A new rule needs its texts in
     every `data/catalog/lang/<code>.json` (`translations_cover_every_rule`); `package/lang/be/ui.json` may
     lag (English fills the gaps).
+11. Versions (the customer's rule of 16.10.2026): `version` of the workspace `Cargo.toml` grows with every
+    pull request that reaches `main`: the second number for a feature (0.2.0 to 0.3.0, the third back to 0),
+    the third for fixes only (0.2.0 to 0.2.1); a pull request with both counts as a feature. Every build
+    names its commit: `winweaver_core::BUILD` is `<version>+<12 digits of the commit>` (`build.rs` of the core,
+    `WINWEAVER_COMMIT` set by CI), shown by `--version`, About, the logs, the MCP server, the answer file
+    and the scripts.
 
 ## 5. Commands
 
@@ -164,9 +172,23 @@ cargo build --release --workspace
 cargo build --release -p winweaver --no-default-features --features wgpu
 ```
 
-CI runs them on every push to `main`, every pull request and every tag. When `cargo fmt` finds differences,
-the Linux job uploads `fmt.patch` with `Cargo.lock` in the artifact `ci-files`:
-`gh run download <run id> -n ci-files -D <folder>`, then `git apply <folder>/fmt.patch`.
+CI does not run at every push, since its Windows minutes are the dear ones:
+
+1. Open a pull request as a draft (`gh pr create --draft`) and push to it as often as needed: a draft runs
+   nothing.
+2. When the work is complete, `gh pr ready <number>` (or "Ready for review" on GitHub) runs CI once. Every
+   later push to a ready pull request runs it again, so gather the fixes into one push; `gh pr ready
+   <number> --undo` makes it a draft again.
+3. A check on demand, of a draft or any branch: `gh workflow run ci.yml --ref <branch>` (or Actions, CI,
+   Run workflow); `gh run list --branch <branch> --workflow ci.yml` finds the run.
+4. A head commit with `[skip ci]` in its message runs nothing; a newer push cancels the run of the same pull
+   request or branch.
+5. The Linux job comes first and the Windows job only after it: an unformatted push, or clippy or a test of
+   the core that fails, stops before Windows.
+6. `main` runs after every merge (its archive is the build for the acceptance), a tag `v*` for the release.
+
+When `cargo fmt` finds differences, the Linux job fails and uploads `fmt.patch` with `Cargo.lock` in the
+artifact `ci-files`: `gh run download <run id> -n ci-files -D <folder>`, then `git apply <folder>/fmt.patch`.
 
 The MCP server without the window (the stdio transport is started by the client; the HTTP one needs a token
 of at least 32 characters):
@@ -180,8 +202,8 @@ A release: set `version` in the workspace `Cargo.toml`, add `docs/releases/v<ver
 (the customer's call); the job `release` publishes the zip with the notes:
 
 ```bash
-git tag -a v0.1.0-alpha.1 -m "WinWeaver 0.1.0-alpha.1"
-git push origin v0.1.0-alpha.1
+git tag -a v0.2.0 -m "WinWeaver 0.2.0"
+git push origin v0.2.0
 ```
 
 Catalog data: edit `data/catalog/*.json` by hand (strict JSON, ASCII), add a new rules file to `RULE_FILES` in
@@ -244,6 +266,11 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - Imports: a policy is `admx.<prefix>.<name>` with `<id>.off`; groups `admx.<import>` under `policies`; a catalog
   file brings only Reg and RegRemove actions under `HKLM:\` or `DU:\` (checked at every load). Turning a group
   on skips imported policies; the read of the whole PC leaves them out.
+- Archives (`admx::read_archive`, the button Import an archive): a `.zip` is read in memory with the crate
+  `zip` (deflate only, pure Rust); its ADMX files with the ADML of `<dir>/<culture>/<name>.adml` (any case)
+  become an import `archive-<fnv of the path>`, else its one `.wwcatalog` is imported like a catalog file.
+  Limits: 256 MB of archive, 20 000 entries, 512 MB unpacked, an entry up to `FILE_MAX` or `CATALOG_MAX`
+  whatever size it declares.
 - Imports are read only when checked: `Settings::loaded_imports` names them (`None` in settings of an earlier
   version: every file but `hidden_imports`, written as the list at the first start), and `read_imports` opens
   no other file, for the window and for the headless MCP (`with_imports` of `main.rs`). The settings list the

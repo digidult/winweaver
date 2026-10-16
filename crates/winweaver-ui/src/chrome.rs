@@ -276,6 +276,7 @@ impl App {
         );
         ui.separator();
         item(ui, tr("Guide"), "F1", Act::OpenGuide);
+        item(ui, tr("License"), "", Act::OpenLicense);
         item(ui, tr("Bookmarks"), "", Act::OpenMarks);
         item(ui, tr("MCP server"), "", Act::OpenMcp);
         item(ui, tr("Settings"), "Ctrl+,", Act::OpenSettings);
@@ -286,7 +287,7 @@ impl App {
             "",
             Act::Message(format!(
                 "WinWeaver {}, catalog {}, settings {}",
-                winweaver_core::APP_VERSION,
+                winweaver_core::BUILD,
                 self.catalog.version(),
                 Settings::path().display()
             )),
@@ -469,6 +470,7 @@ impl App {
                 tr("Import a catalog file..."),
                 crate::ImportSource::CatalogFile,
             ),
+            (tr("Import an archive..."), crate::ImportSource::Archive),
         ] {
             if ui.button(text).clicked() {
                 acts.push(Act::ImportTemplates(source));

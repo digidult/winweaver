@@ -433,5 +433,10 @@
   "Automatic": "Automatisch",
   "A change takes effect at the next start. Automatic tries {order} in this order and takes the first that starts; OpenGL takes less memory, DirectX 12 also draws without a driver of the graphics card.": "Eine Änderung gilt ab dem nächsten Start. Automatisch versucht {order} in dieser Reihenfolge und nimmt den ersten, der startet; OpenGL braucht weniger Speicher, DirectX 12 zeichnet auch ohne Treiber der Grafikkarte.",
   "Draws now with {graphics}": "Zeichnet jetzt mit {graphics}",
-  "{failed}; the window draws with {renderer}": "{failed}; das Fenster zeichnet mit {renderer}"
+  "{failed}; the window draws with {renderer}": "{failed}; das Fenster zeichnet mit {renderer}",
+  "License": "Lizenz",
+  "Import an archive...": "Archiv importieren...",
+  "A zip archive of ADMX templates with their ADML, or of one catalog file; it is read without unpacking": "Ein Zip-Archiv mit ADMX-Vorlagen und ihren ADML oder mit einer Katalogdatei; es wird ohne Entpacken gelesen",
+  "Open an archive of templates or of a catalog file": "Ein Archiv mit Vorlagen oder einer Katalogdatei öffnen",
+  "Zip archives": "Zip-Archive"
 }

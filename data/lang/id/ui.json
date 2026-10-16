@@ -433,5 +433,10 @@
   "Automatic": "Otomatis",
   "A change takes effect at the next start. Automatic tries {order} in this order and takes the first that starts; OpenGL takes less memory, DirectX 12 also draws without a driver of the graphics card.": "Perubahan berlaku pada start berikutnya. Otomatis mencoba {order} sesuai urutan ini dan memakai yang pertama berjalan; OpenGL memakai lebih sedikit memori, DirectX 12 juga menggambar tanpa driver kartu grafis.",
   "Draws now with {graphics}": "Sekarang menggambar dengan {graphics}",
-  "{failed}; the window draws with {renderer}": "{failed}; jendela digambar dengan {renderer}"
+  "{failed}; the window draws with {renderer}": "{failed}; jendela digambar dengan {renderer}",
+  "License": "Lisensi",
+  "Import an archive...": "Impor arsip...",
+  "A zip archive of ADMX templates with their ADML, or of one catalog file; it is read without unpacking": "Arsip zip berisi templat ADMX beserta ADML-nya, atau satu file katalog; dibaca tanpa diekstrak",
+  "Open an archive of templates or of a catalog file": "Buka arsip templat atau file katalog",
+  "Zip archives": "Arsip zip"
 }

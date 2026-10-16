@@ -30,6 +30,8 @@ sayfaları da aynı şekilde, her biri kendi sekmesinde açılır.
 - **Sekmeler**: her açık belge bir sekmedir: profil, karşılaştırma, bu kılavuz, yer işaretleri, MCP
   sunucusu, ayarlar. Sekme satırının sol ucundaki menü düğmesi Yeni, Aç, Kaydet, Karşılaştır, kılavuz,
   MCP sunucusu, yer işaretleri, Ayarlar ve Çıkış komutlarını içerir.
+- Menüdeki **Hakkında ve Lisans**: derlemenin commit'iyle birlikte sürüm ve programa gömülü lisans (MIT);
+  böylece yalnızca `winweaver.exe` taşınsa da lisans onunla kalır.
 - **Komut çubuğu**: Yeni, Aç, Kaydet, Denetle, Oluştur, Bu bilgisayar, Karşılaştır. Dar bir pencerede
   yalnızca simgeleri gösterir ve bunlar gezinti satırına taşınır.
 - **Gezinti satırı**: Geri ve İleri, seçtiğiniz öğeler arasında gezinir; içerik haritası nerede
@@ -79,6 +81,9 @@ yüklenmemiş bir içeri aktarımın seçeneklerini içerebilir: bunlar profilde
 sonunda **Bilinmeyen seçenekler** altında listelenir ve oluşturmaya alınmaz; profil açılırken ve yanıt
 dosyası oluşturulurken bir uyarı verilir. Bu gruptaki **Katalogları yükle**, onları içeren içeri
 aktarımları bulur ve yalnızca bunları yükler. Bir ayar (Genel, Pencere) grubu gizler.
+
+Chrome, Edge ve Firefox'un yayımladığı biçimdeki bir şablon zip arşivi veya bir katalog dosyası arşivi
+**Arşiv içeri aktar...** ile içeri aktarılır ve açılmadan okunur.
 
 ## MCP sunucusu
 

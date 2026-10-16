@@ -263,6 +263,8 @@ pub enum ImportSource {
     ThisWindows,
     Folder,
     CatalogFile,
+    /// A zip archive of templates or of a catalog file.
+    Archive,
 }
 
 /// The colours of the title bar: dark, caption, text, border.
@@ -322,6 +324,8 @@ pub enum Act {
     CancelPlan,
     OpenReport,
     OpenGuide,
+    /// Opens the license, built into the executable, in a Markdown tab.
+    OpenLicense,
     OpenMarks,
     OpenMcp,
     McpStart,
@@ -1406,7 +1410,7 @@ impl App {
             );
             return;
         }
-        let build = match render::build(catalog, &doc.profile, winweaver_core::APP_VERSION) {
+        let build = match render::build(catalog, &doc.profile, winweaver_core::BUILD) {
             Ok(b) => b,
             Err(e) => {
                 doc.issues.insert(
@@ -1604,7 +1608,7 @@ impl App {
             self.status = tr("Save a script: the active tab is not a profile").to_owned();
             return;
         };
-        let version = winweaver_core::APP_VERSION;
+        let version = winweaver_core::BUILD;
         let stem = file_stem(&doc.profile.name);
         let made = match kind {
             ScriptKind::Apply => scripts::apply_script(&self.catalog, &doc.profile, &ids, version)
@@ -2135,6 +2139,14 @@ impl App {
                 Some(p) => Some(p),
                 None => return,
             },
+            ImportSource::Archive => match rfd::FileDialog::new()
+                .set_title(tr("Open an archive of templates or of a catalog file"))
+                .add_filter(tr("Zip archives"), &[admx::ARCHIVE_EXTENSION])
+                .pick_file()
+            {
+                Some(p) => Some(p),
+                None => return,
+            },
         };
         let build = winweaver_win::this_pc()
             .map(|m| m.system_info().build)
@@ -2172,6 +2184,27 @@ impl App {
                     }
                     f
                 }),
+                (ImportSource::Archive, Some(file)) => match admx::read_archive(&file) {
+                    Ok(admx::Archive::Templates(t)) => {
+                        let name = file
+                            .file_stem()
+                            .map(|n| n.to_string_lossy().into_owned())
+                            .unwrap_or_else(|| "Templates".to_owned());
+                        let id = format!(
+                            "archive-{:08x}",
+                            session::fnv(&file.display().to_string().to_lowercase()) as u32
+                        );
+                        Ok(admx::to_catalog_file(&t, &id, &name, "", &now))
+                    }
+                    Ok(admx::Archive::Catalog(f)) => {
+                        let mut f = *f;
+                        if taken.contains(&f.id) && !f.id.starts_with("package-") {
+                            f.id = format!("package-{}", f.id);
+                        }
+                        Ok(f)
+                    }
+                    Err(e) => Err(e),
+                },
                 _ => Err("nothing to import".to_owned()),
             };
             let _ = tx.send(result);
@@ -2401,6 +2434,15 @@ impl App {
                 .clicked()
             {
                 acts.push(Act::ImportTemplates(ImportSource::CatalogFile));
+            }
+            if ui
+                .add_enabled(!busy, egui::Button::new(tr("Import an archive...")))
+                .on_hover_text(tr(
+                    "A zip archive of ADMX templates with their ADML, or of one catalog file; it is read without unpacking",
+                ))
+                .clicked()
+            {
+                acts.push(Act::ImportTemplates(ImportSource::Archive));
             }
         });
     }
@@ -2728,6 +2770,7 @@ impl App {
                 Act::CancelPlan => self.confirm = None,
                 Act::Build => self.build_active(),
                 Act::OpenGuide => self.open_guide(),
+                Act::OpenLicense => self.open_license(),
                 Act::Compare => {
                     if let Some(path) = pick_profile() {
                         match Profile::load(&path) {
@@ -2891,6 +2934,20 @@ impl App {
                 doc.select(sel);
             }
             self.reveal_selection();
+        }
+    }
+
+    fn open_license(&mut self) {
+        match self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Markdown(m) if m.is_license()))
+        {
+            Some(i) => self.active = i,
+            None => {
+                self.docs.push(Doc::Markdown(Box::new(MdDoc::license())));
+                self.active = self.docs.len() - 1;
+            }
         }
     }
 
@@ -4137,7 +4194,11 @@ pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
             session::log(
                 &app.logs_dir,
                 "INFO",
-                &format!("graphics: {}", app.graphics),
+                &format!(
+                    "WinWeaver {} started; graphics: {}",
+                    winweaver_core::BUILD,
+                    app.graphics
+                ),
             );
             app.mcp.port = app.settings.mcp_port;
             app.mcp.token = app.settings.mcp_token.clone();

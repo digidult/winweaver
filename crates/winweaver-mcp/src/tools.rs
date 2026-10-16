@@ -539,6 +539,7 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
             Ok(json!({
                 "program": "WinWeaver",
                 "version": winweaver_core::APP_VERSION,
+                "commit": winweaver_core::COMMIT,
                 "catalog": { "version": catalog.version(), "rules": catalog.rules().len(), "groups": catalog.groups().len() },
                 "mode": state.options.mode.name(),
                 "read_pc": state.options.read_pc,
@@ -884,7 +885,7 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
         }
         "preview_build" => {
             let doc = current(state);
-            let build = render::build(catalog, &doc.profile, winweaver_core::APP_VERSION)
+            let build = render::build(catalog, &doc.profile, winweaver_core::BUILD)
                 .map_err(|e| fail("invalid", format!("the build fails: {e}")))?;
             let mut head: String = build.xml.chars().take(6000).collect();
             head = hide_secrets(&head);
@@ -914,7 +915,7 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
                     format!("{}: {}", validate::summary(&issues), first.join("; ")),
                 ));
             }
-            let build = render::build(catalog, &doc.profile, winweaver_core::APP_VERSION)
+            let build = render::build(catalog, &doc.profile, winweaver_core::BUILD)
                 .map_err(|e| fail("invalid", format!("the build fails: {e}")))?;
             let dir = state.options.output_dir.clone();
             std::fs::create_dir_all(&dir).map_err(|e| fail("write_failed", e.to_string()))?;

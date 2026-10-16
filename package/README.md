@@ -22,7 +22,8 @@ keeps its settings and files in that folder. The guide opens at the first start 
 - **This PC**: read its settings into a profile and see what is in effect; check the selected rules; apply them or
   return them to the Windows defaults as administrator with a backup of every value, and undo a change from its backup.
   For other PCs it saves stand-alone scripts that apply, revert, audit and undo; their audit report opens as a profile.
-- **Policy templates**: import the ADMX templates of this Windows, of a folder or a catalog file; their policies
+- **Policy templates**: import the ADMX templates of this Windows, of a folder, of a zip archive (as Chrome, Edge and
+  Firefox ship them, read without unpacking) or a catalog file, also zipped; their policies
   become rules. Only the imports checked in the settings are loaded. Options of a profile whose catalog is not
   loaded stay in the profile under Unknown options and are left out of the build; Load catalogs finds and loads
   their imports. An `.admx` or `.wwcatalog` file also opens as a tab without importing.
@@ -135,4 +136,5 @@ of the rules are built in for the built-in languages; another language shows the
 
 ## License
 
-MIT, see `LICENSE`.
+MIT. The text is built into `winweaver.exe`: Menu, License; it stays with the program when only the executable
+is moved.

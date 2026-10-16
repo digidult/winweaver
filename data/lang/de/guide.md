@@ -32,6 +32,8 @@ Markdown-Datei; die Seiten der Dokumentation werden genauso geöffnet, jede in e
   Handbuch, die Lesezeichen, der MCP-Server, die Einstellungen. Die Menüschaltfläche am linken Ende der
   Registerkartenleiste enthält Neu, Öffnen, Speichern, Vergleichen, das Handbuch, den MCP-Server, die
   Lesezeichen, Einstellungen und Beenden.
+- **Info und Lizenz** im Menü: die Version mit dem Commit des Builds und die Lizenz (MIT), in das Programm
+  eingebaut, sodass sie bei `winweaver.exe` bleibt, auch wenn nur diese Datei verschoben wird.
 - **Befehlsleiste**: Neu, Öffnen, Speichern, Prüfen, Erstellen, Dieser PC, Vergleichen. In einem schmalen
   Fenster zeigt sie nur Symbole, und zwar in der Navigationszeile.
 - **Navigationszeile**: Zurück und Vorwärts bewegen sich durch die Elemente, die Sie ausgewählt haben; die
@@ -85,6 +87,9 @@ Profil, stehen unter **Unbekannte Optionen** am Ende der Struktur und werden bei
 mit einer Warnung beim Öffnen des Profils und beim Erstellen der Antwortdatei. **Kataloge laden** in
 dieser Gruppe findet die Importe, die sie enthalten, und lädt nur diese. Eine Einstellung (Allgemein,
 Fenster) blendet die Gruppe aus.
+
+Ein Zip-Archiv mit Vorlagen, wie Chrome, Edge und Firefox sie ausliefern, oder mit einer Katalogdatei wird
+mit **Archiv importieren...** importiert und ohne Entpacken gelesen.
 
 ## Der MCP-Server
 

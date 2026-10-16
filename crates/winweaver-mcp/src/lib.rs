@@ -307,7 +307,7 @@ impl Server {
         json!({
             "protocolVersion": PROTOCOL_VERSION,
             "capabilities": { "tools": { "listChanged": false }, "resources": { "listChanged": false } },
-            "serverInfo": { "name": "winweaver", "version": winweaver_core::APP_VERSION },
+            "serverInfo": { "name": "winweaver", "version": winweaver_core::BUILD },
             "instructions": INSTRUCTIONS,
         })
     }

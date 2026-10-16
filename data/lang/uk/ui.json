@@ -433,5 +433,10 @@
   "Automatic": "Автоматично",
   "A change takes effect at the next start. Automatic tries {order} in this order and takes the first that starts; OpenGL takes less memory, DirectX 12 also draws without a driver of the graphics card.": "Зміна діє з наступного запуску. «Автоматично» пробує {order} у цьому порядку й бере перший, що запуститься; OpenGL займає менше пам'яті, DirectX 12 малює й без драйвера відеокарти.",
   "Draws now with {graphics}": "Зараз малює: {graphics}",
-  "{failed}; the window draws with {renderer}": "{failed}; вікно малюється через {renderer}"
+  "{failed}; the window draws with {renderer}": "{failed}; вікно малюється через {renderer}",
+  "License": "Ліцензія",
+  "Import an archive...": "Імпортувати архів...",
+  "A zip archive of ADMX templates with their ADML, or of one catalog file; it is read without unpacking": "Zip-архів шаблонів ADMX з їхніми ADML або одного файлу каталогу; читається без розпакування",
+  "Open an archive of templates or of a catalog file": "Відкрити архів шаблонів або файлу каталогу",
+  "Zip archives": "Zip-архіви"
 }

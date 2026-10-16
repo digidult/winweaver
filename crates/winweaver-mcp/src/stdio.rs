@@ -12,7 +12,7 @@ pub fn serve(server: &Server) -> io::Result<()> {
         "INFO",
         &format!(
             "stdio server of WinWeaver {} started, mode {}, reading this PC {}",
-            winweaver_core::APP_VERSION,
+            winweaver_core::BUILD,
             options.mode.name(),
             if options.read_pc { "allowed" } else { "off" }
         ),

@@ -14,4 +14,8 @@ serde_json.workspace = true
 indexmap.workspace = true
 thiserror.workspace = true
 quick-xml = "0.42"
+# Archives of policy templates (admx::read_archive): only the deflate method, through flate2 with its
+# pure Rust backend (miniz_oxide), named here so that it is on whatever else asks for flate2.
+zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2"] }
+flate2 = "1"
 sha2 = "0.10"

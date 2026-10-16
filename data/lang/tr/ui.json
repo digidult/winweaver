@@ -433,5 +433,10 @@
   "Automatic": "Otomatik",
   "A change takes effect at the next start. Automatic tries {order} in this order and takes the first that starts; OpenGL takes less memory, DirectX 12 also draws without a driver of the graphics card.": "Bir değişiklik sonraki başlatmada geçerli olur. Otomatik, {order} sırasıyla dener ve ilk başlayanı kullanır; OpenGL daha az bellek kullanır, DirectX 12 ekran kartı sürücüsü olmadan da çizer.",
   "Draws now with {graphics}": "Şu anda çizen: {graphics}",
-  "{failed}; the window draws with {renderer}": "{failed}; pencere {renderer} ile çiziliyor"
+  "{failed}; the window draws with {renderer}": "{failed}; pencere {renderer} ile çiziliyor",
+  "License": "Lisans",
+  "Import an archive...": "Arşiv içeri aktar...",
+  "A zip archive of ADMX templates with their ADML, or of one catalog file; it is read without unpacking": "ADML dosyalarıyla ADMX şablonlarının veya tek bir katalog dosyasının zip arşivi; açılmadan okunur",
+  "Open an archive of templates or of a catalog file": "Şablon veya katalog dosyası arşivi aç",
+  "Zip archives": "Zip arşivleri"
 }
