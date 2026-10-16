@@ -1,7 +1,8 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 16.10.2026 (eight built-in
+Updated with every change of structure, commands or task status. Last update: 16.10.2026 (the imports read
+only when checked in the settings, the unknown options of a profile with Load catalogs; eight built-in
 languages besides English, the MCP log and the crash handlers, the files for AI
 agents in `agents/`, the README and the Belarusian example of the archive in `package/`, one archive from CI;
 before it on 15.10.2026 the list of
@@ -238,6 +239,17 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - Imports: a policy is `admx.<prefix>.<name>` with `<id>.off`; groups `admx.<import>` under `policies`; a catalog
   file brings only Reg and RegRemove actions under `HKLM:\` or `DU:\` (checked at every load). Turning a group
   on skips imported policies; the read of the whole PC leaves them out.
+- Imports are read only when checked: `Settings::loaded_imports` names them (`None` in settings of an earlier
+  version: every file but `hidden_imports`, written as the list at the first start), and `read_imports` opens
+  no other file, for the window and for the headless MCP (`with_imports` of `main.rs`). The settings list the
+  other catalog files of `imports/` by `admx::CatalogHeader::read` (the first 16 KB) with their size;
+  unchecking one drops it from memory and closes its tab.
+- Unknown options: choices whose rule the loaded catalog lacks stay in `Profile::unknown`. The tree shows them
+  in the group `UNKNOWN_GROUP` at its end (`Sel::Unknown`, left out with `Settings::hide_unknown`), the open
+  warns of their count (`ProfileDoc::new`), and the check of the build does too (a warning of `validate`).
+  Load catalogs (`Act::LoadCatalogs`) reads only the rule ids of the files that are not loaded
+  (`admx::rule_ids`, a stream), checks and loads the ones that hold some, the templates of this Windows
+  first, and the selection follows an option between the catalog and the unknown group.
 - Lists (`Param::List`, `Action::RegList`): a `reg-list` writes the items of its list parameter as the values
   of a key, named by the items, a prefix and a number from 1 (an empty prefix gives 1, 2, 3), or `name=value`
   items (`ListNames`); without `additive` the other values of the key go first (`Set-RegList`, `Test-RegList`
@@ -303,9 +315,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   cultures next to it) opens like any document, without importing it (`CatalogDoc::from_file`); its
   command bar offers Import.
 - The tab of an import (`Doc::Catalog`, "Open" in Settings, Policy templates) shows its tree without check boxes
-  and the policy with its parameters and registry values; "Show in the profile tree" shows a hidden import
-  again, brings the first profile tab to the front, opens the groups above the policy and selects it.
-- The settings tab has the sections General, Policy templates (show, export, rename, remove, import) and Files
+  and the policy with its parameters and registry values; "Show in the profile tree" loads an import that is
+  not loaded, brings the first profile tab to the front, opens the groups above the policy and selects it.
+- The settings tab has the sections General, Policy templates (load, export, rename, remove, import) and Files
   (the folders next to the executable, the recent files); a rename changes the name of the catalog file and
   the title of its tree and saves the file.
 - The title bar takes the colours of the theme (`winweaver_win::color_title_bar`: DwmSetWindowAttribute 20 for
@@ -335,7 +347,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Window | Tabs, menu, command bar of each tab (icons above labels), navigation, search per tab, the painted tree and lists with the keyboard, detail panel with copy and selectable texts, forms, check, build, diff tab with comments, bookmarks of options, Markdown tabs with anchors, This PC (read, check, scripts, reports), MCP tab with its journal, settings, translations uk, ru, de, es, fr, id, it and tr, drafts, restored tabs, log, themes with fonts (Light, Dark, Latte, Matrix, more as files) and their editor, the title bar in their colours; pull requests #13 to #17 for the list of 15.10.2026 | 15.10.2026 |
 | MCP server | stdio and HTTP, 19 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
 | Native apply | Plans, the elevated helper, the backup and undo (pull request #2), the default user profile loaded and unloaded by the helper; tested in a test key of HKCU and of the default profile on the runner | 14.10.2026 |
-| Policy templates | ADMX import, catalog files, the settings section (pull request #3), lists and multi-line texts (`reg-list`, list parameters), policies linked to built-in rules | 14.10.2026 |
+| Policy templates | ADMX import, catalog files, the settings section (pull request #3), lists and multi-line texts (`reg-list`, list parameters), policies linked to built-in rules; only the checked imports read, the unknown options of a profile in their group with Load catalogs | 16.10.2026 |
 | Not yet | Features and capabilities read natively (they need DISM and administrator rights) | |
 | Acceptance | Nothing of WinWeaver has been tried in a VM yet: the build of the answer file, the read of a PC and the scripts need the acceptance the predecessor had | |
 

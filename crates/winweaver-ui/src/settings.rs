@@ -57,8 +57,15 @@ pub struct Settings {
     /// The port and the token of the MCP server of the window.
     pub mcp_port: u16,
     pub mcp_token: String,
-    /// The ids of the imports of policy templates that are hidden.
+    /// The ids of the imports of policy templates that are loaded; the other catalog files of
+    /// imports/ are never read. `None` in the settings of an earlier version, whose imports were
+    /// all read: then every import but the hidden ones is loaded.
+    pub loaded_imports: Option<Vec<String>>,
+    /// The imports an earlier version hid; read once to fill `loaded_imports`, never written.
+    #[serde(skip_serializing)]
     pub hidden_imports: Vec<String>,
+    /// The options of a profile whose catalog is not loaded are left out of the tree.
+    pub hide_unknown: bool,
 }
 
 impl Default for Settings {
@@ -79,7 +86,9 @@ impl Default for Settings {
             active_tab: 0,
             mcp_port: 8765,
             mcp_token: String::new(),
+            loaded_imports: None,
             hidden_imports: Vec::new(),
+            hide_unknown: false,
         }
     }
 }

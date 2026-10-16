@@ -88,7 +88,10 @@ NEW). Each item names the user-visible behaviour; the mechanism is in `04-archit
   becomes a rule `admx.<namespace>.<policy>` with its elements as parameters (enum, boolean, decimal,
   text, list, multi-text) and a Disabled rule `<id>.off`; categories become groups under the policies
   root. An import of a folder already imported asks to update in place or add a tree; trees can be
-  renamed, hidden, shown, removed.
+  loaded and unloaded (only the checked catalog files are ever read), renamed, removed.
+- Options of a profile whose catalog is not loaded are kept, listed in the tree as unknown, warned of at
+  the open and at the build, and left out of it; Load catalogs finds the imports that hold them by the ids
+  of their rules and loads only those.
 - Trust order of imports when two hold the same policy: bundled, this Windows, folder, catalog file. A
   policy is one rule owned by the most trusted import, shown as an alias in the other trees.
 - Export the shown templates as a catalog file; import a catalog file as an import of the kind "package".

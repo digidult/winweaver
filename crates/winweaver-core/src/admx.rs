@@ -1406,6 +1406,84 @@ impl CatalogFile {
     }
 }
 
+/// What the list of the imports shows of a catalog file that is not loaded, read from the first
+/// bytes of the file only, so that its rules are never read.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct CatalogHeader {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub windows: String,
+    #[serde(default)]
+    pub created: String,
+}
+
+/// How much of the start of a catalog file its header may take.
+const HEADER_BYTES: u64 = 16 * 1024;
+
+impl CatalogHeader {
+    /// The header of a catalog file as WinWeaver writes it: the fields before the groups. `None`
+    /// for another file, a file of another version, or one whose fields come in another order.
+    pub fn read(path: &Path) -> Option<Self> {
+        use std::io::Read;
+        #[derive(Deserialize)]
+        struct Head {
+            format: String,
+            version: u32,
+            kind: String,
+            id: String,
+            name: String,
+            #[serde(default)]
+            windows: String,
+            #[serde(default)]
+            created: String,
+        }
+        let mut bytes = Vec::new();
+        std::fs::File::open(path)
+            .ok()?
+            .take(HEADER_BYTES)
+            .read_to_end(&mut bytes)
+            .ok()?;
+        let text = String::from_utf8_lossy(&bytes);
+        // A quote inside a string of JSON is escaped, so this marks the end of the header.
+        let end = text.find(",\"groups\":")?;
+        let head: Head = serde_json::from_str(&format!("{}}}", &text[..end])).ok()?;
+        let fits = head.format == CATALOG_FORMAT
+            && head.version <= CATALOG_VERSION
+            && head.kind == "admx"
+            && check::is_safe_id(&head.id)
+            && !head.name.chars().any(char::is_control);
+        fits.then(|| Self {
+            id: head.id,
+            name: head.name.chars().take(120).collect(),
+            windows: head.windows.chars().take(40).collect(),
+            created: head.created.chars().take(40).collect(),
+        })
+    }
+}
+
+/// The ids of the rules of a catalog file, read as a stream without keeping the file in memory:
+/// what the search for the catalog of an option the loaded catalog does not have needs.
+pub fn rule_ids(path: &Path) -> Result<HashSet<String>, String> {
+    #[derive(Deserialize)]
+    struct Id {
+        id: String,
+    }
+    #[derive(Deserialize)]
+    struct Ids {
+        format: String,
+        rules: Vec<Id>,
+    }
+    let name = jsonfile::display_name(path);
+    let file = std::fs::File::open(path).map_err(|e| format!("{name}: {e}"))?;
+    let reader = std::io::BufReader::new(std::io::Read::take(file, CATALOG_MAX));
+    let ids: Ids = serde_json::from_reader(reader).map_err(|e| format!("{name}: {e}"))?;
+    if ids.format != CATALOG_FORMAT {
+        return Err(format!("{name}: not a catalog file"));
+    }
+    Ok(ids.rules.into_iter().map(|r| r.id).collect())
+}
+
 /// The catalog with the rules and groups of the catalog files added; a rule or group whose id is
 /// already there is left out (the first file wins), and the notes say so.
 pub fn merge(
@@ -1650,6 +1728,30 @@ mod tests {
             "Вимкнути зразок"
         );
         f.check().unwrap();
+    }
+
+    #[test]
+    fn the_header_and_the_rule_ids_are_read_without_the_whole_file() {
+        let f = sample();
+        let dir = std::env::temp_dir().join(format!("winweaver-header-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("test.wwcatalog");
+        f.save(&path).unwrap();
+        let head = CatalogHeader::read(&path).unwrap();
+        assert_eq!(
+            (head.id.as_str(), head.name.as_str()),
+            ("test", "Sample templates")
+        );
+        assert_eq!(head.windows, "26300");
+        let ids = rule_ids(&path).unwrap();
+        assert_eq!(ids.len(), f.rules.len());
+        assert!(ids.contains("admx.sample.turnoff.off"));
+        std::fs::write(&path, "{\"format\":\"x\",\"rules\":[]}").unwrap();
+        assert!(CatalogHeader::read(&path).is_none());
+        assert!(rule_ids(&path).is_err(), "not a catalog file");
+        std::fs::write(&path, "{\"format\":\"winweaver-catalog\",\"rules\":[{\"id\":").unwrap();
+        assert!(rule_ids(&path).is_err(), "a cut file is an error");
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
