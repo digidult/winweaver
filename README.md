@@ -9,7 +9,7 @@ AI agents.
 WinWeaver is the successor of WinKickOff. It carries over the data of the built-in rule catalog and the
 whole functionality; the file formats are new and no code is ported (clean room).
 
-Stack: Rust, [eframe](https://github.com/emilk/egui) (egui + glow + winit). Runs on Windows 10 and 11,
+Stack: Rust, [eframe](https://github.com/emilk/egui) (egui + wgpu + winit). Runs on Windows 10 and 11,
 one executable with its data folders next to it, nothing installed.
 
 Licence: [MIT](LICENSE).
