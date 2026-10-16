@@ -1107,16 +1107,27 @@ impl App {
             egui::ComboBox::from_id_salt("renderer")
                 .selected_text(current.map_or(tr("Automatic"), Renderer::title))
                 .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut self.settings.renderer, String::new(), tr("Automatic"));
+                    ui.selectable_value(
+                        &mut self.settings.renderer,
+                        String::new(),
+                        tr("Automatic"),
+                    );
                     for &r in Renderer::ALL {
-                        ui.selectable_value(&mut self.settings.renderer, r.id().to_owned(), r.title());
+                        ui.selectable_value(
+                            &mut self.settings.renderer,
+                            r.id().to_owned(),
+                            r.title(),
+                        );
                     }
                 });
         });
         let order: Vec<&str> = Renderer::ALL.iter().map(|r| r.title()).collect();
         ui.weak(trf("A change takes effect at the next start. Automatic tries {order} in this order and takes the first that starts; OpenGL takes less memory, DirectX 12 also draws without a driver of the graphics card.", &[("order", &order.join(", "))]));
         if !self.graphics.is_empty() {
-            ui.weak(trf("Draws now with {graphics}", &[("graphics", &self.graphics)]));
+            ui.weak(trf(
+                "Draws now with {graphics}",
+                &[("graphics", &self.graphics)],
+            ));
         }
     }
 
@@ -4123,7 +4134,11 @@ pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
             style::install_fonts(&cc.egui_ctx);
             let mut app = App::new(catalog, texts, settings);
             app.graphics = renderer::graphics_text(cc);
-            session::log(&app.logs_dir, "INFO", &format!("graphics: {}", app.graphics));
+            session::log(
+                &app.logs_dir,
+                "INFO",
+                &format!("graphics: {}", app.graphics),
+            );
             app.mcp.port = app.settings.mcp_port;
             app.mcp.token = app.settings.mcp_token.clone();
             app.apply_language();
@@ -4144,7 +4159,10 @@ pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
             if !failures.is_empty() {
                 app.status = trf(
                     "{failed}; the window draws with {renderer}",
-                    &[("failed", &failures.join("; ")), ("renderer", &drawn.title())],
+                    &[
+                        ("failed", &failures.join("; ")),
+                        ("renderer", &drawn.title()),
+                    ],
                 );
             }
             Ok(Box::new(app))
