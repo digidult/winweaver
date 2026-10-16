@@ -23,7 +23,9 @@ keeps its settings and files in that folder. The guide opens at the first start 
   return them to the Windows defaults as administrator with a backup of every value, and undo a change from its backup.
   For other PCs it saves stand-alone scripts that apply, revert, audit and undo; their audit report opens as a profile.
 - **Policy templates**: import the ADMX templates of this Windows, of a folder or a catalog file; their policies
-  become rules. An `.admx` or `.wwcatalog` file also opens as a tab without importing.
+  become rules. Only the imports checked in the settings are loaded. Options of a profile whose catalog is not
+  loaded stay in the profile under Unknown options and are left out of the build; Load catalogs finds and loads
+  their imports. An `.admx` or `.wwcatalog` file also opens as a tab without importing.
 - **Bookmarks** of rules with comments (`.wwmarks`), **themes** with their colours and fonts (`.wwtheme`) and an editor.
 - **Languages**: English, Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish built in,
   Belarusian as a file, more as files (below); "Follow Windows" takes the language of Windows when it is one of them.

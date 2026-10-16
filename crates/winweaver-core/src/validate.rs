@@ -53,10 +53,10 @@ pub fn check(catalog: &Catalog, profile: &Profile, resolution: &Resolution) -> V
     if !profile.unknown.is_empty() {
         push(
             &mut issues,
-            Severity::Info,
+            Severity::Warning,
             Target::Profile,
             format!(
-                "{} choices of rules this catalog does not have are kept in the profile and not built",
+                "{} options of catalogs that are not loaded are kept in the profile and left out of the build",
                 profile.unknown.len()
             ),
         );

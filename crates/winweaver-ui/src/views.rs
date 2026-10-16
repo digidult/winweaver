@@ -10,7 +10,7 @@ use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::resolver::State;
 
 use crate::i18n::{tr, trf};
-use crate::{Act, Form, ProfileDoc, ScriptKind, Search, Sel, Settings, style, tree};
+use crate::{Act, Form, ProfileDoc, ScriptKind, Search, Sel, Settings, UNKNOWN_GROUP, style, tree};
 
 pub fn rtitle<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule) -> &'a str {
     texts.map_or(rule.title.as_str(), |t| t.rule_title(rule))
@@ -266,6 +266,56 @@ fn tree_rows(
     }
 }
 
+/// Whether the saved choice of an option whose catalog is not loaded is on.
+fn unknown_on(choice: &Value) -> bool {
+    choice.get("on").and_then(Value::as_bool).unwrap_or(false)
+}
+
+/// The group of the options of the profile whose catalog is not loaded, at the end of the tree:
+/// their ids, not to be switched.
+fn unknown_rows(rows: &mut Vec<tree::Row<Sel>>, doc: &ProfileDoc, words: &[String]) {
+    let unknown = &doc.profile.unknown;
+    let shown: Vec<(&String, &Value)> = unknown
+        .iter()
+        .filter(|(id, _)| {
+            let id = id.to_lowercase();
+            words.iter().all(|w| id.contains(w.as_str()))
+        })
+        .collect();
+    if unknown.is_empty() || shown.is_empty() {
+        return;
+    }
+    let open = !words.is_empty() || doc.expanded.contains(UNKNOWN_GROUP);
+    rows.push(tree::Row {
+        key: Sel::Group(UNKNOWN_GROUP.to_owned()),
+        depth: 0,
+        title: tr("Unknown options").to_owned(),
+        right: unknown.len().to_string(),
+        check: tree::Check::None,
+        open: Some(open),
+        muted: false,
+        icon: None,
+        switch: None,
+    });
+    if !open {
+        return;
+    }
+    for (id, choice) in shown {
+        rows.push(tree::Row {
+            key: Sel::Unknown(id.clone()),
+            depth: 1,
+            title: id.clone(),
+            right: if unknown_on(choice) { tr("on") } else { tr("off") }.to_owned(),
+            check: tree::Check::None,
+            open: None,
+            muted: true,
+            icon: None,
+            switch: None,
+        });
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 pub fn tree_view(
     ui: &mut egui::Ui,
     catalog: &Catalog,
@@ -273,12 +323,16 @@ pub fn tree_view(
     doc: &ProfileDoc,
     search: &Search,
     inline: bool,
+    show_unknown: bool,
     acts: &mut Vec<Act>,
 ) {
     let words = search.words();
     let mut rows = Vec::new();
     for root in catalog.child_groups(None) {
         tree_rows(&mut rows, catalog, texts, doc, &words, &root.id, 0, inline);
+    }
+    if show_unknown {
+        unknown_rows(&mut rows, doc, &words);
     }
     if !words.is_empty() && rows.is_empty() {
         ui.weak(tr("Nothing matches the search."));
@@ -484,6 +538,88 @@ fn profile_detail(ui: &mut egui::Ui, doc: &ProfileDoc) {
         .show(ui, |ui| {
             ui.weak(tr("Select a form, a group or a rule in the tree."));
         });
+}
+
+/// The button that looks for the catalogs of the unknown options among the imports.
+fn load_catalogs_button(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    if ui
+        .button(tr("Load catalogs"))
+        .on_hover_text(tr(
+            "Looks for these options in the imported catalogs that are not loaded and loads only the ones that have them",
+        ))
+        .clicked()
+    {
+        acts.push(Act::LoadCatalogs);
+    }
+}
+
+/// The group of the options of catalogs that are not loaded.
+fn unknown_group_detail(ui: &mut egui::Ui, doc: &ProfileDoc, acts: &mut Vec<Act>) {
+    let unknown = &doc.profile.unknown;
+    header(ui, |ui| {
+        ui.label(style::strong(ui, tr("Unknown options"), 18.0));
+        ui.horizontal_wrapped(|ui| {
+            style::chip(ui, &trf("{n} options", &[("n", &unknown.len())]), true);
+        });
+        ui.add_space(8.0);
+        load_catalogs_button(ui, acts);
+    });
+    block(ui, |ui| {
+        style::selectable_text(
+            ui,
+            "unknown-summary",
+            tr("These options of the profile belong to catalogs of policy templates that are not loaded. They stay in the profile unchanged and are left out of the build. Load catalogs looks for them in the imported catalogs that are not loaded and loads only the ones that have them."),
+        )
+    });
+    block(ui, |ui| {
+        style::section_title(ui, tr("Options"));
+        for (id, choice) in unknown {
+            ui.horizontal(|ui| {
+                ui.label(RichText::new(id).monospace());
+                ui.weak(if unknown_on(choice) { tr("on") } else { tr("off") });
+                if ui.small_button(tr("open")).clicked() {
+                    acts.push(Act::Select(Sel::Unknown(id.clone())));
+                }
+            });
+        }
+    });
+}
+
+/// An option of the profile whose catalog is not loaded: its id and its saved choice.
+fn unknown_detail(ui: &mut egui::Ui, doc: &ProfileDoc, id: &str, acts: &mut Vec<Act>) {
+    let Some(choice) = doc.profile.unknown.get(id) else {
+        return;
+    };
+    header(ui, |ui| {
+        ui.label(style::strong(ui, tr("Unknown option"), 18.0));
+        id_line(ui, id);
+        ui.horizontal_wrapped(|ui| {
+            let on = unknown_on(choice);
+            style::chip(ui, if on { tr("On") } else { tr("Off") }, on);
+        });
+        ui.add_space(8.0);
+        load_catalogs_button(ui, acts);
+    });
+    block(ui, |ui| {
+        style::selectable_text(
+            ui,
+            ("unknown-option", id),
+            tr("This option belongs to a catalog of policy templates that is not loaded. It stays in the profile unchanged and is left out of the build."),
+        )
+    });
+    if let Some(params) = choice.get("params").and_then(Value::as_object)
+        && !params.is_empty()
+    {
+        block(ui, |ui| {
+            style::section_title(ui, tr("Parameters"));
+            for (name, value) in params {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(RichText::new(name).monospace());
+                    ui.weak(value_text(value));
+                });
+            }
+        });
+    }
 }
 
 fn group_detail(
@@ -1033,7 +1169,9 @@ pub fn detail_view(
         .auto_shrink(false)
         .show(ui, |ui| match &doc.sel {
             Sel::None => profile_detail(ui, doc),
+            Sel::Group(id) if id == UNKNOWN_GROUP => unknown_group_detail(ui, doc, acts),
             Sel::Group(id) => group_detail(ui, catalog, texts, doc, id, acts),
+            Sel::Unknown(id) => unknown_detail(ui, doc, id, acts),
             Sel::Rule(id) => rule_detail(ui, catalog, texts, doc, settings, id, acts),
             Sel::Form(form) => {
                 egui::Frame::new()

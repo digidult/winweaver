@@ -71,6 +71,10 @@ const COMPACT_WIDTH: f32 = 1100.0;
 /// The largest Markdown file a tab shows.
 const MARKDOWN_MAX_BYTES: u64 = 4 * 1024 * 1024;
 
+/// The key of the group of the profile tree that lists the options of catalogs that are not
+/// loaded; no catalog can have it as an id.
+pub const UNKNOWN_GROUP: &str = "#unknown";
+
 /// The selected item of a profile document.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Sel {
@@ -78,6 +82,8 @@ pub enum Sel {
     Group(String),
     Rule(String),
     Form(Form),
+    /// An option of the profile whose catalog is not loaded (`Profile::unknown`).
+    Unknown(String),
 }
 
 /// An open profile with its view state.
@@ -105,6 +111,7 @@ pub struct ProfileDoc {
 impl ProfileDoc {
     pub fn new(profile: Profile, path: Option<PathBuf>, catalog: &Catalog) -> Self {
         let resolution = resolver::resolve(catalog, &profile);
+        let issues = unknown_issues(&profile);
         let expanded = TREE_ROOTS.iter().map(|s| (*s).to_owned()).collect();
         let draft_key = match &path {
             Some(p) => session::key_for_path(p),
@@ -119,7 +126,7 @@ impl ProfileDoc {
             pos: 0,
             expanded,
             resolution,
-            issues: Vec::new(),
+            issues,
             draft_key,
             changed: None,
             search: Search::default(),
@@ -289,8 +296,12 @@ pub enum Act {
     SaveScript(ScriptKind),
     /// Import the templates of this Windows (None), of a folder or a catalog file.
     ImportTemplates(ImportSource),
+    /// Loads an import that is not loaded, or forgets one that is.
     ToggleImport(String),
     RemoveImport(String),
+    /// Looks for the catalogs of the unknown options of the active profile among the imports
+    /// that are not loaded, and loads the ones that have them.
+    LoadCatalogs,
     ExportImport(String),
     /// Starts to rename an import: its id and its name now.
     StartRename(String, String),
@@ -376,6 +387,11 @@ pub struct App {
     /// The imports of policy templates found next to the executable.
     imports: Vec<CatalogFile>,
     importing: Option<std::sync::mpsc::Receiver<Result<CatalogFile, String>>>,
+    /// The folder of the catalog files of the imports.
+    imports_dir: PathBuf,
+    /// Every catalog file of that folder, loaded or not, for the settings: listed at the start,
+    /// when the settings open and after a change of the imports.
+    import_list: Vec<ImportEntry>,
     docs: Vec<Doc>,
     active: usize,
     settings: Settings,
@@ -435,6 +451,8 @@ impl App {
             base_texts: texts.clone(),
             imports: Vec::new(),
             importing: None,
+            imports_dir: imports_dir(),
+            import_list: Vec::new(),
             catalog,
             texts,
             docs: vec![Doc::Profile(Box::new(doc))],
@@ -508,6 +526,7 @@ impl App {
                     Sel::Rule(id) => catalog.rule(id).map(|r| r.group.clone()),
                     Sel::Group(id) => catalog.group(id).and_then(|g| g.parent.clone()),
                     Sel::Form(_) => Some(winweaver_core::catalog::ROOT_UNATTEND.to_owned()),
+                    Sel::Unknown(_) => Some(UNKNOWN_GROUP.to_owned()),
                     Sel::None => None,
                 };
                 while let Some(g) = next {
@@ -725,14 +744,18 @@ impl App {
         }
         c.id = file.id.clone();
         c.path = None;
-        let dir = imports_dir();
+        let dir = self.imports_dir.clone();
         let path = dir.join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
         let saved = std::fs::create_dir_all(&dir)
             .map_err(|e| e.to_string())
             .and_then(|()| file.save(&path));
         let rules = file.rules.len();
-        self.imports.retain(|f| f.id != file.id);
+        let id = file.id.clone();
+        self.imports.retain(|f| f.id != id);
         self.imports.push(*file);
+        self.imports.sort_by_key(|f| import_order(&f.id));
+        self.mark_loaded(&id);
+        self.refresh_import_list();
         self.rebuild_catalog();
         self.status = match saved {
             Ok(()) => trf("Imported: {rules} rules", &[("rules", &rules)]),
@@ -774,7 +797,8 @@ impl App {
             Some(Doc::Profile(doc)) => {
                 let item = match &doc.sel {
                     Sel::None => return None,
-                    Sel::Group(id) | Sel::Rule(id) => id.clone(),
+                    Sel::Group(id) if id == UNKNOWN_GROUP => return None,
+                    Sel::Group(id) | Sel::Rule(id) | Sel::Unknown(id) => id.clone(),
                     Sel::Form(f) => f.id().to_owned(),
                 };
                 let path = doc
@@ -886,10 +910,25 @@ impl App {
         let texts = texts_for(&self.texts, &i18n::current());
         let mut crumbs = vec![(doc.profile.name.clone(), Sel::None)];
         let group = match &doc.sel {
-            Sel::None | Sel::Form(_) => None,
+            Sel::None | Sel::Form(_) | Sel::Unknown(_) => None,
+            Sel::Group(id) if id == UNKNOWN_GROUP => None,
             Sel::Group(id) => Some(id.clone()),
             Sel::Rule(id) => self.catalog.rule(id).map(|r| r.group.clone()),
         };
+        let in_unknown = match &doc.sel {
+            Sel::Unknown(_) => true,
+            Sel::Group(id) => id == UNKNOWN_GROUP,
+            _ => false,
+        };
+        if in_unknown {
+            crumbs.push((
+                tr("Unknown options").to_owned(),
+                Sel::Group(UNKNOWN_GROUP.to_owned()),
+            ));
+        }
+        if let Sel::Unknown(id) = &doc.sel {
+            crumbs.push((id.clone(), Sel::Unknown(id.clone())));
+        }
         if let Some(group) = group {
             for id in self.catalog.path_of(&group) {
                 if let Some(g) = self.catalog.group(id) {
@@ -1011,7 +1050,7 @@ impl App {
         ));
         ui.label(trf(
             "Policy templates folder: {path}",
-            &[("path", &imports_dir().display())],
+            &[("path", &self.imports_dir.display())],
         ));
         ui.add_space(8.0);
         if !self.settings.recent.is_empty() && ui.button(tr("Forget recent files")).clicked() {
@@ -1041,6 +1080,10 @@ impl App {
             ui.checkbox(
                 &mut self.settings.inline_switches,
                 tr("Switches at the end of the rows of the selected group"),
+            );
+            ui.checkbox(
+                &mut self.settings.hide_unknown,
+                tr("Hide the options of the profile whose catalog is not loaded"),
             );
             ui.checkbox(
                 &mut self.settings.restore_tabs,
@@ -1248,10 +1291,9 @@ impl App {
                 self.status = if unknown.is_empty() {
                     format!("Opened {}", path.display())
                 } else {
-                    format!(
-                        "Opened {} ({} choices of rules this catalog does not have are kept aside)",
-                        path.display(),
-                        unknown.len()
+                    trf(
+                        "Opened {path}: {n} options of catalogs that are not loaded are left out of the build",
+                        &[("path", &path.display()), ("n", &unknown.len())],
                     )
                 };
                 self.remember_recent(&path);
@@ -1388,6 +1430,7 @@ impl App {
                 .map(|r| r.id.clone())
                 .collect(),
             Sel::None | Sel::Form(_) => self.catalog.rules().iter().map(|r| r.id.clone()).collect(),
+            Sel::Unknown(_) => Vec::new(),
         }
     }
 
@@ -1861,51 +1904,140 @@ impl App {
             });
     }
 
-    /// Reads the catalog files of the imports next to the executable; the templates of this
-    /// Windows first, so that they win a policy two imports hold.
+    /// Reads the catalog files of the imports the settings load, and no other file; the
+    /// templates of this Windows first, so that they win a policy two imports hold. Settings of
+    /// an earlier version load every import but the hidden ones, and name them from now on.
     fn load_imports(&mut self) {
-        let dir = imports_dir();
-        let Ok(entries) = std::fs::read_dir(&dir) else {
-            return;
-        };
-        let mut files: Vec<std::path::PathBuf> = entries
-            .filter_map(Result::ok)
-            .map(|e| e.path())
-            .filter(|p| p.extension().is_some_and(|e| e == admx::CATALOG_EXTENSION))
-            .collect();
-        files.sort_by_key(|p| {
-            let name = p
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default();
-            (!name.starts_with("system"), name)
-        });
-        let mut broken = 0;
-        for path in files {
-            match CatalogFile::load(&path) {
-                Ok(f) => self.imports.push(f),
-                Err(_) => broken += 1,
-            }
+        let ids = loaded_import_ids(&self.settings, &self.imports_dir);
+        if self.settings.loaded_imports.is_none() {
+            self.settings.loaded_imports = Some(ids.clone());
+            self.settings.hidden_imports.clear();
+            self.settings_dirty = true;
         }
-        if broken > 0 {
+        let (files, broken) = read_imports(&self.imports_dir, &ids);
+        self.imports = files;
+        if !broken.is_empty() {
             self.status = trf(
                 "{n} imports of policy templates could not be read",
-                &[("n", &broken)],
+                &[("n", &broken.len())],
             );
         }
+        self.refresh_import_list();
         self.rebuild_catalog();
     }
 
-    /// Merges the visible imports into the catalog and brings the choices of the open profiles
-    /// in line with it.
+    /// Lists the catalog files of the imports folder for the settings; of a file that is not
+    /// loaded only the header is read.
+    fn refresh_import_list(&mut self) {
+        self.import_list = import_entries(&self.imports_dir, &self.imports);
+    }
+
+    /// Reads the catalog file of an import, unless it is loaded, and marks it in the settings.
+    fn load_import(&mut self, id: &str) -> Result<(), String> {
+        if !self.imports.iter().any(|f| f.id == id) {
+            let path = self
+                .imports_dir
+                .join(format!("{id}.{}", admx::CATALOG_EXTENSION));
+            let mut file = CatalogFile::load(&path)?;
+            file.id = id.to_owned();
+            self.imports.push(file);
+            self.imports.sort_by_key(|f| import_order(&f.id));
+        }
+        self.mark_loaded(id);
+        Ok(())
+    }
+
+    /// Names an import among the loaded ones of the settings.
+    fn mark_loaded(&mut self, id: &str) {
+        let list = self.settings.loaded_imports.get_or_insert_with(Vec::new);
+        if !list.iter().any(|x| x == id) {
+            list.push(id.to_owned());
+            self.settings_dirty = true;
+        }
+    }
+
+    /// Forgets an import: out of the settings, out of memory, and its tab closes.
+    fn unload_import(&mut self, id: &str) {
+        self.imports.retain(|f| f.id != id);
+        if let Some(list) = &mut self.settings.loaded_imports {
+            list.retain(|x| x != id);
+        }
+        self.settings_dirty = true;
+        let active = self.active;
+        let mut index = 0;
+        let mut removed_before = 0;
+        self.docs.retain(|d| {
+            let keep = !matches!(d, Doc::Catalog(c) if c.file.is_none() && c.id == id);
+            if !keep && index < active {
+                removed_before += 1;
+            }
+            index += 1;
+            keep
+        });
+        self.active = active
+            .saturating_sub(removed_before)
+            .min(self.docs.len().saturating_sub(1));
+    }
+
+    /// Looks for the options of the active profile whose catalog is not loaded in the catalog
+    /// files of the imports that are not loaded, reading only the ids of their rules, and loads
+    /// the files that have some of them: the templates of this Windows first, no file more than
+    /// needed.
+    fn load_catalogs_for_unknown(&mut self) {
+        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+            return;
+        };
+        let mut wanted: HashSet<String> = doc.profile.unknown.keys().cloned().collect();
+        if wanted.is_empty() {
+            return;
+        }
+        let mut found = Vec::new();
+        for (id, path) in import_files(&self.imports_dir) {
+            if wanted.is_empty() {
+                break;
+            }
+            if self.imports.iter().any(|f| f.id == id) {
+                continue;
+            }
+            let Ok(ids) = admx::rule_ids(&path) else {
+                continue;
+            };
+            let before = wanted.len();
+            wanted.retain(|w| !ids.contains(w));
+            if wanted.len() < before {
+                found.push(id);
+            }
+        }
+        if found.is_empty() {
+            self.status = tr("No imported catalog has these options: import their policy templates in the settings").to_owned();
+            return;
+        }
+        let mut failed = Vec::new();
+        for id in &found {
+            if let Err(e) = self.load_import(id) {
+                failed.push(e);
+            }
+        }
+        self.refresh_import_list();
+        self.rebuild_catalog();
+        self.check_active();
+        let left = match self.docs.get(self.active) {
+            Some(Doc::Profile(d)) => d.profile.unknown.len(),
+            _ => 0,
+        };
+        self.status = match failed.first() {
+            Some(e) => trf("A catalog was not loaded: {e}", &[("e", e)]),
+            None => trf(
+                "Loaded {n} catalogs; {left} options are still unknown",
+                &[("n", &(found.len() - failed.len())), ("left", &left)],
+            ),
+        };
+    }
+
+    /// Merges the loaded imports into the catalog and brings the choices of the open profiles in
+    /// line with it.
     fn rebuild_catalog(&mut self) {
-        let visible: Vec<CatalogFile> = self
-            .imports
-            .iter()
-            .filter(|f| !self.settings.hidden_imports.contains(&f.id))
-            .cloned()
-            .collect();
-        match admx::merge(&self.base_catalog, &visible) {
+        match admx::merge(&self.base_catalog, &self.imports) {
             Ok((catalog, notes)) => {
                 self.catalog = catalog;
                 if !notes.is_empty() {
@@ -1918,7 +2050,7 @@ impl App {
             }
         }
         let mut texts = self.base_texts.clone();
-        admx::merge_texts(&mut texts, &visible);
+        admx::merge_texts(&mut texts, &self.imports);
         self.texts = texts;
         let catalog = &self.catalog;
         for doc in &mut self.docs {
@@ -1926,6 +2058,18 @@ impl App {
                 d.profile.take_known(catalog);
                 d.profile.split_unknown(catalog);
                 d.resolution = resolver::resolve(catalog, &d.profile);
+                // The selection follows an option between the catalog and the unknown ones.
+                d.sel = match std::mem::replace(&mut d.sel, Sel::None) {
+                    Sel::Unknown(id) if catalog.rule(&id).is_some() => Sel::Rule(id),
+                    Sel::Rule(id) if catalog.rule(&id).is_none() => {
+                        if d.profile.unknown.contains_key(&id) {
+                            Sel::Unknown(id)
+                        } else {
+                            Sel::None
+                        }
+                    }
+                    other => other,
+                };
             }
         }
     }
@@ -2007,15 +2151,19 @@ impl App {
                 self.importing = None;
                 match result {
                     Ok(file) => {
-                        let dir = imports_dir();
+                        let dir = self.imports_dir.clone();
                         let path = dir.join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
                         let saved = std::fs::create_dir_all(&dir)
                             .map_err(|e| e.to_string())
                             .and_then(|()| file.save(&path));
                         let rules = file.rules.len();
                         let skipped = file.skipped.len();
-                        self.imports.retain(|f| f.id != file.id);
+                        let id = file.id.clone();
+                        self.imports.retain(|f| f.id != id);
                         self.imports.push(file);
+                        self.imports.sort_by_key(|f| import_order(&f.id));
+                        self.mark_loaded(&id);
+                        self.refresh_import_list();
                         self.rebuild_catalog();
                         self.status = match saved {
                             Ok(()) => trf(
@@ -2053,17 +2201,15 @@ impl App {
         self.active = self.docs.len() - 1;
     }
 
-    /// Shows a policy of an import in the tree of a profile: a hidden import is shown again, the
+    /// Shows a policy of an import in the tree of a profile: an import that is not loaded is, the
     /// first profile tab comes to the front, the groups above the policy open and it is selected.
     fn show_in_profile(&mut self, import: &str, rule: &str) {
-        if let Some(i) = self
-            .settings
-            .hidden_imports
-            .iter()
-            .position(|h| h == import)
-        {
-            self.settings.hidden_imports.remove(i);
-            self.settings_dirty = true;
+        if !self.imports.iter().any(|f| f.id == import) {
+            if let Err(e) = self.load_import(import) {
+                self.status = trf("The import was not loaded: {e}", &[("e", &e)]);
+                return;
+            }
+            self.refresh_import_list();
             self.rebuild_catalog();
         }
         let Some(index) = self.docs.iter().position(|d| matches!(d, Doc::Profile(_))) else {
@@ -2104,7 +2250,9 @@ impl App {
         {
             group.title = name.to_owned();
         }
-        let path = imports_dir().join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
+        let path = self
+            .imports_dir
+            .join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
         let saved = file.save(&path);
         for doc in &mut self.docs {
             if let Doc::Catalog(c) = doc
@@ -2113,6 +2261,7 @@ impl App {
                 c.name = name.to_owned();
             }
         }
+        self.refresh_import_list();
         self.rebuild_catalog();
         self.status = match saved {
             Ok(()) => trf("Renamed to {name}", &[("name", &name)]),
@@ -2141,32 +2290,43 @@ impl App {
     /// The section of the settings that lists the imports of policy templates.
     fn imports_view(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         style::section_title(ui, tr("Policy templates"));
-        ui.weak(tr("Imported ADMX templates become rules under Standard policies. When two imports hold a policy, the templates of this Windows win."));
-        for f in &self.imports {
+        ui.weak(tr("Imported ADMX templates become rules under Standard policies. Only the checked catalogs are read and loaded; when two of them hold a policy, the templates of this Windows win."));
+        for entry in &self.import_list {
+            let file = self.imports.iter().find(|f| f.id == entry.id);
             ui.horizontal(|ui| {
-                let mut shown = !self.settings.hidden_imports.contains(&f.id);
-                if ui.checkbox(&mut shown, &f.name).changed() {
-                    acts.push(Act::ToggleImport(f.id.clone()));
+                let mut loaded = file.is_some();
+                if ui.checkbox(&mut loaded, &entry.name).changed() {
+                    acts.push(Act::ToggleImport(entry.id.clone()));
                 }
-                ui.weak(trf(
-                    "{rules} rules, {skipped} skipped",
-                    &[("rules", &f.rules.len()), ("skipped", &f.skipped.len())],
-                ));
-                if ui.small_button(tr("Export...")).clicked() {
-                    acts.push(Act::ExportImport(f.id.clone()));
-                }
-                if ui.small_button(tr("Open")).clicked() {
-                    acts.push(Act::OpenCatalog(f.id.clone()));
-                }
-                if ui.small_button(tr("Rename")).clicked() {
-                    acts.push(Act::StartRename(f.id.clone(), f.name.clone()));
+                match file {
+                    Some(f) => {
+                        ui.weak(trf(
+                            "{rules} rules, {skipped} skipped",
+                            &[("rules", &f.rules.len()), ("skipped", &f.skipped.len())],
+                        ));
+                        if ui.small_button(tr("Export...")).clicked() {
+                            acts.push(Act::ExportImport(f.id.clone()));
+                        }
+                        if ui.small_button(tr("Open")).clicked() {
+                            acts.push(Act::OpenCatalog(f.id.clone()));
+                        }
+                        if ui.small_button(tr("Rename")).clicked() {
+                            acts.push(Act::StartRename(f.id.clone(), f.name.clone()));
+                        }
+                    }
+                    None => {
+                        ui.weak(trf(
+                            "not loaded, {size}",
+                            &[("size", &size_text(entry.bytes))],
+                        ));
+                    }
                 }
                 if ui.small_button(tr("Remove")).clicked() {
-                    acts.push(Act::RemoveImport(f.id.clone()));
+                    acts.push(Act::RemoveImport(entry.id.clone()));
                 }
             });
             if let Some((id, name)) = &mut self.renaming
-                && id == &f.id
+                && id == &entry.id
             {
                 ui.horizontal(|ui| {
                     let edit = ui.text_edit_singleline(name);
@@ -2302,6 +2462,7 @@ impl App {
                 Act::OpenPath(path) => self.open_path(path),
                 Act::OpenSettings => {
                     self.themes = themes::themes(&themes_dir());
+                    self.refresh_import_list();
                     self.open_settings();
                 }
                 Act::ImportOpenCatalog => self.import_open_catalog(),
@@ -2475,21 +2636,24 @@ impl App {
                 Act::OpenReport => self.open_report(),
                 Act::ImportTemplates(source) => self.start_import(source),
                 Act::ToggleImport(id) => {
-                    if let Some(i) = self.settings.hidden_imports.iter().position(|h| h == &id) {
-                        self.settings.hidden_imports.remove(i);
-                    } else {
-                        self.settings.hidden_imports.push(id);
+                    if self.imports.iter().any(|f| f.id == id) {
+                        self.unload_import(&id);
+                    } else if let Err(e) = self.load_import(&id) {
+                        self.status = trf("The import was not loaded: {e}", &[("e", &e)]);
                     }
-                    self.settings_dirty = true;
+                    self.refresh_import_list();
                     self.rebuild_catalog();
                 }
                 Act::RemoveImport(id) => {
                     let _ = std::fs::remove_file(
-                        imports_dir().join(format!("{id}.{}", admx::CATALOG_EXTENSION)),
+                        self.imports_dir
+                            .join(format!("{id}.{}", admx::CATALOG_EXTENSION)),
                     );
-                    self.imports.retain(|f| f.id != id);
+                    self.unload_import(&id);
+                    self.refresh_import_list();
                     self.rebuild_catalog();
                 }
+                Act::LoadCatalogs => self.load_catalogs_for_unknown(),
                 Act::ExportImport(id) => self.export_import(&id),
                 Act::StartRename(id, name) => self.renaming = Some((id, name)),
                 Act::OpenCatalog(id) => self.open_catalog(&id),
@@ -2680,8 +2844,11 @@ impl App {
             return;
         }
         if mark.is_option() {
-            let sel = sel_from_item(&self.catalog, &mark.item);
+            let mut sel = sel_from_item(&self.catalog, &mark.item);
             if let Some(doc) = self.active_profile() {
+                if sel == Sel::None && doc.profile.unknown.contains_key(&mark.item) {
+                    sel = Sel::Unknown(mark.item.clone());
+                }
                 doc.select(sel);
             }
             self.reveal_selection();
@@ -2746,27 +2913,14 @@ impl App {
         };
         match opened {
             Ok((mut profile, notes)) => {
-                let unknown = profile.split_unknown(&self.catalog);
+                profile.split_unknown(&self.catalog);
                 let mut doc = ProfileDoc::new(profile, None, &self.catalog);
                 doc.dirty = true;
-                doc.issues = notes
-                    .into_iter()
-                    .map(|n| Issue {
-                        severity: Severity::Info,
-                        target: Target::Profile,
-                        text: trf("Open: {n}", &[("n", &n)]),
-                    })
-                    .collect();
-                if !unknown.is_empty() {
-                    doc.issues.push(Issue {
-                        severity: Severity::Info,
-                        target: Target::Profile,
-                        text: format!(
-                            "Open: {} choices of rules this catalog does not have are kept aside",
-                            unknown.len()
-                        ),
-                    });
-                }
+                doc.issues.extend(notes.into_iter().map(|n| Issue {
+                    severity: Severity::Info,
+                    target: Target::Profile,
+                    text: trf("Open: {n}", &[("n", &n)]),
+                }));
                 self.docs.push(Doc::Profile(Box::new(doc)));
                 self.active = self.docs.len() - 1;
                 self.status = format!(
@@ -3405,6 +3559,7 @@ impl eframe::App for App {
                             doc,
                             &doc.search,
                             settings.inline_switches,
+                            !settings.hide_unknown,
                             &mut acts,
                         );
                     });
@@ -3646,6 +3801,110 @@ fn sel_from_item(catalog: &Catalog, item: &str) -> Sel {
 /// The folder of the imports of policy templates next to the executable.
 pub fn imports_dir() -> PathBuf {
     exe_dir().join("imports")
+}
+
+/// A catalog file of the imports folder, loaded or not.
+pub struct ImportEntry {
+    /// The name of the file without its extension: the id of the import.
+    pub id: String,
+    /// The name of the import: of the loaded file, else of the header of the file, else the id.
+    pub name: String,
+    pub bytes: u64,
+}
+
+/// The order the imports are merged in: the templates of this Windows first.
+fn import_order(id: &str) -> (bool, String) {
+    (!id.starts_with("system"), id.to_owned())
+}
+
+/// The catalog files of a folder of imports with their ids, in the order of the merge.
+pub fn import_files(dir: &Path) -> Vec<(String, PathBuf)> {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut files: Vec<(String, PathBuf)> = entries
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e == admx::CATALOG_EXTENSION))
+        .filter_map(|p| Some((p.file_stem()?.to_str()?.to_owned(), p)))
+        .collect();
+    files.sort_by_key(|(id, _)| import_order(id));
+    files
+}
+
+/// The ids of the imports the settings load. Settings of an earlier version name the hidden
+/// ones instead: then every catalog file of the folder but those.
+pub fn loaded_import_ids(settings: &Settings, dir: &Path) -> Vec<String> {
+    match &settings.loaded_imports {
+        Some(ids) => ids.clone(),
+        None => import_files(dir)
+            .into_iter()
+            .map(|(id, _)| id)
+            .filter(|id| !settings.hidden_imports.contains(id))
+            .collect(),
+    }
+}
+
+/// Reads the catalog files of the given imports in the order of the merge, and no other file of
+/// the folder; the ids of the files that could not be read.
+pub fn read_imports(dir: &Path, ids: &[String]) -> (Vec<CatalogFile>, Vec<String>) {
+    let mut files = Vec::new();
+    let mut broken = Vec::new();
+    for (id, path) in import_files(dir) {
+        if !ids.contains(&id) {
+            continue;
+        }
+        match CatalogFile::load(&path) {
+            Ok(mut f) => {
+                f.id = id;
+                files.push(f);
+            }
+            Err(_) => broken.push(id),
+        }
+    }
+    (files, broken)
+}
+
+/// The catalog files of the folder for the list of the settings: a loaded one by its name, the
+/// others by the header of the file.
+fn import_entries(dir: &Path, loaded: &[CatalogFile]) -> Vec<ImportEntry> {
+    import_files(dir)
+        .into_iter()
+        .map(|(id, path)| {
+            let bytes = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+            let name = match loaded.iter().find(|f| f.id == id) {
+                Some(f) => f.name.clone(),
+                None => admx::CatalogHeader::read(&path)
+                    .map(|h| h.name)
+                    .unwrap_or_else(|| id.clone()),
+            };
+            ImportEntry { id, name, bytes }
+        })
+        .collect()
+}
+
+/// The size of a file for people: kilobytes or megabytes.
+fn size_text(bytes: u64) -> String {
+    if bytes >= 1024 * 1024 {
+        format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
+    } else {
+        format!("{} KB", bytes.div_ceil(1024))
+    }
+}
+
+/// The warning of a profile with options of catalogs that are not loaded.
+fn unknown_issues(profile: &Profile) -> Vec<Issue> {
+    if profile.unknown.is_empty() {
+        return Vec::new();
+    }
+    vec![Issue {
+        severity: Severity::Warning,
+        target: Target::Profile,
+        text: trf(
+            "Open: {n} options of catalogs that are not loaded are kept in the profile and left out of the build",
+            &[("n", &profile.unknown.len())],
+        ),
+    }]
 }
 
 /// The folder of the colour themes next to the executable.
@@ -4311,5 +4570,163 @@ and kept"
         app.open_path(dir.join("missing.wwprofile"));
         assert!(app.status.starts_with("Open failed"), "{}", app.status);
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    const SAMPLE_ADMX: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitions xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions" revision="1.0" schemaVersion="1.0">
+  <policyNamespaces>
+    <target prefix="sample" namespace="Test.Policies.Sample" />
+    <using prefix="windows" namespace="Microsoft.Policies.Windows" />
+  </policyNamespaces>
+  <resources minRequiredRevision="1.0" />
+  <categories>
+    <category name="Sample" displayName="$(string.Sample)">
+      <parentCategory ref="windows:WindowsComponents" />
+    </category>
+  </categories>
+  <policies>
+    <policy name="TurnOff" class="Machine" displayName="$(string.TurnOff)" key="Software\Policies\Test" valueName="Off">
+      <parentCategory ref="Sample" />
+      <enabledValue><decimal value="1" /></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+    </policy>
+  </policies>
+</policyDefinitions>"#;
+
+    const SAMPLE_ADML: &str = r#"<?xml version="1.0" encoding="utf-8"?>
+<policyDefinitionResources revision="1.0" schemaVersion="1.0">
+  <resources>
+    <stringTable>
+      <string id="Sample">Sample</string>
+      <string id="TurnOff">Turn the sample off</string>
+    </stringTable>
+  </resources>
+</policyDefinitionResources>"#;
+
+    /// Writes the sample templates as the catalog file `test` into `<dir>/imports`.
+    fn sample_import(dir: &Path) {
+        let admx = dir.join("admx");
+        std::fs::create_dir_all(admx.join("en-US")).unwrap();
+        std::fs::write(admx.join("sample.admx"), SAMPLE_ADMX).unwrap();
+        std::fs::write(admx.join("en-US").join("sample.adml"), SAMPLE_ADML).unwrap();
+        let templates = admx::read_folder(&admx);
+        let file = admx::to_catalog_file(&templates, "test", "Test templates", "", "now");
+        assert!(
+            file.rules.iter().any(|r| r.id == "admx.sample.turnoff"),
+            "{:?}",
+            file.skipped
+        );
+        let imports = dir.join("imports");
+        std::fs::create_dir_all(&imports).unwrap();
+        file.save(&imports.join("test.wwcatalog")).unwrap();
+    }
+
+    /// Only the imports the settings name are read; Load catalogs finds the one an unknown option
+    /// of the profile belongs to, marks it and loads it; unchecking it forgets it again.
+    #[test]
+    fn only_the_checked_imports_load_and_unknown_options_find_their_catalog() {
+        let dir = std::env::temp_dir().join(format!("winweaver-unknown-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        sample_import(&dir);
+        let catalog = Catalog::embedded().unwrap();
+        let earlier = Settings {
+            loaded_imports: None,
+            hidden_imports: vec!["test".to_owned()],
+            ..Settings::default()
+        };
+        let mut app = App::new(catalog.clone(), Vec::new(), earlier);
+        app.imports_dir = dir.join("imports");
+        app.load_imports();
+        assert!(app.imports.is_empty(), "a hidden import stays unread");
+        assert_eq!(app.settings.loaded_imports, Some(Vec::new()));
+        assert_eq!(app.import_list.len(), 1);
+        assert_eq!(
+            app.import_list[0].name, "Test templates",
+            "the name comes from the header of the file"
+        );
+        let id = "admx.sample.turnoff";
+        let mut profile = Profile::new("P", catalog.version());
+        profile.set_on(id, true);
+        profile.split_unknown(&app.catalog);
+        app.docs = vec![Doc::Profile(Box::new(ProfileDoc::new(
+            profile,
+            None,
+            &app.catalog,
+        )))];
+        app.active = 0;
+        let state = |app: &App| match &app.docs[0] {
+            Doc::Profile(d) => (
+                d.profile.unknown.len(),
+                d.profile.is_on(id),
+                d.issues.iter().any(|i| i.severity == Severity::Warning),
+                d.sel.clone(),
+            ),
+            _ => panic!("a profile"),
+        };
+        assert_eq!(state(&app).0, 1);
+        assert!(state(&app).2, "the open warns of the option");
+        app.apply(vec![Act::Select(Sel::Unknown(id.to_owned()))]);
+        app.apply(vec![Act::LoadCatalogs]);
+        assert_eq!(app.imports.len(), 1, "{}", app.status);
+        assert_eq!(app.settings.loaded_imports, Some(vec!["test".to_owned()]));
+        let (unknown, on, _, sel) = state(&app);
+        assert_eq!((unknown, on), (0, true), "the option is known and on again");
+        assert_eq!(sel, Sel::Rule(id.to_owned()), "the selection follows it");
+        app.apply(vec![Act::ToggleImport("test".to_owned())]);
+        assert!(app.imports.is_empty(), "unchecked, the import leaves memory");
+        assert_eq!(app.settings.loaded_imports, Some(Vec::new()));
+        let (unknown, _, _, sel) = state(&app);
+        assert_eq!((unknown, sel), (1, Sel::Unknown(id.to_owned())));
+        let mut next = App::new(
+            catalog,
+            Vec::new(),
+            Settings {
+                loaded_imports: None,
+                ..Settings::default()
+            },
+        );
+        next.imports_dir = dir.join("imports");
+        next.load_imports();
+        assert_eq!(
+            next.imports.len(),
+            1,
+            "settings of an earlier version load what was not hidden"
+        );
+        assert_eq!(next.settings.loaded_imports, Some(vec!["test".to_owned()]));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// The options of catalogs that are not loaded have their group at the end of the tree,
+    /// unless the settings hide them.
+    #[test]
+    fn the_unknown_options_have_their_group_in_the_tree() {
+        use egui_kittest::kittest::Queryable;
+        let catalog = Catalog::embedded().unwrap();
+        let mut profile = Profile::new("P", catalog.version());
+        profile.set_on("admx.other.policy", true);
+        profile.split_unknown(&catalog);
+        let mut app = App::new(catalog.clone(), Vec::new(), Settings::default());
+        app.docs = vec![Doc::Profile(Box::new(ProfileDoc::new(
+            profile, None, &catalog,
+        )))];
+        app.active = 0;
+        app.apply(vec![Act::Expand(UNKNOWN_GROUP.to_owned(), true)]);
+        let mut harness = egui_kittest::Harness::new_eframe(|_| app);
+        harness.step();
+        let has = |h: &egui_kittest::Harness<'_, App>, label: &str| {
+            h.query_all_by_label(label).next().is_some()
+        };
+        assert!(has(&harness, "Unknown options"));
+        assert!(has(&harness, "admx.other.policy"));
+        harness
+            .state_mut()
+            .apply(vec![Act::Select(Sel::Unknown("admx.other.policy".to_owned()))]);
+        harness.step();
+        assert!(has(&harness, "Load catalogs"));
+        harness.state_mut().apply(vec![Act::Select(Sel::None)]);
+        harness.state_mut().settings.hide_unknown = true;
+        harness.step();
+        harness.step();
+        assert!(!has(&harness, "Unknown options"), "hidden by the settings");
     }
 }

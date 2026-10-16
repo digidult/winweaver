@@ -61,7 +61,8 @@ unknown extension, by its content.
   (bundled, system, folder, package); a choice from a less trusted kind than the one that now owns the
   policy is held in `unknown` and not applied.
 - `unknown` keeps the entries of rules the loaded catalog does not have, unchanged, so that a profile
-  survives a round trip through another catalog version.
+  survives a round trip through another catalog version or a catalog that is not loaded; they are left
+  out of the build with a warning.
 - Passwords of accounts are stored in the profile as the user typed them (the answer file needs them);
   the MCP server and the logs redact them.
 
@@ -116,7 +117,9 @@ documents with a `title` (`"document": "markdown"`, `"item": "#heading"`); they 
 
 `settings.json` next to the executable: language, theme, font size, the open tabs and the active one, the
 recent files, the search history, the layout (splitter positions, the description panel), the inline
-toggles, the draft interval, the MCP defaults and token, the logging level. The window is the only writer;
+toggles, the draft interval, the MCP defaults and token, the logging level, the imports that are loaded
+(`loaded_imports`; an earlier version named the hidden ones, `hidden_imports`, read once) and whether the
+unknown options of a profile are hidden. The window is the only writer;
 a headless MCP process never writes it. When the folder is read-only the settings are kept in memory.
 
 ## 8. Draft
