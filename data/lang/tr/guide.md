@@ -97,6 +97,29 @@ DirectX 12'yi seçin. Bir değişiklik sonraki başlatmada geçerli olur; `winwe
 (veya `opengl`, `auto`) yalnızca bir başlatma için seçer. `logs/` içindeki günlük, pencerenin neyle
 çizildiğini belirtir.
 
+## Komut satırı
+
+`winweaver.exe` parametresiz pencereyi açar. Bir değer, parametresinden sonra bir boşluk veya `=` ile
+yazılır: `--renderer=directx`.
+
+| Parametreler | Ne yaparlar |
+|---|---|
+| `--renderer NAME` | Pencereyi açar ve yalnızca bu başlatma için önce NAME oluşturucusunu dener: `auto`, `opengl` veya `directx` |
+| `--mcp stdio` | MCP'yi pencere olmadan standart giriş ve çıkış üzerinden sunar; bir MCP istemcisi onu böyle başlatır |
+| `--mcp http --token TOKEN` | MCP'yi pencere olmadan `http://127.0.0.1:8765/mcp` adresinde sunar; belirteç en az 32 karakterdir |
+| `--port N` | `--mcp http` ile: başka bir bağlantı noktası |
+| `--mode NAME` | `--mcp` ile: `read` (varsayılan) yalnızca okur, `edit` profilleri bellekte değiştirir, `files` ayrıca kaydeder ve yanıt dosyasını yazar |
+| `--read-pc` | `--mcp` ile: bu bilgisayarın ayarlarını okumaya izin verir |
+| `--profile NAME` | `--mcp` ile: bir hazır ayar veya `profiles/` içindeki bir profil geçerli profil olur |
+| `--version` | Sürümü yazdırır |
+| `--check-catalog` | Yerleşik kataloğu çevirileriyle yükler ve sorunlarını yazdırır |
+| `--help` | Parametre listesini yazdırır |
+| `--smoke-window` | Küçük bir pencere açar, iki kare çizer ve bunları neyin çizdiğini yazdırır (`--renderer` ile de): grafik denetimi |
+| `--elevated-apply PLAN DIGEST` | Pencere, onaylanmış bir planı yönetici olarak uygulamak için kendini böyle başlatır; elle başlatmak için değildir |
+
+Mod ve bu bilgisayarı okuma izni her başlatmada verilir ve hiç kaydedilmez. İletiler programın başlatıldığı
+konsola ve `logs/` klasörüne gider.
+
 ## Klavye
 
 | Tuşlar | Eylem |

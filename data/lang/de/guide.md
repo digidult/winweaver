@@ -103,6 +103,29 @@ von Windows. Zeichnet das Fenster mit OpenGL fehlerhaft (ein alter Treiber), wä
 Änderung gilt ab dem nächsten Start; `winweaver.exe --renderer directx` (oder `opengl`, `auto`) wählt nur
 für einen Start. Das Protokoll in `logs/` nennt, womit das Fenster zeichnet.
 
+## Befehlszeile
+
+`winweaver.exe` ohne Parameter öffnet das Fenster. Ein Wert folgt seinem Parameter nach einem Leerzeichen
+oder `=`: `--renderer=directx`.
+
+| Parameter | Was sie tun |
+|---|---|
+| `--renderer NAME` | Öffnet das Fenster und versucht zuerst den Renderer NAME, nur für diesen Start: `auto`, `opengl` oder `directx` |
+| `--mcp stdio` | Bedient MCP über die Standardein- und -ausgabe, ohne Fenster; so startet es ein MCP-Client |
+| `--mcp http --token TOKEN` | Bedient MCP auf `http://127.0.0.1:8765/mcp` ohne Fenster; das Token hat mindestens 32 Zeichen |
+| `--port N` | Mit `--mcp http`: ein anderer Port |
+| `--mode NAME` | Mit `--mcp`: `read` (Standard) liest nur, `edit` ändert Profile im Speicher, `files` speichert sie auch und schreibt die Antwortdatei |
+| `--read-pc` | Mit `--mcp`: erlaubt das Lesen der Einstellungen dieses PCs |
+| `--profile NAME` | Mit `--mcp`: eine Vorlage oder ein Profil aus `profiles/` wird das aktuelle |
+| `--version` | Gibt die Version aus |
+| `--check-catalog` | Lädt den integrierten Katalog mit seinen Übersetzungen und gibt ihre Probleme aus |
+| `--help` | Gibt die Liste der Parameter aus |
+| `--smoke-window` | Öffnet ein kleines Fenster, zeichnet zwei Bilder und gibt aus, womit sie gezeichnet wurden (auch mit `--renderer`): eine Prüfung der Grafik |
+| `--elevated-apply PLAN DIGEST` | So startet das Fenster sich selbst, um einen bestätigten Plan als Administrator anzuwenden; nicht zum Starten von Hand |
+
+Der Modus und die Erlaubnis, diesen PC zu lesen, werden bei jedem Start angegeben und nie gespeichert. Die
+Meldungen gehen an die Konsole, aus der das Programm gestartet wurde, und nach `logs/`.
+
 ## Tastatur
 
 | Tasten | Aktion |

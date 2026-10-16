@@ -100,6 +100,29 @@ ventana se dibuja mal con OpenGL (un controlador antiguo), elija DirectX 12. Un 
 siguiente inicio; `winweaver.exe --renderer directx` (o `opengl`, `auto`) elige solo para un inicio. El
 registro de `logs/` indica con qué dibuja la ventana.
 
+## Línea de comandos
+
+`winweaver.exe` sin parámetros abre la ventana. Un valor sigue a su parámetro tras un espacio o `=`:
+`--renderer=directx`.
+
+| Parámetros | Qué hacen |
+|---|---|
+| `--renderer NAME` | Abre la ventana y prueba primero el renderizador NAME, solo en este inicio: `auto`, `opengl` o `directx` |
+| `--mcp stdio` | Sirve MCP por la entrada y salida estándar, sin la ventana; así lo inicia un cliente MCP |
+| `--mcp http --token TOKEN` | Sirve MCP en `http://127.0.0.1:8765/mcp` sin la ventana; el token tiene al menos 32 caracteres |
+| `--port N` | Con `--mcp http`: otro puerto |
+| `--mode NAME` | Con `--mcp`: `read` (por defecto) solo lee, `edit` cambia los perfiles en memoria, `files` además los guarda y escribe el archivo de respuesta |
+| `--read-pc` | Con `--mcp`: permite leer la configuración de este equipo |
+| `--profile NAME` | Con `--mcp`: un perfil predefinido o un perfil de `profiles/` pasa a ser el actual |
+| `--version` | Muestra la versión |
+| `--check-catalog` | Carga el catálogo integrado con sus traducciones y muestra sus problemas |
+| `--help` | Muestra la lista de parámetros |
+| `--smoke-window` | Abre una ventana pequeña, dibuja dos fotogramas y muestra con qué se dibujaron (también con `--renderer`): una comprobación de los gráficos |
+| `--elevated-apply PLAN DIGEST` | Así se inicia la propia ventana para aplicar un plan confirmado como administrador; no es para iniciarlo a mano |
+
+El modo y el permiso para leer este equipo se indican en cada inicio y nunca se guardan. Los mensajes van a
+la consola desde la que se inició el programa y a `logs/`.
+
 ## Teclado
 
 | Teclas | Acción |

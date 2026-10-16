@@ -86,6 +86,29 @@ rasterizer of Windows. If the window draws wrongly with OpenGL (an old driver), 
 effect at the next start. For one start only: `winweaver.exe --renderer directx` (or `opengl`, `auto`). The log
 `logs/winweaver-<date>.log` names what the window draws with.
 
+## Command line
+
+`winweaver.exe` without parameters opens the window. A value follows its parameter after a space or `=`:
+`--renderer=directx`.
+
+| Parameters | What they do |
+|---|---|
+| `--renderer NAME` | Opens the window and tries the renderer NAME first, for this start only: `auto`, `opengl` or `directx` |
+| `--mcp stdio` | Serves MCP on the standard input and output, without the window; an MCP client starts it so |
+| `--mcp http --token TOKEN` | Serves MCP on `http://127.0.0.1:8765/mcp` without the window; the token has at least 32 characters |
+| `--port N` | With `--mcp http`: another port |
+| `--mode NAME` | With `--mcp`: `read` (the default) only reads, `edit` changes profiles in memory, `files` also saves them and writes the answer file |
+| `--read-pc` | With `--mcp`: allows reading the settings of this PC |
+| `--profile NAME` | With `--mcp`: a preset or a profile of `profiles/` becomes the current one |
+| `--version` | Prints the version |
+| `--check-catalog` | Loads the built-in catalog with its translations and prints their problems |
+| `--help` | Prints the list of parameters |
+| `--smoke-window` | Opens a small window, draws two frames and prints what drew them (also with `--renderer`): a check of the graphics |
+| `--elevated-apply PLAN DIGEST` | The window starts itself so to apply a confirmed plan as administrator; not for starting by hand |
+
+The mode and the permission to read this PC are given at every start and never saved. The messages go to
+the console the program was started from and to `logs/`.
+
 ## Add a language
 
 1. Make a folder `lang/<code>` next to `winweaver.exe`, with the code of the language: `be`, `pl`, `de`.

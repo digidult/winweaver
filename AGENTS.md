@@ -273,6 +273,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   logs what it draws with (`renderer::graphics_text`) and puts the failures in the message bar. The CI
   step Window smoke test runs `--smoke-window` and fails when no renderer starts; on the runner OpenGL fails
   and DirectX 12 draws, so it tests the fall back. Tests and screenshots draw with the wgpu of egui_kittest.
+- The command line: `USAGE` of `main.rs` and the section Command line of the guide (`data/docs/guide.md` and every
+  `data/lang/<code>/guide.md`) and of `package/README.md` list every parameter; a new one goes into all of them.
 - Screenshots: the Windows job sets `WINWEAVER_SCREENSHOTS`, and the test `screenshots_of_the_window` draws the
   main tabs with wgpu (no screen) into `target/screenshots`, uploaded as the artifact `screenshots`
   (`gh run download <id> -n screenshots -D <folder>`); the way to see the window without starting it on the

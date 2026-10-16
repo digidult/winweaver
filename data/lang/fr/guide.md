@@ -103,6 +103,29 @@ Si la fenêtre s'affiche mal avec OpenGL (un ancien pilote), choisissez DirectX 
 effet au démarrage suivant ; `winweaver.exe --renderer directx` (ou `opengl`, `auto`) choisit pour un seul
 démarrage. Le journal de `logs/` indique avec quoi la fenêtre dessine.
 
+## Ligne de commande
+
+`winweaver.exe` sans paramètre ouvre la fenêtre. Une valeur suit son paramètre après une espace ou `=` :
+`--renderer=directx`.
+
+| Paramètres | Ce qu'ils font |
+|---|---|
+| `--renderer NAME` | Ouvre la fenêtre et essaie d'abord le moteur de rendu NAME, pour ce démarrage seulement : `auto`, `opengl` ou `directx` |
+| `--mcp stdio` | Sert MCP sur l'entrée et la sortie standard, sans la fenêtre ; un client MCP le démarre ainsi |
+| `--mcp http --token TOKEN` | Sert MCP sur `http://127.0.0.1:8765/mcp` sans la fenêtre ; le jeton a au moins 32 caractères |
+| `--port N` | Avec `--mcp http` : un autre port |
+| `--mode NAME` | Avec `--mcp` : `read` (par défaut) lit seulement, `edit` modifie les profils en mémoire, `files` les enregistre aussi et écrit le fichier de réponses |
+| `--read-pc` | Avec `--mcp` : permet de lire les paramètres de ce PC |
+| `--profile NAME` | Avec `--mcp` : un préréglage ou un profil de `profiles/` devient le profil courant |
+| `--version` | Affiche la version |
+| `--check-catalog` | Charge le catalogue intégré avec ses traductions et affiche leurs problèmes |
+| `--help` | Affiche la liste des paramètres |
+| `--smoke-window` | Ouvre une petite fenêtre, dessine deux images et affiche avec quoi elles ont été dessinées (aussi avec `--renderer`) : une vérification de l'affichage |
+| `--elevated-apply PLAN DIGEST` | La fenêtre se démarre ainsi elle-même pour appliquer un plan confirmé en administrateur ; pas pour un démarrage à la main |
+
+Le mode et l'autorisation de lire ce PC sont donnés à chaque démarrage et jamais enregistrés. Les messages
+vont dans la console d'où le programme a été démarré et dans `logs/`.
+
 ## Clavier
 
 | Touches | Action |

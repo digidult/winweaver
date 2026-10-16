@@ -99,6 +99,29 @@ finestra viene disegnata male (un driver vecchio), scegli DirectX 12. Una modifi
 successivo; `winweaver.exe --renderer directx` (oppure `opengl`, `auto`) sceglie per un solo avvio. Il log
 in `logs/` indica con che cosa disegna la finestra.
 
+## Riga di comando
+
+`winweaver.exe` senza parametri apre la finestra. Un valore segue il suo parametro dopo uno spazio o `=`:
+`--renderer=directx`.
+
+| Parametri | Che cosa fanno |
+|---|---|
+| `--renderer NAME` | Apre la finestra e prova prima il renderer NAME, solo per questo avvio: `auto`, `opengl` o `directx` |
+| `--mcp stdio` | Serve MCP sull'input e sull'output standard, senza la finestra; un client MCP lo avvia così |
+| `--mcp http --token TOKEN` | Serve MCP su `http://127.0.0.1:8765/mcp` senza la finestra; il token ha almeno 32 caratteri |
+| `--port N` | Con `--mcp http`: un'altra porta |
+| `--mode NAME` | Con `--mcp`: `read` (predefinito) legge soltanto, `edit` modifica i profili in memoria, `files` li salva anche e scrive il file di risposte |
+| `--read-pc` | Con `--mcp`: consente di leggere le impostazioni di questo PC |
+| `--profile NAME` | Con `--mcp`: una preimpostazione o un profilo di `profiles/` diventa quello corrente |
+| `--version` | Stampa la versione |
+| `--check-catalog` | Carica il catalogo integrato con le sue traduzioni e stampa i loro problemi |
+| `--help` | Stampa l'elenco dei parametri |
+| `--smoke-window` | Apre una piccola finestra, disegna due fotogrammi e stampa con che cosa sono stati disegnati (anche con `--renderer`): un controllo della grafica |
+| `--elevated-apply PLAN DIGEST` | La finestra avvia così se stessa per applicare un piano confermato come amministratore; non va avviato a mano |
+
+La modalità e il permesso di leggere questo PC si danno a ogni avvio e non vengono mai salvati. I messaggi
+vanno nella console da cui è stato avviato il programma e in `logs/`.
+
 ## Tastiera
 
 | Tasti | Azione |

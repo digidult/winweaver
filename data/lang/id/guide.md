@@ -94,6 +94,29 @@ salah dengan OpenGL (driver lama), pilih DirectX 12. Perubahan berlaku pada star
 `winweaver.exe --renderer directx` (atau `opengl`, `auto`) memilih hanya untuk satu start. Log di `logs/`
 menyebutkan apa yang dipakai jendela untuk menggambar.
 
+## Baris perintah
+
+`winweaver.exe` tanpa parameter membuka jendela. Nilai ditulis setelah parameternya dengan spasi atau `=`:
+`--renderer=directx`.
+
+| Parameter | Fungsinya |
+|---|---|
+| `--renderer NAME` | Membuka jendela dan mencoba perender NAME lebih dulu, hanya untuk start ini: `auto`, `opengl`, atau `directx` |
+| `--mcp stdio` | Melayani MCP lewat input dan output standar, tanpa jendela; klien MCP menjalankannya dengan cara ini |
+| `--mcp http --token TOKEN` | Melayani MCP di `http://127.0.0.1:8765/mcp` tanpa jendela; token minimal 32 karakter |
+| `--port N` | Dengan `--mcp http`: port lain |
+| `--mode NAME` | Dengan `--mcp`: `read` (default) hanya membaca, `edit` mengubah profil di memori, `files` juga menyimpannya dan menulis file jawaban |
+| `--read-pc` | Dengan `--mcp`: mengizinkan membaca pengaturan PC ini |
+| `--profile NAME` | Dengan `--mcp`: preset atau profil dari `profiles/` menjadi profil saat ini |
+| `--version` | Menampilkan versi |
+| `--check-catalog` | Memuat katalog bawaan dengan terjemahannya dan menampilkan masalahnya |
+| `--help` | Menampilkan daftar parameter |
+| `--smoke-window` | Membuka jendela kecil, menggambar dua bingkai, dan menampilkan apa yang menggambarnya (juga dengan `--renderer`): pemeriksaan grafis |
+| `--elevated-apply PLAN DIGEST` | Jendela menjalankan dirinya sendiri dengan cara ini untuk menerapkan rencana yang dikonfirmasi sebagai administrator; bukan untuk dijalankan manual |
+
+Mode dan izin membaca PC ini diberikan pada setiap start dan tidak pernah disimpan. Pesan masuk ke konsol
+tempat program dijalankan dan ke `logs/`.
+
 ## Keyboard
 
 | Tombol | Tindakan |
