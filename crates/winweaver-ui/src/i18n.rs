@@ -208,8 +208,8 @@ mod tests {
     /// it reads, its placeholders match and it has no text the interface does not know.
     #[test]
     fn the_example_translation_reads() {
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../package/lang/be/ui.json");
+        let path =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../package/lang/be/ui.json");
         let text = std::fs::read_to_string(&path).unwrap();
         let (name, table) = parse(&text, "be/ui.json").unwrap();
         assert!(!name.is_empty());
@@ -228,9 +228,15 @@ mod tests {
             found
         };
         for (key, value) in &table {
-            assert!(known.contains_key(key), "be: {key:?} is not a text of the interface");
+            assert!(
+                known.contains_key(key),
+                "be: {key:?} is not a text of the interface"
+            );
             assert_eq!(marks(key), marks(value), "be: {key:?}");
-            assert!(!value.contains('\u{2013}') && !value.contains('\u{2014}'), "be: a dash in {key:?}");
+            assert!(
+                !value.contains('\u{2013}') && !value.contains('\u{2014}'),
+                "be: a dash in {key:?}"
+            );
         }
     }
 
