@@ -171,10 +171,18 @@ mod tests {
         assert!(kyiv.title_for("en").contains("Kyiv"));
         assert!(!kyiv.title_for("uk").is_empty());
         assert!(kyiv.title_for("de").contains("Kiew"));
-        assert_eq!(kyiv.title_for("pl"), kyiv.title_en, "English without a title");
+        assert_eq!(
+            kyiv.title_for("pl"),
+            kyiv.title_en,
+            "English without a title"
+        );
         for zone in zones {
             for code in ["de", "es", "fr", "id", "it", "tr"] {
-                assert!(zone.titles.contains_key(code), "{} has no {code} title", zone.id);
+                assert!(
+                    zone.titles.contains_key(code),
+                    "{} has no {code} title",
+                    zone.id
+                );
             }
         }
         assert!(keyboard("en-US").is_some_and(|k| k.klid == "00000409"));
