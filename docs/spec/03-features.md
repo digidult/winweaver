@@ -118,7 +118,8 @@ NEW). Each item names the user-visible behaviour; the mechanism is in `04-archit
 
 ## 8. Languages and themes
 
-- Interface, catalog and documentation in English, Ukrainian and Russian; a language is a folder in
+- Interface, catalog and documentation in English, Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish; time zones of their regions with their
+  titles in each; a language is a folder in
   `lang/`; a missing text falls back to English; the setting "follow Windows" picks the Windows display
   language.
 - Light and dark themes embedded and following Windows by default; more themes as JSON files in

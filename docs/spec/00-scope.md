@@ -27,7 +27,7 @@ The program:
 8. serves an MCP server (stdio and loopback HTTP) through which AI agents read and, when allowed, edit
    profiles and read this PC;
 9. shows its own documentation, a guide at the first start and a catalog of bookmarks inside the window;
-10. ships with presets (Office, Strict, Laptop, Home) and in three languages (English, Ukrainian, Russian).
+10. ships with presets (Office, Strict, Laptop, Home) and in nine languages (English, Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish).
 
 The predecessor is WinKickOff (Python 3.14, tkinter). WinWeaver carries over the data of its built-in rule
 catalog and its whole functionality. The file formats are new and need no compatibility. No code is ported.
@@ -61,7 +61,7 @@ catalog and its whole functionality. The file formats are new and need no compat
   mechanism (the embedded scripts of the passes), and in the stand-alone scripts generated for use without
   the program.
 - P3 Languages. English is the source language of the interface, the catalog and the documentation.
-  Ukrainian and Russian ship by default. A language is a set of files in `lang/<code>/` next to the
+  Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish ship built in. A language is a set of files in `lang/<code>/` next to the
   executable; a missing text falls back to English; a new language is added by adding its folder.
 - P4 Dependencies. Popular, well known, open source Rust crates; pure Rust, no extra DLL, no runtime to
   install. A new crate is named in `04-architecture.md` with the reason.

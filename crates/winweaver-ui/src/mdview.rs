@@ -9,9 +9,15 @@ use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 /// The guide shown at the first start and from the menu (F1).
 pub const GUIDE: &str = include_str!("../../../data/docs/guide.md");
 /// The translated guides: the language code and the page.
-pub const GUIDES: [(&str, &str); 2] = [
+pub const GUIDES: [(&str, &str); 8] = [
     ("uk", include_str!("../../../data/lang/uk/guide.md")),
     ("ru", include_str!("../../../data/lang/ru/guide.md")),
+    ("de", include_str!("../../../data/lang/de/guide.md")),
+    ("es", include_str!("../../../data/lang/es/guide.md")),
+    ("fr", include_str!("../../../data/lang/fr/guide.md")),
+    ("id", include_str!("../../../data/lang/id/guide.md")),
+    ("it", include_str!("../../../data/lang/it/guide.md")),
+    ("tr", include_str!("../../../data/lang/tr/guide.md")),
 ];
 pub const GUIDE_TITLE: &str = "Guide.md";
 /// The parameter reference of the catalog, carried over with its data (`data/reference/`): the

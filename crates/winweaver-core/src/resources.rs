@@ -56,6 +56,9 @@ pub struct TimeZone {
     pub title_uk: String,
     #[serde(default)]
     pub title_en: String,
+    /// The titles in the other languages of the interface, by language code.
+    #[serde(default)]
+    pub titles: std::collections::BTreeMap<String, String>,
     #[serde(default)]
     pub recommended: bool,
 }
@@ -66,7 +69,7 @@ impl TimeZone {
         let text = match language {
             "ru" => &self.title,
             "uk" => &self.title_uk,
-            _ => &self.title_en,
+            other => self.titles.get(other).unwrap_or(&self.title_en),
         };
         if !text.is_empty() {
             text
@@ -167,6 +170,21 @@ mod tests {
         let kyiv = zones.iter().find(|z| z.id == "FLE Standard Time").unwrap();
         assert!(kyiv.title_for("en").contains("Kyiv"));
         assert!(!kyiv.title_for("uk").is_empty());
+        assert!(kyiv.title_for("de").contains("Kiew"));
+        assert_eq!(
+            kyiv.title_for("pl"),
+            kyiv.title_en,
+            "English without a title"
+        );
+        for zone in zones {
+            for code in ["de", "es", "fr", "id", "it", "tr"] {
+                assert!(
+                    zone.titles.contains_key(code),
+                    "{} has no {code} title",
+                    zone.id
+                );
+            }
+        }
         assert!(keyboard("en-US").is_some_and(|k| k.klid == "00000409"));
         assert!(keyboard("ru-UA").is_some_and(|k| k.transient && k.lcid.is_none()));
         let tips = |t: &str| vec![t.to_owned()];

@@ -34,7 +34,7 @@ are Windows only (`cfg(windows)`), and the UI tests run on the Windows runner.
 
 | Need | Crate | Why |
 |---|---|---|
-| Window, rendering, widgets | `eframe`, `egui`, `egui_extras` (tables, images) | The chosen stack; glow + winit backends are features of eframe |
+| Window, rendering, widgets | `eframe`, `egui`, `egui_extras` (tables, images) | The chosen stack; wgpu (the renderer eframe chooses by default) and winit |
 | JSON | `serde`, `serde_json` | The standard; strict reading through a custom deserializer wrapper (duplicate keys, depth, size) |
 | XML of the answer file | `quick-xml` | Writing with escaping and reading of imported files; no DTD, entities refused |
 | Markdown | `pulldown-cmark` | Rendering of the documentation and the guide (a small renderer to egui on top) |
@@ -128,9 +128,10 @@ task XML) before the file is written.
 
 ## 9. Known limitations to document
 
-- glow needs OpenGL 2.1 or later; a VM without 3D acceleration may fall back to software rendering, which
-  is slow but works. If a target has no usable OpenGL at all, the wgpu backend with the DirectX 12 path is
-  the fallback to evaluate (also pure Rust, larger executable).
+- The window draws with wgpu: DirectX 12 or Vulkan on a GPU, and without a GPU driver (a VM without 3D
+  acceleration, a fresh installation, the CI runner) a software adapter, slower but working. glow
+  (OpenGL) was tried on 16.10.2026: 6.4 MB smaller, but without a driver Windows offers only OpenGL 1.1,
+  and egui_glow needs 2.0, so the window did not start on the CI runner.
 - The first frame of egui is drawn after the catalog loads; a splash is the window itself with a progress
   bar, not a separate window.
 
