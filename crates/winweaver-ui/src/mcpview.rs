@@ -188,6 +188,12 @@ fn server_card(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
         ui.colored_label(ui.visuals().warn_fg_color, &panel.error);
     }
     ui.weak(tr("The copied configuration holds the token; the clipboard history of Windows keeps what is copied."));
+    if let Some(file) = winweaver_mcp::log::file_of_today() {
+        ui.weak(trf(
+            "The log of the server: {path}",
+            &[("path", &file.display())],
+        ));
+    }
 }
 
 /// The documents of the workspace of the running server.

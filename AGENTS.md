@@ -1,7 +1,10 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 15.10.2026 (the list of
+Updated with every change of structure, commands or task status. Last update: 16.10.2026 (eight built-in
+languages besides English, the MCP log and the crash handlers, the files for AI
+agents in `agents/`, the README and the Belarusian example of the archive in `package/`, one archive from CI;
+before it on 15.10.2026 the list of
 the customer of 15.10.2026: the chrome of each tab, the painted tree and lists with the keyboard, the
 diff tab with comments, bookmarks of options, theme files with fonts and their editor; before it on
 14.10.2026 lists of values, linked policies, the default user profile applied natively, the local
@@ -16,7 +19,7 @@ A commit made by an agent ends with the line `Co-Authored-By: <agent model> <nor
 WinWeaver is the successor of WinKickOff: a portable editor of Windows 11 installation profiles that builds
 `autounattend.xml`, compares profiles, reads the settings of this PC natively, generates stand-alone scripts
 that apply and revert them, and serves an MCP server; importing ADMX policy templates and applying natively
-come next. It is written in Rust with eframe (egui + glow + winit) for Windows 10 and 11, one executable with
+come next. It is written in Rust with eframe (egui + wgpu + winit) for Windows 10 and 11, one executable with
 data folders next to it. The data of the predecessor's rule catalog, its runtime templates and its whole
 functionality carry over; the file formats are new and no program code is ported (clean room).
 
@@ -29,7 +32,8 @@ functionality carry over; the file formats are new and no program code is ported
 | File types, formats, what lives next to the executable | `docs/spec/02-documents.md` |
 | What the program must do (feature inventory) | `docs/spec/03-features.md` |
 | Crates, modules, threads, build | `docs/spec/04-architecture.md` |
-| Use or change the MCP server | `crates/winweaver-mcp/src/lib.rs`, `tools.rs`, then `skills/winweaver/SKILL.md` |
+| Use or change the MCP server | `crates/winweaver-mcp/src/lib.rs`, `tools.rs`, then `agents/skills/winweaver/SKILL.md` |
+| Change what an AI agent or the archive gets | `agents/README.md`, `package/README.md` |
 
 ## 3. Folder structure
 
@@ -83,17 +87,22 @@ functionality carry over; the file formats are new and no program code is ported
 ├── data/                  embedded into the executable at build time
 │   ├── reference/         the parameter reference of the predecessor (00-20 and README), carried over with the
 │   │                      catalog data; the `doc` field of a rule links into it with a heading anchor
-│   ├── catalog/           groups.json, 00-17 rules files, lang/ru.json and lang/uk.json (catalog 0.11 of the
+│   ├── catalog/           groups.json, 00-17 rules files, lang/<code>.json for uk, ru, de, es, fr, id, it, tr (catalog 0.11 of the
 │   │                      predecessor)
 │   ├── presets/           office, strict, laptop, home .wwprofile (converted once from the predecessor)
 │   ├── resources/         timezones.json, keyboards.json
 │   ├── templates/         the runtime templates of the predecessor carried over as data: the answer file
 │   │                      skeleton and the scripts with {{slot}}s (they name WinWeaver now), VERSION 0.11
-│   ├── lang/<code>/       ui.json: the translations of the interface (uk, ru); guide.md: the guide translated
+│   ├── lang/<code>/       ui.json: the translations of the interface (uk, ru, de, es, fr, id, it, tr); guide.md: the guide translated
 │   ├── themes/            light, dark, latte, matrix .wwtheme: the embedded themes (a base, the colours it
 │   │                      changes, the fonts); Latte and Matrix are the colours of the predecessor
 │   └── docs/              guide.md, the English guide shown at the first start
-├── skills/winweaver/      the Agent Skill for AI agents that use WinWeaver over MCP
+├── agents/                shipped in the archive: AGENTS.md (the assistant for any agent, short for small
+│                          contexts), README.md, skills/ (winweaver: the tools, served as winweaver://skill;
+│                          winweaver-review, -change, -this-pc), pi-agent/ (Dockerfile of the latest pi and
+│                          Node.js LTS, its AGENTS.md, README.md)
+├── package/               what the archive adds: README.md for the user (not this repository's), lang/be/ui.json
+│                          (Belarusian, every text: the example of a language, checked by a test of i18n.rs)
 └── docs/
     ├── releases/          release notes v<version>.md
     ├── spec/              clean room specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
@@ -102,15 +111,15 @@ functionality carry over; the file formats are new and no program code is ported
 
 Next to the executable at run time (never versioned): `settings.json`, `bookmarks.wwmarks`, `profiles/`,
 `output/` (the answer file, the scripts, plan and backup files of the native apply), `imports/` (catalog files of
-the imported policy templates), `drafts/` (unsaved profiles), `logs/` (winweaver-<date>.log),
+the imported policy templates), `drafts/` (unsaved profiles), `logs/` (winweaver-<date>.log, mcp-<date>.log),
 `lang/<code>/` (more or overriding translations), `themes/` (more themes, `<id>.wwtheme`, also `<id>.json`
 of the predecessor; the id of an embedded theme replaces it).
 
 ## 4. Project rules
 
 1. Language: everything in the repository is English (code, comments, documentation, commit messages, issue
-   texts). The interface, the catalog and the user documentation are English sources with Ukrainian and
-   Russian translation files; other languages are files added next to the executable.
+   texts). The interface, the catalog and the user documentation are English sources with translation
+   files built in for Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish; other languages are files added next to the executable.
 2. No em dash (U+2014) and no en dash (U+2013) in any text we create, in any language: documents, code,
    data, comments, interface strings, translations, commit messages. Number ranges use a hyphen.
 3. Clean room: no program code of WinKickOff is copied or translated into this repository. Its data is
@@ -132,8 +141,10 @@ of the predecessor; the id of an embedded theme replaces it).
    predecessor). The first day (14.10.2026) went straight to `main` while the repository was being created;
    from the branch `docs-refresh` on, work goes through pull requests, which the customer merges.
 10. Every text of the interface is wrapped in `tr("English")` or `trf("English {name}", &[("name", &v)])` and
-    has a Ukrainian and a Russian translation in `data/lang/<code>/ui.json`; the test
-    `every_text_of_the_interface_is_translated` fails otherwise.
+    has a translation in `data/lang/<code>/ui.json` of every built-in language (uk, ru, de, es, fr, id, it,
+    tr); the test `every_text_of_the_interface_is_translated` fails otherwise. A new rule needs its texts in
+    every `data/catalog/lang/<code>.json` (`translations_cover_every_rule`); `package/lang/be/ui.json` may
+    lag (English fills the gaps).
 
 ## 5. Commands
 
@@ -204,6 +215,13 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   Base64 (`Set-AccountText`), the profile is embedded as ASCII JSON in `Extensions/Profile`.
 - The language setting `""` follows the language of the Windows interface; it switches the interface and the
   catalog texts together (`i18n::current()`).
+- Logs and crashes (`winweaver_mcp::log`, set up first in `main`): the MCP server writes `logs/mcp-<date>.log`
+  (transport start and stop, every request with its time, refusals and transport errors; ids and switches
+  only, never a token, a password, a key or a free text). The panic hook and the filter of unhandled Windows
+  exceptions (`winweaver_win::on_fatal_exception`: access violation, stack overflow) write the crash into the
+  MCP log for a headless process or a thread named `mcp-*`, else into `winweaver-<date>.log`. A panic inside a
+  request is caught (`Server::handle_text`): the request gets the error -32603 and the server goes on; a
+  release build has no console, so `eprintln!` of a headless process also goes to the log (`refuse`).
 - MCP: the mode is never saved (read at every start), nor is read_pc; the token is saved in settings.json;
   errors start with not_allowed, not_found, invalid, write_failed or read_failed; passwords and the product
   key are replaced by `***` in every answer.
@@ -299,6 +317,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   disabled with the built-in rule in the tip, the profile keeps it off, and `get_rule` names it in
   `linked_by`. A policy chosen on stays a normal rule.
 - Pull requests: the CI of a pull request is read with the app's PR tools (`get_status`), not by polling with gh.
+- The archive: the job Package copies the exe, LICENSE, `package/README.md`, the presets as `profiles/`,
+  `package/lang/` and `agents/` into `dist/WinWeaver` and uploads `dist/`, so the artifact is the one archive; a
+  tag zips the same folder for the release. Agent texts stay short (local models with small contexts) and name no
+  model: the person chooses it.
 - Drafts: `drafts/<key>.json`, key `p-<fnv of the path>` or `n-<time>-<n>`; written 2 s after the last change
   and at the close; a save or a discard deletes them.
 
@@ -310,7 +332,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | UI design | Variant A with the compact layout and the row switches of C and the secondary tabs of D (decided) | 14.10.2026 |
 | Core | Catalog, profiles, resolver, check, diff, bookmarks, build of the answer file, This PC (plan, judgement, capture, reports), stand-alone scripts, import of answer files and WinKickOff profiles; tests on the real data | 14.10.2026 |
 | Windows API | Reading the registry, the elevation, the locales, the Windows language and the local accounts with their groups; the native read of the whole catalog is tested on the Windows runner | 14.10.2026 |
-| Window | Tabs, menu, command bar of each tab (icons above labels), navigation, search per tab, the painted tree and lists with the keyboard, detail panel with copy and selectable texts, forms, check, build, diff tab with comments, bookmarks of options, Markdown tabs with anchors, This PC (read, check, scripts, reports), MCP tab with its journal, settings, translations uk and ru, drafts, restored tabs, log, themes with fonts (Light, Dark, Latte, Matrix, more as files) and their editor, the title bar in their colours; pull requests #13 to #17 for the list of 15.10.2026 | 15.10.2026 |
+| Window | Tabs, menu, command bar of each tab (icons above labels), navigation, search per tab, the painted tree and lists with the keyboard, detail panel with copy and selectable texts, forms, check, build, diff tab with comments, bookmarks of options, Markdown tabs with anchors, This PC (read, check, scripts, reports), MCP tab with its journal, settings, translations uk, ru, de, es, fr, id, it and tr, drafts, restored tabs, log, themes with fonts (Light, Dark, Latte, Matrix, more as files) and their editor, the title bar in their colours; pull requests #13 to #17 for the list of 15.10.2026 | 15.10.2026 |
 | MCP server | stdio and HTTP, 19 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
 | Native apply | Plans, the elevated helper, the backup and undo (pull request #2), the default user profile loaded and unloaded by the helper; tested in a test key of HKCU and of the default profile on the runner | 14.10.2026 |
 | Policy templates | ADMX import, catalog files, the settings section (pull request #3), lists and multi-line texts (`reg-list`, list parameters), policies linked to built-in rules | 14.10.2026 |

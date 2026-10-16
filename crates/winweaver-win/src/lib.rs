@@ -106,3 +106,46 @@ pub fn run_elevated(exe: &std::path::Path, args: &[String]) -> Result<u32, Strin
         Err("elevation exists on Windows only".to_owned())
     }
 }
+
+/// Calls `report` with the code and the address of an exception that nothing handles (an access
+/// violation, a stack overflow), before Windows ends the process and reports it as it always does.
+/// Once per process; nothing outside Windows.
+pub fn on_fatal_exception(report: fn(u32, usize)) {
+    #[cfg(windows)]
+    {
+        use std::sync::OnceLock;
+        use windows_sys::Win32::System::Diagnostics::Debug::{
+            EXCEPTION_POINTERS, SetUnhandledExceptionFilter,
+        };
+        static REPORT: OnceLock<fn(u32, usize)> = OnceLock::new();
+        if REPORT.set(report).is_err() {
+            return;
+        }
+        unsafe extern "system" fn filter(info: *const EXCEPTION_POINTERS) -> i32 {
+            // SAFETY: Windows passes the records of the exception, or a null pointer is skipped.
+            let (code, address) = unsafe {
+                match info.as_ref().and_then(|i| i.ExceptionRecord.as_ref()) {
+                    Some(record) => (
+                        record.ExceptionCode as u32,
+                        record.ExceptionAddress as usize,
+                    ),
+                    None => (0, 0),
+                }
+            };
+            if let Some(report) = REPORT.get() {
+                report(code, address);
+            }
+            // EXCEPTION_CONTINUE_SEARCH: Windows goes on as without the filter.
+            0
+        }
+        // SAFETY: the filter reads the record and writes a line; it replaces no other filter of
+        // the program.
+        unsafe {
+            SetUnhandledExceptionFilter(Some(filter));
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = report;
+    }
+}

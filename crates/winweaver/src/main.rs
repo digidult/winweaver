@@ -77,8 +77,23 @@ fn with_imports(catalog: Catalog, dir: &std::path::Path) -> Catalog {
     }
 }
 
+/// A message for the console of the parent and the MCP log: a release build started by a client
+/// has no console, so the log is where the reason of an early exit stays.
+fn refuse(text: &str) {
+    eprintln!("{text}");
+    winweaver_mcp::log::line("ERROR", text);
+}
+
 fn mcp(args: &[String]) -> ExitCode {
     let transport = args.first().map(String::as_str).unwrap_or("");
+    winweaver_mcp::log::line(
+        "INFO",
+        &format!(
+            "WinWeaver {} started for MCP over {transport} (process {})",
+            winweaver_core::APP_VERSION,
+            std::process::id()
+        ),
+    );
     let mode = match option(args, "--mode")
         .as_deref()
         .map(winweaver_mcp::Mode::parse)
@@ -86,14 +101,14 @@ fn mcp(args: &[String]) -> ExitCode {
         None => winweaver_mcp::Mode::Read,
         Some(Some(m)) => m,
         Some(None) => {
-            eprintln!("--mode is read, edit or files");
+            refuse("--mode is read, edit or files");
             return ExitCode::from(2);
         }
     };
     let catalog = match Catalog::embedded() {
         Ok(c) => c,
         Err(e) => {
-            eprintln!("catalog: {e}");
+            refuse(&format!("catalog: {e}"));
             return ExitCode::FAILURE;
         }
     };
@@ -112,27 +127,27 @@ fn mcp(args: &[String]) -> ExitCode {
     if let Some(name) = option(args, "--profile")
         && let Err(e) = server.select(&name)
     {
-        eprintln!("--profile {name}: {e}");
+        refuse(&format!("--profile {name}: {e}"));
         return ExitCode::from(2);
     }
     match transport {
         "stdio" => match winweaver_mcp::stdio::serve(&server) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
-                eprintln!("stdio: {e}");
+                refuse(&format!("stdio: {e}"));
                 ExitCode::FAILURE
             }
         },
         "http" => {
             let Some(token) = option(args, "--token").filter(|t| t.len() >= 32) else {
-                eprintln!("--token of at least 32 characters is needed");
+                refuse("--token of at least 32 characters is needed");
                 return ExitCode::from(2);
             };
             let port = match option(args, "--port").map(|p| p.parse::<u16>()) {
                 None => 8765,
                 Some(Ok(p)) => p,
                 Some(Err(_)) => {
-                    eprintln!("--port is a number");
+                    refuse("--port is a number");
                     return ExitCode::from(2);
                 }
             };
@@ -144,13 +159,14 @@ fn mcp(args: &[String]) -> ExitCode {
                     }
                 }
                 Err(e) => {
-                    eprintln!("http: {e}");
+                    refuse(&format!("http: {e}"));
                     ExitCode::FAILURE
                 }
             }
         }
         _ => {
-            eprintln!("--mcp stdio or --mcp http\n{USAGE}");
+            refuse("--mcp stdio or --mcp http");
+            eprintln!("{USAGE}");
             ExitCode::from(2)
         }
     }
@@ -214,11 +230,16 @@ fn elevated_apply(args: &[String]) -> ExitCode {
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    // The crash handlers first: a panic or a fatal exception of Windows is written to the logs
+    // folder next to the executable, the MCP log for a process that only serves MCP.
+    let headless = args.first().map(String::as_str) == Some("--mcp");
+    winweaver_mcp::log::init(&winweaver_ui::exe_dir().join("logs"), headless);
     match args.first().map(String::as_str) {
         None => match winweaver_ui::run() {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("{e}");
+                winweaver_mcp::log::window_line("ERROR", &format!("the window failed: {e}"));
                 ExitCode::FAILURE
             }
         },

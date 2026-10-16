@@ -113,12 +113,13 @@ NEW). Each item names the user-visible behaviour; the mechanism is in `04-archit
   are redacted in every answer and in the journal.
 - The server has its own workspace of documents; the window shows them in the MCP tab and can open them
   as tabs. A request that needs the window while a dialog is open gets `window_busy`.
-- The agent skill (`skills/winweaver/`) and the instructions for any agent (`agents/`) ship with the
+- The agent skills (`agents/skills/`) and the instructions for any agent (`agents/`) ship with the
   program and are served as resources.
 
 ## 8. Languages and themes
 
-- Interface, catalog and documentation in English, Ukrainian and Russian; a language is a folder in
+- Interface, catalog and documentation in English, Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish; time zones of their regions with their
+  titles in each; a language is a folder in
   `lang/`; a missing text falls back to English; the setting "follow Windows" picks the Windows display
   language.
 - Light and dark themes embedded and following Windows by default; more themes as JSON files in

@@ -8,6 +8,7 @@
 //! ever applies settings, elevates, deletes or imports.
 
 pub mod http;
+pub mod log;
 pub mod stdio;
 mod tools;
 
@@ -196,13 +197,46 @@ impl Server {
     /// Handles one JSON-RPC message given as text; `None` for a notification.
     pub fn handle_text(&self, text: &str) -> Option<String> {
         if text.len() > MAX_MESSAGE {
+            log::line(
+                "WARN",
+                &format!("a message of {} bytes was refused: too large", text.len()),
+            );
             return Some(error(Value::Null, -32600, "the message is too large").to_string());
         }
         let value: Value = match winweaver_core::jsonfile::parse(text, "message") {
             Ok(v) => v,
-            Err(e) => return Some(error(Value::Null, -32700, &e.to_string()).to_string()),
+            Err(e) => {
+                log::line(
+                    "WARN",
+                    &format!("a message that is not JSON was refused: {e}"),
+                );
+                return Some(error(Value::Null, -32700, &e.to_string()).to_string());
+            }
         };
-        self.handle(&value).map(|v| v.to_string())
+        // A failure inside the program answers this request with an error and keeps the
+        // process and the other requests going; the panic hook has written the details.
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.handle(&value))) {
+            Ok(answer) => answer.map(|v| v.to_string()),
+            Err(payload) => {
+                let method = value.get("method").and_then(Value::as_str).unwrap_or("");
+                log::line(
+                    "ERROR",
+                    &format!(
+                        "the request {method} failed inside the program: {}; the server goes on",
+                        log::panic_text(payload.as_ref())
+                    ),
+                );
+                let id = value.get("id").cloned().unwrap_or(Value::Null);
+                Some(
+                    error(
+                        id,
+                        -32603,
+                        "internal error: the request failed inside WinWeaver; the MCP log of the program has the details",
+                    )
+                    .to_string(),
+                )
+            }
+        }
     }
 
     /// Handles one JSON-RPC message; `None` for a notification.
@@ -231,7 +265,12 @@ impl Server {
             "tools/call" => Ok(self.call_tool(&params)),
             "resources/list" => Ok(json!({ "resources": tools::resources() })),
             "resources/read" => self.read_resource(&params),
-            _ => Err((-32601, format!("unknown method {method}"))),
+            #[cfg(test)]
+            "test/panic" => panic!("a failure inside a request"),
+            _ => {
+                log::line("WARN", &format!("unknown method {method}"));
+                Err((-32601, format!("unknown method {method}")))
+            }
         };
         Some(match result {
             Ok(value) => json!({ "jsonrpc": "2.0", "id": id, "result": value }),
@@ -248,6 +287,18 @@ impl Server {
             .filter(|c| c.is_ascii_graphic() || *c == ' ')
             .take(60)
             .collect::<String>();
+        let protocol = params
+            .get("protocolVersion")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .chars()
+            .filter(char::is_ascii_graphic)
+            .take(20)
+            .collect::<String>();
+        log::line(
+            "INFO",
+            &format!("client '{client}' connected (protocol {protocol})"),
+        );
         {
             let mut state = self.lock();
             state.client = client;
@@ -265,10 +316,24 @@ impl Server {
         let name = params.get("name").and_then(Value::as_str).unwrap_or("");
         let args = params.get("arguments").cloned().unwrap_or(json!({}));
         let detail = tools::journal_detail(&args);
+        let started = std::time::Instant::now();
+        log::line("INFO", &format!("tool {name} {detail}"));
         let outcome = {
             let mut state = self.lock();
             tools::call(self, &mut state, name, &args)
         };
+        let ms = started.elapsed().as_millis();
+        match &outcome {
+            Ok(_) => log::line("INFO", &format!("tool {name} ok in {ms} ms")),
+            Err(e) => log::line(
+                "WARN",
+                &format!(
+                    "tool {name} {} in {ms} ms: {}",
+                    e.kind,
+                    e.message.chars().take(200).collect::<String>()
+                ),
+            ),
+        }
         match outcome {
             Ok(value) => {
                 self.record(name, detail, "ok".to_owned());
@@ -357,4 +422,37 @@ pub fn new_token() -> Result<String, String> {
         }
     }
     Err("the random source gave too few usable bytes".to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A failure inside a request answers it with an error; the lock of the state is still
+    /// usable and the next request is served.
+    #[test]
+    fn a_failure_inside_a_request_keeps_the_server_going() {
+        let catalog = Catalog::embedded().unwrap();
+        let server = Server::new(
+            catalog,
+            &[],
+            Options {
+                mode: Mode::Read,
+                read_pc: false,
+                profiles_dir: std::env::temp_dir(),
+                output_dir: std::env::temp_dir(),
+            },
+        );
+        let failed = server
+            .handle_text(r#"{"jsonrpc": "2.0", "id": 7, "method": "test/panic"}"#)
+            .unwrap();
+        let failed: Value = serde_json::from_str(&failed).unwrap();
+        assert_eq!(failed["id"], 7);
+        assert_eq!(failed["error"]["code"], -32603);
+        let ping = server
+            .handle_text(r#"{"jsonrpc": "2.0", "id": 8, "method": "ping"}"#)
+            .unwrap();
+        assert!(ping.contains("\"result\""), "{ping}");
+        assert_eq!(server.options().mode, Mode::Read);
+    }
 }

@@ -1024,7 +1024,7 @@
       "title": "Search without cloud content and history (user profile)",
       "level": "optional",
       "default": true,
-      "tags": ["search", "cloud", "logging"],
+      "tags": ["search", "cloud", "history"],
       "doc": "docs/technical/reference/19-more-privacy.md#search-and-start",
       "summary": "The user's search toggles are turned off: cloud content from Microsoft and Entra ID accounts, search highlights, search history on this device.",
       "effect": "Matches the machine search policies and turns off the local query history. Values from the customer's list; they match the toggles in Settings.",

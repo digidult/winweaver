@@ -9,10 +9,17 @@ use std::sync::RwLock;
 
 use winweaver_core::jsonfile;
 
-/// The embedded translations: the language code and the file.
-pub const EMBEDDED: [(&str, &str); 2] = [
+/// The embedded translations: the language code and the file. Every text of the interface has a
+/// translation in each of them (`every_text_of_the_interface_is_translated`).
+pub const EMBEDDED: [(&str, &str); 8] = [
     ("uk", include_str!("../../../data/lang/uk/ui.json")),
     ("ru", include_str!("../../../data/lang/ru/ui.json")),
+    ("de", include_str!("../../../data/lang/de/ui.json")),
+    ("es", include_str!("../../../data/lang/es/ui.json")),
+    ("fr", include_str!("../../../data/lang/fr/ui.json")),
+    ("id", include_str!("../../../data/lang/id/ui.json")),
+    ("it", include_str!("../../../data/lang/it/ui.json")),
+    ("tr", include_str!("../../../data/lang/tr/ui.json")),
 ];
 const MAX_BYTES: u64 = 4 * 1024 * 1024;
 
@@ -166,7 +173,10 @@ mod tests {
         }
         let dir = std::env::temp_dir().join("winweaver-no-lang-folder");
         let codes: Vec<String> = languages(&dir).into_iter().map(|l| l.code).collect();
-        assert_eq!(codes, vec!["en", "uk", "ru"]);
+        assert_eq!(
+            codes,
+            vec!["en", "uk", "ru", "de", "es", "fr", "id", "it", "tr"]
+        );
     }
 
     /// The literals of the `tr` and `trf` calls of a source text.
@@ -202,6 +212,42 @@ mod tests {
             }
         }
         out
+    }
+
+    /// The Belarusian file shipped in `lang/be/` of the archive, the example of a translation:
+    /// it reads, its placeholders match and it has no text the interface does not know.
+    #[test]
+    fn the_example_translation_reads() {
+        let path =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../package/lang/be/ui.json");
+        let text = std::fs::read_to_string(&path).unwrap();
+        let (name, table) = parse(&text, "be/ui.json").unwrap();
+        assert!(!name.is_empty());
+        let (_, known) = parse(EMBEDDED[1].1, "ru/ui.json").unwrap();
+        let marks = |t: &str| {
+            let mut found = Vec::new();
+            let mut rest = t;
+            while let Some(i) = rest.find('{') {
+                let Some(j) = rest[i..].find('}') else {
+                    break;
+                };
+                found.push(rest[i..i + j + 1].to_owned());
+                rest = &rest[i + j + 1..];
+            }
+            found.sort();
+            found
+        };
+        for (key, value) in &table {
+            assert!(
+                known.contains_key(key),
+                "be: {key:?} is not a text of the interface"
+            );
+            assert_eq!(marks(key), marks(value), "be: {key:?}");
+            assert!(
+                !value.contains('\u{2013}') && !value.contains('\u{2014}'),
+                "be: a dash in {key:?}"
+            );
+        }
     }
 
     #[test]

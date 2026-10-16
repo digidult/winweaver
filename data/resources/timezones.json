@@ -1,9 +1,73 @@
 [
   {
+    "id": "Tokyo Standard Time",
+    "title": "(UTC+09:00) Джаяпура, Токио",
+    "title_uk": "(UTC+09:00) Джаяпура, Токіо",
+    "title_en": "(UTC+09:00) Jayapura, Tokyo",
+    "titles": {
+      "de": "(UTC+09:00) Jayapura, Tokio",
+      "es": "(UTC+09:00) Jayapura, Tokio",
+      "fr": "(UTC+09:00) Jayapura, Tokyo",
+      "id": "(UTC+09:00) Jayapura, Tokyo",
+      "it": "(UTC+09:00) Jayapura, Tokyo",
+      "tr": "(UTC+09:00) Jayapura, Tokyo"
+    }
+  },
+  {
+    "id": "Singapore Standard Time",
+    "title": "(UTC+08:00) Макасар, Сингапур, Куала-Лумпур",
+    "title_uk": "(UTC+08:00) Макасар, Сінгапур, Куала-Лумпур",
+    "title_en": "(UTC+08:00) Makassar, Singapore, Kuala Lumpur",
+    "titles": {
+      "de": "(UTC+08:00) Makassar, Singapur, Kuala Lumpur",
+      "es": "(UTC+08:00) Makassar, Singapur, Kuala Lumpur",
+      "fr": "(UTC+08:00) Makassar, Singapour, Kuala Lumpur",
+      "id": "(UTC+08:00) Makassar, Singapura, Kuala Lumpur",
+      "it": "(UTC+08:00) Makassar, Singapore, Kuala Lumpur",
+      "tr": "(UTC+08:00) Makassar, Singapur, Kuala Lumpur"
+    }
+  },
+  {
+    "id": "SE Asia Standard Time",
+    "title": "(UTC+07:00) Джакарта, Бангкок, Ханой",
+    "title_uk": "(UTC+07:00) Джакарта, Бангкок, Ханой",
+    "title_en": "(UTC+07:00) Jakarta, Bangkok, Hanoi",
+    "titles": {
+      "de": "(UTC+07:00) Jakarta, Bangkok, Hanoi",
+      "es": "(UTC+07:00) Yakarta, Bangkok, Hanói",
+      "fr": "(UTC+07:00) Jakarta, Bangkok, Hanoï",
+      "id": "(UTC+07:00) Jakarta, Bangkok, Hanoi",
+      "it": "(UTC+07:00) Giacarta, Bangkok, Hanoi",
+      "tr": "(UTC+07:00) Cakarta, Bangkok, Hanoi"
+    }
+  },
+  {
+    "id": "Turkey Standard Time",
+    "title": "(UTC+03:00) Стамбул",
+    "title_uk": "(UTC+03:00) Стамбул",
+    "title_en": "(UTC+03:00) Istanbul",
+    "titles": {
+      "de": "(UTC+03:00) Istanbul",
+      "es": "(UTC+03:00) Estambul",
+      "fr": "(UTC+03:00) Istanbul",
+      "id": "(UTC+03:00) Istanbul",
+      "it": "(UTC+03:00) Istanbul",
+      "tr": "(UTC+03:00) İstanbul"
+    }
+  },
+  {
     "id": "FLE Standard Time",
     "title": "(UTC+02:00) Киев, Хельсинки, Рига, Вильнюс",
     "title_uk": "(UTC+02:00) Київ, Гельсінкі, Рига, Вільнюс",
     "title_en": "(UTC+02:00) Kyiv, Helsinki, Riga, Vilnius",
+    "titles": {
+      "de": "(UTC+02:00) Kiew, Helsinki, Riga, Vilnius",
+      "es": "(UTC+02:00) Kiev, Helsinki, Riga, Vilna",
+      "fr": "(UTC+02:00) Kyiv, Helsinki, Riga, Vilnius",
+      "id": "(UTC+02:00) Kyiv, Helsinki, Riga, Vilnius",
+      "it": "(UTC+02:00) Kiev, Helsinki, Riga, Vilnius",
+      "tr": "(UTC+02:00) Kiev, Helsinki, Riga, Vilnius"
+    },
     "recommended": true
   },
   {
@@ -11,41 +75,97 @@
     "title": "(UTC+02:00) Афины, Бухарест",
     "title_uk": "(UTC+02:00) Афіни, Бухарест",
     "title_en": "(UTC+02:00) Athens, Bucharest",
-    "recommended": false
+    "titles": {
+      "de": "(UTC+02:00) Athen, Bukarest",
+      "es": "(UTC+02:00) Atenas, Bucarest",
+      "fr": "(UTC+02:00) Athènes, Bucarest",
+      "id": "(UTC+02:00) Athena, Bukares",
+      "it": "(UTC+02:00) Atene, Bucarest",
+      "tr": "(UTC+02:00) Atina, Bükreş"
+    }
   },
   {
     "id": "E. Europe Standard Time",
     "title": "(UTC+02:00) Кишинёв",
     "title_uk": "(UTC+02:00) Кишинів",
     "title_en": "(UTC+02:00) Chisinau",
-    "recommended": false
+    "titles": {
+      "de": "(UTC+02:00) Chisinau",
+      "es": "(UTC+02:00) Chisináu",
+      "fr": "(UTC+02:00) Chisinau",
+      "id": "(UTC+02:00) Chisinau",
+      "it": "(UTC+02:00) Chisinau",
+      "tr": "(UTC+02:00) Kişinev"
+    }
   },
   {
     "id": "Central European Standard Time",
     "title": "(UTC+01:00) Варшава, Прага, Братислава",
     "title_uk": "(UTC+01:00) Варшава, Прага, Братислава",
     "title_en": "(UTC+01:00) Warsaw, Prague, Bratislava",
-    "recommended": false
+    "titles": {
+      "de": "(UTC+01:00) Warschau, Prag, Bratislava",
+      "es": "(UTC+01:00) Varsovia, Praga, Bratislava",
+      "fr": "(UTC+01:00) Varsovie, Prague, Bratislava",
+      "id": "(UTC+01:00) Warsawa, Praha, Bratislava",
+      "it": "(UTC+01:00) Varsavia, Praga, Bratislava",
+      "tr": "(UTC+01:00) Varşova, Prag, Bratislava"
+    }
+  },
+  {
+    "id": "Romance Standard Time",
+    "title": "(UTC+01:00) Париж, Мадрид, Брюссель, Копенгаген",
+    "title_uk": "(UTC+01:00) Париж, Мадрид, Брюссель, Копенгаген",
+    "title_en": "(UTC+01:00) Paris, Madrid, Brussels, Copenhagen",
+    "titles": {
+      "de": "(UTC+01:00) Paris, Madrid, Brüssel, Kopenhagen",
+      "es": "(UTC+01:00) París, Madrid, Bruselas, Copenhague",
+      "fr": "(UTC+01:00) Paris, Madrid, Bruxelles, Copenhague",
+      "id": "(UTC+01:00) Paris, Madrid, Brussel, Kopenhagen",
+      "it": "(UTC+01:00) Parigi, Madrid, Bruxelles, Copenaghen",
+      "tr": "(UTC+01:00) Paris, Madrid, Brüksel, Kopenhag"
+    }
   },
   {
     "id": "W. Europe Standard Time",
-    "title": "(UTC+01:00) Берлин, Вена, Амстердам",
-    "title_uk": "(UTC+01:00) Берлін, Відень, Амстердам",
-    "title_en": "(UTC+01:00) Berlin, Vienna, Amsterdam",
-    "recommended": false
+    "title": "(UTC+01:00) Берлин, Рим, Вена, Амстердам",
+    "title_uk": "(UTC+01:00) Берлін, Рим, Відень, Амстердам",
+    "title_en": "(UTC+01:00) Berlin, Rome, Vienna, Amsterdam",
+    "titles": {
+      "de": "(UTC+01:00) Berlin, Rom, Wien, Amsterdam",
+      "es": "(UTC+01:00) Berlín, Roma, Viena, Ámsterdam",
+      "fr": "(UTC+01:00) Berlin, Rome, Vienne, Amsterdam",
+      "id": "(UTC+01:00) Berlin, Roma, Wina, Amsterdam",
+      "it": "(UTC+01:00) Berlino, Roma, Vienna, Amsterdam",
+      "tr": "(UTC+01:00) Berlin, Roma, Viyana, Amsterdam"
+    }
   },
   {
     "id": "GMT Standard Time",
     "title": "(UTC+00:00) Лондон, Дублин, Лиссабон",
     "title_uk": "(UTC+00:00) Лондон, Дублін, Лісабон",
     "title_en": "(UTC+00:00) London, Dublin, Lisbon",
-    "recommended": false
+    "titles": {
+      "de": "(UTC+00:00) London, Dublin, Lissabon",
+      "es": "(UTC+00:00) Londres, Dublín, Lisboa",
+      "fr": "(UTC+00:00) Londres, Dublin, Lisbonne",
+      "id": "(UTC+00:00) London, Dublin, Lisbon",
+      "it": "(UTC+00:00) Londra, Dublino, Lisbona",
+      "tr": "(UTC+00:00) Londra, Dublin, Lizbon"
+    }
   },
   {
     "id": "UTC",
     "title": "(UTC) Всемирное координированное время",
     "title_uk": "(UTC) Всесвітній координований час",
     "title_en": "(UTC) Coordinated Universal Time",
-    "recommended": false
+    "titles": {
+      "de": "(UTC) Koordinierte Weltzeit",
+      "es": "(UTC) Hora universal coordinada",
+      "fr": "(UTC) Temps universel coordonné",
+      "id": "(UTC) Waktu Universal Terkoordinasi",
+      "it": "(UTC) Tempo coordinato universale",
+      "tr": "(UTC) Eşgüdümlü Evrensel Saat"
+    }
   }
 ]
