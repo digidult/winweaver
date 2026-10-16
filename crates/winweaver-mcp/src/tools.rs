@@ -17,7 +17,7 @@ const TEXT_LIMIT: usize = 60_000;
 const LIST_LIMIT: usize = 200;
 const PRESET_IDS: [&str; 4] = ["office", "strict", "laptop", "home"];
 /// The skill for agents, served as a resource.
-const SKILL: &str = include_str!("../../../skills/winweaver/SKILL.md");
+const SKILL: &str = include_str!("../../../agents/skills/winweaver/SKILL.md");
 
 /// A failed tool call: the kind starts the text the client sees.
 pub(crate) struct ToolError {
@@ -1072,6 +1072,7 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
                 "summary": summary.line(),
                 "forms": summary.forms,
                 "notes": summary.notes,
+                "partly": summary.partly.iter().map(|(id, differs)| json!({ "id": id, "differs": differs })).collect::<Vec<_>>(),
                 "not_read": plan.excluded.len(),
             }))
         }

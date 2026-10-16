@@ -77,16 +77,19 @@ jobs:
         shell: pwsh
         run: |
           $v = (Select-String -Path Cargo.toml -Pattern '^version = "(.*)"').Matches[0].Groups[1].Value
-          New-Item -ItemType Directory -Force dist/WinWeaver | Out-Null
-          Copy-Item target/release/winweaver.exe dist/WinWeaver/
-          Copy-Item LICENSE, README.md dist/WinWeaver/
-          Copy-Item -Recurse data/presets dist/WinWeaver/profiles
-          Compress-Archive -Path dist/WinWeaver -DestinationPath "dist/WinWeaver-$v.zip"
+          # The folder of the program: the artifact zips it once, so its download is the archive itself.
+          $root = 'dist/WinWeaver'
+          New-Item -ItemType Directory -Force $root | Out-Null
+          Copy-Item target/release/winweaver.exe, LICENSE "$root/"
+          Copy-Item package/README.md "$root/README.md"
+          Copy-Item -Recurse data/presets "$root/profiles"
+          Copy-Item -Recurse package/lang "$root/lang"
+          Copy-Item -Recurse agents "$root/agents"
           "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append
       - uses: actions/upload-artifact@v4
         with:
           name: WinWeaver-${{ env.VERSION }}
-          path: dist/WinWeaver-*.zip
+          path: dist/
 
   release:
     name: Release
@@ -102,6 +105,10 @@ jobs:
           pattern: WinWeaver-*
           merge-multiple: true
           path: dist
+      - name: Archive
+        run: |
+          v="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
+          cd dist && zip -qr "WinWeaver-$v.zip" WinWeaver
       - name: Release notes file
         id: notes
         run: |

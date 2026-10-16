@@ -5,7 +5,7 @@ description: Use WinWeaver over MCP to read and edit Windows 11 installation pro
 
 # WinWeaver over MCP
 
-WinWeaver holds a catalog of 284 rules for unattended installations of Windows 11 Pro in small workgroups:
+WinWeaver holds a catalog of 284 rules for unattended installations of Windows 10 and 11 in small workgroups:
 answer file settings, policies, other registry values, services, app removals and scripts. A profile says
 which rules are on, with which parameters, and fills the forms of the installation (edition and key,
 computer name, workgroup, disk, accounts, languages, time zone). The MCP server of WinWeaver keeps its own
@@ -33,7 +33,8 @@ The person running the server chooses the mode; ask them to switch it, never wor
 | files | Also `save_profile` (into the profiles folder) and `write_answer_file` (into the output folder). |
 
 `read_this_pc` needs the option "Allow reading the settings of this PC" of the MCP tab (or `--read-pc`) and
-the mode edit; it reads only and puts the result into a new workspace profile.
+the mode edit; it reads only and puts the result into a new workspace profile. Its `partly` lists the rules
+of which some values differ, with each value read and what the rule wants.
 
 ## Errors
 

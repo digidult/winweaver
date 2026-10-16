@@ -1,7 +1,9 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 15.10.2026 (the list of
+Updated with every change of structure, commands or task status. Last update: 16.10.2026 (the files for AI
+agents in `agents/`, the README and the Belarusian example of the archive in `package/`, one archive from CI;
+before it on 15.10.2026 the list of
 the customer of 15.10.2026: the chrome of each tab, the painted tree and lists with the keyboard, the
 diff tab with comments, bookmarks of options, theme files with fonts and their editor; before it on
 14.10.2026 lists of values, linked policies, the default user profile applied natively, the local
@@ -29,7 +31,8 @@ functionality carry over; the file formats are new and no program code is ported
 | File types, formats, what lives next to the executable | `docs/spec/02-documents.md` |
 | What the program must do (feature inventory) | `docs/spec/03-features.md` |
 | Crates, modules, threads, build | `docs/spec/04-architecture.md` |
-| Use or change the MCP server | `crates/winweaver-mcp/src/lib.rs`, `tools.rs`, then `skills/winweaver/SKILL.md` |
+| Use or change the MCP server | `crates/winweaver-mcp/src/lib.rs`, `tools.rs`, then `agents/skills/winweaver/SKILL.md` |
+| Change what an AI agent or the archive gets | `agents/README.md`, `package/README.md` |
 
 ## 3. Folder structure
 
@@ -93,7 +96,12 @@ functionality carry over; the file formats are new and no program code is ported
 │   ├── themes/            light, dark, latte, matrix .wwtheme: the embedded themes (a base, the colours it
 │   │                      changes, the fonts); Latte and Matrix are the colours of the predecessor
 │   └── docs/              guide.md, the English guide shown at the first start
-├── skills/winweaver/      the Agent Skill for AI agents that use WinWeaver over MCP
+├── agents/                shipped in the archive: AGENTS.md (the assistant for any agent, short for small
+│                          contexts), README.md, skills/ (winweaver: the tools, served as winweaver://skill;
+│                          winweaver-review, -change, -this-pc), pi-agent/ (Dockerfile of the latest pi and
+│                          Node.js LTS, its AGENTS.md, README.md)
+├── package/               what the archive adds: README.md for the user (not this repository's), lang/be/ui.json
+│                          (Belarusian, every text: the example of a language, checked by a test of i18n.rs)
 └── docs/
     ├── releases/          release notes v<version>.md
     ├── spec/              clean room specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
@@ -299,6 +307,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   disabled with the built-in rule in the tip, the profile keeps it off, and `get_rule` names it in
   `linked_by`. A policy chosen on stays a normal rule.
 - Pull requests: the CI of a pull request is read with the app's PR tools (`get_status`), not by polling with gh.
+- The archive: the job Package copies the exe, LICENSE, `package/README.md`, the presets as `profiles/`,
+  `package/lang/` and `agents/` into `dist/WinWeaver` and uploads `dist/`, so the artifact is the one archive; a
+  tag zips the same folder for the release. Agent texts stay short (local models with small contexts) and name no
+  model: the person chooses it.
 - Drafts: `drafts/<key>.json`, key `p-<fnv of the path>` or `n-<time>-<n>`; written 2 s after the last change
   and at the close; a save or a discard deletes them.
 

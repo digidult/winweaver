@@ -204,6 +204,36 @@ mod tests {
         out
     }
 
+    /// The Belarusian file shipped in `lang/be/` of the archive, the example of a translation:
+    /// it reads, its placeholders match and it has no text the interface does not know.
+    #[test]
+    fn the_example_translation_reads() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../package/lang/be/ui.json");
+        let text = std::fs::read_to_string(&path).unwrap();
+        let (name, table) = parse(&text, "be/ui.json").unwrap();
+        assert!(!name.is_empty());
+        let (_, known) = parse(EMBEDDED[1].1, "ru/ui.json").unwrap();
+        let marks = |t: &str| {
+            let mut found = Vec::new();
+            let mut rest = t;
+            while let Some(i) = rest.find('{') {
+                let Some(j) = rest[i..].find('}') else {
+                    break;
+                };
+                found.push(rest[i..i + j + 1].to_owned());
+                rest = &rest[i + j + 1..];
+            }
+            found.sort();
+            found
+        };
+        for (key, value) in &table {
+            assert!(known.contains_key(key), "be: {key:?} is not a text of the interface");
+            assert_eq!(marks(key), marks(value), "be: {key:?}");
+            assert!(!value.contains('\u{2013}') && !value.contains('\u{2014}'), "be: a dash in {key:?}");
+        }
+    }
+
     #[test]
     fn every_text_of_the_interface_is_translated() {
         let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
