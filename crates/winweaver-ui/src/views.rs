@@ -305,7 +305,12 @@ fn unknown_rows(rows: &mut Vec<tree::Row<Sel>>, doc: &ProfileDoc, words: &[Strin
             key: Sel::Unknown(id.clone()),
             depth: 1,
             title: id.clone(),
-            right: if unknown_on(choice) { tr("on") } else { tr("off") }.to_owned(),
+            right: if unknown_on(choice) {
+                tr("on")
+            } else {
+                tr("off")
+            }
+            .to_owned(),
             check: tree::Check::None,
             open: None,
             muted: true,
@@ -568,7 +573,9 @@ fn unknown_group_detail(ui: &mut egui::Ui, doc: &ProfileDoc, acts: &mut Vec<Act>
         style::selectable_text(
             ui,
             "unknown-summary",
-            tr("These options of the profile belong to catalogs of policy templates that are not loaded. They stay in the profile unchanged and are left out of the build. Load catalogs looks for them in the imported catalogs that are not loaded and loads only the ones that have them."),
+            tr(
+                "These options of the profile belong to catalogs of policy templates that are not loaded. They stay in the profile unchanged and are left out of the build. Load catalogs looks for them in the imported catalogs that are not loaded and loads only the ones that have them.",
+            ),
         )
     });
     block(ui, |ui| {
@@ -576,7 +583,11 @@ fn unknown_group_detail(ui: &mut egui::Ui, doc: &ProfileDoc, acts: &mut Vec<Act>
         for (id, choice) in unknown {
             ui.horizontal(|ui| {
                 ui.label(RichText::new(id).monospace());
-                ui.weak(if unknown_on(choice) { tr("on") } else { tr("off") });
+                ui.weak(if unknown_on(choice) {
+                    tr("on")
+                } else {
+                    tr("off")
+                });
                 if ui.small_button(tr("open")).clicked() {
                     acts.push(Act::Select(Sel::Unknown(id.clone())));
                 }
@@ -604,7 +615,9 @@ fn unknown_detail(ui: &mut egui::Ui, doc: &ProfileDoc, id: &str, acts: &mut Vec<
         style::selectable_text(
             ui,
             ("unknown-option", id),
-            tr("This option belongs to a catalog of policy templates that is not loaded. It stays in the profile unchanged and is left out of the build."),
+            tr(
+                "This option belongs to a catalog of policy templates that is not loaded. It stays in the profile unchanged and is left out of the build.",
+            ),
         )
     });
     if let Some(params) = choice.get("params").and_then(Value::as_object)

@@ -4766,7 +4766,10 @@ and kept"
         assert_eq!((unknown, on), (0, true), "the option is known and on again");
         assert_eq!(sel, Sel::Rule(id.to_owned()), "the selection follows it");
         app.apply(vec![Act::ToggleImport("test".to_owned())]);
-        assert!(app.imports.is_empty(), "unchecked, the import leaves memory");
+        assert!(
+            app.imports.is_empty(),
+            "unchecked, the import leaves memory"
+        );
         assert_eq!(app.settings.loaded_imports, Some(Vec::new()));
         let (unknown, _, _, sel) = state(&app);
         assert_eq!((unknown, sel), (1, Sel::Unknown(id.to_owned())));
@@ -4811,9 +4814,9 @@ and kept"
         };
         assert!(has(&harness, "Unknown options"));
         assert!(has(&harness, "admx.other.policy"));
-        harness
-            .state_mut()
-            .apply(vec![Act::Select(Sel::Unknown("admx.other.policy".to_owned()))]);
+        harness.state_mut().apply(vec![Act::Select(Sel::Unknown(
+            "admx.other.policy".to_owned(),
+        ))]);
         harness.step();
         assert!(has(&harness, "Load catalogs"));
         harness.state_mut().apply(vec![Act::Select(Sel::None)]);

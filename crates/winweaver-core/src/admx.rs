@@ -1749,7 +1749,11 @@ mod tests {
         std::fs::write(&path, "{\"format\":\"x\",\"rules\":[]}").unwrap();
         assert!(CatalogHeader::read(&path).is_none());
         assert!(rule_ids(&path).is_err(), "not a catalog file");
-        std::fs::write(&path, "{\"format\":\"winweaver-catalog\",\"rules\":[{\"id\":").unwrap();
+        std::fs::write(
+            &path,
+            "{\"format\":\"winweaver-catalog\",\"rules\":[{\"id\":",
+        )
+        .unwrap();
         assert!(rule_ids(&path).is_err(), "a cut file is an error");
         std::fs::remove_dir_all(&dir).unwrap();
     }
