@@ -91,6 +91,11 @@ Fenster) blendet die Gruppe aus.
 Ein Zip-Archiv mit Vorlagen, wie Chrome, Edge und Firefox sie ausliefern, oder mit einer Katalogdatei wird
 mit **Archiv importieren...** importiert und ohne Entpacken gelesen.
 
+Eine Richtlinie, die zwei Importe enthalten, erscheint in beiden Strukturen. **Vergleichen** in der Leiste
+eines Katalog-Tabs stellt den Katalog einem anderen geladenen Import oder einer geöffneten Katalogdatei
+gegenüber: die Richtlinien, die nur in einem davon stehen, und die, deren Titel, Beschreibung, Werte oder
+Parameter sich unterscheiden. Das Entfernen eines Imports fragt, wie jedes Entfernen, zuerst nach.
+
 ## Der MCP-Server
 
 **Menü, MCP-Server** öffnet die Registerkarte des Servers, über den KI-Agents Profile lesen und, wenn der

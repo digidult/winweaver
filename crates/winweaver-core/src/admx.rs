@@ -244,6 +244,8 @@ struct Category {
 #[derive(Debug, Clone)]
 struct Policy {
     prefix: String,
+    /// The target namespace of its ADMX, which tells two policies of one prefix apart.
+    ns: String,
     name: String,
     user: bool,
     title: Texts,
@@ -570,6 +572,7 @@ fn read_pair(
             }
             Ok(Policy {
                 prefix: prefix.clone(),
+                ns: ns.clone(),
                 name: name.clone(),
                 user: class == "User",
                 title: texts_of(p.attr("displayName"), &res, &name),
@@ -1156,6 +1159,15 @@ pub fn to_catalog_file(
         used_groups.insert(gid.clone());
         group_of.insert((c.ns.clone(), c.name.clone()), gid);
     }
+    // Categories of two namespaces with one title (Zoom has one for its user and one for its machine
+    // templates) are told apart by the end of their namespace.
+    let mut namespaces_of_title: HashMap<String, HashSet<&str>> = HashMap::new();
+    for c in &t.categories {
+        namespaces_of_title
+            .entry(en(&c.title))
+            .or_default()
+            .insert(c.ns.as_str());
+    }
     let mut placed: HashSet<(String, String)> = HashSet::new();
     for (order, c) in t.categories.iter().enumerate() {
         if !placed.insert((c.ns.clone(), c.name.clone())) {
@@ -1168,9 +1180,18 @@ pub fn to_catalog_file(
             .and_then(|p| group_of.get(p))
             .cloned()
             .unwrap_or_else(|| root_id.clone());
+        let title = en(&c.title);
+        let mark = if namespaces_of_title
+            .get(&title)
+            .is_some_and(|n| n.len() > 1)
+        {
+            format!(" ({})", c.ns.rsplit('.').next().unwrap_or(&c.ns))
+        } else {
+            String::new()
+        };
         groups.push(Group {
             id: gid.clone(),
-            title: cut(&en(&c.title), 200),
+            title: cut(&format!("{title}{mark}"), 200),
             order: 1000 + order as u32,
             summary: String::new(),
             parent: Some(parent),
@@ -1181,7 +1202,7 @@ pub fn to_catalog_file(
                     .entry((*code).to_owned())
                     .or_default()
                     .groups
-                    .insert(gid.clone(), cut(text, 200));
+                    .insert(gid.clone(), cut(&format!("{text}{mark}"), 200));
             }
         }
     }
@@ -1212,8 +1233,32 @@ pub fn to_catalog_file(
     let mut rules = Vec::new();
     let mut skipped = t.skipped.clone();
     let mut used: HashSet<String> = HashSet::new();
+    // Two namespaces with one prefix and one policy name (Zoom gives its user and its machine
+    // templates the prefix fullarmor) are two policies: they take the namespace into their ids,
+    // whatever the order of the files. A second copy of a policy of the same namespace (the x64 and
+    // x86 templates of Office) is left out.
+    let mut namespaces: HashMap<(String, String), HashSet<&str>> = HashMap::new();
     for p in &t.policies {
-        let base = format!("admx.{}.{}", slug(&p.prefix), slug(&p.name));
+        namespaces
+            .entry((slug(&p.prefix), slug(&p.name)))
+            .or_default()
+            .insert(p.ns.as_str());
+    }
+    let mut seen: HashSet<(&str, &str)> = HashSet::new();
+    for p in &t.policies {
+        if !seen.insert((p.ns.as_str(), p.name.as_str())) {
+            skipped.push((
+                p.name.clone(),
+                format!("a second copy of a policy of {}", p.ns),
+            ));
+            continue;
+        }
+        let key = (slug(&p.prefix), slug(&p.name));
+        let base = if namespaces.get(&key).is_some_and(|n| n.len() > 1) {
+            format!("admx.{}.{}", slug(&p.ns), key.1)
+        } else {
+            format!("admx.{}.{}", key.0, key.1)
+        };
         let mut rid = base.clone();
         let mut n = 2;
         while used.contains(&rid) || used.contains(&format!("{rid}.off")) {
@@ -1406,6 +1451,92 @@ impl CatalogFile {
     }
 }
 
+/// One policy against another: what differs between two catalog files (`compare`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PolicyDifference {
+    pub id: String,
+    pub title: String,
+    /// What differs: title, description, values, values when off, parameters, category.
+    pub what: Vec<&'static str>,
+}
+
+/// Two catalog files side by side, policy by policy (the rules `<id>.off` of the Disabled state
+/// count as part of their policy).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Comparison {
+    /// The policies of the first only, then of the second only: ids and titles.
+    pub only_first: Vec<(String, String)>,
+    pub only_second: Vec<(String, String)>,
+    pub changed: Vec<PolicyDifference>,
+    pub same: usize,
+}
+
+/// Compares two catalog files by the ids of their policies.
+pub fn compare(first: &CatalogFile, second: &CatalogFile) -> Comparison {
+    let policies = |f: &CatalogFile| -> IndexMap<String, &Rule> {
+        f.rules
+            .iter()
+            .filter(|r| !r.id.ends_with(".off"))
+            .map(|r| (r.id.clone(), r))
+            .collect()
+    };
+    let rule = |f: &CatalogFile, id: &str| f.rules.iter().find(|r| r.id == id);
+    let group_title = |f: &CatalogFile, id: &str| {
+        f.groups
+            .iter()
+            .find(|g| g.id == id)
+            .map(|g| g.title.clone())
+            .unwrap_or_default()
+    };
+    fn json<T: Serialize>(v: &T) -> Value {
+        serde_json::to_value(v).unwrap_or_default()
+    }
+    let (a, b) = (policies(first), policies(second));
+    let mut out = Comparison::default();
+    for (id, ra) in &a {
+        let Some(rb) = b.get(id) else {
+            out.only_first.push((id.clone(), ra.title.clone()));
+            continue;
+        };
+        let mut what = Vec::new();
+        if ra.title != rb.title {
+            what.push("title");
+        }
+        if ra.summary != rb.summary {
+            what.push("description");
+        }
+        if json(&ra.actions) != json(&rb.actions) {
+            what.push("values");
+        }
+        let off = format!("{id}.off");
+        let (oa, ob) = (rule(first, &off), rule(second, &off));
+        if oa.map(|r| json(&r.actions)) != ob.map(|r| json(&r.actions)) {
+            what.push("values when off");
+        }
+        if json(&ra.params) != json(&rb.params) {
+            what.push("parameters");
+        }
+        if group_title(first, &ra.group) != group_title(second, &rb.group) {
+            what.push("category");
+        }
+        if what.is_empty() {
+            out.same += 1;
+        } else {
+            out.changed.push(PolicyDifference {
+                id: id.clone(),
+                title: ra.title.clone(),
+                what,
+            });
+        }
+    }
+    for (id, rb) in &b {
+        if !a.contains_key(id) {
+            out.only_second.push((id.clone(), rb.title.clone()));
+        }
+    }
+    out
+}
+
 /// The extension of an archive of policy templates or of a catalog file.
 pub const ARCHIVE_EXTENSION: &str = "zip";
 /// The limits of an archive: its size, the count of its entries and all it unpacks to. An entry is
@@ -1543,10 +1674,7 @@ fn entry_text<R: std::io::Read + std::io::Seek>(
         return Err(format!("{name}: larger than {} MB", limit >> 20));
     }
     *unpacked += bytes.len() as u64;
-    let text = bytes
-        .strip_prefix(&[0xEF, 0xBB, 0xBF][..])
-        .unwrap_or(&bytes);
-    String::from_utf8(text.to_vec()).map_err(|_| format!("{name}: not UTF-8 text"))
+    jsonfile::decode_bom(&bytes).ok_or_else(|| format!("{name}: neither UTF-8 nor UTF-16 text"))
 }
 
 /// What the list of the imports shows of a catalog file that is not loaded, read from the first
@@ -1638,6 +1766,7 @@ pub fn merge(
     let mut group_ids: HashSet<String> = groups.iter().map(|g| g.id.clone()).collect();
     let mut rule_ids: HashSet<String> = rules.iter().map(|r| r.id.clone()).collect();
     let mut notes = Vec::new();
+    let mut aliases = Vec::new();
     for f in files {
         let mut skipped = 0;
         for g in &f.groups {
@@ -1653,6 +1782,9 @@ pub fn merge(
             .collect();
         for r in &f.rules {
             if !own_rules.contains(r.id.as_str()) || !group_ids.contains(&r.group) {
+                if rule_ids.contains(&r.id) && group_ids.contains(&r.group) {
+                    aliases.push((r.group.clone(), r.id.clone()));
+                }
                 skipped += 1;
                 continue;
             }
@@ -1663,12 +1795,12 @@ pub fn merge(
         }
         if skipped > 0 {
             notes.push(format!(
-                "{}: {skipped} rules are already in the catalog and were left out",
+                "{}: {skipped} rules belong to an import before it and show in both trees",
                 f.name
             ));
         }
     }
-    let catalog = Catalog::from_parts(base.version(), groups, rules)?;
+    let catalog = Catalog::from_parts(base.version(), groups, rules)?.with_aliases(aliases);
     Ok((catalog, notes))
 }
 
@@ -1787,6 +1919,10 @@ mod tests {
     </stringTable></resources></policyDefinitionResources>"#;
 
     fn sample() -> CatalogFile {
+        to_catalog_file(&sample_templates(), "test", "Sample templates", "26300", "now")
+    }
+
+    fn sample_templates() -> Templates {
         let mut t = Templates::default();
         read_pair(
             ADMX,
@@ -1798,7 +1934,125 @@ mod tests {
             &mut t,
         )
         .unwrap();
-        to_catalog_file(&t, "test", "Sample templates", "26300", "now")
+        t
+    }
+
+    /// Two templates of one prefix in two namespaces (as Zoom has its user and machine ones) and a
+    /// copy of one of them (as Office has its x64 and x86 ones), in UTF-16 as most vendors write
+    /// them: two policies with ids of their namespaces, the copy left out, the categories told
+    /// apart.
+    #[test]
+    fn vendor_templates_in_utf16_with_a_copy_and_a_shared_prefix() {
+        use std::io::Write;
+        let admx = |ns: &str, class: &str| {
+            format!(
+                r#"<?xml version="1.0" encoding="utf-16"?>
+<policyDefinitions revision="1.0" schemaVersion="1.0">
+  <policyNamespaces><target prefix="fullarmor" namespace="{ns}" /></policyNamespaces>
+  <resources minRequiredRevision="1.0" />
+  <categories><category name="Zoom" displayName="$(string.Zoom)" /></categories>
+  <policies>
+    <policy name="Mute" class="{class}" displayName="$(string.Mute)" key="Software\Policies\Zoom" valueName="Mute">
+      <parentCategory ref="Zoom" />
+      <enabledValue><decimal value="1" /></enabledValue>
+      <disabledValue><decimal value="0" /></disabledValue>
+    </policy>
+  </policies>
+</policyDefinitions>"#
+            )
+        };
+        let adml = r#"<?xml version="1.0" encoding="utf-16"?>
+<policyDefinitionResources revision="1.0" schemaVersion="1.0"><resources><stringTable>
+<string id="Zoom">Zoom Meetings</string><string id="Mute">Mute the microphone</string>
+</stringTable></resources></policyDefinitionResources>"#;
+        let utf16 = |text: &str| {
+            let mut bytes = vec![0xFF, 0xFE];
+            for unit in text.encode_utf16() {
+                bytes.extend_from_slice(&unit.to_le_bytes());
+            }
+            bytes
+        };
+        let dir = std::env::temp_dir().join(format!("winweaver-vendors-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("vendors.zip");
+        let mut zip = zip::ZipWriter::new(std::fs::File::create(&path).unwrap());
+        let user = admx("Zoom.Meetings.HKCU", "User");
+        let machine = admx("Zoom.Meetings.HKLM", "Machine");
+        for (name, text) in [
+            ("zoom/user.admx", user.as_str()),
+            ("zoom/en-US/user.adml", adml),
+            ("zoom/machine.admx", machine.as_str()),
+            ("zoom/en-US/machine.adml", adml),
+            ("copy/user.admx", user.as_str()),
+            ("copy/en-US/user.adml", adml),
+        ] {
+            zip.start_file(name, zip::write::SimpleFileOptions::default())
+                .unwrap();
+            zip.write_all(&utf16(text)).unwrap();
+        }
+        zip.finish().unwrap();
+        let Archive::Templates(t) = read_archive(&path).unwrap() else {
+            panic!("templates");
+        };
+        let f = to_catalog_file(&t, "vendors", "Vendors", "", "now");
+        let ids: Vec<&str> = f
+            .rules
+            .iter()
+            .map(|r| r.id.as_str())
+            .filter(|id| !id.ends_with(".off"))
+            .collect();
+        assert_eq!(
+            ids,
+            vec!["admx.zoom-meetings-hkcu.mute", "admx.zoom-meetings-hklm.mute"],
+            "{:?}",
+            f.skipped
+        );
+        assert!(f.skipped.iter().any(|(_, why)| why.starts_with("a second copy")));
+        let titles: Vec<&str> = f.groups.iter().skip(1).map(|g| g.title.as_str()).collect();
+        assert_eq!(titles, vec!["Zoom Meetings (HKCU)", "Zoom Meetings (HKLM)"]);
+        f.check().unwrap();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// The same policies in two imports show in both trees (the second holds aliases), and the
+    /// comparison of two catalog files names what differs.
+    #[test]
+    fn a_policy_of_two_imports_shows_in_both_trees_and_they_compare() {
+        let first = sample();
+        let mut second = to_catalog_file(&sample_templates(), "again", "Again", "", "now");
+        let base = Catalog::embedded().unwrap();
+        let (merged, notes) = merge(&base, &[first.clone(), second.clone()]).unwrap();
+        assert_eq!(merged.rules().len(), base.rules().len() + first.rules.len());
+        assert_eq!(notes.len(), 1);
+        assert_eq!(merged.rules_under("admx.test").len(), first.rules.len());
+        assert_eq!(
+            merged.rules_under("admx.again").len(),
+            first.rules.len(),
+            "the second tree shows the same policies"
+        );
+        let policies = first.rules.iter().filter(|r| !r.id.ends_with(".off")).count();
+        let same = compare(&first, &second);
+        assert_eq!(same.same, policies);
+        assert!(same.only_first.is_empty() && same.only_second.is_empty() && same.changed.is_empty());
+        second
+            .rules
+            .retain(|r| r.id != "admx.sample.level" && r.id != "admx.sample.level.off");
+        for r in &mut second.rules {
+            if r.id == "admx.sample.turnoff" {
+                r.title = "Another title".to_owned();
+            }
+            if r.id == "admx.sample.turnoff.off" {
+                r.actions.clear();
+            }
+        }
+        let d = compare(&first, &second);
+        let only: Vec<&str> = d.only_first.iter().map(|(id, _)| id.as_str()).collect();
+        assert_eq!(only, vec!["admx.sample.level"]);
+        assert!(d.only_second.is_empty());
+        assert_eq!(d.changed.len(), 1);
+        assert_eq!(d.changed[0].id, "admx.sample.turnoff");
+        assert_eq!(d.changed[0].what, vec!["title", "values when off"]);
+        assert_eq!(d.same, policies - 2);
     }
 
     #[test]

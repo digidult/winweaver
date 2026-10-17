@@ -157,7 +157,7 @@ fn server_card(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
                     .add_enabled(!running, egui::Button::new(tr("Renew")))
                     .clicked()
                 {
-                    acts.push(Act::McpRenewToken);
+                    acts.push(Act::AskRenewToken);
                 }
             });
             ui.end_row();

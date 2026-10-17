@@ -267,6 +267,13 @@ pub enum ImportSource {
     Archive,
 }
 
+/// Another catalog to compare the one of the active tab with: a loaded import or the tab of a
+/// catalog file.
+pub enum CatalogRef {
+    Import(String),
+    Tab(usize),
+}
+
 /// The colours of the title bar: dark, caption, text, border.
 type TitleColors = (bool, [u8; 3], [u8; 3], [u8; 3]);
 
@@ -303,6 +310,17 @@ pub enum Act {
     /// Loads an import that is not loaded, or forgets one that is.
     ToggleImport(String),
     RemoveImport(String),
+    /// Asks before an import and its catalog file are removed.
+    AskRemoveImport(String),
+    /// Asks before a tab with unsaved changes is closed without them.
+    AskCloseDiscard(usize),
+    /// Asks before the list of the recent files is forgotten, then forgets it.
+    AskForgetRecent,
+    ForgetRecent,
+    /// Asks before the token of the MCP server is renewed.
+    AskRenewToken,
+    /// Compares the catalog of the active tab with another one in a page.
+    CompareCatalog(CatalogRef),
     /// Looks for the catalogs of the unknown options of the active profile among the imports
     /// that are not loaded, and loads the ones that have them.
     LoadCatalogs,
@@ -572,7 +590,7 @@ impl App {
         }
     }
 
-    /// Asks before a bookmark with a comment is removed.
+    /// Asks before a bookmark is removed, naming its comment when it has one.
     fn ask_remove_mark(&mut self, i: usize) {
         let Some(b) = self.marks.items.get(i) else {
             return;
@@ -583,12 +601,17 @@ impl App {
             &self.imports,
             b,
         );
-        self.ask = Some(Ask {
-            title: tr("Remove the bookmark").to_owned(),
-            text: trf(
+        let text = if b.comment.trim().is_empty() {
+            trf("Remove the bookmark of {title}?", &[("title", &t.title)])
+        } else {
+            trf(
                 "The bookmark of {title} has a comment. Remove it with the comment?",
                 &[("title", &t.title)],
-            ),
+            )
+        };
+        self.ask = Some(Ask {
+            title: tr("Remove the bookmark").to_owned(),
+            text,
             yes: tr("Remove").to_owned(),
             act: Act::RemoveMark(i),
         });
@@ -1063,7 +1086,7 @@ impl App {
         ));
         ui.add_space(8.0);
         if !self.settings.recent.is_empty() && ui.button(tr("Forget recent files")).clicked() {
-            self.settings.recent.clear();
+            self.pending_acts.push(Act::AskForgetRecent);
         }
     }
 
@@ -2394,7 +2417,7 @@ impl App {
                     }
                 }
                 if ui.small_button(tr("Remove")).clicked() {
-                    acts.push(Act::RemoveImport(entry.id.clone()));
+                    acts.push(Act::AskRemoveImport(entry.id.clone()));
                 }
             });
             if let Some((id, name)) = &mut self.renaming
@@ -2683,18 +2706,7 @@ impl App {
                         self.save_marks();
                     }
                 }
-                Act::RemoveMarkAsk(i) => {
-                    let has_comment = self
-                        .marks
-                        .items
-                        .get(i)
-                        .is_some_and(|b| !b.comment.trim().is_empty());
-                    if has_comment {
-                        self.ask_remove_mark(i);
-                    } else {
-                        self.apply(vec![Act::RemoveMark(i)]);
-                    }
-                }
+                Act::RemoveMarkAsk(i) => self.ask_remove_mark(i),
                 Act::MarkSelect(i) => self.marks_tab.sel = Some(i),
                 Act::AskYes => {
                     if let Some(ask) = self.ask.take() {
@@ -2735,6 +2747,60 @@ impl App {
                     self.rebuild_catalog();
                 }
                 Act::LoadCatalogs => self.load_catalogs_for_unknown(),
+                Act::AskRemoveImport(id) => {
+                    let name = self
+                        .import_list
+                        .iter()
+                        .find(|e| e.id == id)
+                        .map_or_else(|| id.clone(), |e| e.name.clone());
+                    self.ask = Some(Ask {
+                        title: tr("Remove the import").to_owned(),
+                        text: trf(
+                            "Remove {name}? Its catalog file is deleted from the imports folder, and the options of profiles from it become unknown.",
+                            &[("name", &name)],
+                        ),
+                        yes: tr("Remove").to_owned(),
+                        act: Act::RemoveImport(id),
+                    });
+                }
+                Act::AskCloseDiscard(i) => match self.docs.get(i) {
+                    Some(d) if d.dirty() => {
+                        self.ask = Some(Ask {
+                            title: tr("Discard the changes").to_owned(),
+                            text: trf(
+                                "Close {title} and discard its unsaved changes?",
+                                &[("title", &d.title())],
+                            ),
+                            yes: tr("Discard").to_owned(),
+                            act: Act::CloseTab(i, true),
+                        });
+                    }
+                    Some(_) => self.apply(vec![Act::CloseTab(i, true)]),
+                    None => {}
+                },
+                Act::AskForgetRecent => {
+                    self.ask = Some(Ask {
+                        title: tr("Forget the recent files").to_owned(),
+                        text: tr("Forget the list of the recent files? The files stay where they are.")
+                            .to_owned(),
+                        yes: tr("Forget").to_owned(),
+                        act: Act::ForgetRecent,
+                    });
+                }
+                Act::ForgetRecent => {
+                    self.settings.recent.clear();
+                    self.settings_dirty = true;
+                }
+                Act::AskRenewToken => {
+                    self.ask = Some(Ask {
+                        title: tr("Renew the token").to_owned(),
+                        text: tr("Renew the token of the MCP server? The clients set up with the old one lose their access until they get the new one.")
+                            .to_owned(),
+                        yes: tr("Renew").to_owned(),
+                        act: Act::McpRenewToken,
+                    });
+                }
+                Act::CompareCatalog(other) => self.compare_catalog(other),
                 Act::ExportImport(id) => self.export_import(&id),
                 Act::StartRename(id, name) => self.renaming = Some((id, name)),
                 Act::OpenCatalog(id) => self.open_catalog(&id),
@@ -2935,6 +3001,35 @@ impl App {
             }
             self.reveal_selection();
         }
+    }
+
+    /// The catalog of the active tab and the other one, side by side in a Markdown page.
+    fn compare_catalog(&mut self, other: CatalogRef) {
+        let Some(Doc::Catalog(c)) = self.docs.get(self.active) else {
+            return;
+        };
+        let Some(first) = c.catalog(&self.imports) else {
+            return;
+        };
+        let second = match &other {
+            CatalogRef::Import(id) => self.imports.iter().find(|f| &f.id == id),
+            CatalogRef::Tab(i) => match self.docs.get(*i) {
+                Some(Doc::Catalog(o)) => o.catalog(&self.imports),
+                _ => None,
+            },
+        };
+        let Some(second) = second else {
+            self.status = tr("The other catalog is not open any more").to_owned();
+            return;
+        };
+        let title = trf(
+            "{first} and {second}",
+            &[("first", &first.name), ("second", &second.name)],
+        );
+        let page = comparison_page(first, second);
+        self.docs
+            .push(Doc::Markdown(Box::new(MdDoc::new(title, None, page))));
+        self.active = self.docs.len() - 1;
     }
 
     fn open_license(&mut self) {
@@ -3892,6 +3987,92 @@ fn sel_from_item(catalog: &Catalog, item: &str) -> Sel {
     } else {
         Sel::None
     }
+}
+
+/// What differs in a policy, as the comparison page names it.
+fn difference_text(what: &str) -> &'static str {
+    match what {
+        "title" => tr("title"),
+        "description" => tr("description"),
+        "values" => tr("values"),
+        "values when off" => tr("values when off"),
+        "parameters" => tr("parameters"),
+        "category" => tr("category"),
+        _ => tr("other"),
+    }
+}
+
+/// A title in a line of Markdown: its marks as plain characters.
+fn md_plain(text: &str) -> String {
+    let mut out = String::new();
+    for c in text.chars() {
+        if "\\`*_[]<>#|".contains(c) {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
+
+/// Two catalog files compared policy by policy, as a Markdown page: the counts, then the policies
+/// of each alone and those that differ, at most 1000 lines a section.
+fn comparison_page(first: &CatalogFile, second: &CatalogFile) -> String {
+    const LINES: usize = 1000;
+    let c = admx::compare(first, second);
+    let mut page = format!(
+        "# {}\n\n{}\n",
+        md_plain(&trf(
+            "{first} and {second}",
+            &[("first", &first.name), ("second", &second.name)],
+        )),
+        trf(
+            "{same} policies are the same, {changed} differ, {first_only} are only in {first} and {second_only} only in {second}.",
+            &[
+                ("same", &c.same),
+                ("changed", &c.changed.len()),
+                ("first_only", &c.only_first.len()),
+                ("second_only", &c.only_second.len()),
+                ("first", &md_plain(&first.name)),
+                ("second", &md_plain(&second.name)),
+            ],
+        )
+    );
+    let mut section = |title: String, lines: Vec<String>| {
+        if lines.is_empty() {
+            return;
+        }
+        page.push_str(&format!("\n## {} ({})\n\n", md_plain(&title), lines.len()));
+        for line in lines.iter().take(LINES) {
+            page.push_str(line);
+            page.push('\n');
+        }
+        if lines.len() > LINES {
+            page.push_str(&format!(
+                "\n{}\n",
+                trf("and {n} more", &[("n", &(lines.len() - LINES))])
+            ));
+        }
+    };
+    let line = |id: &str, title: &str| format!("- **{}** `{id}`", md_plain(title));
+    section(
+        trf("Only in {name}", &[("name", &first.name)]),
+        c.only_first.iter().map(|(id, t)| line(id, t)).collect(),
+    );
+    section(
+        trf("Only in {name}", &[("name", &second.name)]),
+        c.only_second.iter().map(|(id, t)| line(id, t)).collect(),
+    );
+    section(
+        tr("Different").to_owned(),
+        c.changed
+            .iter()
+            .map(|d| {
+                let what: Vec<&str> = d.what.iter().map(|w| difference_text(w)).collect();
+                format!("{}: {}", line(&d.id, &d.title), what.join(", "))
+            })
+            .collect(),
+    );
+    page
 }
 
 /// The folder of the imports of policy templates next to the executable.
@@ -4903,5 +5084,59 @@ and kept"
         harness.step();
         harness.step();
         assert!(!has(&harness, "Unknown options"), "hidden by the settings");
+    }
+
+    /// Removing an import, discarding changes, forgetting the recent files and renewing the
+    /// token ask first; two catalogs compare in a page.
+    #[test]
+    fn removals_ask_first_and_two_catalogs_compare() {
+        let dir = std::env::temp_dir().join(format!("winweaver-ask-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        sample_import(&dir);
+        let mut copy = admx::to_catalog_file(
+            &admx::read_folder(&dir.join("admx")),
+            "copy",
+            "Copy",
+            "",
+            "now",
+        );
+        copy.rules.clear();
+        copy.save(&dir.join("imports").join("copy.wwcatalog"))
+            .unwrap();
+        let catalog = Catalog::embedded().unwrap();
+        let settings = Settings {
+            loaded_imports: Some(vec!["test".to_owned()]),
+            recent: vec![PathBuf::from("a.wwprofile")],
+            ..Settings::default()
+        };
+        let mut app = App::new(catalog, Vec::new(), settings);
+        app.imports_dir = dir.join("imports");
+        app.load_imports();
+        app.apply(vec![Act::AskRemoveImport("test".to_owned())]);
+        assert!(app.ask.is_some());
+        app.apply(vec![Act::AskNo]);
+        assert!(dir.join("imports").join("test.wwcatalog").exists());
+        assert_eq!(app.imports.len(), 1);
+        app.apply(vec![Act::Toggle("install.bypass-tpm".to_owned(), false)]);
+        app.apply(vec![Act::AskCloseDiscard(0)]);
+        assert!(app.ask.is_some(), "a tab with changes asks");
+        app.apply(vec![Act::AskNo]);
+        assert_eq!(app.docs.len(), 1);
+        app.apply(vec![Act::AskForgetRecent, Act::AskYes]);
+        assert!(app.settings.recent.is_empty());
+        app.apply(vec![Act::AskRenewToken]);
+        assert!(app.ask.is_some());
+        app.apply(vec![Act::AskNo]);
+        app.apply(vec![
+            Act::ToggleImport("copy".to_owned()),
+            Act::OpenCatalog("test".to_owned()),
+            Act::CompareCatalog(CatalogRef::Import("copy".to_owned())),
+        ]);
+        let Some(Doc::Markdown(page)) = app.docs.get(app.active) else {
+            panic!("a page of the comparison: {}", app.status);
+        };
+        assert!(page.text.contains("Only in Test templates"), "{}", page.text);
+        assert!(page.text.contains("`admx.sample.turnoff`"), "{}", page.text);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }

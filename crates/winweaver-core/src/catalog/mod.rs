@@ -68,6 +68,8 @@ pub struct Catalog {
     rules: Vec<Rule>,
     group_index: HashMap<String, usize>,
     rule_index: HashMap<String, usize>,
+    /// Rules shown in a group of another tree too: (the group, the rule).
+    aliases: Vec<(String, String)>,
 }
 
 impl Catalog {
@@ -137,6 +139,7 @@ impl Catalog {
             rules,
             group_index,
             rule_index,
+            aliases: Vec::new(),
         };
         for root in TREE_ROOTS {
             if catalog.group(root).is_none() {
@@ -212,7 +215,31 @@ impl Catalog {
 
     /// The rules whose group is `group`, in catalog order.
     pub fn rules_in(&self, group: &str) -> Vec<&Rule> {
-        self.rules.iter().filter(|r| r.group == group).collect()
+        let mut out: Vec<&Rule> = self.rules.iter().filter(|r| r.group == group).collect();
+        out.extend(
+            self.aliases
+                .iter()
+                .filter(|(g, _)| g == group)
+                .filter_map(|(_, r)| self.rule(r)),
+        );
+        out
+    }
+
+    /// The catalog with rules shown in other groups too: an imported policy two imports hold is
+    /// one rule, owned by the first import, and an alias in the trees of the others. An alias in
+    /// the group of the rule, or of something unknown, is left out.
+    pub fn with_aliases(mut self, aliases: Vec<(String, String)>) -> Self {
+        let mut seen = std::collections::HashSet::new();
+        let kept: Vec<(String, String)> = aliases
+            .into_iter()
+            .filter(|(g, r)| {
+                self.group_index.contains_key(g)
+                    && self.rule(r).is_some_and(|rule| &rule.group != g)
+                    && seen.insert((g.clone(), r.clone()))
+            })
+            .collect();
+        self.aliases = kept;
+        self
     }
 
     /// The rules of a group and of every group under it.

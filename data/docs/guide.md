@@ -82,6 +82,11 @@ built. **Load catalogs** in that group finds the imports that hold them and load
 A zip archive of templates, as Chrome, Edge and Firefox ship them, or of a catalog file is imported with
 **Import an archive...** and read without unpacking it.
 
+A policy two imports hold shows in both trees. **Compare** in the bar of a catalog tab sets the catalog
+side by side with another loaded import or an open catalog file: the policies only in one of them and
+those whose title, description, values or parameters differ. Removing an import, like every removal,
+asks first.
+
 ## The MCP server
 
 **Menu, MCP server** opens the tab of the server through which AI agents read profiles and, when the

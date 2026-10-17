@@ -88,6 +88,11 @@ oculta el grupo.
 Un archivo zip de plantillas, como las publican Chrome, Edge y Firefox, o de un archivo de catálogo se
 importa con **Importar un archivo comprimido...** y se lee sin descomprimirlo.
 
+Una directiva que tienen dos importaciones aparece en ambos árboles. **Comparar** en la barra de una
+pestaña de catálogo lo pone junto a otra importación cargada o un archivo de catálogo abierto: las
+directivas que solo están en uno de ellos y aquellas cuyo título, descripción, valores o parámetros
+difieren. Quitar una importación, como cualquier eliminación, pide confirmación antes.
+
 ## El servidor MCP
 
 **Menú, Servidor MCP** abre la pestaña del servidor a través del cual los agentes de IA leen perfiles y,

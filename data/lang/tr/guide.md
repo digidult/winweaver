@@ -85,6 +85,11 @@ aktarımları bulur ve yalnızca bunları yükler. Bir ayar (Genel, Pencere) gru
 Chrome, Edge ve Firefox'un yayımladığı biçimdeki bir şablon zip arşivi veya bir katalog dosyası arşivi
 **Arşiv içeri aktar...** ile içeri aktarılır ve açılmadan okunur.
 
+İki içeri aktarımda bulunan bir ilke her iki ağaçta da görünür. Bir katalog sekmesinin çubuğundaki
+**Karşılaştır**, onu yüklenmiş başka bir içeri aktarımla veya açık bir katalog dosyasıyla yan yana koyar:
+yalnızca birinde olan ilkeler ve başlığı, açıklaması, değerleri veya parametreleri farklı olanlar. Bir içeri
+aktarımı kaldırmak, her kaldırma gibi, önce onay ister.
+
 ## MCP sunucusu
 
 **Menü, MCP sunucusu**, yapay zeka aracılarının profilleri okuduğu ve mod izin verdiğinde değiştirdiği

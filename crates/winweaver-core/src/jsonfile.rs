@@ -69,8 +69,39 @@ pub fn read_text(path: &Path, limit: u64) -> Result<String, JsonError> {
     String::from_utf8(bytes).map_err(|_| JsonError::Utf8 { name })
 }
 
-/// Reads a text file of at most `limit` bytes written by another program: a UTF-8 byte order
-/// mark (Windows PowerShell writes one) is dropped.
+/// The text of bytes another program wrote: UTF-8 with or without its byte order mark, or UTF-16
+/// with its mark, little or big endian (Windows PowerShell and the ADMX of most vendors write it).
+pub fn decode_bom(bytes: &[u8]) -> Option<String> {
+    if let Some(rest) = bytes.strip_prefix(&BOM[..]) {
+        return String::from_utf8(rest.to_vec()).ok();
+    }
+    let utf16 = |rest: &[u8], little: bool| {
+        if rest.len() % 2 != 0 {
+            return None;
+        }
+        let units: Vec<u16> = rest
+            .chunks_exact(2)
+            .map(|c| {
+                if little {
+                    u16::from_le_bytes([c[0], c[1]])
+                } else {
+                    u16::from_be_bytes([c[0], c[1]])
+                }
+            })
+            .collect();
+        String::from_utf16(&units).ok()
+    };
+    if let Some(rest) = bytes.strip_prefix(&[0xFF, 0xFE][..]) {
+        return utf16(rest, true);
+    }
+    if let Some(rest) = bytes.strip_prefix(&[0xFE, 0xFF][..]) {
+        return utf16(rest, false);
+    }
+    String::from_utf8(bytes.to_vec()).ok()
+}
+
+/// Reads a text file of at most `limit` bytes written by another program, in the encodings of
+/// [`decode_bom`].
 pub fn read_text_bom(path: &Path, limit: u64) -> Result<String, JsonError> {
     let name = display_name(path);
     let meta = std::fs::metadata(path).map_err(|source| JsonError::Io {
@@ -84,8 +115,7 @@ pub fn read_text_bom(path: &Path, limit: u64) -> Result<String, JsonError> {
         name: name.clone(),
         source,
     })?;
-    let bytes = bytes.strip_prefix(&BOM[..]).unwrap_or(&bytes).to_vec();
-    String::from_utf8(bytes).map_err(|_| JsonError::Utf8 { name })
+    decode_bom(&bytes).ok_or(JsonError::Utf8 { name })
 }
 
 /// Parses JSON text into `T` after the checks of this module.
@@ -147,6 +177,25 @@ pub fn nesting_depth(text: &str) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn text_is_read_in_utf8_and_in_utf16_with_its_mark() {
+        let text = "Ab\u{439}";
+        let le: Vec<u8> = [0xFF, 0xFE]
+            .into_iter()
+            .chain(text.encode_utf16().flat_map(u16::to_le_bytes))
+            .collect();
+        let be: Vec<u8> = [0xFE, 0xFF]
+            .into_iter()
+            .chain(text.encode_utf16().flat_map(u16::to_be_bytes))
+            .collect();
+        assert_eq!(decode_bom(&le).as_deref(), Some(text));
+        assert_eq!(decode_bom(&be).as_deref(), Some(text));
+        assert_eq!(decode_bom(b"\xEF\xBB\xBFx").as_deref(), Some("x"));
+        assert_eq!(decode_bom(b"x").as_deref(), Some("x"));
+        assert_eq!(decode_bom(&[0xFF, 0xFE, 0x41]), None, "an odd length");
+        assert_eq!(decode_bom(&[0xC3]), None);
+    }
 
     #[test]
     fn depth_ignores_brackets_in_strings() {

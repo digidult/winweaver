@@ -91,6 +91,12 @@ celles-ci. Un paramètre (Général, Fenêtre) masque le groupe.
 Une archive zip de modèles, comme Chrome, Edge et Firefox les distribuent, ou d'un fichier de catalogue
 s'importe avec **Importer une archive...** et se lit sans être décompressée.
 
+Une stratégie que contiennent deux importations apparaît dans les deux arborescences. **Comparer** dans la
+barre d'un onglet de catalogue le met en regard d'une autre importation chargée ou d'un fichier de
+catalogue ouvert : les stratégies présentes dans un seul des deux et celles dont le titre, la description,
+les valeurs ou les paramètres diffèrent. Supprimer une importation, comme toute suppression, demande
+confirmation.
+
 ## Le serveur MCP
 
 **Menu, Serveur MCP** ouvre l'onglet du serveur par lequel les agents IA lisent les profils et, si le

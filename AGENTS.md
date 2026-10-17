@@ -1,7 +1,9 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 16.10.2026 (version 0.2.0 with
+Updated with every change of structure, commands or task status. Last update: 17.10.2026 (0.3.0: templates in
+UTF-16, policies of two imports in both trees, ids by namespace for a shared prefix, the comparison of
+catalogs, a question before every removal; before it on 16.10.2026 version 0.2.0 with
 the commit in every build, CI only for pull requests that are ready, archives of templates, the license in the
 executable; two renderers,
 OpenGL and DirectX 12, with Automatic, the setting and --renderer; the imports read only when checked in the
@@ -202,8 +204,8 @@ A release: set `version` in the workspace `Cargo.toml`, add `docs/releases/v<ver
 (the customer's call); the job `release` publishes the zip with the notes:
 
 ```bash
-git tag -a v0.2.0 -m "WinWeaver 0.2.0"
-git push origin v0.2.0
+git tag -a v0.3.0 -m "WinWeaver 0.3.0"
+git push origin v0.3.0
 ```
 
 Catalog data: edit `data/catalog/*.json` by hand (strict JSON, ASCII), add a new rules file to `RULE_FILES` in
@@ -271,6 +273,21 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   become an import `archive-<fnv of the path>`, else its one `.wwcatalog` is imported like a catalog file.
   Limits: 256 MB of archive, 20 000 entries, 512 MB unpacked, an entry up to `FILE_MAX` or `CATALOG_MAX`
   whatever size it declares.
+- Templates of vendors (Chrome, Edge, Brave, Office) are UTF-16 LE: `jsonfile::decode_bom` reads UTF-8 with or
+  without its mark and UTF-16 with its mark, for ADMX, ADML, the entries of an archive and every
+  `read_text_bom`. In one import a second copy of a policy (same namespace and name, as the x64 and x86
+  templates of Office) is left out and listed as skipped; two namespaces with one prefix and one policy name
+  (Zoom's user and machine templates, prefix `fullarmor`) take `admx.<slug of the namespace>.<name>`, and
+  categories of one title in two namespaces get the end of the namespace in brackets. The ids of templates
+  without such a clash (all of Windows) are unchanged.
+- A policy two imports hold is one rule of the first (`admx::merge`) and an alias in the groups of the
+  others (`Catalog::with_aliases`, `rules_in` and `rules_under` include them), so every checked import
+  shows its whole tree. `admx::compare` sets two catalog files side by side by policy (the `.off` rule
+  counts with its policy); Compare in the bar of a catalog tab opens it as a Markdown page
+  (`comparison_page`, at most 1000 lines a section).
+- Every removal asks first (`App::ask`, Escape says no): an import, a bookmark of the bookmarks tab (the star
+  of the navigation row stays a toggle), closing a tab discarding its changes, forgetting the recent files,
+  renewing the MCP token.
 - Imports are read only when checked: `Settings::loaded_imports` names them (`None` in settings of an earlier
   version: every file but `hidden_imports`, written as the list at the first start), and `read_imports` opens
   no other file, for the window and for the headless MCP (`with_imports` of `main.rs`). The settings list the

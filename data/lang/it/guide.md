@@ -87,6 +87,11 @@ gruppo.
 Un archivio zip di modelli, come li distribuiscono Chrome, Edge e Firefox, o di un file di catalogo si
 importa con **Importa un archivio...** e si legge senza estrarlo.
 
+Un criterio presente in due importazioni compare in entrambi gli alberi. **Confronta** nella barra di una
+scheda di catalogo lo affianca a un'altra importazione caricata o a un file di catalogo aperto: i criteri
+presenti solo in uno dei due e quelli con titolo, descrizione, valori o parametri diversi. Rimuovere
+un'importazione, come ogni rimozione, chiede prima conferma.
+
 ## Il server MCP
 
 **Menu, Server MCP** apre la scheda del server tramite il quale gli agenti di IA leggono i profili e,

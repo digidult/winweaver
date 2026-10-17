@@ -272,7 +272,7 @@ impl App {
             ui,
             tr("Close tab, discard changes"),
             "",
-            Act::CloseTab(self.active, true),
+            Act::AskCloseDiscard(self.active),
         );
         ui.separator();
         item(ui, tr("Guide"), "F1", Act::OpenGuide);
@@ -415,6 +415,7 @@ impl App {
                 if tool(ui, "\u{1F4E5}", tr("Import"), "", true) {
                     acts.push(Act::ImportOpenCatalog);
                 }
+                self.compare_tool(ui, acts, compact);
             }
             Some(Doc::Catalog(c)) => {
                 if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
@@ -435,6 +436,7 @@ impl App {
                 if tool(ui, "\u{1F4E4}", tr("Export"), "", true) {
                     acts.push(Act::ExportImport(c.id.clone()));
                 }
+                self.compare_tool(ui, acts, compact);
             }
             Some(Doc::Settings) => {}
             None => {
@@ -446,6 +448,43 @@ impl App {
                 }
             }
         }
+    }
+
+    /// Compare in the bar of a catalog tab: a menu of the loaded imports and the tabs of catalog
+    /// files to compare the catalog of the tab with.
+    fn compare_tool(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>, compact: bool) {
+        let own = match self.docs.get(self.active) {
+            Some(Doc::Catalog(c)) if c.file.is_none() => Some(c.id.clone()),
+            _ => None,
+        };
+        let mut others: Vec<(String, crate::CatalogRef)> = self
+            .imports
+            .iter()
+            .filter(|f| Some(&f.id) != own.as_ref())
+            .map(|f| (f.name.clone(), crate::CatalogRef::Import(f.id.clone())))
+            .collect();
+        for (i, d) in self.docs.iter().enumerate() {
+            if i != self.active
+                && let Doc::Catalog(c) = d
+                && let Some(f) = &c.file
+            {
+                others.push((f.name.clone(), crate::CatalogRef::Tab(i)));
+            }
+        }
+        let label = tr("Compare");
+        let compare = style::tool_button(ui, "\u{21C6}", label, label, true, compact, true);
+        egui::Popup::menu(&compare).show(|ui| {
+            ui.set_min_width(300.0);
+            if others.is_empty() {
+                ui.weak(tr("Load or open another catalog to compare it with this one"));
+            }
+            for (name, other) in others {
+                if ui.button(name).clicked() {
+                    acts.push(Act::CompareCatalog(other));
+                    ui.close();
+                }
+            }
+        });
     }
 
     /// The menu of the policy templates: the imports to open in a tab and the import commands.

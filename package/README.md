@@ -26,7 +26,7 @@ keeps its settings and files in that folder. The guide opens at the first start 
   Firefox ship them, read without unpacking) or a catalog file, also zipped; their policies
   become rules. Only the imports checked in the settings are loaded. Options of a profile whose catalog is not
   loaded stay in the profile under Unknown options and are left out of the build; Load catalogs finds and loads
-  their imports. An `.admx` or `.wwcatalog` file also opens as a tab without importing.
+  their imports. Compare sets two catalogs side by side. An `.admx` or `.wwcatalog` file also opens as a tab without importing.
 - **Bookmarks** of rules with comments (`.wwmarks`), **themes** with their colours and fonts (`.wwtheme`) and an editor.
 - **Languages**: English, Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish built in,
   Belarusian as a file, more as files (below); "Follow Windows" takes the language of Windows when it is one of them.

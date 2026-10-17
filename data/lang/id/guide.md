@@ -82,6 +82,11 @@ Sebuah pengaturan (Umum, Jendela) menyembunyikan grup itu.
 Arsip zip berisi templat, seperti yang dirilis Chrome, Edge, dan Firefox, atau berisi file katalog diimpor
 dengan **Impor arsip...** dan dibaca tanpa diekstrak.
 
+Kebijakan yang ada di dua impor tampil di kedua pohon. **Bandingkan** di bilah tab katalog
+menyandingkannya dengan impor lain yang dimuat atau file katalog yang terbuka: kebijakan yang hanya ada
+di salah satunya dan yang judul, deskripsi, nilai, atau parameternya berbeda. Menghapus impor, seperti
+setiap penghapusan, meminta konfirmasi lebih dulu.
+
 ## Server MCP
 
 **Menu, Server MCP** membuka tab server yang digunakan agen AI untuk membaca profil dan, bila mode
