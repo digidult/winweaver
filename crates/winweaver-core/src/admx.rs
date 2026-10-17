@@ -1480,10 +1480,11 @@ pub fn compare(first: &CatalogFile, second: &CatalogFile) -> Comparison {
     fn rule<'a>(f: &'a CatalogFile, id: &str) -> Option<&'a Rule> {
         f.rules.iter().find(|r| r.id == id)
     }
+    // The root group of an import is its name, not a category: a policy right under it has none.
     let group_title = |f: &CatalogFile, id: &str| {
         f.groups
             .iter()
-            .find(|g| g.id == id)
+            .find(|g| g.id == id && g.parent.as_deref() != Some(ROOT_POLICIES))
             .map(|g| g.title.clone())
             .unwrap_or_default()
     };
