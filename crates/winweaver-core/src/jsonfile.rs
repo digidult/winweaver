@@ -76,16 +76,18 @@ pub fn decode_bom(bytes: &[u8]) -> Option<String> {
         return String::from_utf8(rest.to_vec()).ok();
     }
     let utf16 = |rest: &[u8], little: bool| {
-        if rest.len() % 2 != 0 {
+        if !rest.len().is_multiple_of(2) {
             return None;
         }
         let units: Vec<u16> = rest
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|c| {
                 if little {
-                    u16::from_le_bytes([c[0], c[1]])
+                    u16::from_le_bytes(*c)
                 } else {
-                    u16::from_be_bytes([c[0], c[1]])
+                    u16::from_be_bytes(*c)
                 }
             })
             .collect();
