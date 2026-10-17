@@ -2781,8 +2781,10 @@ impl App {
                 Act::AskForgetRecent => {
                     self.ask = Some(Ask {
                         title: tr("Forget the recent files").to_owned(),
-                        text: tr("Forget the list of the recent files? The files stay where they are.")
-                            .to_owned(),
+                        text: tr(
+                            "Forget the list of the recent files? The files stay where they are.",
+                        )
+                        .to_owned(),
                         yes: tr("Forget").to_owned(),
                         act: Act::ForgetRecent,
                     });
@@ -5135,7 +5137,11 @@ and kept"
         let Some(Doc::Markdown(page)) = app.docs.get(app.active) else {
             panic!("a page of the comparison: {}", app.status);
         };
-        assert!(page.text.contains("Only in Test templates"), "{}", page.text);
+        assert!(
+            page.text.contains("Only in Test templates"),
+            "{}",
+            page.text
+        );
         assert!(page.text.contains("`admx.sample.turnoff`"), "{}", page.text);
         std::fs::remove_dir_all(&dir).unwrap();
     }

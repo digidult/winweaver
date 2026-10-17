@@ -1181,10 +1181,7 @@ pub fn to_catalog_file(
             .cloned()
             .unwrap_or_else(|| root_id.clone());
         let title = en(&c.title);
-        let mark = if namespaces_of_title
-            .get(&title)
-            .is_some_and(|n| n.len() > 1)
-        {
+        let mark = if namespaces_of_title.get(&title).is_some_and(|n| n.len() > 1) {
             format!(" ({})", c.ns.rsplit('.').next().unwrap_or(&c.ns))
         } else {
             String::new()
@@ -1473,14 +1470,16 @@ pub struct Comparison {
 
 /// Compares two catalog files by the ids of their policies.
 pub fn compare(first: &CatalogFile, second: &CatalogFile) -> Comparison {
-    let policies = |f: &CatalogFile| -> IndexMap<String, &Rule> {
+    fn policies(f: &CatalogFile) -> IndexMap<String, &Rule> {
         f.rules
             .iter()
             .filter(|r| !r.id.ends_with(".off"))
             .map(|r| (r.id.clone(), r))
             .collect()
-    };
-    let rule = |f: &CatalogFile, id: &str| f.rules.iter().find(|r| r.id == id);
+    }
+    fn rule<'a>(f: &'a CatalogFile, id: &str) -> Option<&'a Rule> {
+        f.rules.iter().find(|r| r.id == id)
+    }
     let group_title = |f: &CatalogFile, id: &str| {
         f.groups
             .iter()
@@ -1919,7 +1918,13 @@ mod tests {
     </stringTable></resources></policyDefinitionResources>"#;
 
     fn sample() -> CatalogFile {
-        to_catalog_file(&sample_templates(), "test", "Sample templates", "26300", "now")
+        to_catalog_file(
+            &sample_templates(),
+            "test",
+            "Sample templates",
+            "26300",
+            "now",
+        )
     }
 
     fn sample_templates() -> Templates {
@@ -2003,11 +2008,18 @@ mod tests {
             .collect();
         assert_eq!(
             ids,
-            vec!["admx.zoom-meetings-hkcu.mute", "admx.zoom-meetings-hklm.mute"],
+            vec![
+                "admx.zoom-meetings-hkcu.mute",
+                "admx.zoom-meetings-hklm.mute"
+            ],
             "{:?}",
             f.skipped
         );
-        assert!(f.skipped.iter().any(|(_, why)| why.starts_with("a second copy")));
+        assert!(
+            f.skipped
+                .iter()
+                .any(|(_, why)| why.starts_with("a second copy"))
+        );
         let titles: Vec<&str> = f.groups.iter().skip(1).map(|g| g.title.as_str()).collect();
         assert_eq!(titles, vec!["Zoom Meetings (HKCU)", "Zoom Meetings (HKLM)"]);
         f.check().unwrap();
@@ -2030,10 +2042,16 @@ mod tests {
             first.rules.len(),
             "the second tree shows the same policies"
         );
-        let policies = first.rules.iter().filter(|r| !r.id.ends_with(".off")).count();
+        let policies = first
+            .rules
+            .iter()
+            .filter(|r| !r.id.ends_with(".off"))
+            .count();
         let same = compare(&first, &second);
         assert_eq!(same.same, policies);
-        assert!(same.only_first.is_empty() && same.only_second.is_empty() && same.changed.is_empty());
+        assert!(
+            same.only_first.is_empty() && same.only_second.is_empty() && same.changed.is_empty()
+        );
         second
             .rules
             .retain(|r| r.id != "admx.sample.level" && r.id != "admx.sample.level.off");

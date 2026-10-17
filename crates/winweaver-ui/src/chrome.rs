@@ -476,7 +476,9 @@ impl App {
         egui::Popup::menu(&compare).show(|ui| {
             ui.set_min_width(300.0);
             if others.is_empty() {
-                ui.weak(tr("Load or open another catalog to compare it with this one"));
+                ui.weak(tr(
+                    "Load or open another catalog to compare it with this one",
+                ));
             }
             for (name, other) in others {
                 if ui.button(name).clicked() {
