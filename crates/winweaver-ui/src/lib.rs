@@ -5379,12 +5379,18 @@ and kept"
         let key = "HKEY_CURRENT_USER\\Software\\WinWeaverTest";
         reg.create_key(key).unwrap();
         app.registry = reg.clone();
-        app.apply(vec![Act::OpenRegistry("HKCU:\\Software\\WinWeaverTest".to_owned(), None)]);
+        app.apply(vec![Act::OpenRegistry(
+            "HKCU:\\Software\\WinWeaverTest".to_owned(),
+            None,
+        )]);
         let Some(Doc::Registry(d)) = app.docs.get(app.active) else {
             panic!("the registry tab");
         };
         assert_eq!(d.path, key);
-        app.apply(vec![Act::RegistryNew(regview::EditKind::NewValue, "REG_DWORD")]);
+        app.apply(vec![Act::RegistryNew(
+            regview::EditKind::NewValue,
+            "REG_DWORD",
+        )]);
         if let Some(Doc::Registry(d)) = app.docs.get_mut(app.active)
             && let Some(edit) = &mut d.edit
         {

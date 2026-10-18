@@ -182,7 +182,13 @@ impl RegistryDoc {
 }
 
 /// The rows of the tree under a key.
-fn rows(doc: &RegistryDoc, out: &mut Vec<tree::Row<String>>, path: &str, title: &str, depth: usize) {
+fn rows(
+    doc: &RegistryDoc,
+    out: &mut Vec<tree::Row<String>>,
+    path: &str,
+    title: &str,
+    depth: usize,
+) {
     let open = doc.expanded.contains(&path.to_lowercase());
     out.push(tree::Row {
         key: path.to_owned(),
@@ -209,7 +215,11 @@ fn rows(doc: &RegistryDoc, out: &mut Vec<tree::Row<String>>, path: &str, title: 
 pub fn registry_view(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
     let p = style::palette(ui);
     egui::Panel::top("registry-address")
-        .frame(egui::Frame::new().fill(p.card).inner_margin(egui::Margin::symmetric(10, 6)))
+        .frame(
+            egui::Frame::new()
+                .fill(p.card)
+                .inner_margin(egui::Margin::symmetric(10, 6)),
+        )
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.label(tr("Key"));
@@ -227,7 +237,11 @@ pub fn registry_view(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Ac
     egui::Panel::left("registry-tree")
         .resizable(true)
         .default_size(360.0)
-        .frame(egui::Frame::new().fill(p.card).inner_margin(egui::Margin::symmetric(0, 4)))
+        .frame(
+            egui::Frame::new()
+                .fill(p.card)
+                .inner_margin(egui::Margin::symmetric(0, 4)),
+        )
         .show(ui, |ui| {
             let mut out = Vec::new();
             for (hive, _) in HIVES {
@@ -254,7 +268,11 @@ pub fn registry_view(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Ac
             }
         });
     egui::CentralPanel::default()
-        .frame(egui::Frame::new().fill(p.bg).inner_margin(egui::Margin::same(12)))
+        .frame(
+            egui::Frame::new()
+                .fill(p.bg)
+                .inner_margin(egui::Margin::same(12)),
+        )
         .show(ui, |ui| values(ui, doc, acts));
     editor(ui.ctx(), doc, acts);
 }
@@ -363,7 +381,9 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
                             "REG_MULTI_SZ" | "REG_BINARY" | "REG_NONE"
                         );
                         let hint = match edit.type_name.as_str() {
-                            "REG_DWORD" | "REG_QWORD" => tr("A number: decimal, or hexadecimal after 0x"),
+                            "REG_DWORD" | "REG_QWORD" => {
+                                tr("A number: decimal, or hexadecimal after 0x")
+                            }
                             "REG_MULTI_SZ" => tr("One string per line"),
                             "REG_BINARY" | "REG_NONE" => tr("Bytes as hexadecimal pairs"),
                             _ => "",
@@ -390,7 +410,9 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
                 if ui.button(tr("OK")).clicked() {
                     acts.push(Act::RegistrySave);
                 }
-                if ui.button(tr("Cancel")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if ui.button(tr("Cancel")).clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                {
                     close = true;
                 }
             });

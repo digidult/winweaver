@@ -17,8 +17,8 @@ pub struct NativeRegistry;
 
 /// The hive of a path and the rest of it, with the path in the form of regedit.
 fn split(path: &str) -> Result<(RegKey, String, String), String> {
-    let full = registry::normalize(path)
-        .ok_or_else(|| format!("not a path of the registry: {path}"))?;
+    let full =
+        registry::normalize(path).ok_or_else(|| format!("not a path of the registry: {path}"))?;
     let (hive, sub) = full.split_once('\\').unwrap_or((full.as_str(), ""));
     let root = match hive {
         "HKEY_CLASSES_ROOT" => HKEY_CLASSES_ROOT,

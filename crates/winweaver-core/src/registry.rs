@@ -168,9 +168,9 @@ impl Data {
             1 => Data::Sz(utf16_text(bytes)),
             2 => Data::ExpandSz(utf16_text(bytes)),
             3 => Data::Binary(bytes.to_vec()),
-            4 if bytes.len() == 4 => Data::Dword(u32::from_le_bytes([
-                bytes[0], bytes[1], bytes[2], bytes[3],
-            ])),
+            4 if bytes.len() == 4 => {
+                Data::Dword(u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
+            }
             7 => Data::MultiSz(
                 utf16_text(bytes)
                     .split('\0')
@@ -349,9 +349,11 @@ impl Registry for MemoryRegistry {
         let keys = self.keys();
         let lower = path.to_lowercase();
         let hive = !path.contains('\\');
-        let Some((written, values)) = keys.get(&lower).cloned().or_else(|| {
-            hive.then(|| (path.clone(), Vec::new()))
-        }) else {
+        let Some((written, values)) = keys
+            .get(&lower)
+            .cloned()
+            .or_else(|| hive.then(|| (path.clone(), Vec::new())))
+        else {
             return Err(format!("{path}: the key does not exist"));
         };
         let prefix = format!("{lower}\\");
@@ -489,8 +491,14 @@ mod tests {
         assert_eq!(key.subkeys, vec!["Test"]);
         let test = reg.read("hkcu\\software\\winweaver\\test").unwrap();
         assert_eq!(test.values[0].data, Data::Dword(1));
-        reg.delete_value("HKCU\\Software\\WinWeaver\\Test", "n").unwrap();
-        assert!(reg.read("HKCU\\Software\\WinWeaver\\Test").unwrap().values.is_empty());
+        reg.delete_value("HKCU\\Software\\WinWeaver\\Test", "n")
+            .unwrap();
+        assert!(
+            reg.read("HKCU\\Software\\WinWeaver\\Test")
+                .unwrap()
+                .values
+                .is_empty()
+        );
         reg.delete_key("HKCU\\Software\\WinWeaver").unwrap();
         assert!(reg.read("HKCU\\Software\\WinWeaver\\Test").is_err());
         assert!(reg.read("HKCU").is_ok(), "a hive is always there");

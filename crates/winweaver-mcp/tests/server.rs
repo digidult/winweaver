@@ -40,9 +40,8 @@ fn server(mode: Mode, dir: &std::path::Path) -> Server {
 #[test]
 fn the_registry_tools_are_off_until_allowed() {
     let dir = folder("registry");
-    let s = server(Mode::Read, &dir).with_registry(Arc::new(
-        winweaver_core::registry::MemoryRegistry::default(),
-    ));
+    let s = server(Mode::Read, &dir)
+        .with_registry(Arc::new(winweaver_core::registry::MemoryRegistry::default()));
     let key = "HKCU\\Software\\WinWeaverTest";
     assert_eq!(
         error_kind(&s, "read_registry_key", json!({ "path": "HKCU" })),
@@ -62,7 +61,10 @@ fn the_registry_tools_are_off_until_allowed() {
         json!({ "path": key, "name": "N", "type": "REG_DWORD", "data": "0x10" }),
     );
     let read = ok(&s, "read_registry_key", json!({ "path": key }));
-    assert_eq!(read["values"][0]["data"], json!({ "type": "REG_DWORD", "data": 16 }));
+    assert_eq!(
+        read["values"][0]["data"],
+        json!({ "type": "REG_DWORD", "data": 16 })
+    );
     assert_eq!(
         error_kind(
             &s,
