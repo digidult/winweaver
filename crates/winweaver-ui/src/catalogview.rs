@@ -191,6 +191,7 @@ pub fn catalog_view(
     file: &CatalogFile,
     doc: &CatalogDoc,
     catalog: &winweaver_core::catalog::Catalog,
+    imports: &[CatalogFile],
     settings: &crate::Settings,
     acts: &mut Vec<Act>,
 ) {
@@ -262,17 +263,19 @@ pub fn catalog_view(
         egui::ScrollArea::vertical()
             .auto_shrink(false)
             .show(ui, |ui| {
-                detail(ui, file, &lang, doc, catalog, settings, acts)
+                detail(ui, file, &lang, doc, catalog, imports, settings, acts)
             });
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn detail(
     ui: &mut egui::Ui,
     file: &CatalogFile,
     lang: &str,
     doc: &CatalogDoc,
     catalog: &winweaver_core::catalog::Catalog,
+    imports: &[CatalogFile],
     settings: &crate::Settings,
     acts: &mut Vec<Act>,
 ) {
@@ -295,6 +298,7 @@ fn detail(
                     &file.rules.iter().filter(|r| r.group == group.id).count(),
                 )],
             ));
+            group_links(ui, file, lang, group, acts);
             return;
         }
         ui.heading(&file.name);
@@ -352,5 +356,71 @@ fn detail(
                 });
         });
     }
-    crate::views::rule_description(ui, catalog, None, &shown, settings, false, acts);
+    let link = crate::views::RuleLink::Catalog(file);
+    // The same policy in the other loaded imports.
+    let others: Vec<&CatalogFile> = imports
+        .iter()
+        .filter(|f| f.id != file.id && f.rules.iter().any(|r| r.id == rule.id))
+        .collect();
+    if !others.is_empty() {
+        crate::views::block(ui, |ui| {
+            style::section_title(ui, tr("In other catalogs"));
+            ui.add_space(4.0);
+            for f in others {
+                let text = trf("Show in the catalog {name}", &[("name", &f.name)]);
+                if ui.link(text).clicked() {
+                    acts.push(Act::OpenCatalogAt(f.id.clone(), rule.id.clone()));
+                }
+            }
+        });
+    }
+    crate::views::rule_description(ui, catalog, None, &shown, settings, link, acts);
+}
+
+/// The group above a group, the groups in it and its policies, as links of the tree of the tab.
+fn group_links(
+    ui: &mut egui::Ui,
+    file: &CatalogFile,
+    lang: &str,
+    group: &Group,
+    acts: &mut Vec<Act>,
+) {
+    let find = |id: &str| file.groups.iter().find(|g| g.id == id);
+    if let Some(parent) = group.parent.as_deref().and_then(find) {
+        ui.add_space(6.0);
+        ui.horizontal_wrapped(|ui| {
+            ui.weak(tr("In the group"));
+            if ui.link(group_title(file, lang, parent)).clicked() {
+                acts.push(Act::CatalogReveal(format!("g:{}", parent.id)));
+            }
+        });
+    }
+    let inside = Some(group.id.as_str());
+    let children: Vec<&Group> = file
+        .groups
+        .iter()
+        .filter(|g| g.parent.as_deref() == inside)
+        .collect();
+    let in_group = |r: &&Rule| r.group == group.id;
+    let policies: Vec<&Rule> = file.rules.iter().filter(in_group).collect();
+    if !children.is_empty() {
+        ui.add_space(8.0);
+        style::section_title(ui, tr("Groups in it"));
+        ui.add_space(4.0);
+        for g in children {
+            if ui.link(group_title(file, lang, g)).clicked() {
+                acts.push(Act::CatalogReveal(format!("g:{}", g.id)));
+            }
+        }
+    }
+    if !policies.is_empty() {
+        ui.add_space(8.0);
+        style::section_title(ui, tr("Policies"));
+        ui.add_space(4.0);
+        for r in policies {
+            if ui.link(rule_texts(file, lang, r).0).clicked() {
+                acts.push(Act::CatalogReveal(r.id.clone()));
+            }
+        }
+    }
 }

@@ -298,6 +298,8 @@ type TitleColors = (bool, [u8; 3], [u8; 3], [u8; 3]);
 /// A change requested while a frame was drawn, applied after it.
 pub enum Act {
     Select(Sel),
+    /// Selects an item of the profile in front and opens its tree down to it: a link of a view.
+    Reveal(Sel),
     Toggle(String, bool),
     SetGroup(String, bool),
     SetParam(String, String, Value),
@@ -394,6 +396,9 @@ pub enum Act {
     /// Opens the tab of an import.
     OpenCatalog(String),
     CatalogSelect(String),
+    /// Selects a group (`g:<id>`) or a policy of the catalog tab in front and opens its tree down
+    /// to it: a link of a view.
+    CatalogReveal(String),
     CatalogExpand(String, bool),
     /// Shows a policy of an import (the import, the rule) in the tree of a profile.
     ShowInProfile(String, String),
@@ -651,13 +656,15 @@ impl App {
             }
             Some(Doc::Catalog(c)) => {
                 let mut chain = Vec::new();
-                if let Some(file) = c.catalog(&self.imports)
-                    && let Some(rule) = c
-                        .sel
-                        .as_deref()
-                        .and_then(|id| file.rules.iter().find(|r| r.id == id))
-                {
-                    let mut next = Some(rule.group.clone());
+                if let Some(file) = c.catalog(&self.imports) {
+                    let group = |id: &str| file.groups.iter().find(|x| x.id == id);
+                    let rule = |id: &str| file.rules.iter().find(|r| r.id == id);
+                    // The groups above the selected policy, or above the selected group.
+                    let mut next = match (c.sel.as_deref(), c.group.as_deref()) {
+                        (Some(id), _) => rule(id).map(|r| r.group.clone()),
+                        (None, Some(id)) => group(id).and_then(|g| g.parent.clone()),
+                        (None, None) => None,
+                    };
                     while let Some(g) = next {
                         next = file
                             .groups
@@ -1033,7 +1040,10 @@ impl App {
             Sel::None | Sel::Form(_) | Sel::Unknown(_) => None,
             Sel::Group(id) if id == UNKNOWN_GROUP => None,
             Sel::Group(id) => Some(id.clone()),
-            Sel::Rule(id) => self.catalog.rule(id).map(|r| r.group.clone()),
+            Sel::Rule(id) => doc
+                .focus
+                .clone()
+                .or_else(|| self.catalog.rule(id).map(|r| r.group.clone())),
         };
         let in_unknown = match &doc.sel {
             Sel::Unknown(_) => true,
@@ -2647,6 +2657,8 @@ impl App {
         if let Some(Doc::Profile(doc)) = self.docs.get_mut(index) {
             doc.expanded.extend(groups);
             doc.select(Sel::Rule(rule.to_owned()));
+            doc.focus = None;
+            doc.reveal = true;
         }
     }
 
@@ -2804,6 +2816,13 @@ impl App {
                         doc.select(sel);
                         doc.focus = None;
                     }
+                }
+                Act::Reveal(sel) => {
+                    if let Some(doc) = self.active_profile() {
+                        doc.select(sel);
+                        doc.focus = None;
+                    }
+                    self.reveal_selection();
                 }
                 Act::SelectIn(sel, group) => {
                     if let Some(doc) = self.active_profile() {
@@ -3268,6 +3287,10 @@ impl App {
                             c.sel = Some(key);
                         }
                     }
+                }
+                Act::CatalogReveal(key) => {
+                    self.apply(vec![Act::CatalogSelect(key)]);
+                    self.reveal_selection();
                 }
                 Act::CatalogExpand(gid, open) => {
                     if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) {
@@ -4685,6 +4708,7 @@ impl eframe::App for App {
             let search = &self.mcp_search;
             let imports: Vec<String> = self.imports.iter().map(|f| f.id.clone()).collect();
             let catalog = &self.catalog;
+            let texts = texts_for(&self.texts, &i18n::current());
             let p = style::palette(ui);
             let settings_frame = egui::Frame::new().fill(p.bg);
             if panel.run.is_some() {
@@ -4709,7 +4733,7 @@ impl eframe::App for App {
                                 .inner_margin(egui::Margin::same(12)),
                         )
                         .show(ui, |ui| {
-                            mcpview::detail_view(ui, panel, catalog, &imports, &mut acts)
+                            mcpview::detail_view(ui, panel, catalog, texts, &imports, &mut acts)
                         });
                 }
                 egui::CentralPanel::default()
@@ -4763,6 +4787,7 @@ impl eframe::App for App {
                     file,
                     doc,
                     &self.catalog,
+                    &self.imports,
                     &self.settings,
                     &mut acts,
                 ),
@@ -4792,8 +4817,9 @@ impl eframe::App for App {
                 regfileview::regfile_view(ui, doc, &self.catalog, texts, &self.imports, &mut acts);
             }
         } else if kind == 9 {
+            let texts = texts_for(&self.texts, &i18n::current());
             if let Some(Doc::Registry(doc)) = self.docs.get_mut(self.active) {
-                regview::registry_view(ui, doc, &mut acts);
+                regview::registry_view(ui, doc, &self.catalog, texts, &mut acts);
             }
         } else if kind == 1 {
             let p = style::palette(ui);
@@ -5929,6 +5955,32 @@ and kept"
         assert!(text.contains("; kept"), "{text}");
         assert!(!text.contains("WinWeaver]"), "{text}");
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_link_selects_and_opens_the_tree_down_to_it() {
+        let catalog = Catalog::embedded().unwrap();
+        let group = catalog
+            .groups()
+            .iter()
+            .find(|g| g.parent.is_some())
+            .map(|g| g.id.clone())
+            .unwrap();
+        let parent = catalog
+            .group(&group)
+            .and_then(|g| g.parent.clone())
+            .unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        if let Some(Doc::Profile(doc)) = app.docs.get_mut(0) {
+            doc.expanded.clear();
+        }
+        app.apply(vec![Act::Reveal(Sel::Group(group.clone()))]);
+        let Some(Doc::Profile(doc)) = app.docs.first() else {
+            panic!("a profile");
+        };
+        assert_eq!(doc.sel, Sel::Group(group));
+        assert!(doc.expanded.contains(&parent), "the tree opens to it");
+        assert!(doc.reveal);
     }
 
     const SAMPLE_ADMX: &str = r#"<?xml version="1.0" encoding="utf-8"?>

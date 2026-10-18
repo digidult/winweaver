@@ -61,6 +61,12 @@ les pages de documentation s'ouvrent de la même façon, chacune dans son propre
 - **Arborescence et volet de détails** : l'arborescence à gauche, l'élément sélectionné à droite. La
   description se réduit avec Ctrl+D. Les règles d'un groupe sélectionné affichent un commutateur en fin
   de ligne.
+- **Liens** : chaque règle, groupe, catalogue, fichier de profil et clé de registre qu'une vue nomme y
+  mène : les règles dont une règle a besoin, celles qui ont besoin d'elle et celles avec lesquelles elle
+  est en conflit ; les règles nommées dans les messages ; les groupes au-dessus et à l'intérieur d'un
+  groupe ; la même stratégie dans d'autres catalogues ; les règles qui écrivent une clé de registre, dans
+  l'onglet du registre et dans un fichier de registre. Un lien dans un profil ouvre son arbre jusqu'à
+  l'élément ; depuis un autre onglet, il montre la règle dans le premier onglet de profil.
 - **Barre d'état** : l'état du document, la version du catalogue, le serveur MCP et le dernier message.
 
 ## Ce PC

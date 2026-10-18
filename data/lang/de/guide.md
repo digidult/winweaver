@@ -60,6 +60,13 @@ Markdown-Datei; die Seiten der Dokumentation werden genauso geöffnet, jede in e
   Suchen filtert die Struktur während der Eingabe und merkt sich, wonach Sie gesucht haben.
 - **Struktur und Detailbereich**: links die Struktur, rechts das ausgewählte Element. Die Beschreibung wird
   mit Ctrl+D eingeklappt. Die Regeln einer ausgewählten Gruppe zeigen am Ende ihrer Zeilen einen Schalter.
+- **Links**: jede Regel, Gruppe, jeder Katalog, jede Profildatei und jeder Registrierungsschlüssel, den
+  eine Ansicht nennt, führt dorthin: die Regeln, die eine Regel braucht, die sie brauchen und mit denen
+  sie in Konflikt steht; die in den Meldungen genannten Regeln; die Gruppen über und in einer Gruppe;
+  dieselbe Richtlinie in anderen Katalogen; die Regeln, die einen Registrierungsschlüssel schreiben, in
+  der Registerkarte der Registrierung und in einer Registrierungsdatei. Ein Link in einem Profil öffnet
+  dessen Baum bis zum Element; aus einer anderen Registerkarte zeigt er die Regel in der ersten
+  Profilregisterkarte.
 - **Statusleiste**: der Zustand des Dokuments, die Katalogversion, der MCP-Server und die letzte Meldung.
 
 ## Dieser PC

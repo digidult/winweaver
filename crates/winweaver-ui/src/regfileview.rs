@@ -723,7 +723,11 @@ fn key_head(
         }
         if rules.len() > RULES_MAX {
             let more = rules.len() - RULES_MAX;
-            ui.weak(trf("and {n} more", &[("n", &more)]));
+            ui.collapsing(trf("and {n} more", &[("n", &more)]), |ui| {
+                for id in &rules[RULES_MAX..] {
+                    rule_link(ui, catalog, texts, imports, id, acts);
+                }
+            });
         }
     });
     ui.add_space(10.0);

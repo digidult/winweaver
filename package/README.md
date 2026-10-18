@@ -33,6 +33,9 @@ keeps its settings and files in that folder. The guide opens at the first start 
 - **Registry** of this PC in a tab: keys, values of every type of regedit, edits and deletions that ask
   first, bookmarks of keys; every list of what a rule writes opens its key there. A registry file (`.reg`) opens
   as a tab of its keys, values and comments, with the rules that write each key, and is saved without losing a line.
+- **Links** to everything a view names: the rules a rule needs, the ones that need it or conflict with it, the rules
+  named in the messages, the groups above and inside a group, the same policy in other catalogs, the rules that write
+  a registry key; a click shows the item where it lives.
 - **Bookmarks** of rules with comments (`.wwmarks`), **themes** with their colours and fonts (`.wwtheme`) and an editor.
 - **Languages**: English, Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish built in,
   Belarusian as a file, more as files (below); "Follow Windows" takes the language of Windows when it is one of them.

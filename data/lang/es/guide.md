@@ -61,6 +61,12 @@ las páginas de documentación se abren del mismo modo, cada una en su propia pe
 - **Árbol y panel de detalles**: el árbol a la izquierda y el elemento seleccionado a la derecha. La
   descripción se contrae con Ctrl+D. Las reglas de un grupo seleccionado muestran un conmutador al final de
   sus filas.
+- **Enlaces**: cada regla, grupo, catálogo, archivo de perfil y clave del registro que nombra una vista
+  lleva a él: las reglas que necesita una regla, las que la necesitan y aquellas con las que entra en
+  conflicto; las reglas nombradas en los mensajes; los grupos por encima y dentro de un grupo; la misma
+  directiva en otros catálogos; las reglas que escriben una clave del registro, en la pestaña del
+  registro y en un archivo de registro. Un enlace en un perfil abre su árbol hasta el elemento; desde
+  otra pestaña muestra la regla en la primera pestaña de perfil.
 - **Barra de estado**: el estado del documento, la versión del catálogo, el servidor MCP y el último mensaje.
 
 ## Este equipo

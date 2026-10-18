@@ -297,7 +297,19 @@ pub fn marks_detail(
                         style::chip(ui, &t.group, false);
                     }
                     if let Some(source) = &t.source {
-                        style::chip(ui, &trf("From {name}", &[("name", source)]), true);
+                        // The import of the option, a link to its catalog tab at it.
+                        let text = trf("From {name}", &[("name", source)]);
+                        let file = imports.iter().find(|f| &f.name == source);
+                        match (file, t.rule) {
+                            (Some(f), Some(rule)) => {
+                                if ui.link(text).clicked() {
+                                    acts.push(Act::OpenCatalogAt(f.id.clone(), rule.id.clone()));
+                                }
+                            }
+                            _ => {
+                                style::chip(ui, &text, true);
+                            }
+                        }
                     }
                     if t.missing {
                         style::chip(ui, tr("not in this catalog"), false);
@@ -374,7 +386,8 @@ pub fn marks_detail(
                 });
             }
             if let Some(rule) = t.rule {
-                views::rule_description(ui, catalog, texts, rule, settings, false, acts);
+                let link = views::RuleLink::Elsewhere;
+                views::rule_description(ui, catalog, texts, rule, settings, link, acts);
             } else if !t.summary.is_empty() {
                 views::block(ui, |ui| {
                     style::section_title(ui, tr("Description"));

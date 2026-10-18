@@ -57,6 +57,11 @@ ini adalah file Markdown; halaman dokumentasi terbuka dengan cara yang sama, mas
   pohon saat Anda mengetik dan mengingat apa yang pernah Anda cari.
 - **Pohon dan panel detail**: pohon di sebelah kiri, item yang dipilih di sebelah kanan. Deskripsi
   diciutkan dengan Ctrl+D. Aturan dari grup yang dipilih menampilkan tombol alih di ujung barisnya.
+- **Tautan**: setiap aturan, grup, katalog, file profil, dan kunci registri yang disebut tampilan
+  mengarah ke sana: aturan yang dibutuhkan suatu aturan, yang membutuhkannya, dan yang berkonflik
+  dengannya; aturan yang disebut dalam pesan; grup di atas dan di dalam sebuah grup; kebijakan yang sama
+  di katalog lain; aturan yang menulis kunci registri, di tab registri dan di file registri. Tautan di
+  profil membuka pohonnya hingga ke item; dari tab lain, tautan menampilkan aturan di tab profil pertama.
 - **Bilah status**: status dokumen, versi katalog, server MCP, dan pesan terakhir.
 
 ## PC Ini

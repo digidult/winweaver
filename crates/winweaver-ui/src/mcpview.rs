@@ -10,12 +10,13 @@ use std::sync::Arc;
 use eframe::egui;
 use serde_json::Value;
 use winweaver_core::catalog::Catalog;
+use winweaver_core::i18n::CatalogTexts;
 use winweaver_mcp::config::{Config, Transport};
 use winweaver_mcp::http::HttpServer;
 use winweaver_mcp::{Entry, Mode, RegistryAccess, Server};
 
 use crate::i18n::{tr, trf};
-use crate::{Act, list, style, tree};
+use crate::{Act, list, style, tree, views};
 
 /// A server the window runs.
 pub struct McpRun {
@@ -553,6 +554,7 @@ pub fn detail_view(
     ui: &mut egui::Ui,
     panel: &McpPanel,
     catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
     imports: &[String],
     acts: &mut Vec<Act>,
 ) {
@@ -593,7 +595,17 @@ pub fn detail_view(
                 ui.horizontal_wrapped(|ui| {
                     for place in places {
                         let (text, act) = match place {
-                            Place::Rule(id) => (id.clone(), Act::ShowInProfile(String::new(), id)),
+                            // A rule shows its title, its id in the hint.
+                            Place::Rule(id) => {
+                                let title = catalog
+                                    .rule(&id)
+                                    .map_or(id.as_str(), |r| views::rtitle(texts, r));
+                                let shown = ui.small_button(title).on_hover_text(&id);
+                                if shown.clicked() {
+                                    acts.push(views::RuleLink::Elsewhere.act(&id));
+                                }
+                                continue;
+                            }
                             Place::Profile(name) => (name.clone(), Act::McpOpen(name)),
                             Place::Catalog(id) => (id.clone(), Act::OpenCatalog(id)),
                             Place::Key(key) => (key.clone(), Act::OpenRegistry(key, None)),

@@ -619,46 +619,42 @@ impl App {
     /// The breadcrumb of the active tab: a label and what a click on it does.
     fn nav_crumbs(&self) -> Vec<(String, Option<Act>)> {
         match self.docs.get(self.active) {
-            Some(Doc::Profile(_)) => self
+            Some(Doc::Profile(doc)) => self
                 .crumbs()
                 .into_iter()
-                .map(|(label, sel)| (label, Some(Act::Select(sel))))
+                .map(|(label, sel)| {
+                    let act = match sel {
+                        Sel::Rule(_) => Act::SelectIn(sel, doc.focus.clone()),
+                        _ => Act::Select(sel),
+                    };
+                    (label, Some(act))
+                })
                 .collect(),
             Some(Doc::Catalog(c)) => {
                 let Some(file) = c.catalog(&self.imports) else {
                     return Vec::new();
                 };
                 let mut out = vec![(file.name.clone(), Some(Act::CatalogSelect(String::new())))];
-                if c.sel.is_none()
-                    && let Some(g) = c
-                        .group
-                        .as_deref()
-                        .and_then(|g| file.groups.iter().find(|x| x.id == g))
-                {
-                    let lang = crate::i18n::current();
-                    out.push((
-                        crate::catalogview::group_title(file, &lang, g).to_owned(),
-                        None,
-                    ));
-                }
-                if let Some(rule) = c
+                let lang = crate::i18n::current();
+                let rule = c
                     .sel
                     .as_deref()
-                    .and_then(|id| file.rules.iter().find(|r| r.id == id))
-                {
-                    let lang = crate::i18n::current();
-                    let mut chain = Vec::new();
-                    let mut group = Some(rule.group.clone());
-                    while let Some(g) = group {
-                        let Some(found) = file.groups.iter().find(|x| x.id == g) else {
-                            break;
-                        };
-                        chain.push(crate::catalogview::group_title(file, &lang, found).to_owned());
-                        group = found.parent.clone();
-                    }
-                    for title in chain.into_iter().rev() {
-                        out.push((title, None));
-                    }
+                    .and_then(|id| file.rules.iter().find(|r| r.id == id));
+                let mut group = match rule {
+                    Some(r) => Some(r.group.clone()),
+                    None => c.group.clone(),
+                };
+                let mut chain = Vec::new();
+                while let Some(g) = group {
+                    let Some(found) = file.groups.iter().find(|x| x.id == g) else {
+                        break;
+                    };
+                    let title = crate::catalogview::group_title(file, &lang, found).to_owned();
+                    chain.push((title, Some(Act::CatalogSelect(format!("g:{g}")))));
+                    group = found.parent.clone();
+                }
+                out.extend(chain.into_iter().rev());
+                if let Some(rule) = rule {
                     let (title, _) = crate::catalogview::rule_texts(file, &lang, rule);
                     out.push((title.to_owned(), None));
                 }
@@ -729,6 +725,7 @@ impl App {
         };
         let clone_act = |a: &Act| match a {
             Act::Select(s) => Some(Act::Select(s.clone())),
+            Act::SelectIn(s, g) => Some(Act::SelectIn(s.clone(), g.clone())),
             Act::CatalogSelect(s) => Some(Act::CatalogSelect(s.clone())),
             _ => None,
         };
@@ -986,9 +983,19 @@ impl App {
                                     Target::Profile => (doc.profile.name.clone(), Sel::None),
                                 };
                                 if ui.link(label).clicked() {
-                                    acts.push(Act::Select(sel));
+                                    acts.push(Act::Reveal(sel));
                                 }
-                                ui.label(RichText::new(&issue.text).color(p.msg_fg));
+                                let link = views::RuleLink::Profile;
+                                let text = issue.text.as_str();
+                                views::linked_text(
+                                    ui,
+                                    &self.catalog,
+                                    texts,
+                                    text,
+                                    p.msg_fg,
+                                    link,
+                                    acts,
+                                );
                             });
                         }
                     });

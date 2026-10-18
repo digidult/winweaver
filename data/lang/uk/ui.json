@@ -610,5 +610,11 @@
   "Remove these {n} lines from the file?": "Видалити ці рядки ({n}) з файлу?",
   "Remove the key {path} and its {n} values from the file? Its comments stay.": "Видалити з файлу ключ {path} і його значення ({n})? Його коментарі лишаться.",
   "Saved {path} ({n} values); import it as administrator, first on a test PC": "Збережено {path} (значень: {n}); імпортуйте його від імені адміністратора, спершу на тестовому ПК",
-  "Search the keys, values and comments (Ctrl+F)": "Пошук ключів, значень і коментарів (Ctrl+F)"
+  "Search the keys, values and comments (Ctrl+F)": "Пошук ключів, значень і коментарів (Ctrl+F)",
+  "Groups in it": "Групи в ній",
+  "In the group": "У групі",
+  "Needed by": "Потрібне для",
+  "Open {name}": "Відкрити {name}",
+  "Policies": "Політики",
+  "{n} rules": "правил: {n}"
 }

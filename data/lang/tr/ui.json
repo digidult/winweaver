@@ -610,5 +610,11 @@
   "Remove these {n} lines from the file?": "Bu {n} satır dosyadan kaldırılsın mı?",
   "Remove the key {path} and its {n} values from the file? Its comments stay.": "{path} anahtarı ve {n} değeri dosyadan kaldırılsın mı? Yorumları kalır.",
   "Saved {path} ({n} values); import it as administrator, first on a test PC": "{path} kaydedildi ({n} değer); yönetici olarak, önce bir test bilgisayarında içe aktarın",
-  "Search the keys, values and comments (Ctrl+F)": "Anahtarlarda, değerlerde ve yorumlarda ara (Ctrl+F)"
+  "Search the keys, values and comments (Ctrl+F)": "Anahtarlarda, değerlerde ve yorumlarda ara (Ctrl+F)",
+  "Groups in it": "İçindeki gruplar",
+  "In the group": "Bulunduğu grup",
+  "Needed by": "Buna ihtiyaç duyan",
+  "Open {name}": "{name} aç",
+  "Policies": "İlkeler",
+  "{n} rules": "{n} kural"
 }

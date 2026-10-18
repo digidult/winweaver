@@ -58,6 +58,12 @@ della documentazione si aprono allo stesso modo, ognuna nella propria scheda.
 - **Albero e riquadro dei dettagli**: l'albero a sinistra, l'elemento selezionato a destra. La
   descrizione si comprime con Ctrl+D. Le regole di un gruppo selezionato mostrano un interruttore alla
   fine delle loro righe.
+- **Collegamenti**: ogni regola, gruppo, catalogo, file di profilo e chiave di registro che una vista
+  nomina vi conduce: le regole di cui una regola ha bisogno, quelle che ne hanno bisogno e quelle con cui
+  è in conflitto; le regole nominate nei messaggi; i gruppi sopra e dentro un gruppo; lo stesso criterio
+  in altri cataloghi; le regole che scrivono una chiave di registro, nella scheda del registro e in un
+  file di registro. Un collegamento in un profilo apre il suo albero fino all'elemento; da un'altra
+  scheda mostra la regola nella prima scheda di profilo.
 - **Barra di stato**: lo stato del documento, la versione del catalogo, il server MCP e l'ultimo messaggio.
 
 ## Questo PC

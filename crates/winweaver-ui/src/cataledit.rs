@@ -416,6 +416,8 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
         ui.colored_label(style::palette(ui).warn, e);
         ui.add_space(6.0);
     }
+    // A loaded import leads to its catalog tab and to the profile.
+    let import = doc.import.then(|| (doc.file.id.clone(), doc.file.name.clone()));
     let Some(form) = &mut doc.form else {
         ui.weak(tr(
             "Select a policy in the tree to edit it, or a group to add one to it.",
@@ -425,6 +427,17 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
     let mut apply = false;
     ui.label(style::strong(ui, &form.title, 18.0));
     crate::views::id_line(ui, &form.id);
+    if let Some((id, name)) = import {
+        ui.horizontal_wrapped(|ui| {
+            let text = trf("Show in the catalog {name}", &[("name", &name)]);
+            if ui.link(text).clicked() {
+                acts.push(Act::OpenCatalogAt(id.clone(), form.id.clone()));
+            }
+            if ui.link(tr("Show in the profile")).clicked() {
+                acts.push(Act::ShowInProfile(id.clone(), form.id.clone()));
+            }
+        });
+    }
     ui.add_space(6.0);
     egui::Grid::new(("catalog-editor-form", form.id.as_str()))
         .num_columns(2)
@@ -464,11 +477,21 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
                     ui.label("");
                 } else {
                     ui.checkbox(&mut row.remove, tr("remove"));
-                    ui.add(
-                        egui::TextEdit::singleline(&mut row.key)
-                            .hint_text(tr("Key"))
-                            .desired_width(300.0),
-                    );
+                    ui.horizontal(|ui| {
+                        ui.add(
+                            egui::TextEdit::singleline(&mut row.key)
+                                .hint_text(tr("Key"))
+                                .desired_width(300.0),
+                        );
+                        if ui
+                            .small_button("\u{1F5C2}")
+                            .on_hover_text(tr("Open in the registry"))
+                            .clicked()
+                        {
+                            let value = (!row.name.is_empty()).then(|| row.name.clone());
+                            acts.push(Act::OpenRegistry(row.key.clone(), value));
+                        }
+                    });
                     ui.add(
                         egui::TextEdit::singleline(&mut row.name)
                             .hint_text(tr("Name"))

@@ -610,5 +610,11 @@
   "Remove these {n} lines from the file?": "Rimuovere queste {n} righe dal file?",
   "Remove the key {path} and its {n} values from the file? Its comments stay.": "Rimuovere dal file la chiave {path} e i suoi {n} valori? I suoi commenti restano.",
   "Saved {path} ({n} values); import it as administrator, first on a test PC": "Salvato {path} ({n} valori); importarlo come amministratore, prima su un PC di prova",
-  "Search the keys, values and comments (Ctrl+F)": "Cerca chiavi, valori e commenti (Ctrl+F)"
+  "Search the keys, values and comments (Ctrl+F)": "Cerca chiavi, valori e commenti (Ctrl+F)",
+  "Groups in it": "Gruppi al suo interno",
+  "In the group": "Nel gruppo",
+  "Needed by": "Richiesta da",
+  "Open {name}": "Apri {name}",
+  "Policies": "Criteri",
+  "{n} rules": "{n} regole"
 }

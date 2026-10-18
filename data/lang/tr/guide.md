@@ -58,6 +58,12 @@ sayfaları da aynı şekilde, her biri kendi sekmesinde açılır.
   ağacı filtreler ve aradıklarınızı hatırlar.
 - **Ağaç ve ayrıntı paneli**: solda ağaç, sağda seçili öğe. Açıklama Ctrl+D ile daraltılır. Seçili bir
   grubun kuralları, satırlarının sonunda bir anahtar gösterir.
+- **Bağlantılar**: bir görünümün adını verdiği her kural, grup, katalog, profil dosyası ve kayıt defteri
+  anahtarı kendisine götürür: bir kuralın ihtiyaç duyduğu kurallar, ona ihtiyaç duyanlar ve onunla
+  çakışanlar; iletilerde adı geçen kurallar; bir grubun üstündeki ve içindeki gruplar; diğer
+  kataloglardaki aynı ilke; bir kayıt defteri anahtarını yazan kurallar, kayıt defteri sekmesinde ve
+  kayıt dosyasında. Profildeki bir bağlantı ağacını öğeye kadar açar; başka bir sekmeden kuralı ilk
+  profil sekmesinde gösterir.
 - **Durum çubuğu**: belgenin durumu, katalog sürümü, MCP sunucusu ve son ileti.
 
 ## Bu bilgisayar

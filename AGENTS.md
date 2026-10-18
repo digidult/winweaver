@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
 the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
@@ -381,6 +381,16 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   EXPAND_SZ with keys in the form of regedit (`admx::catalog_path` turns them into `HKLM:\` or `DU:\`);
   other actions are kept as they are. Apply goes through `CatalogFile::put_rule`, Save (Ctrl+S) checks and
   writes the file and loads a loaded import again; a removal asks first.
+- Links (the list of 18.10.2026, item 4): a rule named in a view leads where `views::RuleLink` says
+  (`Profile`: `Act::Reveal`, select and open the tree down to it; `Catalog(file)`: `Act::CatalogReveal`
+  in the tree of the catalog tab for a policy of its file; `Elsewhere`: `Act::ShowInProfile` in the first
+  profile tab, which now scrolls to it). `rule_description` takes the `RuleLink` of its tab and lists the
+  rules a rule needs, the ones that need it and its conflicts both ways. `views::linked_text` turns the
+  ids of rules and the registry paths of a text into links (the message bar); the crumbs of a catalog tab
+  select every group above, the crumb of a rule of a profile keeps the group it is shown in. The registry
+  tab names the rules that write the selected key or value (`regview::Writers`, kept until the selection
+  or the count of rules changes), the catalog editor opens a key in the registry tab and its policy in the
+  catalog tab and the profile, the places of an MCP call show the titles of rules.
 - Every removal asks first (`App::ask`, Escape says no): an import, a bookmark of the bookmarks tab (the star
   of the navigation row stays a toggle), closing a tab discarding its changes, forgetting the recent files,
   renewing the MCP token.

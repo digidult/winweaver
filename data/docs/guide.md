@@ -56,6 +56,11 @@ documentation pages open the same way, each in its own tab.
   you type and remembers what you searched.
 - **Tree and detail panel**: the tree on the left, the selected item on the right. The description
   folds with Ctrl+D. The rules of a selected group show a switch at the end of their rows.
+- **Links**: every rule, group, catalog, profile file and registry key a view names leads to it: the
+  rules a rule needs, the ones that need it and the ones it conflicts with; the rules named in the
+  messages; the groups above and inside a group; the same policy in other catalogs; the rules that write
+  a registry key, in the registry tab and in a registry file. A link in a profile opens its tree down to
+  the item; from another tab it shows the rule in the first profile tab.
 - **Status bar**: the state of the document, the catalog version, the MCP server and the last message.
 
 ## This PC
