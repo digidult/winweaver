@@ -34,6 +34,18 @@ keeps its settings and files in that folder. The guide opens at the first start 
 
 Every new answer file goes to a virtual machine first, never straight to working computers.
 
+## The way of work
+
+1. Start from a preset (Menu, New) or read this PC into a profile (This PC).
+2. Adjust the rules, their parameters and the forms of the installation; import policy templates when you need
+   more rules.
+3. Check (F7) and build (F9): `output/autounattend.xml` goes to the root of the installation USB stick.
+4. Install in a virtual machine first, then read that PC and compare it with the profile.
+5. Keep the installed PCs in line with This PC (applied as administrator with a backup) or with the stand-alone
+   scripts for other PCs.
+
+The guide (F1) tells the same in more detail and in the language of the program.
+
 ## Editions and keys
 
 The edition form offers these editions with the generic key of each, "Ask during Setup" or a key of your own. A

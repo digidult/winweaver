@@ -422,7 +422,7 @@ pub fn diff_detail(
             });
             match item.rule {
                 Some(rule) => {
-                    views::rule_description(ui, catalog, texts, rule, settings.desc_open, false, acts)
+                    views::rule_description(ui, catalog, texts, rule, settings, false, acts)
                 }
                 None if item.key.starts_with("rule:") => {
                     views::block(ui, |ui| {

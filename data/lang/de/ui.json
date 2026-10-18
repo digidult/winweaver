@@ -463,5 +463,10 @@
   "and {n} more": "und {n} weitere",
   "Only in {name}": "Nur in {name}",
   "Different": "Unterschiedlich",
-  "Load or open another catalog to compare it with this one": "Laden oder öffnen Sie einen anderen Katalog, um ihn mit diesem zu vergleichen"
+  "Load or open another catalog to compare it with this one": "Laden oder öffnen Sie einen anderen Katalog, um ihn mit diesem zu vergleichen",
+  "In other catalogs": "In anderen Katalogen",
+  "The same policy in": "Dieselbe Richtlinie in",
+  "Show in the catalog {name}": "Im Katalog {name} zeigen",
+  "In the catalogs": "In den Katalogen",
+  "Open at first in the description:": "In der Beschreibung zuerst geöffnet:"
 }

@@ -6,6 +6,7 @@ use serde_json::Value;
 use winweaver_core::catalog::{
     Action, Catalog, Group, ListNames, Param, ROOT_UNATTEND, Rule, check,
 };
+use winweaver_core::admx::CatalogFile;
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::resolver::State;
 
@@ -84,7 +85,7 @@ fn switch(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
     response
 }
 
-fn mechanism_title(m: winweaver_core::catalog::Mechanism) -> &'static str {
+pub(crate) fn mechanism_title(m: winweaver_core::catalog::Mechanism) -> &'static str {
     match m {
         winweaver_core::catalog::Mechanism::Unattend => "Answer file",
         winweaver_core::catalog::Mechanism::Policy => "Policy",
@@ -92,7 +93,7 @@ fn mechanism_title(m: winweaver_core::catalog::Mechanism) -> &'static str {
     }
 }
 
-fn phase_title(p: winweaver_core::catalog::Phase) -> &'static str {
+pub(crate) fn phase_title(p: winweaver_core::catalog::Phase) -> &'static str {
     use winweaver_core::catalog::Phase;
     match p {
         Phase::Windowspe => "windowsPE",
@@ -104,7 +105,7 @@ fn phase_title(p: winweaver_core::catalog::Phase) -> &'static str {
     }
 }
 
-fn level_title(l: winweaver_core::catalog::Level) -> &'static str {
+pub(crate) fn level_title(l: winweaver_core::catalog::Level) -> &'static str {
     use winweaver_core::catalog::Level;
     match l {
         Level::Optional => "optional",
@@ -156,10 +157,14 @@ fn form_icon(form: Form) -> &'static str {
     }
 }
 
+/// The key of a row of the profile tree: what it selects and, for a rule, the group it is drawn
+/// under, since a policy of two imports shows in both trees.
+type Key = (Sel, Option<String>);
+
 /// The rows of the profile tree under a group, in the order they are shown.
 #[allow(clippy::too_many_arguments)]
 fn tree_rows(
-    rows: &mut Vec<tree::Row<Sel>>,
+    rows: &mut Vec<tree::Row<Key>>,
     catalog: &Catalog,
     texts: Option<&CatalogTexts>,
     doc: &ProfileDoc,
@@ -189,7 +194,7 @@ fn tree_rows(
         tree::Check::Off
     };
     rows.push(tree::Row {
-        key: Sel::Group(gid.to_owned()),
+        key: (Sel::Group(gid.to_owned()), None),
         depth,
         title: gtitle(texts, group).to_owned(),
         right: format!("{on}/{total}"),
@@ -205,7 +210,7 @@ fn tree_rows(
     if gid == ROOT_UNATTEND && words.is_empty() {
         for form in Form::ALL {
             rows.push(tree::Row {
-                key: Sel::Form(form),
+                key: (Sel::Form(form), None),
                 depth: depth + 1,
                 title: tr(form.title()).to_owned(),
                 right: String::new(),
@@ -249,7 +254,7 @@ fn tree_rows(
         let switch =
             (inline && group_selected && rule.params.is_empty() && !linked).then_some(chosen);
         rows.push(tree::Row {
-            key: Sel::Rule(rule.id.clone()),
+            key: (Sel::Rule(rule.id.clone()), Some(gid.to_owned())),
             depth: depth + 1,
             title: rtitle(texts, rule).to_owned(),
             right: if switch.is_some() {
@@ -273,7 +278,7 @@ fn unknown_on(choice: &Value) -> bool {
 
 /// The group of the options of the profile whose catalog is not loaded, at the end of the tree:
 /// their ids, not to be switched.
-fn unknown_rows(rows: &mut Vec<tree::Row<Sel>>, doc: &ProfileDoc, words: &[String]) {
+fn unknown_rows(rows: &mut Vec<tree::Row<Key>>, doc: &ProfileDoc, words: &[String]) {
     let unknown = &doc.profile.unknown;
     let shown: Vec<(&String, &Value)> = unknown
         .iter()
@@ -287,7 +292,7 @@ fn unknown_rows(rows: &mut Vec<tree::Row<Sel>>, doc: &ProfileDoc, words: &[Strin
     }
     let open = !words.is_empty() || doc.expanded.contains(UNKNOWN_GROUP);
     rows.push(tree::Row {
-        key: Sel::Group(UNKNOWN_GROUP.to_owned()),
+        key: (Sel::Group(UNKNOWN_GROUP.to_owned()), None),
         depth: 0,
         title: tr("Unknown options").to_owned(),
         right: unknown.len().to_string(),
@@ -302,7 +307,7 @@ fn unknown_rows(rows: &mut Vec<tree::Row<Sel>>, doc: &ProfileDoc, words: &[Strin
     }
     for (id, choice) in shown {
         rows.push(tree::Row {
-            key: Sel::Unknown(id.clone()),
+            key: (Sel::Unknown(id.clone()), None),
             depth: 1,
             title: id.clone(),
             right: if unknown_on(choice) {
@@ -342,7 +347,16 @@ pub fn tree_view(
     if !words.is_empty() && rows.is_empty() {
         ui.weak(tr("Nothing matches the search."));
     }
-    let selected = rows.iter().position(|r| r.key == doc.sel);
+    let selected = rows
+        .iter()
+        .position(|r| {
+            r.key.0 == doc.sel
+                && doc
+                    .focus
+                    .as_ref()
+                    .is_none_or(|g| r.key.1.as_ref() == Some(g))
+        })
+        .or_else(|| rows.iter().position(|r| r.key.0 == doc.sel));
     let scroll = if doc.reveal {
         tree::Scroll::Center
     } else if doc.follow {
@@ -357,14 +371,14 @@ pub fn tree_view(
     let out = tree::show(ui, id, &rows, selected, scroll);
     for event in out.events {
         match event {
-            tree::Event::Select(sel) => acts.push(Act::Select(sel)),
-            tree::Event::Expand(Sel::Group(g), open) => acts.push(Act::Expand(g, open)),
-            tree::Event::Toggle(Sel::Rule(id)) => {
+            tree::Event::Select((sel, group)) => acts.push(Act::SelectIn(sel, group)),
+            tree::Event::Expand((Sel::Group(g), _), open) => acts.push(Act::Expand(g, open)),
+            tree::Event::Toggle((Sel::Rule(id), _)) => {
                 let on = !doc.profile.is_on(&id);
                 acts.push(Act::Toggle(id, on));
             }
-            tree::Event::Switch(Sel::Rule(id), on) => acts.push(Act::Toggle(id, on)),
-            tree::Event::Toggle(Sel::Group(g)) => {
+            tree::Event::Switch((Sel::Rule(id), _), on) => acts.push(Act::Toggle(id, on)),
+            tree::Event::Toggle((Sel::Group(g), _)) => {
                 let rules = catalog.rules_under(&g);
                 let all = !rules.is_empty() && rules.iter().all(|r| doc.resolution.shown_on(&r.id));
                 acts.push(Act::SetGroup(g, !all));
@@ -466,8 +480,9 @@ fn section(ui: &mut egui::Ui, id: &str, title: &str, open: bool, add: impl FnOnc
         .inner_margin(Margin::symmetric(12, 6))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
+            // The state of the setting is part of the id, so a change of it shows at once.
             egui::CollapsingHeader::new(style::strong(ui, title, 13.0))
-                .id_salt(id)
+                .id_salt((id, open))
                 .default_open(open)
                 .show(ui, add);
         });
@@ -865,10 +880,94 @@ fn writes(ui: &mut egui::Ui, rule: &Rule) {
     }
 }
 
+/// The name of a policy in its id, without the prefix and the `.off` of the Disabled state.
+fn policy_name(id: &str) -> &str {
+    let id = id.strip_suffix(".off").unwrap_or(id);
+    id.rsplit('.').next().unwrap_or(id)
+}
+
+/// The import whose tree holds a group: the title of the group under the root of the policies.
+fn import_of<'a>(catalog: &'a Catalog, texts: Option<&'a CatalogTexts>, group: &str) -> &'a str {
+    catalog
+        .path_of(group)
+        .get(1)
+        .and_then(|id| catalog.group(id))
+        .map_or("", |g| gtitle(texts, g))
+}
+
+/// The same policy in the trees of other imports and the policies of the same name in other
+/// catalogs, as links that select them.
+fn other_catalogs(
+    ui: &mut egui::Ui,
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    rule: &Rule,
+    acts: &mut Vec<Act>,
+) {
+    if !rule.id.starts_with("admx.") {
+        return;
+    }
+    let aliases: Vec<&str> = catalog.alias_groups(&rule.id).collect();
+    let name = policy_name(&rule.id);
+    let off = rule.id.ends_with(".off");
+    let similar: Vec<&Rule> = catalog
+        .rules()
+        .iter()
+        .filter(|r| {
+            r.id.starts_with("admx.")
+                && r.id != rule.id
+                && r.id.ends_with(".off") == off
+                && policy_name(&r.id) == name
+        })
+        .collect();
+    if aliases.is_empty() && similar.is_empty() {
+        return;
+    }
+    block(ui, |ui| {
+        style::section_title(ui, tr("In other catalogs"));
+        ui.add_space(4.0);
+        for group in aliases {
+            ui.horizontal_wrapped(|ui| {
+                ui.weak(tr("The same policy in"));
+                if ui.link(import_of(catalog, texts, group)).clicked() {
+                    acts.push(Act::ShowIn(rule.id.clone(), group.to_owned()));
+                }
+            });
+        }
+        for other in similar {
+            ui.horizontal_wrapped(|ui| {
+                if ui.link(rtitle(texts, other)).clicked() {
+                    acts.push(Act::Select(Sel::Rule(other.id.clone())));
+                }
+                ui.weak(import_of(catalog, texts, &other.group));
+            });
+        }
+    });
+}
+
+/// Links that open the loaded imports holding a rule in their catalog tabs at it.
+pub(crate) fn catalog_links(
+    ui: &mut egui::Ui,
+    imports: &[CatalogFile],
+    rule: &str,
+    acts: &mut Vec<Act>,
+) {
+    for f in imports.iter().filter(|f| f.rules.iter().any(|r| r.id == rule)) {
+        if ui
+            .link(trf("Show in the catalog {name}", &[("name", &f.name)]))
+            .clicked()
+        {
+            acts.push(Act::OpenCatalogAt(f.id.clone(), rule.to_owned()));
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 fn rule_detail(
     ui: &mut egui::Ui,
     catalog: &Catalog,
     texts: Option<&CatalogTexts>,
+    imports: &[CatalogFile],
     doc: &ProfileDoc,
     settings: &Settings,
     id: &str,
@@ -941,8 +1040,10 @@ fn rule_detail(
         style::section_title(ui, tr("This PC, this rule"));
         ui.add_space(4.0);
         this_pc_buttons(ui, acts);
+        catalog_links(ui, imports, &rule.id, acts);
     });
-    rule_description(ui, catalog, texts, rule, settings.desc_open, true, acts);
+    other_catalogs(ui, catalog, texts, rule, acts);
+    rule_description(ui, catalog, texts, rule, settings, true, acts);
 }
 
 /// The description of a rule under its title, folded with Ctrl+D: what it does, the risk, what it
@@ -952,10 +1053,12 @@ pub(crate) fn rule_description(
     catalog: &Catalog,
     texts: Option<&CatalogTexts>,
     rule: &Rule,
-    open: bool,
+    settings: &Settings,
     links: bool,
     acts: &mut Vec<Act>,
 ) {
+    let open = settings.desc_open;
+    let parts = &settings.desc_sections;
     ui.add_space(6.0);
     egui::Frame::new()
         .inner_margin(Margin {
@@ -982,18 +1085,18 @@ pub(crate) fn rule_description(
     if !open {
         return;
     }
-    section(ui, "desc-what", tr("What it does"), true, |ui| {
+    section(ui, "desc-what", tr("What it does"), parts.what, |ui| {
         style::selectable_text(ui, ("what", rule.id.as_str()), rsummary(texts, rule));
         if !rule.effect.is_empty() {
             style::selectable_text(ui, ("effect", rule.id.as_str()), &rule.effect);
         }
     });
     if !rule.risk.is_empty() {
-        section(ui, "desc-risk", tr("Risk"), true, |ui| {
+        section(ui, "desc-risk", tr("Risk"), parts.risk, |ui| {
             style::selectable_text(ui, ("risk", rule.id.as_str()), &rule.risk);
         });
     }
-    section(ui, "desc-writes", tr("What it writes"), true, |ui| {
+    section(ui, "desc-writes", tr("What it writes"), parts.writes, |ui| {
         writes(ui, rule)
     });
     if !rule.requires.is_empty() || !rule.conflicts.is_empty() {
@@ -1001,7 +1104,7 @@ pub(crate) fn rule_description(
             ui,
             "desc-deps",
             tr("Dependencies and conflicts"),
-            false,
+            parts.deps,
             |ui| {
                 for (label, list) in [
                     (tr("Needs"), &rule.requires),
@@ -1029,7 +1132,7 @@ pub(crate) fn rule_description(
             ui,
             "desc-more",
             tr("Versions, check and rollback"),
-            false,
+            parts.more,
             |ui| {
                 for (i, text) in [&rule.versions, &rule.verify, &rule.rollback]
                     .into_iter()
@@ -1043,7 +1146,7 @@ pub(crate) fn rule_description(
         );
     }
     if !rule.doc.is_empty() {
-        section(ui, "desc-ref", tr("Reference"), false, |ui| {
+        section(ui, "desc-ref", tr("Reference"), parts.reference, |ui| {
             if ui.link(rule.doc.as_str()).clicked() {
                 acts.push(Act::OpenDoc(rule.doc.clone()));
             }
@@ -1125,8 +1228,8 @@ fn param_editor(
                 .add(
                     egui::TextEdit::multiline(&mut text)
                         .id_salt(format!("{}.{name}", rule.id))
-                        .desired_rows(4)
-                        .desired_width(320.0)
+                        .desired_rows(6)
+                        .desired_width((ui.available_width() - 24.0).clamp(360.0, 760.0))
                         .hint_text(hint),
                 )
                 .changed()
@@ -1151,7 +1254,7 @@ fn param_editor(
                 .add(
                     egui::TextEdit::singleline(&mut s)
                         .id_salt(format!("{}.{name}", rule.id))
-                        .desired_width(240.0),
+                        .desired_width((ui.available_width() - 24.0).clamp(240.0, 520.0)),
                 )
                 .changed()
             {
@@ -1174,6 +1277,7 @@ pub fn detail_view(
     ui: &mut egui::Ui,
     catalog: &Catalog,
     texts: Option<&CatalogTexts>,
+    imports: &[CatalogFile],
     doc: &ProfileDoc,
     settings: &Settings,
     acts: &mut Vec<Act>,
@@ -1185,7 +1289,7 @@ pub fn detail_view(
             Sel::Group(id) if id == UNKNOWN_GROUP => unknown_group_detail(ui, doc, acts),
             Sel::Group(id) => group_detail(ui, catalog, texts, doc, id, acts),
             Sel::Unknown(id) => unknown_detail(ui, doc, id, acts),
-            Sel::Rule(id) => rule_detail(ui, catalog, texts, doc, settings, id, acts),
+            Sel::Rule(id) => rule_detail(ui, catalog, texts, imports, doc, settings, id, acts),
             Sel::Form(form) => {
                 egui::Frame::new()
                     .inner_margin(Margin::symmetric(18, 12))

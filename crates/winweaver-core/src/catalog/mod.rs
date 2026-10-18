@@ -225,6 +225,14 @@ impl Catalog {
         out
     }
 
+    /// The groups of other trees a rule shows in as an alias.
+    pub fn alias_groups<'a>(&'a self, rule: &'a str) -> impl Iterator<Item = &'a str> + 'a {
+        self.aliases
+            .iter()
+            .filter(move |(_, r)| r == rule)
+            .map(|(g, _)| g.as_str())
+    }
+
     /// The catalog with rules shown in other groups too: an imported policy two imports hold is
     /// one rule, owned by the first import, and an alias in the trees of the others. An alias in
     /// the group of the rule, or of something unknown, is left out.

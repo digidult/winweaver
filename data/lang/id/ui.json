@@ -463,5 +463,10 @@
   "and {n} more": "dan {n} lainnya",
   "Only in {name}": "Hanya di {name}",
   "Different": "Berbeda",
-  "Load or open another catalog to compare it with this one": "Muat atau buka katalog lain untuk membandingkannya dengan yang ini"
+  "Load or open another catalog to compare it with this one": "Muat atau buka katalog lain untuk membandingkannya dengan yang ini",
+  "In other catalogs": "Di katalog lain",
+  "The same policy in": "Kebijakan yang sama di",
+  "Show in the catalog {name}": "Tampilkan di katalog {name}",
+  "In the catalogs": "Di katalog",
+  "Open at first in the description:": "Terbuka sejak awal di deskripsi:"
 }

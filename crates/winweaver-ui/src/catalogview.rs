@@ -186,7 +186,14 @@ fn catalog_rows(
 }
 
 /// The tab: the tree on the left, the selected policy on the right.
-pub fn catalog_view(ui: &mut egui::Ui, file: &CatalogFile, doc: &CatalogDoc, acts: &mut Vec<Act>) {
+pub fn catalog_view(
+    ui: &mut egui::Ui,
+    file: &CatalogFile,
+    doc: &CatalogDoc,
+    catalog: &winweaver_core::catalog::Catalog,
+    settings: &crate::Settings,
+    acts: &mut Vec<Act>,
+) {
     let lang = crate::i18n::current();
     let words = doc.search.words();
     let (rules, groups) = matches(file, &lang, &words);
@@ -254,7 +261,7 @@ pub fn catalog_view(ui: &mut egui::Ui, file: &CatalogFile, doc: &CatalogDoc, act
     egui::CentralPanel::default().show(ui, |ui| {
         egui::ScrollArea::vertical()
             .auto_shrink(false)
-            .show(ui, |ui| detail(ui, file, &lang, doc, acts));
+            .show(ui, |ui| detail(ui, file, &lang, doc, catalog, settings, acts));
     });
 }
 
@@ -263,6 +270,8 @@ fn detail(
     file: &CatalogFile,
     lang: &str,
     doc: &CatalogDoc,
+    catalog: &winweaver_core::catalog::Catalog,
+    settings: &crate::Settings,
     acts: &mut Vec<Act>,
 ) {
     let Some(rule) = doc
@@ -304,27 +313,42 @@ fn detail(
         ui.label(tr("Select a policy in the tree."));
         return;
     };
+    // The policy in the cards of the profile view: the head, the parameters, the description.
     let (title, summary) = rule_texts(file, lang, rule);
-    ui.label(style::strong(ui, title, 18.0));
-    crate::views::id_line(ui, &rule.id);
-    ui.add_space(6.0);
-    if doc.file.is_none() && ui.button(tr("Show in the profile tree")).clicked() {
-        acts.push(Act::ShowInProfile(file.id.clone(), rule.id.clone()));
-    }
-    if !summary.is_empty() {
-        ui.add_space(6.0);
-        ui.label(summary);
-    }
-    if !rule.params.is_empty() {
-        ui.add_space(6.0);
-        ui.strong(tr("Parameters"));
-        for (name, param) in &rule.params {
-            ui.label(format!("{name}: {}", param.title()));
+    let mut shown = rule.clone();
+    shown.title = title.to_owned();
+    shown.summary = summary.to_owned();
+    crate::views::header(ui, |ui| {
+        ui.label(style::strong(ui, &shown.title, 18.0));
+        crate::views::id_line(ui, &rule.id);
+        ui.horizontal_wrapped(|ui| {
+            let mechanism = winweaver_core::catalog::Catalog::mechanism(rule);
+            style::chip(ui, tr(crate::views::mechanism_title(mechanism)), true);
+            style::chip(ui, crate::views::phase_title(rule.phase), false);
+            style::chip(ui, tr(crate::views::level_title(rule.level)), false);
+        });
+        if doc.file.is_none() {
+            ui.add_space(8.0);
+            if ui.button(tr("Show in the profile tree")).clicked() {
+                acts.push(Act::ShowInProfile(file.id.clone(), rule.id.clone()));
+            }
         }
+    });
+    if !rule.params.is_empty() {
+        crate::views::block(ui, |ui| {
+            style::section_title(ui, tr("Parameters"));
+            ui.add_space(4.0);
+            egui::Grid::new(("catalog-params", rule.id.as_str()))
+                .num_columns(2)
+                .spacing([14.0, 6.0])
+                .show(ui, |ui| {
+                    for (name, param) in &rule.params {
+                        ui.label(egui::RichText::new(name).monospace());
+                        ui.label(param.title());
+                        ui.end_row();
+                    }
+                });
+        });
     }
-    ui.add_space(6.0);
-    ui.strong(tr("What it writes"));
-    for action in &rule.actions {
-        ui.monospace(crate::views::describe(action));
-    }
+    crate::views::rule_description(ui, catalog, None, &shown, settings, false, acts);
 }

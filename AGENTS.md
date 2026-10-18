@@ -1,7 +1,10 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 17.10.2026 (0.3.0: templates in
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.4.0: links to the
+catalogs from an option and a bookmark, the same policy in the trees of other imports, the policy of a catalog
+tab in the cards of a profile, the parts of the description open at first, wider editors of lists, the guide
+and the README with the organization and the way of work; before it on 17.10.2026 0.3.0: templates in
 UTF-16, policies of two imports in both trees, ids by namespace for a shared prefix, the comparison of
 catalogs, a question before every removal; before it on 16.10.2026 version 0.2.0 with
 the commit in every build, CI only for pull requests that are ready, archives of templates, the license in the
@@ -285,6 +288,14 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   shows its whole tree. `admx::compare` sets two catalog files side by side by policy (the `.off` rule
   counts with its policy); Compare in the bar of a catalog tab opens it as a Markdown page
   (`comparison_page`, at most 1000 lines a section).
+- A policy of two imports shows twice in the profile tree, so the key of a row is `(Sel, Option<group>)` and
+  `ProfileDoc::focus` keeps the group of the selected rule: `Act::SelectIn` from the tree, `Act::ShowIn`
+  (select and reveal) from the links of the detail panel (`views::other_catalogs`: the same id in the groups
+  of `Catalog::alias_groups`, and rules of the same policy name in other imports). `views::catalog_links`
+  opens the catalog tabs of the loaded imports at a rule (`Act::OpenCatalogAt`), from the detail panel and a
+  bookmark. The policy of a catalog tab is drawn with `views::header`, `block` and `rule_description`;
+  `Settings::desc_sections` gives the parts of the description open at first (the id of a part holds the
+  setting, so a change shows at once).
 - Every removal asks first (`App::ask`, Escape says no): an import, a bookmark of the bookmarks tab (the star
   of the navigation row stays a toggle), closing a tab discarding its changes, forgetting the recent files,
   renewing the MCP token.

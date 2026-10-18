@@ -463,5 +463,10 @@
   "and {n} more": "і яшчэ {n}",
   "Only in {name}": "Толькі ў {name}",
   "Different": "Адрозніваюцца",
-  "Load or open another catalog to compare it with this one": "Загрузіце або адкрыйце іншы каталог, каб параўнаць яго з гэтым"
+  "Load or open another catalog to compare it with this one": "Загрузіце або адкрыйце іншы каталог, каб параўнаць яго з гэтым",
+  "In other catalogs": "У іншых каталогах",
+  "The same policy in": "Тая ж палітыка ў",
+  "Show in the catalog {name}": "Паказаць у каталогу {name}",
+  "In the catalogs": "У каталогах",
+  "Open at first in the description:": "Адразу адкрытыя ў апісанні:"
 }

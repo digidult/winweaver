@@ -108,6 +108,8 @@ pub struct ProfileDoc {
     pub reveal: bool,
     /// The selected row follows into view at the next frame (after a move with the keys).
     pub follow: bool,
+    /// The group the selected rule is shown in, when it shows in the trees of two imports.
+    pub focus: Option<String>,
 }
 
 impl ProfileDoc {
@@ -134,6 +136,7 @@ impl ProfileDoc {
             search: Search::default(),
             reveal: false,
             follow: false,
+            focus: None,
         }
     }
 
@@ -319,6 +322,12 @@ pub enum Act {
     ForgetRecent,
     /// Asks before the token of the MCP server is renewed.
     AskRenewToken,
+    /// Selects an item of the tree of a profile in the group it is drawn under.
+    SelectIn(Sel, Option<String>),
+    /// Selects a rule of a profile in the tree of another import (the group) and shows it.
+    ShowIn(String, String),
+    /// Opens the tab of a loaded import, or brings it to the front, at a rule.
+    OpenCatalogAt(String, String),
     /// Compares the catalog of the active tab with another one in a page.
     CompareCatalog(CatalogRef),
     /// Looks for the catalogs of the unknown options of the active profile among the imports
@@ -550,7 +559,10 @@ impl App {
         match self.docs.get_mut(self.active) {
             Some(Doc::Profile(doc)) => {
                 let mut next = match &doc.sel {
-                    Sel::Rule(id) => catalog.rule(id).map(|r| r.group.clone()),
+                    Sel::Rule(id) => doc
+                        .focus
+                        .clone()
+                        .or_else(|| catalog.rule(id).map(|r| r.group.clone())),
                     Sel::Group(id) => catalog.group(id).and_then(|g| g.parent.clone()),
                     Sel::Form(_) => Some(winweaver_core::catalog::ROOT_UNATTEND.to_owned()),
                     Sel::Unknown(_) => Some(UNKNOWN_GROUP.to_owned()),
@@ -1105,6 +1117,16 @@ impl App {
                 &mut self.settings.desc_open,
                 tr("Show the description panel (Ctrl+D)"),
             );
+            ui.horizontal_wrapped(|ui| {
+                ui.label(tr("Open at first in the description:"));
+                let parts = &mut self.settings.desc_sections;
+                ui.checkbox(&mut parts.what, tr("What it does"));
+                ui.checkbox(&mut parts.risk, tr("Risk"));
+                ui.checkbox(&mut parts.writes, tr("What it writes"));
+                ui.checkbox(&mut parts.deps, tr("Dependencies and conflicts"));
+                ui.checkbox(&mut parts.more, tr("Versions, check and rollback"));
+                ui.checkbox(&mut parts.reference, tr("Reference"));
+            });
             ui.checkbox(
                 &mut self.settings.show_guide_at_start,
                 tr("Open the guide at the next start"),
@@ -2476,7 +2498,31 @@ impl App {
                 Act::Select(sel) => {
                     if let Some(doc) = self.active_profile() {
                         doc.select(sel);
+                        doc.focus = None;
                     }
+                }
+                Act::SelectIn(sel, group) => {
+                    if let Some(doc) = self.active_profile() {
+                        doc.select(sel);
+                        doc.focus = group;
+                    }
+                }
+                Act::ShowIn(rule, group) => {
+                    if let Some(doc) = self.active_profile() {
+                        doc.select(Sel::Rule(rule));
+                        doc.focus = Some(group);
+                    }
+                    self.reveal_selection();
+                }
+                Act::OpenCatalogAt(import, rule) => {
+                    self.open_catalog(&import);
+                    if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active)
+                        && c.id == import
+                    {
+                        c.group = None;
+                        c.sel = Some(rule);
+                    }
+                    self.reveal_selection();
                 }
                 Act::Toggle(id, on) => {
                     if let Some(doc) = self.active_profile() {
@@ -3759,7 +3805,15 @@ impl eframe::App for App {
                 egui::CentralPanel::default()
                     .frame(egui::Frame::new().fill(p.bg))
                     .show(ui, |ui| {
-                        views::detail_view(ui, catalog, texts, doc, settings, &mut acts);
+                        views::detail_view(
+                            ui,
+                            catalog,
+                            texts,
+                            &self.imports,
+                            doc,
+                            settings,
+                            &mut acts,
+                        );
                     });
             }
         } else if kind == 3 {
@@ -3854,7 +3908,14 @@ impl eframe::App for App {
                 _ => None,
             };
             match shown {
-                Some((file, doc)) => catalogview::catalog_view(ui, file, doc, &mut acts),
+                Some((file, doc)) => catalogview::catalog_view(
+                    ui,
+                    file,
+                    doc,
+                    &self.catalog,
+                    &self.settings,
+                    &mut acts,
+                ),
                 None => {
                     egui::CentralPanel::default().show(ui, |ui| {
                         ui.label(tr("This import is no longer there."));
@@ -5086,6 +5147,49 @@ and kept"
         harness.step();
         harness.step();
         assert!(!has(&harness, "Unknown options"), "hidden by the settings");
+    }
+
+    /// A link opens the catalog tab of an import at the policy, and the same policy in the tree
+    /// of another import is selected there, not in the first tree.
+    #[test]
+    fn links_open_the_catalog_at_a_policy_and_select_it_in_another_tree() {
+        let dir = std::env::temp_dir().join(format!("winweaver-links-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        sample_import(&dir);
+        let again = admx::to_catalog_file(
+            &admx::read_folder(&dir.join("admx")),
+            "again",
+            "Again",
+            "",
+            "now",
+        );
+        again
+            .save(&dir.join("imports").join("again.wwcatalog"))
+            .unwrap();
+        let catalog = Catalog::embedded().unwrap();
+        let settings = Settings {
+            loaded_imports: Some(vec!["test".to_owned(), "again".to_owned()]),
+            ..Settings::default()
+        };
+        let mut app = App::new(catalog, Vec::new(), settings);
+        app.imports_dir = dir.join("imports");
+        app.load_imports();
+        let id = "admx.sample.turnoff";
+        let alias: Vec<String> = app.catalog.alias_groups(id).map(str::to_owned).collect();
+        assert_eq!(alias.len(), 1, "the second import shows the policy too");
+        app.apply(vec![Act::ShowIn(id.to_owned(), alias[0].clone())]);
+        let Doc::Profile(doc) = &app.docs[0] else {
+            panic!("a profile");
+        };
+        assert_eq!(doc.sel, Sel::Rule(id.to_owned()));
+        assert_eq!(doc.focus.as_ref(), Some(&alias[0]));
+        assert!(doc.expanded.contains(&alias[0]), "its tree opens to it");
+        app.apply(vec![Act::OpenCatalogAt("again".to_owned(), id.to_owned())]);
+        let Some(Doc::Catalog(c)) = app.docs.get(app.active) else {
+            panic!("the catalog tab");
+        };
+        assert_eq!((c.id.as_str(), c.sel.as_deref()), ("again", Some(id)));
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     /// Removing an import, discarding changes, forgetting the recent files and renewing the

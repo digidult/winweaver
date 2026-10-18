@@ -463,5 +463,10 @@
   "and {n} more": "et {n} de plus",
   "Only in {name}": "Seulement dans {name}",
   "Different": "Différentes",
-  "Load or open another catalog to compare it with this one": "Chargez ou ouvrez un autre catalogue pour le comparer à celui-ci"
+  "Load or open another catalog to compare it with this one": "Chargez ou ouvrez un autre catalogue pour le comparer à celui-ci",
+  "In other catalogs": "Dans d'autres catalogues",
+  "The same policy in": "La même stratégie dans",
+  "Show in the catalog {name}": "Afficher dans le catalogue {name}",
+  "In the catalogs": "Dans les catalogues",
+  "Open at first in the description:": "Ouverts d'abord dans la description :"
 }

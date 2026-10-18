@@ -325,8 +325,19 @@ pub fn marks_detail(
                     acts.push(Act::SetMarkComment(i, comment));
                 }
             });
+            if let Some(rule) = t.rule
+                && imports
+                    .iter()
+                    .any(|f| f.rules.iter().any(|r| r.id == rule.id))
+            {
+                views::block(ui, |ui| {
+                    style::section_title(ui, tr("In the catalogs"));
+                    ui.add_space(4.0);
+                    views::catalog_links(ui, imports, &rule.id, acts);
+                });
+            }
             if let Some(rule) = t.rule {
-                views::rule_description(ui, catalog, texts, rule, settings.desc_open, false, acts);
+                views::rule_description(ui, catalog, texts, rule, settings, false, acts);
             } else if !t.summary.is_empty() {
                 views::block(ui, |ui| {
                     style::section_title(ui, tr("Description"));

@@ -1,11 +1,26 @@
 # Guida di WinWeaver
 
-WinWeaver prepara installazioni automatiche di Windows 11 Pro per piccoli gruppi di lavoro e mantiene
-configurati i PC installati. Un profilo indica quali regole del catalogo sono attivate, con quali
-parametri, e cosa contengono i moduli dell'installazione; da esso il programma genera `autounattend.xml`.
+WinWeaver prepara installazioni automatiche di Windows 10 e 11 e mantiene configurati i PC installati. Un
+profilo dice quali regole del catalogo sono attive, con quali parametri e che cosa contengono i moduli
+dell'installazione; da esso il programma genera il file di risposte `autounattend.xml` con i suoi script,
+confronta i profili, legge le impostazioni di un PC in funzione e le applica. Il catalogo è scritto per
+piccoli uffici senza dominio: prima la sicurezza e gli aggiornamenti.
 
 Questa pagina si apre al primo avvio e in seguito dal menu o con F1. È un file Markdown; le pagine
 della documentazione si aprono allo stesso modo, ognuna nella propria scheda.
+
+## Come è organizzato
+
+- **I profili** (`.wwprofile`) conservano le vostre scelte; le preimpostazioni Office, Strict, Laptop e
+  Home sono punti di partenza.
+- **Il catalogo** comprende le regole integrate in tre parti (Installazione, Criteri standard, Altro) e i
+  modelli di criteri (ADMX) che importate, che diventano anch'essi regole.
+- **Le schede**: ogni documento si apre nella propria scheda: profili, confronti, cataloghi, segnalibri, il
+  server MCP, pagine come questa.
+- **Questo PC** legge il Windows in funzione, vi controlla le regole, le applica con un backup e crea
+  script per altri PC.
+- **La cartella del programma** tiene tutto accanto a `winweaver.exe` (vedi la fine di questa pagina);
+  nulla viene installato.
 
 ## Primi passi
 
@@ -23,6 +38,10 @@ della documentazione si aprono allo stesso modo, ognuna nella propria scheda.
    chiavetta USB di installazione.
 6. Salva il profilo con Ctrl+S. I profili sono file `.wwprofile` nella cartella `profiles` accanto
    all'eseguibile, oppure in qualsiasi posizione scelta con Salva con nome.
+7. Provate il file di risposte in una macchina virtuale prima di qualsiasi PC reale: installate, poi leggete
+   quel PC con **Questo PC** e confrontatelo con il profilo.
+8. Mantenete in regola i PC installati: **Questo PC** applica le regole scelte come amministratore con un
+   backup, oppure salva script autonomi che applicano, ripristinano, controllano e annullano su altri PC.
 
 ## La finestra
 
@@ -91,6 +110,10 @@ Un criterio presente in due importazioni compare in entrambi gli alberi. **Confr
 scheda di catalogo lo affianca a un'altra importazione caricata o a un file di catalogo aperto: i criteri
 presenti solo in uno dei due e quelli con titolo, descrizione, valori o parametri diversi. Rimuovere
 un'importazione, come ogni rimozione, chiede prima conferma.
+
+Il pannello dei dettagli di un'opzione collega le schede dei cataloghi che la contengono e lo stesso
+criterio negli alberi di altre importazioni; anche un segnalibro dell'opzione. In Impostazioni, Generale si
+sceglie quali parti della descrizione sono aperte all'inizio.
 
 ## Il server MCP
 

@@ -1,11 +1,27 @@
 # Guía de WinWeaver
 
-WinWeaver prepara instalaciones desatendidas de Windows 11 Pro para pequeños grupos de trabajo y mantiene
-configurados los equipos instalados. Un perfil indica qué reglas del catálogo están activadas, con qué
-parámetros y qué contienen los formularios de instalación; a partir de él, el programa genera `autounattend.xml`.
+WinWeaver prepara instalaciones desatendidas de Windows 10 y 11 y mantiene configurados los equipos
+instalados. Un perfil indica qué reglas del catálogo están activadas, con qué parámetros y qué contienen
+los formularios de instalación; a partir de él el programa genera el archivo de respuesta
+`autounattend.xml` con sus scripts, compara perfiles, lee la configuración de un equipo en marcha y la
+aplica. El catálogo está pensado para oficinas pequeñas sin dominio: primero la seguridad y las
+actualizaciones.
 
 Esta página se abre en el primer inicio y, más adelante, desde el menú o con F1. Es un archivo Markdown;
 las páginas de documentación se abren del mismo modo, cada una en su propia pestaña.
+
+## Cómo está organizado
+
+- **Perfiles** (`.wwprofile`): guardan sus elecciones; los perfiles predefinidos Office, Strict, Laptop y
+  Home son puntos de partida.
+- **El catálogo**: las reglas integradas en tres partes (Instalación, Directivas estándar, Otros) y las
+  plantillas de directivas (ADMX) que importe, que también se convierten en reglas.
+- **Pestañas**: cada documento se abre en su propia pestaña: perfiles, comparaciones, catálogos,
+  marcadores, el servidor MCP, páginas como esta.
+- **Este equipo** lee el Windows en marcha, comprueba reglas en él, las aplica con una copia de seguridad
+  y crea scripts para otros equipos.
+- **La carpeta del programa** guarda todo junto a `winweaver.exe` (vea el final de esta página); no se
+  instala nada.
 
 ## Primeros pasos
 
@@ -23,6 +39,11 @@ las páginas de documentación se abren del mismo modo, cada una en su propia pe
    de la unidad USB de instalación.
 6. Guarda el perfil con Ctrl+S. Los perfiles son archivos `.wwprofile` de la carpeta `profiles` junto al
    ejecutable, o de cualquier otra ubicación que elijas con Guardar como.
+7. Pruebe el archivo de respuesta en una máquina virtual antes de cualquier equipo real: instale, después
+   lea ese equipo con **Este equipo** y compárelo con el perfil.
+8. Mantenga al día los equipos instalados: **Este equipo** aplica las reglas seleccionadas como
+   administrador con una copia de seguridad, o guarda scripts independientes que aplican, revierten,
+   auditan y deshacen en otros equipos.
 
 ## La ventana
 
@@ -92,6 +113,10 @@ Una directiva que tienen dos importaciones aparece en ambos árboles. **Comparar
 pestaña de catálogo lo pone junto a otra importación cargada o un archivo de catálogo abierto: las
 directivas que solo están en uno de ellos y aquellas cuyo título, descripción, valores o parámetros
 difieren. Quitar una importación, como cualquier eliminación, pide confirmación antes.
+
+El panel de detalles de una opción enlaza las pestañas de los catálogos que la tienen y la misma
+directiva en los árboles de otras importaciones; un marcador de la opción también. En Configuración,
+General se elige qué partes de la descripción se abren al principio.
 
 ## El servidor MCP
 

@@ -1,12 +1,27 @@
 # Guide de WinWeaver
 
-WinWeaver prépare des installations sans assistance de Windows 11 Pro pour les petits groupes de
-travail et maintient la configuration des PC installés. Un profil indique quelles règles du catalogue
-sont activées, avec quels paramètres, et ce que contiennent les formulaires d'installation ; le
-programme génère `autounattend.xml` à partir de ce profil.
+WinWeaver prépare les installations sans assistance de Windows 10 et 11 et garde les PC installés
+configurés. Un profil indique quelles règles du catalogue sont activées, avec quels paramètres, et ce que
+contiennent les formulaires d'installation ; à partir de lui, le programme génère le fichier de réponses
+`autounattend.xml` avec ses scripts, compare des profils, lit les paramètres d'un PC en marche et les lui
+applique. Le catalogue est écrit pour les petits bureaux sans domaine : la sécurité et les mises à jour
+d'abord.
 
 Cette page s'ouvre au premier démarrage, puis depuis le menu ou avec F1. C'est un fichier Markdown ;
 les pages de documentation s'ouvrent de la même façon, chacune dans son propre onglet.
+
+## Comment il est organisé
+
+- **Les profils** (`.wwprofile`) gardent vos choix ; les préréglages Office, Strict, Laptop et Home sont
+  des points de départ.
+- **Le catalogue** réunit les règles intégrées en trois parties (Installation, Stratégies standard,
+  Autres) et les modèles de stratégie (ADMX) que vous importez, qui deviennent aussi des règles.
+- **Les onglets** : chaque document s'ouvre dans son propre onglet : profils, comparaisons, catalogues,
+  signets, le serveur MCP, des pages comme celle-ci.
+- **Ce PC** lit le Windows en marche, y vérifie des règles, les applique avec une sauvegarde et crée des
+  scripts pour d'autres PC.
+- **Le dossier du programme** garde tout à côté de `winweaver.exe` (voir la fin de cette page) ; rien
+  n'est installé.
 
 ## Premiers pas
 
@@ -24,6 +39,11 @@ les pages de documentation s'ouvrent de la même façon, chacune dans son propre
    le fichier à la racine de la clé USB d'installation.
 6. Enregistrez le profil avec Ctrl+S. Les profils sont des fichiers `.wwprofile` dans le dossier
    `profiles` à côté de l'exécutable, ou à l'emplacement de votre choix avec Enregistrer sous.
+7. Essayez le fichier de réponses dans une machine virtuelle avant tout PC réel : installez, puis lisez ce
+   PC avec **Ce PC** et comparez-le au profil.
+8. Gardez les PC installés en règle : **Ce PC** applique les règles choisies en administrateur avec une
+   sauvegarde, ou enregistre des scripts autonomes qui appliquent, annulent, contrôlent et défont sur
+   d'autres PC.
 
 ## La fenêtre
 
@@ -96,6 +116,10 @@ barre d'un onglet de catalogue le met en regard d'une autre importation chargée
 catalogue ouvert : les stratégies présentes dans un seul des deux et celles dont le titre, la description,
 les valeurs ou les paramètres diffèrent. Supprimer une importation, comme toute suppression, demande
 confirmation.
+
+Le panneau de détails d'une option renvoie aux onglets des catalogues qui la contiennent et à la même
+stratégie dans les arborescences d'autres importations ; un signet de l'option aussi. Paramètres, Général
+choisit quelles parties de la description sont ouvertes d'abord.
 
 ## Le serveur MCP
 

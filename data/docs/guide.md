@@ -1,11 +1,26 @@
 # WinWeaver guide
 
-WinWeaver prepares unattended installations of Windows 11 Pro for small workgroups and keeps the
-installed PCs configured. A profile says which rules of the catalog are on, with which parameters,
-and what the installation forms hold; the program builds `autounattend.xml` from it.
+WinWeaver prepares unattended installations of Windows 10 and 11 and keeps the installed PCs configured.
+A profile says which rules of the catalog are on, with which parameters, and what the installation forms
+hold; from it the program builds the answer file `autounattend.xml` with its scripts, compares profiles,
+reads the settings of a running PC and applies them to it. The catalog is written for small offices
+without a domain: security and updates first.
 
 This page opens at the first start and later from the menu or with F1. It is a Markdown file; the
 documentation pages open the same way, each in its own tab.
+
+## How it is organized
+
+- **Profiles** (`.wwprofile`) hold your choices; the presets Office, Strict, Laptop and Home are starting
+  points.
+- **The catalog** is the built-in rules in three parts (Installation, Standard policies, Other) and the
+  policy templates (ADMX) you import, which become rules too.
+- **Tabs**: every document opens in its own tab: profiles, comparisons, catalogs, bookmarks, the MCP
+  server, pages like this one.
+- **This PC** reads the running Windows, checks rules against it, applies them with a backup and makes
+  scripts for other PCs.
+- **The folder of the program** keeps everything next to `winweaver.exe` (see the end of this page);
+  nothing is installed.
 
 ## First steps
 
@@ -22,6 +37,10 @@ documentation pages open the same way, each in its own tab.
    installation USB stick.
 6. Save the profile with Ctrl+S. Profiles are `.wwprofile` files in the folder `profiles` next to
    the executable, or anywhere you choose with Save as.
+7. Try the answer file in a virtual machine before any real PC: install, then read that PC with
+   **This PC** and compare it with the profile.
+8. Keep the installed PCs in line: **This PC** applies the selected rules as administrator with a
+   backup, or saves stand-alone scripts that apply, revert, audit and undo on other PCs.
 
 ## The window
 
@@ -86,6 +105,10 @@ A policy two imports hold shows in both trees. **Compare** in the bar of a catal
 side by side with another loaded import or an open catalog file: the policies only in one of them and
 those whose title, description, values or parameters differ. Removing an import, like every removal,
 asks first.
+
+The detail panel of an option links to the catalog tabs that hold it and to the same policy in the
+trees of other imports; a bookmark of the option does the same. Settings, General choose which parts of
+the description open at first.
 
 ## The MCP server
 

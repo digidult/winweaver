@@ -1,11 +1,26 @@
 # Panduan WinWeaver
 
-WinWeaver menyiapkan instalasi Windows 11 Pro tanpa pengawasan untuk grup kerja kecil dan menjaga
-konfigurasi PC yang sudah terinstal. Profil menentukan aturan katalog mana yang aktif, dengan parameter
-apa, dan apa isi formulir instalasi; program membuat `autounattend.xml` dari profil tersebut.
+WinWeaver menyiapkan instalasi otomatis Windows 10 dan 11 serta menjaga konfigurasi PC yang sudah
+terpasang. Sebuah profil menyatakan aturan katalog mana yang aktif, dengan parameter apa, dan apa isi
+formulir instalasi; dari profil itu program membuat file jawaban `autounattend.xml` beserta skripnya,
+membandingkan profil, membaca pengaturan PC yang berjalan, dan menerapkannya. Katalog ini ditulis untuk
+kantor kecil tanpa domain: keamanan dan pembaruan lebih dulu.
 
 Halaman ini terbuka saat program pertama kali dimulai, dan selanjutnya dari menu atau dengan F1. Halaman
 ini adalah file Markdown; halaman dokumentasi terbuka dengan cara yang sama, masing-masing di tabnya sendiri.
+
+## Cara program tersusun
+
+- **Profil** (`.wwprofile`) menyimpan pilihan Anda; preset Office, Strict, Laptop, dan Home menjadi titik
+  awal.
+- **Katalog** terdiri dari aturan bawaan dalam tiga bagian (Instalasi, Kebijakan standar, Lainnya) dan
+  templat kebijakan (ADMX) yang Anda impor, yang juga menjadi aturan.
+- **Tab**: setiap dokumen terbuka di tabnya sendiri: profil, perbandingan, katalog, penanda, server MCP,
+  halaman seperti ini.
+- **PC Ini** membaca Windows yang berjalan, memeriksa aturan di sana, menerapkannya dengan cadangan, dan
+  membuat skrip untuk PC lain.
+- **Folder program** menyimpan semuanya di samping `winweaver.exe` (lihat akhir halaman ini); tidak ada
+  yang diinstal.
 
 ## Langkah pertama
 
@@ -22,6 +37,11 @@ ini adalah file Markdown; halaman dokumentasi terbuka dengan cara yang sama, mas
    instalasi.
 6. Simpan profil dengan Ctrl+S. Profil adalah file `.wwprofile` di folder `profiles` di samping file
    program, atau di mana pun yang Anda pilih dengan Simpan sebagai.
+7. Coba file jawaban di mesin virtual sebelum PC sungguhan: instal, lalu baca PC itu dengan **PC Ini**
+   dan bandingkan dengan profilnya.
+8. Jaga PC yang terpasang tetap sesuai: **PC Ini** menerapkan aturan terpilih sebagai administrator dengan
+   cadangan, atau menyimpan skrip mandiri yang menerapkan, mengembalikan, mengaudit, dan membatalkan di PC
+   lain.
 
 ## Jendela
 
@@ -86,6 +106,9 @@ Kebijakan yang ada di dua impor tampil di kedua pohon. **Bandingkan** di bilah t
 menyandingkannya dengan impor lain yang dimuat atau file katalog yang terbuka: kebijakan yang hanya ada
 di salah satunya dan yang judul, deskripsi, nilai, atau parameternya berbeda. Menghapus impor, seperti
 setiap penghapusan, meminta konfirmasi lebih dulu.
+
+Panel detail sebuah opsi menautkan tab katalog yang memuatnya dan kebijakan yang sama di pohon impor lain;
+penanda opsi itu juga. Di Pengaturan, Umum dipilih bagian deskripsi mana yang terbuka sejak awal.
 
 ## Server MCP
 

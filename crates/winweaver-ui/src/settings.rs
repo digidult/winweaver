@@ -66,6 +66,8 @@ pub struct Settings {
     pub hidden_imports: Vec<String>,
     /// The options of a profile whose catalog is not loaded are left out of the tree.
     pub hide_unknown: bool,
+    /// The parts of the description of an option open at first.
+    pub desc_sections: DescSections,
     /// The renderer the window tries first (`opengl`, `directx`), empty for Automatic; a name this
     /// executable lacks is Automatic. `--renderer` overrides it for one start.
     pub renderer: String,
@@ -93,6 +95,32 @@ impl Default for Settings {
             hidden_imports: Vec::new(),
             hide_unknown: false,
             renderer: String::new(),
+            desc_sections: DescSections::default(),
+        }
+    }
+}
+
+/// The parts of the description of an option open at first; folded ones open with a click.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct DescSections {
+    pub what: bool,
+    pub risk: bool,
+    pub writes: bool,
+    pub deps: bool,
+    pub more: bool,
+    pub reference: bool,
+}
+
+impl Default for DescSections {
+    fn default() -> Self {
+        Self {
+            what: true,
+            risk: true,
+            writes: true,
+            deps: false,
+            more: false,
+            reference: false,
         }
     }
 }

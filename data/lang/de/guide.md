@@ -1,12 +1,26 @@
 # WinWeaver-Handbuch
 
-WinWeaver bereitet unbeaufsichtigte Installationen von Windows 11 Pro für kleine Arbeitsgruppen vor und hält
-die installierten PCs konfiguriert. Ein Profil legt fest, welche Regeln des Katalogs eingeschaltet sind, mit
-welchen Parametern, und was die Installationsformulare enthalten; daraus erstellt das Programm
-`autounattend.xml`.
+WinWeaver bereitet unbeaufsichtigte Installationen von Windows 10 und 11 vor und hält die installierten PCs
+konfiguriert. Ein Profil sagt, welche Regeln des Katalogs an sind, mit welchen Parametern, und was die
+Installationsformulare enthalten; daraus erstellt das Programm die Antwortdatei `autounattend.xml` mit
+ihren Skripten, vergleicht Profile, liest die Einstellungen eines laufenden PCs und wendet sie auf ihn an.
+Der Katalog ist für kleine Büros ohne Domäne geschrieben: Sicherheit und Updates zuerst.
 
 Diese Seite wird beim ersten Start geöffnet und später über das Menü oder mit F1. Sie ist eine
 Markdown-Datei; die Seiten der Dokumentation werden genauso geöffnet, jede in einer eigenen Registerkarte.
+
+## Wie das Programm aufgebaut ist
+
+- **Profile** (`.wwprofile`) enthalten Ihre Auswahl; die Vorlagen Office, Strict, Laptop und Home sind
+  Ausgangspunkte.
+- **Der Katalog** besteht aus den integrierten Regeln in drei Teilen (Installation, Standardrichtlinien,
+  Sonstiges) und den Richtlinienvorlagen (ADMX), die Sie importieren und die ebenfalls zu Regeln werden.
+- **Registerkarten**: Jedes Dokument öffnet sich in einer eigenen Registerkarte: Profile, Vergleiche,
+  Kataloge, Lesezeichen, der MCP-Server, Seiten wie diese.
+- **Dieser PC** liest das laufende Windows, prüft Regeln darauf, wendet sie mit einer Sicherung an und
+  erstellt Skripte für andere PCs.
+- **Der Ordner des Programms** hält alles neben `winweaver.exe` (siehe das Ende dieser Seite); nichts
+  wird installiert.
 
 ## Erste Schritte
 
@@ -25,6 +39,11 @@ Markdown-Datei; die Seiten der Dokumentation werden genauso geöffnet, jede in e
    Stammverzeichnis des USB-Installationssticks.
 6. Speichern Sie das Profil mit Ctrl+S. Profile sind `.wwprofile`-Dateien im Ordner `profiles` neben der
    ausführbaren Datei oder an einem beliebigen Ort, den Sie mit „Speichern unter“ wählen.
+7. Testen Sie die Antwortdatei in einer virtuellen Maschine vor jedem echten PC: installieren, dann diesen
+   PC mit **Dieser PC** lesen und mit dem Profil vergleichen.
+8. Halten Sie die installierten PCs auf Linie: **Dieser PC** wendet die ausgewählten Regeln als
+   Administrator mit einer Sicherung an oder speichert eigenständige Skripte zum Anwenden, Zurücksetzen,
+   Prüfen und Rückgängigmachen auf anderen PCs.
 
 ## Das Fenster
 
@@ -95,6 +114,10 @@ Eine Richtlinie, die zwei Importe enthalten, erscheint in beiden Strukturen. **V
 eines Katalog-Tabs stellt den Katalog einem anderen geladenen Import oder einer geöffneten Katalogdatei
 gegenüber: die Richtlinien, die nur in einem davon stehen, und die, deren Titel, Beschreibung, Werte oder
 Parameter sich unterscheiden. Das Entfernen eines Imports fragt, wie jedes Entfernen, zuerst nach.
+
+Der Detailbereich einer Option verlinkt die Katalog-Tabs, die sie enthalten, und dieselbe Richtlinie in
+den Strukturen anderer Importe; ein Lesezeichen der Option ebenso. Unter Einstellungen, Allgemein wird
+gewählt, welche Teile der Beschreibung zuerst geöffnet sind.
 
 ## Der MCP-Server
 

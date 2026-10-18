@@ -463,5 +463,10 @@
   "and {n} more": "ve {n} tane daha",
   "Only in {name}": "Yalnızca {name} içinde",
   "Different": "Farklı",
-  "Load or open another catalog to compare it with this one": "Bununla karşılaştırmak için başka bir katalog yükleyin veya açın"
+  "Load or open another catalog to compare it with this one": "Bununla karşılaştırmak için başka bir katalog yükleyin veya açın",
+  "In other catalogs": "Diğer kataloglarda",
+  "The same policy in": "Aynı ilke şurada:",
+  "Show in the catalog {name}": "{name} kataloğunda göster",
+  "In the catalogs": "Kataloglarda",
+  "Open at first in the description:": "Açıklamada baştan açık olanlar:"
 }

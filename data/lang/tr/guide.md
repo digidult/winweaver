@@ -1,12 +1,26 @@
 # WinWeaver kılavuzu
 
-WinWeaver, küçük çalışma grupları için Windows 11 Pro'nun gözetimsiz yüklemelerini hazırlar ve yüklü
-bilgisayarların yapılandırmasını korur. Profil, kataloğun hangi kurallarının hangi parametrelerle açık
-olduğunu ve yükleme formlarının neleri içerdiğini belirtir; program bu profilden `autounattend.xml`
-dosyasını oluşturur.
+WinWeaver, Windows 10 ve 11'in gözetimsiz kurulumlarını hazırlar ve kurulu bilgisayarların yapılandırmasını
+korur. Bir profil, kataloğun hangi kurallarının hangi parametrelerle açık olduğunu ve kurulum formlarında ne
+bulunduğunu söyler; program ondan betikleriyle birlikte `autounattend.xml` yanıt dosyasını oluşturur,
+profilleri karşılaştırır, çalışan bir bilgisayarın ayarlarını okur ve ona uygular. Katalog, etki alanı
+olmayan küçük ofisler için yazılmıştır: önce güvenlik ve güncellemeler.
 
 Bu sayfa ilk başlangıçta, daha sonra da menüden veya F1 ile açılır. Bir Markdown dosyasıdır; belge
 sayfaları da aynı şekilde, her biri kendi sekmesinde açılır.
+
+## Program nasıl düzenlenmiştir
+
+- **Profiller** (`.wwprofile`) seçimlerinizi tutar; Office, Strict, Laptop ve Home hazır ayarları başlangıç
+  noktalarıdır.
+- **Katalog**, üç bölümdeki yerleşik kurallardan (Kurulum, Standart ilkeler, Diğer) ve içeri aktardığınız,
+  onlar da kurala dönüşen ilke şablonlarından (ADMX) oluşur.
+- **Sekmeler**: her belge kendi sekmesinde açılır: profiller, karşılaştırmalar, kataloglar, yer imleri, MCP
+  sunucusu, bunun gibi sayfalar.
+- **Bu bilgisayar** çalışan Windows'u okur, kuralları onda denetler, onları bir yedekle uygular ve başka
+  bilgisayarlar için betikler oluşturur.
+- **Programın klasörü** her şeyi `winweaver.exe` dosyasının yanında tutar (bu sayfanın sonuna bakın); hiçbir
+  şey kurulmaz.
 
 ## İlk adımlar
 
@@ -24,6 +38,11 @@ sayfaları da aynı şekilde, her biri kendi sekmesinde açılır.
    köküne kopyalayın.
 6. Profili Ctrl+S ile kaydedin. Profiller, yürütülebilir dosyanın yanındaki `profiles` klasöründe veya
    Farklı kaydet ile seçtiğiniz herhangi bir yerde bulunan `.wwprofile` dosyalarıdır.
+7. Yanıt dosyasını herhangi bir gerçek bilgisayardan önce bir sanal makinede deneyin: kurun, sonra o
+   bilgisayarı **Bu bilgisayar** ile okuyup profille karşılaştırın.
+8. Kurulu bilgisayarları düzende tutun: **Bu bilgisayar** seçili kuralları yönetici olarak bir yedekle
+   uygular veya başka bilgisayarlarda uygulayan, geri alan, denetleyen ve geri döndüren bağımsız betikler
+   kaydeder.
 
 ## Pencere
 
@@ -89,6 +108,10 @@ Chrome, Edge ve Firefox'un yayımladığı biçimdeki bir şablon zip arşivi ve
 **Karşılaştır**, onu yüklenmiş başka bir içeri aktarımla veya açık bir katalog dosyasıyla yan yana koyar:
 yalnızca birinde olan ilkeler ve başlığı, açıklaması, değerleri veya parametreleri farklı olanlar. Bir içeri
 aktarımı kaldırmak, her kaldırma gibi, önce onay ister.
+
+Bir seçeneğin ayrıntı paneli, onu içeren katalog sekmelerine ve diğer içeri aktarımların ağaçlarındaki aynı
+ilkeye bağlantı verir; seçeneğin yer imi de öyle. Ayarlar, Genel'de açıklamanın hangi bölümlerinin baştan
+açık olacağı seçilir.
 
 ## MCP sunucusu
 

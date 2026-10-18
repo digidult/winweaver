@@ -463,5 +463,10 @@
   "and {n} more": "и ещё {n}",
   "Only in {name}": "Только в {name}",
   "Different": "Отличаются",
-  "Load or open another catalog to compare it with this one": "Загрузите или откройте другой каталог, чтобы сравнить его с этим"
+  "Load or open another catalog to compare it with this one": "Загрузите или откройте другой каталог, чтобы сравнить его с этим",
+  "In other catalogs": "В других каталогах",
+  "The same policy in": "Та же политика в",
+  "Show in the catalog {name}": "Показать в каталоге {name}",
+  "In the catalogs": "В каталогах",
+  "Open at first in the description:": "Сразу открыты в описании:"
 }
