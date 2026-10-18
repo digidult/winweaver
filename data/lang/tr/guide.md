@@ -97,6 +97,13 @@ Yönetici olarak uygulandığında, Windows uygulamalarını veya yeteneklerini 
 pencereden de kaldırır: yetenekleri DISM üzerinden, uygulamaları tüm kullanıcılar ve sonradan oluşturulan
 hesaplar için. Yedek onları listeler, ancak Geri al onları geri getirmez.
 
+Kuralların betik adımları da PowerShell olmadan yerel olarak uygulanır: yükleme ortamından .NET Framework
+3.5 ve sürücüler, hizmetlerin başlangıç türleri, NetBIOS, gezinti bölmesindeki çıkarılabilir sürücüler,
+profil hesapları için "parolanın süresi hiç dolmaz", yerleşik Administrator ve Guest hesaplarının devre
+dışı bırakılması (kullanılan hesap asla) ve yanıt dosyası kopyalarının silinmesi. Geri al; çalışan
+programları, değişen hesapları ve silinen dosyaları geri almaz; onay, bir planda bu türden kaç adım
+olduğunu söyler.
+
 ## Profilleri karşılaştırma
 
 **Menü, Bir dosyayla karşılaştır** veya **Bir hazır ayarla karşılaştır**, bir karşılaştırma sekmesi
@@ -225,5 +232,4 @@ kaydedilmemiş değişiklikler), `mcp/` (MCP sunucusunun yapılandırmaları), `
 
 ## Henüz yok
 
-Bazı kuralların betik adımları ve diğer kullanıcıların profilleri, pencereden uygulandığında: o zamana
-kadar bunu uygulama betiği yapar.
+Kayıt defteri sekmesinde kayıt defteri anahtarlarının izinleri.

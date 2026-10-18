@@ -1,6 +1,9 @@
-//! The executor of an apply plan, run by the elevated helper: registry values, service start types,
-//! programs of the system folder, capability removals through DISM and app removals through the
-//! package API, each change backed up first. It never runs a script.
+//! The executor of an apply plan, run by the elevated helper: registry values and keys, service
+//! start types, programs of the system folder (also on a folder of the installation media),
+//! capability removals through DISM, app removals through the package API, the flags of local
+//! accounts and the copies of the answer file. Each registry change is backed up first; the
+//! changes no undo takes back are named in the backup. It never runs a script: the script steps of
+//! the catalog come here as the native steps of `apply::script_ops`.
 
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -353,26 +356,226 @@ fn run(file: &str, args: &[String]) -> Result<String, String> {
     }
 }
 
-fn describe(op: &Op) -> String {
-    match op {
-        Op::SetValue {
-            path, name, data, ..
-        } => format!("{path}\\{name} = {data}"),
-        Op::DeleteValue { path, name } => format!("{path}\\{name} removed"),
-        Op::SetList {
-            path,
-            names,
-            additive,
-            ..
-        } => {
-            let how = if *additive { "added to" } else { "the list of" };
-            format!("{} values {how} {path}", names.len())
-        }
-        Op::ServiceStart { name, start } => format!("service {name} start type {start}"),
-        Op::Run { file, args } => format!("{file} {}", args.join(" ")),
-        Op::RemoveCapability { pattern } => format!("capabilities {pattern} removed"),
-        Op::RemoveApps { names } => format!("apps {} removed", names.join(", ")),
+/// The names of the subkeys of a key; none when the key does not exist.
+fn subkey_names(path: &str) -> Result<Vec<String>, String> {
+    let (root, sub) = split(path)?;
+    let key = match root.open_subkey_with_flags(&sub, KEY_READ) {
+        Ok(k) => k,
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) => return Err(e.to_string()),
+    };
+    key.enum_keys()
+        .collect::<io::Result<Vec<_>>>()
+        .map_err(|e| e.to_string())
+}
+
+/// Every value under a key and its subkeys, as a path and a name; a tree deeper than 32 keys or
+/// with more than 10000 values is refused, so it is never deleted without its backup.
+fn values_under(path: &str, out: &mut Vec<(String, String)>, depth: usize) -> Result<(), String> {
+    if depth > 32 || out.len() > 10_000 {
+        return Err(format!("{path} is too large to back up"));
     }
+    for name in value_names(path)? {
+        out.push((path.to_owned(), name));
+    }
+    for sub in subkey_names(path)? {
+        values_under(&format!("{path}\\{sub}"), out, depth + 1)?;
+    }
+    Ok(())
+}
+
+/// Deletes a key with everything under it; false when it did not exist.
+fn delete_key(path: &str) -> Result<bool, String> {
+    let (root, sub) = split(path)?;
+    match root.delete_subkey_all(&sub) {
+        Ok(()) => Ok(true),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// Whether a folder holds a file of an extension, in its subfolders too when `deep`; at most
+/// 100000 entries are looked at.
+fn has_file(dir: &Path, extension: &str, deep: bool, seen: &mut usize) -> bool {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return false;
+    };
+    for entry in entries.flatten() {
+        *seen += 1;
+        if *seen > 100_000 {
+            return false;
+        }
+        let path = entry.path();
+        if entry.file_type().is_ok_and(|t| t.is_dir()) {
+            if deep && has_file(&path, extension, deep, seen) {
+                return true;
+            }
+        } else if path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case(extension))
+        {
+            return true;
+        }
+    }
+    false
+}
+
+/// The first drive from C: whose `folder` holds a file of `pattern` (`*.cab`), as the script steps
+/// look for the folders of the installation media. A drive without a disk asks nothing.
+fn media_folder(folder: &str, pattern: &str, deep: bool) -> Option<PathBuf> {
+    use windows_sys::Win32::System::Diagnostics::Debug::{
+        SEM_FAILCRITICALERRORS, SEM_NOOPENFILEERRORBOX, SetErrorMode,
+    };
+    let extension = pattern.strip_prefix("*.")?;
+    let relative = !folder.contains("..") && !folder.contains(':') && !folder.starts_with('\\');
+    if !relative || !extension.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return None;
+    }
+    // SAFETY: the error mode of the process; the previous one comes back below.
+    let before = unsafe { SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX) };
+    let found = (b'C'..=b'Z')
+        .map(|letter| PathBuf::from(format!("{}:\\", char::from(letter))).join(folder))
+        .find(|dir| dir.is_dir() && has_file(dir, extension, deep, &mut 0));
+    // SAFETY: the mode the process had.
+    unsafe { SetErrorMode(before) };
+    found
+}
+
+/// An entry of the backup that names a change no undo takes back, as the apply script names them.
+fn named(kind: &str, name: &str) -> BackupEntry {
+    BackupEntry {
+        kind: kind.to_owned(),
+        path: String::new(),
+        name: name.to_owned(),
+        existed: true,
+        value_type: None,
+        value: Value::Null,
+    }
+}
+
+/// The status of a step that did several things: failed when one of them failed.
+fn outcome(failed: bool, notes: Vec<String>) -> (&'static str, String) {
+    let status = if failed { "failed" } else { "ok" };
+    (status, notes.join("; "))
+}
+
+/// Sets "password never expires" on the accounts of the profile that exist.
+fn never_expires(accounts: &[String], backup: &mut Vec<BackupEntry>) -> (&'static str, String) {
+    let mut notes = Vec::new();
+    let mut failed = false;
+    if accounts.is_empty() {
+        notes.push("the profile has no accounts".to_owned());
+    }
+    for name in accounts {
+        match crate::accounts::set_flag(name, crate::accounts::NEVER_EXPIRES, true) {
+            Ok(Some(true)) => {
+                let what = format!("{name}: password never expires");
+                backup.push(named("account-changed", &what));
+                notes.push(format!("{name}: set"));
+            }
+            Ok(Some(false)) => notes.push(format!("{name}: set already")),
+            Ok(None) => notes.push(format!("{name}: no such account")),
+            Err(e) => {
+                failed = true;
+                notes.push(e);
+            }
+        }
+    }
+    outcome(failed, notes)
+}
+
+/// Disables the built-in Administrator and Guest, never the account the helper runs as.
+fn disable_builtin(backup: &mut Vec<BackupEntry>) -> (&'static str, String) {
+    let found = match crate::accounts::builtin() {
+        Ok(found) => found,
+        Err(e) => return ("failed", e),
+    };
+    let me = std::env::var("USERNAME").unwrap_or_default();
+    let mut notes = Vec::new();
+    let mut failed = false;
+    for name in found {
+        if name.eq_ignore_ascii_case(&me) {
+            notes.push(format!("{name}: left on, it is the account in use"));
+            continue;
+        }
+        match crate::accounts::set_flag(&name, crate::accounts::DISABLED, true) {
+            Ok(Some(true)) => {
+                backup.push(named("account-changed", &format!("{name}: disabled")));
+                notes.push(format!("{name}: disabled"));
+            }
+            Ok(Some(false)) => notes.push(format!("{name}: disabled already")),
+            Ok(None) => {}
+            Err(e) => {
+                failed = true;
+                notes.push(e);
+            }
+        }
+    }
+    outcome(failed, notes)
+}
+
+/// The lines of the error file of the installation in the note, then the file deleted; no other
+/// file is read.
+fn collect_errors(file: &str) -> (&'static str, String) {
+    use std::io::Read;
+    if !file.eq_ignore_ascii_case(apply::SETUP_ERRORS) {
+        let why = format!("{file} is not the error file of the installation");
+        return ("failed", why);
+    }
+    let mut bytes = Vec::new();
+    let read = std::fs::File::open(file).and_then(|f| f.take(64 * 1024).read_to_end(&mut bytes));
+    match read {
+        Ok(_) => {}
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return ("ok", "no errors".to_owned()),
+        Err(e) => return ("failed", e.to_string()),
+    }
+    let text = String::from_utf8_lossy(&bytes);
+    let lines: Vec<&str> = text
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .take(50)
+        .collect();
+    let mut notes = if lines.is_empty() {
+        vec!["the file was empty".to_owned()]
+    } else {
+        vec![format!("errors of the installation: {}", lines.join(" | "))]
+    };
+    if let Err(e) = std::fs::remove_file(file) {
+        notes.push(format!("{file} was not deleted: {e}"));
+    }
+    outcome(false, notes)
+}
+
+/// Deletes the copies of the answer file that exist; no other file is deleted.
+fn delete_files(paths: &[String], backup: &mut Vec<BackupEntry>) -> (&'static str, String) {
+    let mut notes = Vec::new();
+    let mut failed = false;
+    for path in paths {
+        if !apply::ANSWER_FILE_COPIES
+            .iter()
+            .any(|c| c.eq_ignore_ascii_case(path))
+        {
+            failed = true;
+            notes.push(format!("{path} is not a copy of the answer file, left"));
+            continue;
+        }
+        match std::fs::remove_file(path) {
+            Ok(()) => {
+                backup.push(named("file-deleted", path));
+                notes.push(format!("deleted {path}"));
+            }
+            Err(e) if e.kind() == io::ErrorKind::NotFound => {}
+            Err(e) => {
+                failed = true;
+                notes.push(format!("{path}: {e}"));
+            }
+        }
+    }
+    if notes.is_empty() {
+        notes.push("none was there".to_owned());
+    }
+    outcome(failed, notes)
 }
 
 /// Removes apps for every user and for new accounts; each app found goes into the backup the way
@@ -465,7 +668,7 @@ pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
         {
             report.results.push(StepResult {
                 rule: step.rule.clone(),
-                what: describe(&step.op),
+                what: step.op.describe(),
                 status: "failed".to_owned(),
                 note: why.clone(),
             });
@@ -547,10 +750,86 @@ pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
             },
             Op::RemoveCapability { pattern } => remove_capabilities(pattern, &mut backup),
             Op::RemoveApps { names } => remove_apps(names, &mut backup),
+            Op::RunFromMedia {
+                folder,
+                pattern,
+                deep,
+                file,
+                args,
+            } => match media_folder(folder, pattern, *deep) {
+                None => ("skipped", format!("no drive has {folder} with {pattern}")),
+                Some(source) => {
+                    let source = source.display().to_string();
+                    let args: Vec<String> = args
+                        .iter()
+                        .map(|a| a.replace("{source}", &source))
+                        .collect();
+                    match run(file, &args) {
+                        Ok(note) => ("ok", note),
+                        Err(e) => ("failed", e),
+                    }
+                }
+            },
+            Op::ServiceStartFrom { name, from, start } => {
+                let key = apply::service_key(name);
+                match machine.value(&key, "Start") {
+                    Ok(Some(RegData::Dword(now))) if now == *from => {
+                        remember(&key, "Start", &mut backup);
+                        match write_value(&key, "Start", RegKind::DWord, &Value::from(*start)) {
+                            Ok(()) => ("ok", String::new()),
+                            Err(e) => ("failed", e),
+                        }
+                    }
+                    Ok(Some(_)) => ("ok", format!("the start type is not {from}, unchanged")),
+                    Ok(None) => ("skipped", "the service is not present".to_owned()),
+                    Err(e) => ("failed", e),
+                }
+            }
+            Op::SetValueInSubkeys {
+                path,
+                name,
+                kind,
+                data,
+            } => match subkey_names(path) {
+                Err(e) => ("failed", e),
+                Ok(subs) if subs.is_empty() => ("skipped", "the key has no subkeys".to_owned()),
+                Ok(subs) => {
+                    let mut failed = Vec::new();
+                    for sub in &subs {
+                        let at = format!("{path}\\{sub}");
+                        remember(&at, name, &mut backup);
+                        if let Err(e) = write_value(&at, name, *kind, data) {
+                            failed.push(e);
+                        }
+                    }
+                    let note = format!("{} subkeys", subs.len());
+                    outcome(!failed.is_empty(), [vec![note], failed].concat())
+                }
+            },
+            Op::DeleteKey { path } => {
+                let mut found = Vec::new();
+                match values_under(path, &mut found, 0) {
+                    Err(e) => ("failed", e),
+                    Ok(()) => {
+                        for (at, name) in &found {
+                            remember(at, name, &mut backup);
+                        }
+                        match delete_key(path) {
+                            Ok(true) => ("ok", format!("{} values backed up", found.len())),
+                            Ok(false) => ("ok", "it did not exist".to_owned()),
+                            Err(e) => ("failed", e),
+                        }
+                    }
+                }
+            }
+            Op::PasswordNeverExpires { accounts } => never_expires(accounts, &mut backup),
+            Op::DisableBuiltinAccounts => disable_builtin(&mut backup),
+            Op::CollectErrors { file } => collect_errors(file),
+            Op::DeleteFiles { paths } => delete_files(paths, &mut backup),
         };
         report.results.push(StepResult {
             rule: step.rule.clone(),
-            what: describe(&step.op),
+            what: step.op.describe(),
             status: status.to_owned(),
             note,
         });
@@ -785,6 +1064,78 @@ mod tests {
         let sub = key.strip_prefix("HKU:\\").unwrap();
         users.delete_subkey_all(sub).unwrap();
         hive.unmount().unwrap();
+        std::fs::remove_dir_all(&out).unwrap();
+    }
+
+    #[test]
+    fn the_native_script_steps_work_and_undo_in_a_test_key() {
+        let key = format!("HKCU:\\Software\\WinWeaverSteps-{}", std::process::id());
+        let (one, two, deep) = (
+            format!("{key}\\A\\One"),
+            format!("{key}\\A\\Two"),
+            format!("{key}\\Gone\\Deep"),
+        );
+        for path in [&one, &two, &deep] {
+            write_value(path, "x", RegKind::String, &Value::from("old")).unwrap();
+        }
+        let out = std::env::temp_dir().join(format!("winweaver-steps-{}", std::process::id()));
+        std::fs::create_dir_all(&out).unwrap();
+        let kept = out.join("unattend.xml");
+        std::fs::write(&kept, "kept").unwrap();
+        let step = |op| Step {
+            rule: "test".to_owned(),
+            op,
+        };
+        let plan = Plan {
+            format: apply::PLAN_FORMAT.to_owned(),
+            version: apply::PLAN_VERSION,
+            nonce: "n".to_owned(),
+            purpose: "apply".to_owned(),
+            steps: vec![
+                step(Op::SetValueInSubkeys {
+                    path: format!("{key}\\A"),
+                    name: "N".into(),
+                    kind: RegKind::DWord,
+                    data: Value::from(2),
+                }),
+                step(Op::DeleteKey {
+                    path: format!("{key}\\Gone"),
+                }),
+                step(Op::ServiceStartFrom {
+                    name: "WinWeaverNoSuchService".into(),
+                    from: 4,
+                    start: 3,
+                }),
+                step(Op::RunFromMedia {
+                    folder: "WinWeaverNoSuchFolder".into(),
+                    pattern: "*.cab".into(),
+                    deep: false,
+                    file: "hostname.exe".into(),
+                    args: vec![],
+                }),
+                // A file that is not a copy of the answer file is never deleted.
+                step(Op::DeleteFiles {
+                    paths: vec![kept.display().to_string()],
+                }),
+            ],
+            skipped: vec![],
+        };
+        let report = execute(&plan, &out, "steps");
+        assert_eq!(report.count("skipped"), 2, "{report:?}");
+        assert_eq!(report.count("failed"), 1, "{report:?}");
+        assert!(kept.exists());
+        let m = NativeMachine;
+        assert_eq!(m.value(&one, "N"), Ok(Some(RegData::Dword(2))));
+        assert_eq!(m.value(&two, "N"), Ok(Some(RegData::Dword(2))));
+        assert_eq!(m.value(&deep, "x"), Ok(None), "the key is deleted");
+        // The undo makes the deleted key again with its value and removes the new values.
+        let entries = apply::read_backup(&out.join(&report.backup)).unwrap();
+        let undo = execute(&plan_undo(&entries, "n"), &out, "steps-undo");
+        assert_eq!(undo.count("failed"), 0, "{undo:?}");
+        assert_eq!(m.value(&deep, "x"), Ok(Some(RegData::Str("old".into()))));
+        assert_eq!(m.value(&one, "N"), Ok(None));
+        let (root, sub) = split(&key).unwrap();
+        root.delete_subkey_all(&sub).unwrap();
         std::fs::remove_dir_all(&out).unwrap();
     }
 }

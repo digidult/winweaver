@@ -92,6 +92,13 @@ Applied as administrator, a rule that removes apps or capabilities of Windows re
 as well: capabilities through DISM, apps for every user and for the accounts created later. The backup names
 them, and Undo does not bring them back.
 
+The script steps of the rules are applied natively too, without PowerShell: .NET Framework 3.5 and the
+drivers from the installation media, the start types of services, NetBIOS, the removable drives in the
+navigation pane, "password never expires" for the accounts of the profile, the built-in Administrator and
+Guest disabled (never the account in use) and the copies of the answer file deleted. Undo does not take
+back programs that ran, accounts that changed and deleted files; the confirmation says how many steps of
+a plan are such.
+
 ## Comparing profiles
 
 **Menu, Compare with a file** or **Compare with a preset** opens a diff tab: every difference between
@@ -219,5 +226,4 @@ next start), `mcp/` (the configurations of the MCP server), `logs/` (what the pr
 
 ## Not there yet
 
-The script steps of some rules and the profiles of other users, applied from the window: the apply script
-does them meanwhile.
+The rights of registry keys in the registry tab.

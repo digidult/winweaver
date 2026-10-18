@@ -2293,6 +2293,12 @@ impl App {
                         &[("n", &plan.removals())],
                     ));
                 }
+                if plan.irreversible() > 0 {
+                    ui.label(trf(
+                        "{n} steps run programs, change accounts or delete copies of the answer file; Undo does not take them back.",
+                        &[("n", &plan.irreversible())],
+                    ));
+                }
                 ui.label(tr("Every registry value is saved to a backup in the output folder before its change; Undo restores it."));
                 ui.add_space(8.0);
                 ui.horizontal(|ui| {

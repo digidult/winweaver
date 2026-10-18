@@ -374,6 +374,19 @@ impl RegFile {
                     ));
                     key = None;
                 }
+                Op::DeleteKey { path } => {
+                    if let Some(full) = registry::normalize(path) {
+                        file.lines.push(Line::Key {
+                            path: full,
+                            delete: true,
+                        });
+                    }
+                    key = None;
+                }
+                other => {
+                    file.note(&format!("Not in a registry file: {}", other.describe()));
+                    key = None;
+                }
             }
         }
         if !plan.skipped.is_empty() {

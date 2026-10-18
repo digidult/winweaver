@@ -616,5 +616,6 @@
   "Needed by": "Lo necesita",
   "Open {name}": "Abrir {name}",
   "Policies": "Directivas",
-  "{n} rules": "{n} reglas"
+  "{n} rules": "{n} reglas",
+  "{n} steps run programs, change accounts or delete copies of the answer file; Undo does not take them back.": "{n} pasos ejecutan programas, cambian cuentas o eliminan copias del archivo de respuesta; Deshacer no los revierte."
 }

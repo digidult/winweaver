@@ -99,6 +99,13 @@ Applicata come amministratore, una regola che rimuove app o capacità di Windows
 finestra: le capacità tramite DISM, le app per tutti gli utenti e per gli account creati in seguito. Il backup
 le elenca, ma Annulla non le ripristina.
 
+Anche i passaggi di script delle regole si applicano in modo nativo, senza PowerShell: .NET Framework 3.5
+e i driver dal supporto di installazione, i tipi di avvio dei servizi, NetBIOS, le unità rimovibili nel
+riquadro di spostamento, «la password non scade mai» per gli account del profilo, la disattivazione degli
+account predefiniti Administrator e Guest (mai l'account in uso) e l'eliminazione delle copie del file di
+risposte. Annulla non riporta indietro i programmi eseguiti, gli account modificati e i file eliminati;
+la conferma dice quanti passaggi di questo tipo ha un piano.
+
 ## Confronto dei profili
 
 **Menu, Confronta con un file** o **Confronta con una preimpostazione** apre una scheda di confronto:
@@ -229,5 +236,4 @@ scrive nulla altrove.
 
 ## Non ancora disponibile
 
-I passaggi di script di alcune regole e i profili di altri utenti, applicati dalla finestra: nel frattempo
-se ne occupa lo script di applicazione.
+Le autorizzazioni delle chiavi di registro nella scheda del registro.

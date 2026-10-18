@@ -101,6 +101,14 @@ Al aplicar como administrador, una regla que quita aplicaciones o funcionalidade
 quita desde la ventana: las funcionalidades mediante DISM, las aplicaciones para todos los usuarios y para
 las cuentas creadas después. La copia de seguridad las nombra, pero Deshacer no las devuelve.
 
+Los pasos de script de las reglas también se aplican de forma nativa, sin PowerShell: .NET Framework 3.5
+y los controladores del medio de instalación, los tipos de inicio de los servicios, NetBIOS, las unidades
+extraíbles en el panel de navegación, «la contraseña nunca caduca» para las cuentas del perfil, la
+desactivación de las cuentas integradas Administrador e Invitado (nunca la cuenta en uso) y la
+eliminación de las copias del archivo de respuesta. Deshacer no revierte los programas ejecutados, los
+cambios de cuentas ni los archivos eliminados; la confirmación dice cuántos pasos de este tipo tiene un
+plan.
+
 ## Comparar perfiles
 
 **Menú, Comparar con un archivo** o **Comparar con un perfil predefinido** abre una pestaña de comparación:
@@ -234,5 +242,4 @@ escribe nada en ningún otro sitio.
 
 ## Todavía no disponible
 
-Los pasos de script de algunas reglas y los perfiles de otros usuarios al aplicar desde la ventana: mientras
-tanto lo hace el script de aplicación.
+Los permisos de las claves del registro en la pestaña del registro.
