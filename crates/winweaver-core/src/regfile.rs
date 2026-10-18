@@ -29,10 +29,16 @@ pub enum Line {
     /// A comment with its `;`.
     Comment(String),
     /// A key to make (`[path]`) or to delete with everything under it (`[-path]`).
-    Key { path: String, delete: bool },
+    Key {
+        path: String,
+        delete: bool,
+    },
     /// A value of the key above it; `None` deletes it (`"name"=-`). The name is empty for the
     /// default value (`@`).
-    Value { name: String, data: Option<Data> },
+    Value {
+        name: String,
+        data: Option<Data>,
+    },
     /// A line the program does not read, kept as it is.
     Other(String),
 }
@@ -237,7 +243,9 @@ impl RegFile {
             .and_then(|f| f.take(MAX_BYTES + 1).read_to_end(&mut bytes))
             .map_err(|e| format!("{name}: {e}"))?;
         if bytes.len() as u64 > MAX_BYTES {
-            return Err(format!("{name}: larger than a registry file the program reads"));
+            return Err(format!(
+                "{name}: larger than a registry file the program reads"
+            ));
         }
         let text = jsonfile::decode_bom(&bytes)
             .ok_or_else(|| format!("{name}: neither UTF-8 nor UTF-16 with its mark"))?;

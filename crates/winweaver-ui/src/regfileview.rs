@@ -746,7 +746,10 @@ fn file_head(ui: &mut egui::Ui, doc: &RegFileDoc) {
         (keys, trf("{n} keys", &[("n", &keys)])),
         (gone_keys, trf("{n} keys deleted", &[("n", &gone_keys)])),
         (values, trf("{n} values", &[("n", &values)])),
-        (gone_values, trf("{n} values deleted", &[("n", &gone_values)])),
+        (
+            gone_values,
+            trf("{n} values deleted", &[("n", &gone_values)]),
+        ),
         (comments, trf("{n} comments", &[("n", &comments)])),
         (other, trf("{n} lines not read", &[("n", &other)])),
     ];
@@ -819,7 +822,10 @@ fn lines_list(
                 let button = key_path
                     .as_ref()
                     .map(|_| ("\u{1F5C2}", tr("Open in the registry").to_owned()));
-                (vec![list::Cell::new(value_title(name)), kind, shown], button)
+                (
+                    vec![list::Cell::new(value_title(name)), kind, shown],
+                    button,
+                )
             }
             Line::Comment(t) => {
                 let button = rule_of_comment(t)
