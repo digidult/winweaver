@@ -61,19 +61,107 @@ pub enum Op {
     /// Removes the provisioned packages and the packages of every user of the apps with these
     /// names; the backup names each one found, and no undo brings it back.
     RemoveApps { names: Vec<String> },
+    /// Runs a program of the system folder on a folder of the installation media: the first drive
+    /// whose `folder` holds a file of `pattern` (`*.cab`), in its subfolders too when `deep`;
+    /// `{source}` in the arguments is that folder. Skipped when no drive has one.
+    RunFromMedia {
+        folder: String,
+        pattern: String,
+        deep: bool,
+        file: String,
+        args: Vec<String>,
+    },
+    /// Sets the start type of a service whose start type is `from` now (a disabled update service
+    /// back to manual).
+    ServiceStartFrom { name: String, from: u32, start: u32 },
+    /// Writes a value in every subkey of a key, such as the network interfaces of a service.
+    SetValueInSubkeys {
+        path: String,
+        name: String,
+        kind: RegKind,
+        data: Value,
+    },
+    /// Deletes a key with everything under it; every value under it is backed up first, so an
+    /// undo makes the key again with its values.
+    DeleteKey { path: String },
+    /// Sets "password never expires" on the local accounts of these names that exist; no undo
+    /// clears it.
+    PasswordNeverExpires { accounts: Vec<String> },
+    /// Disables the built-in accounts Administrator and Guest (relative ids 500 and 501), never
+    /// the account the helper runs as; no undo enables them.
+    DisableBuiltinAccounts,
+    /// Puts the lines of the error file of the installation into the report and deletes it.
+    CollectErrors { file: String },
+    /// Deletes the copies of the answer file that exist (they may hold passwords); no undo brings
+    /// them back.
+    DeleteFiles { paths: Vec<String> },
 }
 
 impl Op {
     /// Whether the operation writes the default user profile, which the helper loads first.
     pub fn in_default_user(&self) -> bool {
         match self {
-            Op::SetValue { path, .. } | Op::DeleteValue { path, .. } | Op::SetList { path, .. } => {
-                in_default_user(path)
-            }
+            Op::SetValue { path, .. }
+            | Op::DeleteValue { path, .. }
+            | Op::SetList { path, .. }
+            | Op::SetValueInSubkeys { path, .. }
+            | Op::DeleteKey { path } => in_default_user(path),
             Op::ServiceStart { .. }
             | Op::Run { .. }
             | Op::RemoveCapability { .. }
-            | Op::RemoveApps { .. } => false,
+            | Op::RemoveApps { .. }
+            | Op::RunFromMedia { .. }
+            | Op::ServiceStartFrom { .. }
+            | Op::PasswordNeverExpires { .. }
+            | Op::DisableBuiltinAccounts
+            | Op::CollectErrors { .. }
+            | Op::DeleteFiles { .. } => false,
+        }
+    }
+
+    /// What the step does, in a line of the report and of a registry file.
+    pub fn describe(&self) -> String {
+        match self {
+            Op::SetValue {
+                path, name, data, ..
+            } => format!("{path}\\{name} = {data}"),
+            Op::DeleteValue { path, name } => format!("{path}\\{name} removed"),
+            Op::SetList {
+                path,
+                names,
+                additive,
+                ..
+            } => {
+                let how = if *additive { "added to" } else { "the list of" };
+                format!("{} values {how} {path}", names.len())
+            }
+            Op::ServiceStart { name, start } => format!("service {name} start type {start}"),
+            Op::Run { file, args } => format!("{file} {}", args.join(" ")),
+            Op::RemoveCapability { pattern } => format!("capabilities {pattern} removed"),
+            Op::RemoveApps { names } => format!("apps {} removed", names.join(", ")),
+            Op::RunFromMedia {
+                folder, file, args, ..
+            } => {
+                let args = args.join(" ");
+                format!("{file} {args} with the folder {folder} of a drive")
+            }
+            Op::ServiceStartFrom { name, from, start } => {
+                format!("service {name} start type {start} where it is {from}")
+            }
+            Op::SetValueInSubkeys {
+                path, name, data, ..
+            } => format!("{name} = {data} in every subkey of {path}"),
+            Op::DeleteKey { path } => format!("{path} deleted with its subkeys"),
+            Op::PasswordNeverExpires { accounts } => {
+                format!("password never expires: {}", accounts.join(", "))
+            }
+            Op::DisableBuiltinAccounts => {
+                "the built-in Administrator and Guest disabled".to_owned()
+            }
+            Op::CollectErrors { file } => {
+                format!("the errors of {file} read and the file deleted")
+            }
+            Op::DeleteFiles { paths } => format!("deleted when present: {}", paths.join(", ")),
         }
     }
 }
@@ -160,6 +248,25 @@ impl Plan {
             .filter(|s| matches!(s.op, Op::RemoveCapability { .. } | Op::RemoveApps { .. }))
             .count()
     }
+
+    /// The other steps no undo takes back: programs that run, accounts that change, files that
+    /// are deleted.
+    pub fn irreversible(&self) -> usize {
+        self.steps
+            .iter()
+            .filter(|s| {
+                matches!(
+                    s.op,
+                    Op::Run { .. }
+                        | Op::RunFromMedia { .. }
+                        | Op::PasswordNeverExpires { .. }
+                        | Op::DisableBuiltinAccounts
+                        | Op::CollectErrors { .. }
+                        | Op::DeleteFiles { .. }
+                )
+            })
+            .count()
+    }
 }
 
 /// The SHA-256 of the bytes of a plan file in lower case hexadecimal. The window passes it on the
@@ -222,6 +329,103 @@ fn feature_run(name: &str, state: &str) -> Op {
     }
 }
 
+/// Why a script step the program does not know stays with the stand-alone script.
+const SCRIPT_STEP: &str = "a script step: the stand-alone apply script runs it";
+
+/// The copies of the answer file the step of the rule `post-oobe.delete-answer-file-copies`
+/// deletes, as its script names them; the executor deletes no other file.
+pub const ANSWER_FILE_COPIES: [&str; 6] = [
+    "C:\\Windows\\Panther\\unattend.xml",
+    "C:\\Windows\\Panther\\unattend-original.xml",
+    "C:\\Windows\\Panther\\Unattend\\unattend.xml",
+    "C:\\Windows\\System32\\Sysprep\\unattend.xml",
+    "C:\\unattend.xml",
+    "C:\\autounattend.xml",
+];
+/// The file the commands of the specialize pass write their errors into.
+pub const SETUP_ERRORS: &str = "C:\\Windows\\Temp\\ua.err";
+
+fn strings(items: &[&str]) -> Vec<String> {
+    items.iter().map(|s| (*s).to_owned()).collect()
+}
+
+/// The script step of a rule of the catalog as native operations: what its PowerShell does, done
+/// by the program without running it. `None` for a script step it does not know, which stays with
+/// the stand-alone script.
+pub fn script_ops(rule: &str, profile: &Profile) -> Option<Vec<Op>> {
+    const NETFX: [&str; 8] = [
+        "/Online",
+        "/Enable-Feature",
+        "/FeatureName:NetFx3",
+        "/All",
+        "/LimitAccess",
+        "/Source:{source}",
+        "/NoRestart",
+        "/Quiet",
+    ];
+    const PNPUTIL: [&str; 4] = ["/add-driver", "{source}\\*.inf", "/subdirs", "/install"];
+    const UPDATE: [&str; 5] = ["wuauserv", "UsoSvc", "BITS", "DoSvc", "WaaSMedicSvc"];
+    const ROOTS: [&str; 2] = [
+        "HKLM:\\SOFTWARE\\Microsoft",
+        "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft",
+    ];
+    const DELEGATE: &str = "Windows\\CurrentVersion\\Explorer\\Desktop\\NameSpace\\DelegateFolders";
+    const DRIVES: &str = "{F5FB2C77-0E2F-4A16-A381-3E560C68BC83}";
+    const INTERFACES: &str =
+        "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\NetBT\\Parameters\\Interfaces";
+    Some(match rule {
+        "install.netfx3" => vec![Op::RunFromMedia {
+            folder: "sources\\sxs".to_owned(),
+            pattern: "*.cab".to_owned(),
+            deep: false,
+            file: "dism.exe".to_owned(),
+            args: strings(&NETFX),
+        }],
+        "install.drivers-from-media" => vec![Op::RunFromMedia {
+            folder: "Drivers".to_owned(),
+            pattern: "*.inf".to_owned(),
+            deep: true,
+            file: "pnputil.exe".to_owned(),
+            args: strings(&PNPUTIL),
+        }],
+        "printing.spooler-automatic" => vec![Op::ServiceStart {
+            name: "Spooler".to_owned(),
+            start: 2,
+        }],
+        "update.unblock" => UPDATE
+            .iter()
+            .map(|name| Op::ServiceStartFrom {
+                name: (*name).to_owned(),
+                from: 4,
+                start: 3,
+            })
+            .collect(),
+        "network.netbios-off" => vec![Op::SetValueInSubkeys {
+            path: INTERFACES.to_owned(),
+            name: "NetbiosOptions".to_owned(),
+            kind: RegKind::DWord,
+            data: Value::from(2),
+        }],
+        "nav.removable-drives-once" => ROOTS
+            .iter()
+            .map(|root| Op::DeleteKey {
+                path: format!("{root}\\{DELEGATE}\\{DRIVES}"),
+            })
+            .collect(),
+        "post-oobe.password-never-expires" => vec![Op::PasswordNeverExpires {
+            accounts: profile.accounts.iter().map(|a| a.name.clone()).collect(),
+        }],
+        "post-oobe.disable-builtin-accounts" => vec![Op::DisableBuiltinAccounts],
+        "post-oobe.collect-specialize-errors" => vec![Op::CollectErrors {
+            file: SETUP_ERRORS.to_owned(),
+        }],
+        "post-oobe.delete-answer-file-copies" => vec![Op::DeleteFiles {
+            paths: strings(&ANSWER_FILE_COPIES),
+        }],
+        _ => return None,
+    })
+}
+
 /// The operations that make one action of a rule true, or why it is left to the script.
 fn apply_ops(
     action: &Action,
@@ -271,9 +475,7 @@ fn apply_ops(
             args: args.iter().map(|a| render::substitute(a, params)).collect(),
         }],
         Action::Feature { name, state, .. } => vec![feature_run(name, state)],
-        Action::Ps { .. } => {
-            return Err("a script step: the stand-alone apply script runs it".to_owned());
-        }
+        Action::Ps { .. } => return Err(SCRIPT_STEP.to_owned()),
         Action::Capability { pattern } => vec![Op::RemoveCapability {
             pattern: pattern.clone(),
         }],
@@ -419,8 +621,18 @@ pub fn plan_apply(catalog: &Catalog, profile: &Profile, rule_ids: &[String], non
         }
         if is_applied {
             let params = render::params_of(catalog, profile, rule);
+            // The script step of a rule the program knows is done natively, once.
+            let mut scripted = false;
             for action in &rule.actions {
-                match apply_ops(action, &params) {
+                let ops = match action {
+                    Action::Ps { .. } if scripted => continue,
+                    Action::Ps { .. } => {
+                        scripted = true;
+                        script_ops(&rule.id, profile).ok_or_else(|| SCRIPT_STEP.to_owned())
+                    }
+                    _ => apply_ops(action, &params),
+                };
+                match ops {
                     Ok(ops) => plan.steps.extend(ops.into_iter().map(|op| Step {
                         rule: rule.id.clone(),
                         op,
@@ -575,6 +787,44 @@ mod tests {
         let path =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../data/presets/office.wwprofile");
         Profile::load(&path).unwrap()
+    }
+
+    #[test]
+    fn the_script_steps_of_the_catalog_go_natively() {
+        let catalog = Catalog::embedded().unwrap();
+        let profile = office();
+        for rule in catalog.rules() {
+            let scripted = rule.actions.iter().any(|a| matches!(a, Action::Ps { .. }));
+            if scripted && thispc::exclusion(rule).is_none() {
+                assert!(
+                    script_ops(&rule.id, &profile).is_some(),
+                    "{} has no native steps",
+                    rule.id
+                );
+            }
+        }
+        // A plan of every rule leaves no script step it knows to the stand-alone script.
+        let ids: Vec<String> = catalog.rules().iter().map(|r| r.id.clone()).collect();
+        let plan = plan_apply(&catalog, &profile, &ids, "n");
+        let left = plan.skipped.iter().any(|(_, why)| why == SCRIPT_STEP);
+        assert!(!left, "{:?}", plan.skipped);
+        let names: Vec<String> = profile.accounts.iter().map(|a| a.name.clone()).collect();
+        let ops = script_ops("post-oobe.password-never-expires", &profile).unwrap();
+        assert_eq!(ops, vec![Op::PasswordNeverExpires { accounts: names }]);
+        let update = script_ops("update.unblock", &profile).unwrap();
+        assert_eq!(update.len(), 5);
+        assert!(script_ops("no.such-rule", &profile).is_none());
+        let files = Op::DeleteFiles {
+            paths: strings(&ANSWER_FILE_COPIES),
+        };
+        let plan = Plan {
+            steps: vec![Step {
+                rule: "r".to_owned(),
+                op: files,
+            }],
+            ..Plan::new("apply", "n")
+        };
+        assert_eq!((plan.removals(), plan.irreversible()), (0, 1));
     }
 
     #[test]

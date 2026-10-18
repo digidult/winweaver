@@ -90,6 +90,15 @@ native writes -> report.
   the default profile (`GetDefaultUserProfileDirectoryW`) there with `RegLoadKeyW` for the steps that
   write it and unloads it after the last step. A hive already loaded at that key is used and left
   loaded. A backup names the same keys as one of the script, so either restores the other.
+- The script steps of the catalog (`ps` actions) are not run: `apply::script_ops` gives each known one
+  native steps that do what its PowerShell does (a program of the system folder on a folder of the
+  installation media, the start type of a service that has one now, a value in every subkey of a key,
+  a key deleted after the backup of every value under it, the flags of local accounts through the
+  network management API, the error file of the installation and the copies of the answer file). A
+  script step it does not know stays with the stand-alone script. The changes no undo takes back
+  (programs, accounts, deleted files) are named in the backup and counted in the confirmation; the
+  helper deletes no file but the copies of the answer file the rule names, never disables the account
+  it runs as, and looks for media folders only below the roots of the drives.
 - No PowerShell anywhere in this path (principle P2).
 
 ## 6. Answer file rendering

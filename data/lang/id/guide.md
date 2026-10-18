@@ -94,6 +94,13 @@ Saat diterapkan sebagai administrator, aturan yang menghapus aplikasi atau kemam
 menghapusnya dari jendela: kemampuan melalui DISM, aplikasi untuk semua pengguna dan untuk akun yang dibuat
 kemudian. Cadangan mencantumkannya, tetapi Batalkan perubahan tidak mengembalikannya.
 
+Langkah skrip aturan juga diterapkan secara native, tanpa PowerShell: .NET Framework 3.5 dan driver dari
+media instalasi, tipe mulai layanan, NetBIOS, drive lepasan di panel navigasi, "kata sandi tidak pernah
+kedaluwarsa" untuk akun profil, penonaktifan akun bawaan Administrator dan Guest (tidak pernah akun yang
+sedang dipakai), dan penghapusan salinan file jawaban. Urungkan tidak mengembalikan program yang
+dijalankan, akun yang diubah, dan file yang dihapus; konfirmasi menyebut berapa banyak langkah seperti
+itu dalam rencana.
+
 ## Membandingkan profil
 
 **Menu, Bandingkan dengan file** atau **Bandingkan dengan preset** membuka tab perbandingan: setiap perbedaan
@@ -221,5 +228,4 @@ ditulis di tempat lain.
 
 ## Belum tersedia
 
-Langkah skrip beberapa aturan dan profil pengguna lain saat diterapkan dari jendela: sementara ini skrip
-penerapan yang melakukannya.
+Izin kunci registri di tab registri.

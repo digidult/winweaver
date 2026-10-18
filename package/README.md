@@ -22,6 +22,7 @@ keeps its settings and files in that folder. The guide opens at the first start 
 - **This PC**: read its settings into a profile (the features and capabilities of Windows as administrator) and see
   what is in effect; check the selected rules; apply them or
   return them to the Windows defaults as administrator with a backup of every value, and undo a change from its backup.
+  The script steps of the rules (.NET 3.5 and drivers from the media, services, accounts) run natively too.
   For other PCs it saves stand-alone scripts that apply, revert, audit and undo; their audit report opens as a profile.
   The registry values of an apply or a return also go to a registry file (`.reg`) for regedit.
 - **Policy templates**: import the ADMX templates of this Windows, of a folder, of a zip archive (as Chrome, Edge and

@@ -102,6 +102,13 @@ Beim Anwenden als Administrator entfernt eine Regel, die Apps oder Funktionen vo
 auch direkt im Fenster: Funktionen über DISM, Apps für alle Benutzer und für später angelegte Konten. Die
 Sicherung nennt sie, aber „Rückgängig machen“ bringt sie nicht zurück.
 
+Auch die Skriptschritte der Regeln werden nativ angewendet, ohne PowerShell: .NET Framework 3.5 und die
+Treiber vom Installationsmedium, die Starttypen von Diensten, NetBIOS, die Wechseldatenträger im
+Navigationsbereich, „Kennwort läuft nie ab“ für die Konten des Profils, das Deaktivieren der integrierten
+Konten Administrator und Gast (nie des Kontos, mit dem Sie arbeiten) und das Löschen der Kopien der
+Antwortdatei. Rückgängig nimmt ausgeführte Programme, geänderte Konten und gelöschte Dateien nicht
+zurück; die Bestätigung sagt, wie viele solche Schritte ein Plan hat.
+
 ## Profile vergleichen
 
 **Menü, Mit einer Datei vergleichen** oder **Mit einer Vorlage vergleichen** öffnet eine Registerkarte mit
@@ -237,5 +244,4 @@ Meldungen gehen an die Konsole, aus der das Programm gestartet wurde, und nach `
 
 ## Noch nicht verfügbar
 
-Die Skriptschritte einiger Regeln und die Profile anderer Benutzer beim Anwenden im Fenster: Bis dahin
-erledigt das das Anwendungsskript.
+Die Berechtigungen von Registrierungsschlüsseln in der Registerkarte der Registrierung.

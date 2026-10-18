@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
 the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
@@ -303,8 +303,16 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   helper reads the file once and refuses another folder, name or digest (`apply::digest`), so a plan changed
   after the permission never runs,
   backs up every registry value into `output/backup-<stamp>.json` (the format of the apply script, so
-  `Undo-Apply.ps1` restores it too) and writes `plan-<stamp>-report.json`. Script steps and the
-  profiles of other users stay with the stand-alone script; capabilities are removed through DISM
+  `Undo-Apply.ps1` restores it too) and writes `plan-<stamp>-report.json`. The script steps of the
+  catalog go natively through `apply::script_ops`, a table by rule id (`Op::RunFromMedia`,
+  `ServiceStartFrom`, `SetValueInSubkeys`, `DeleteKey` with the backup of every value under the key,
+  `PasswordNeverExpires`, `DisableBuiltinAccounts` that leaves the account in use on, `CollectErrors`,
+  `DeleteFiles` only of `apply::ANSWER_FILE_COPIES`; `winweaver_win::accounts` for the flags); the test
+  `the_script_steps_of_the_catalog_go_natively` fails when a script step This PC applies has no entry, and
+  a new one stays with the stand-alone script until it has one. The changes no undo takes back are named
+  in the backup (`account-changed`, `file-deleted`) and counted by `Plan::irreversible` in the
+  confirmation. The only paths of other users are the sign-in screen (`HKU:\.DEFAULT`), which This PC and
+  the apply script leave out. Capabilities are removed through DISM
   (`Op::RemoveCapability`, `dism::remove_capabilities`) and apps through the package API (`Op::RemoveApps`,
   `apps::remove_apps` with the crate `windows`: the provisioned package first, then the package of every
   user), named in the backup as `capability-removed` and `app-removed` the way the apply script names them,
@@ -518,7 +526,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Policy templates | ADMX import, catalog files, the settings section (pull request #3), lists and multi-line texts (`reg-list`, list parameters), policies linked to built-in rules; only the checked imports read, the unknown options of a profile in their group with Load catalogs | 16.10.2026 |
 | This PC | Features and capabilities read natively through DISM as administrator (0.8.0) | 18.10.2026 |
 | Native apply | Capabilities removed through DISM (0.9.0) and apps through the package API (0.10.0), named in the backup, not restored by an undo | 18.10.2026 |
-| Not yet | Script steps of rules and the profiles of other users applied from the window (the apply script does them) | |
+| Native apply | The script steps of the catalog applied natively (0.15.0): media, services, keys, accounts, the copies of the answer file | 18.10.2026 |
+| Not yet | The rights of registry keys in the registry tab | |
 | Acceptance | Earlier versions were accepted by the customer in a VM: the generated answer file works, and a `.wwdiff` read from a real PC came back for bugs. Not accepted yet: the stand-alone scripts (apply, undo, return to defaults, audit) and the versions 0.4.0 to 0.11.0; the scenario of 18.10.2026 lists the steps | 18.10.2026 |
 
 Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and

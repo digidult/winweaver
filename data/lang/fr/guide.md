@@ -104,6 +104,13 @@ Appliquée en tant qu'administrateur, une règle qui supprime des applications o
 supprime aussi depuis la fenêtre : les capacités via DISM, les applications pour tous les utilisateurs et
 pour les comptes créés plus tard. La sauvegarde les nomme, mais l'annulation ne les rétablit pas.
 
+Les étapes de script des règles s'appliquent aussi en natif, sans PowerShell : .NET Framework 3.5 et les
+pilotes du support d'installation, les types de démarrage des services, NetBIOS, les lecteurs amovibles
+dans le volet de navigation, « le mot de passe n'expire jamais » pour les comptes du profil, la
+désactivation des comptes intégrés Administrateur et Invité (jamais le compte utilisé) et la suppression
+des copies du fichier de réponses. Annuler ne reprend pas les programmes exécutés, les comptes modifiés
+ni les fichiers supprimés ; la confirmation indique combien d'étapes de ce type compte un plan.
+
 ## Comparer des profils
 
 **Menu, Comparer avec un fichier** ou **Comparer avec un préréglage** ouvre un onglet de comparaison :
@@ -238,5 +245,4 @@ restaurées au démarrage suivant), `mcp/` (les configurations du serveur MCP), 
 
 ## Pas encore disponible
 
-Les étapes de script de certaines règles et les profils des autres utilisateurs, appliqués depuis la fenêtre :
-en attendant, le script d'application s'en charge.
+Les autorisations des clés de registre dans l'onglet du registre.

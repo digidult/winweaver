@@ -146,7 +146,7 @@ pub(crate) fn elevated() -> bool {
 /// # Safety
 ///
 /// `p` is null or points to a null-terminated UTF-16 string that stays valid during the call.
-unsafe fn wide_text(p: *const u16) -> String {
+pub(crate) unsafe fn wide_text(p: *const u16) -> String {
     if p.is_null() {
         return String::new();
     }
