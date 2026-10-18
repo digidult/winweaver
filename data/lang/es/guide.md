@@ -78,6 +78,12 @@ cambiar nada:
   scripts de aplicación o de restablecimiento como administrador, primero en un equipo de prueba; guardan
   una copia de seguridad que restaura el script `Undo-Apply.ps1` que se encuentra a su lado. El informe de
   un script de auditoría se abre con **Abrir un informe de auditoría** y se convierte en un perfil.
+- **Guardar un archivo de registro** o **un archivo de registro de restablecimiento de los valores
+  predeterminados** escribe los valores del registro de la selección en un archivo `.reg` para regedit o
+  `reg import`; lo que un archivo de registro no puede contener (pasos de scripts, aplicaciones,
+  funcionalidades) queda en él como comentarios. Los valores del perfil de usuario predeterminado van a
+  `HKEY_USERS\UnattendDefault`, y el comentario al principio del archivo explica cómo cargar allí su
+  subárbol.
 
 No se leen las reglas que solo actúan durante la instalación o en el primer inicio de sesión de un usuario.
 
@@ -102,6 +108,9 @@ cualquier perfil.
 Abrir acepta perfiles (`.wwprofile`), comparaciones (`.wwdiff`), archivos de marcadores (`.wwmarks`),
 páginas Markdown, archivos de respuesta generados por WinWeaver o WinKickOff (el perfil que incluyen),
 perfiles de WinKickOff e informes de auditoría (`.json`).
+
+Un archivo de registro (`.reg`) se abre en una pestaña propia, como describe la sección sobre el
+registro.
 
 ## Plantillas de directivas
 
@@ -143,6 +152,15 @@ muestra las reglas que la escriben. **Buscar** en la barra busca bajo la clave e
 de regedit: en los nombres de las claves, los nombres de los valores y los datos, solo la cadena completa si
 se pide. La búsqueda se hace en segundo plano, **Detener** la termina y un clic en un lugar encontrado lo
 muestra. Los permisos de las claves llegarán más tarde.
+
+Un archivo de registro (`.reg`) se abre en una pestaña propia, como una estructura y no como texto: a la
+izquierda las claves y los comentarios del archivo en su orden, a la derecha la clave seleccionada con
+sus valores en los tipos de regedit y los comentarios entre ellos, un enlace a la pestaña del registro y
+las reglas de los catálogos cargados que escriben la clave o el valor seleccionado. **Nueva clave**,
+**Nuevo valor**, **Editar** y **Eliminar** están en la barra, y una eliminación pregunta antes.
+**Guardar** vuelve a escribir cada línea: los comentarios y las líneas que el programa no lee se quedan
+donde estaban. Un archivo guardado desde **Este equipo** nombra sus reglas en comentarios, y la flecha de
+ese comentario muestra la regla en el perfil.
 
 ## El servidor MCP
 

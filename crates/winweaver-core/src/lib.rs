@@ -13,6 +13,7 @@ pub mod i18n;
 pub mod import;
 pub mod jsonfile;
 pub mod profile;
+pub mod regfile;
 pub mod registry;
 pub mod render;
 pub mod resolver;

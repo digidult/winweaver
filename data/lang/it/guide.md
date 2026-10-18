@@ -76,6 +76,11 @@ modificare nulla:
   applicazione o di ripristino come amministratore, prima su un PC di prova; salva un backup che
   `Undo-Apply.ps1`, posto accanto, ripristina. Il report di uno script di controllo si apre con **Apri un
   report di controllo** e diventa un profilo.
+- **Salva un file di registro** o **un file di registro di ripristino dei valori predefiniti** scrive i
+  valori del registro della selezione in un file `.reg` per regedit o `reg import`; ciò che un file di
+  registro non può contenere (passi di script, app, funzionalità) vi resta come commenti. I valori del
+  profilo utente predefinito vanno in `HKEY_USERS\UnattendDefault`, e il commento all'inizio del file
+  spiega come caricarvi il suo hive.
 
 Le regole che agiscono solo durante l'installazione o al primo accesso di un utente non vengono lette.
 
@@ -100,6 +105,8 @@ differenze in un file `.wwdiff` applicabile in seguito a qualsiasi profilo.
 Apri accetta profili (`.wwprofile`), confronti (`.wwdiff`), file di segnalibri (`.wwmarks`), pagine
 Markdown, file di risposte generati da WinWeaver o WinKickOff (il profilo che incorporano), profili di
 WinKickOff e report di controllo (`.json`).
+
+Un file di registro (`.reg`) si apre in una scheda propria, come descrive la sezione sul registro.
 
 ## Modelli di criteri
 
@@ -141,6 +148,14 @@ segnalibro elenca le regole che la scrivono. **Trova** nella barra cerca sotto l
 regedit: nei nomi delle chiavi, nei nomi dei valori e nei dati, solo la stringa intera se richiesto. La
 ricerca avviene in background, **Arresta** la interrompe e un clic su un punto trovato lo mostra. I permessi
 delle chiavi arriveranno più avanti.
+
+Un file di registro (`.reg`) si apre in una scheda propria, come struttura e non come testo: a sinistra
+le chiavi e i commenti del file nel loro ordine, a destra la chiave selezionata con i suoi valori nei
+tipi di regedit e i commenti tra di essi, un collegamento alla scheda del registro e le regole dei
+cataloghi caricati che scrivono la chiave o il valore selezionato. **Nuova chiave**, **Nuovo valore**,
+**Modifica** ed **Elimina** sono nella barra, e un'eliminazione chiede prima. **Salva** riscrive ogni
+riga: i commenti e le righe che il programma non legge restano al loro posto. Un file salvato da **Questo
+PC** nomina le sue regole nei commenti, e la freccia di un tale commento mostra la regola nel profilo.
 
 ## Il server MCP
 

@@ -23,6 +23,7 @@ fn doc_icon(doc: &Doc) -> &'static str {
         Doc::Theme(_) => "\u{1F3A8}",
         Doc::Registry(_) => "\u{1F5C2}",
         Doc::CatalogEdit(_) => "\u{270F}",
+        Doc::RegFile(_) => "\u{1F4C3}",
     }
 }
 
@@ -35,6 +36,7 @@ fn search_hint(doc: &Doc) -> &'static str {
         Doc::Bookmarks => "Search the bookmarks (Ctrl+F)",
         Doc::Mcp => "Filter the journal (Ctrl+F)",
         Doc::Catalog(_) => "Search policies (Ctrl+F)",
+        Doc::RegFile(_) => "Search the keys, values and comments (Ctrl+F)",
         Doc::Settings | Doc::Theme(_) | Doc::Registry(_) | Doc::CatalogEdit(_) => "",
     }
 }
@@ -455,6 +457,42 @@ impl App {
             Some(Doc::CatalogEdit(_)) => {
                 if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
                     acts.push(Act::Save);
+                }
+            }
+            Some(Doc::RegFile(d)) => {
+                if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
+                    acts.push(Act::Open);
+                }
+                if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
+                    acts.push(Act::Save);
+                }
+                if tool(ui, "\u{1F4BE}", tr("Save as"), "Ctrl+Shift+S", true) {
+                    acts.push(Act::SaveAs);
+                }
+                sep(ui);
+                let key = d.selected_key();
+                if tool(ui, "\u{1F4C1}", tr("New key"), "", true) {
+                    acts.push(Act::RegFileNew(crate::regfileview::EditKind::Key));
+                }
+                if tool(ui, "\u{2795}", tr("New value"), "", key.is_some()) {
+                    acts.push(Act::RegFileNew(crate::regfileview::EditKind::Value));
+                }
+                if tool(ui, "\u{270F}", tr("Edit"), "", d.target().is_some()) {
+                    acts.push(Act::RegFileEdit);
+                }
+                if tool(ui, "\u{1F5D1}", tr("Delete"), "", d.removal().is_some()) {
+                    acts.push(Act::AskRegFileRemove);
+                }
+                sep(ui);
+                if tool(
+                    ui,
+                    "\u{1F5C2}",
+                    tr("Open in the registry"),
+                    "",
+                    key.is_some(),
+                ) && let Some((_, path)) = key
+                {
+                    acts.push(Act::OpenRegistry(path, d.selected_value()));
                 }
             }
             Some(Doc::Registry(d)) => {
@@ -1048,6 +1086,16 @@ pub(crate) fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         ui,
         tr("Save a return-to-defaults script for the selection..."),
         Act::SaveScript(ScriptKind::Revert),
+    );
+    item(
+        ui,
+        tr("Save a registry file for the selection..."),
+        Act::SaveRegFile(false),
+    );
+    item(
+        ui,
+        tr("Save a return-to-defaults registry file for the selection..."),
+        Act::SaveRegFile(true),
     );
     item(
         ui,

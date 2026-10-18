@@ -12,6 +12,7 @@ Draft 0.1, 14.10.2026.
 | Bookmark file | `.wwmarks` | Positions with comments | List |
 | MCP configuration | `.wwmcp` | The transport, port, token, mode and switches of an MCP server, its first profile, the detailed log | The MCP tab |
 | Markdown page | `.md` | Documentation, the guide, any Markdown file | Rendered page |
+| Registry file | `.reg` | The format of regedit (version 5 in UTF-16 with its mark, or REGEDIT4): keys, values and their deletions, comments; every line is kept, the ones the program does not read too. Also saved from This PC for the apply or the return of a selection | Outline of keys and comments, the values of the selected key |
 | Answer file | `autounattend.xml` | The build; opened as a profile when it embeds one, imported by its actions otherwise | Opens as a profile |
 
 The extensions are registered nowhere (portability); the program opens a file by its extension and, for an

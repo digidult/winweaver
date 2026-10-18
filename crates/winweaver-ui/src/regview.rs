@@ -116,7 +116,7 @@ pub struct RegistryDoc {
 }
 
 /// The name of the default value as regedit shows it.
-fn value_title(name: &str) -> &str {
+pub(crate) fn value_title(name: &str) -> &str {
     if name.is_empty() {
         tr("(Default)")
     } else {

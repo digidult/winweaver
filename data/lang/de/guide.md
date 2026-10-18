@@ -78,6 +78,11 @@ Markdown-Datei; die Seiten der Dokumentation werden genauso geöffnet, jede in e
   Anwendungs- oder Rücksetzskript als Administrator aus, zuerst auf einem Test-PC; es legt eine Sicherung
   an, die `Undo-Apply.ps1` daneben wiederherstellt. Der Bericht eines Prüfskripts wird mit
   **Prüfbericht öffnen** geöffnet und wird zu einem Profil.
+- **Registrierungsdatei speichern** oder **Registrierungsdatei zum Zurücksetzen auf die Standardwerte
+  speichern** schreibt die Registrierungswerte der Auswahl als `.reg`-Datei für regedit oder `reg
+  import`; was eine Registrierungsdatei nicht aufnehmen kann (Skriptschritte, Apps, Funktionen), bleibt
+  darin als Kommentar. Die Werte des Standardbenutzerprofils gehen nach `HKEY_USERS\UnattendDefault`, und
+  der Kommentar am Anfang der Datei sagt, wie seine Struktur dort geladen wird.
 
 Regeln, die nur während der Installation oder bei der ersten Anmeldung eines Benutzers wirken, werden nicht
 eingelesen.
@@ -103,6 +108,9 @@ lässt.
 Öffnen akzeptiert Profile (`.wwprofile`), Vergleiche (`.wwdiff`), Lesezeichendateien (`.wwmarks`),
 Markdown-Seiten, von WinWeaver oder WinKickOff erstellte Antwortdateien (das darin eingebettete Profil),
 WinKickOff-Profile und Prüfberichte (`.json`).
+
+Eine Registrierungsdatei (`.reg`) öffnet sich in einer eigenen Registerkarte, wie der Abschnitt über die
+Registrierung beschreibt.
 
 ## Richtlinienvorlagen
 
@@ -146,6 +154,15 @@ Leiste sucht unter dem gewählten Schlüssel wie die Suche von regedit: in den N
 von Werten und den Daten, auf Wunsch nur nach der ganzen Zeichenfolge. Die Suche läuft im Hintergrund,
 **Beenden** bricht sie ab, und ein Klick auf eine Fundstelle zeigt sie. Die Rechte von Schlüsseln kommen
 später.
+
+Eine Registrierungsdatei (`.reg`) öffnet sich in einer eigenen Registerkarte, als Struktur statt als
+Text: links die Schlüssel und Kommentare der Datei in ihrer Reihenfolge, rechts der gewählte Schlüssel
+mit seinen Werten in den Typen von regedit und den Kommentaren dazwischen, ein Link zur Registerkarte der
+Registrierung und die Regeln der geladenen Kataloge, die den Schlüssel oder den gewählten Wert schreiben.
+**Neuer Schlüssel**, **Neuer Wert**, **Bearbeiten** und **Löschen** sind in der Leiste, und ein Löschen
+fragt zuerst. **Speichern** schreibt jede Zeile zurück: die Kommentare und die Zeilen, die das Programm
+nicht liest, bleiben an ihrem Platz. Eine über **Dieser PC** gespeicherte Datei nennt ihre Regeln in
+Kommentaren, und der Pfeil eines solchen Kommentars zeigt die Regel im Profil.
 
 ## Der MCP-Server
 

@@ -729,6 +729,11 @@ fn this_pc_buttons(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
                 tr("Save a return-to-defaults script..."),
                 Act::SaveScript(ScriptKind::Revert),
             ),
+            (tr("Save a registry file..."), Act::SaveRegFile(false)),
+            (
+                tr("Save a return-to-defaults registry file..."),
+                Act::SaveRegFile(true),
+            ),
         ] {
             if ui.button(text).clicked() {
                 acts.push(act);
