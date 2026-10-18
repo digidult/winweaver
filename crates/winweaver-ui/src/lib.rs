@@ -3060,7 +3060,9 @@ impl App {
                     if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active)
                         && let Some(running) = &d.search.running
                     {
-                        running.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+                        running
+                            .stop
+                            .store(true, std::sync::atomic::Ordering::Relaxed);
                     }
                 }
                 Act::AskRegistryDelete => self.ask_registry_delete(),

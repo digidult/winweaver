@@ -1403,7 +1403,10 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
             registry_allowed(state, false)?;
             let path = text_arg(args, "path")?;
             if winweaver_core::registry::normalize(&path).is_none() {
-                return Err(fail("invalid", format!("not a key of the registry: {path}")));
+                return Err(fail(
+                    "invalid",
+                    format!("not a key of the registry: {path}"),
+                ));
             }
             let flag = |name: &str, default: bool| {
                 args.get(name).and_then(Value::as_bool).unwrap_or(default)

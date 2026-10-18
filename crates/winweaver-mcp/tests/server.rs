@@ -78,10 +78,7 @@ fn the_registry_tools_are_off_until_allowed() {
     );
     assert_eq!(found["complete"], json!(true));
     let number = json!({ "path": key, "text": "0x10", "keys": false, "whole": true });
-    assert_eq!(
-        ok(&s, "search_registry", number)["hits"][0]["value"],
-        "N"
-    );
+    assert_eq!(ok(&s, "search_registry", number)["hits"][0]["value"], "N");
     let empty = json!({ "path": key, "text": " " });
     assert_eq!(error_kind(&s, "search_registry", empty), "invalid");
     assert_eq!(

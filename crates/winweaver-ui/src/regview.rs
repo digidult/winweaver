@@ -422,18 +422,20 @@ fn search_panel(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
     let Some(found) = &s.found else {
         return;
     };
-    egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
-        for hit in &found.hits {
-            let text = match &hit.value {
-                Some(v) => format!("{}    {}", hit.path, value_title(v)),
-                None => hit.path.clone(),
-            };
-            let label = egui::RichText::new(text).monospace();
-            if ui.selectable_label(false, label).clicked() {
-                acts.push(Act::RegistryGo(hit.path.clone(), hit.value.clone()));
+    egui::ScrollArea::vertical()
+        .auto_shrink(false)
+        .show(ui, |ui| {
+            for hit in &found.hits {
+                let text = match &hit.value {
+                    Some(v) => format!("{}    {}", hit.path, value_title(v)),
+                    None => hit.path.clone(),
+                };
+                let label = egui::RichText::new(text).monospace();
+                if ui.selectable_label(false, label).clicked() {
+                    acts.push(Act::RegistryGo(hit.path.clone(), hit.value.clone()));
+                }
             }
-        }
-    });
+        });
 }
 
 /// The values of the selected key: a click selects, a double click edits.
