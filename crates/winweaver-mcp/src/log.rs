@@ -214,7 +214,8 @@ mod tests {
     fn the_mcp_log_is_json_lines() {
         let file = Path::new("logs").join(name(MCP));
         assert!(file.to_string_lossy().ends_with(".jsonl"), "{file:?}");
-        let line: Value = serde_json::from_str(&formatted(&file, "INFO", "a \"quoted\" text")).unwrap();
+        let line: Value =
+            serde_json::from_str(&formatted(&file, "INFO", "a \"quoted\" text")).unwrap();
         assert_eq!(line["level"], "INFO");
         assert_eq!(line["text"], "a \"quoted\" text");
         assert!(name(WINDOW).ends_with(".log"));

@@ -114,8 +114,8 @@ fn mcp_config(args: &[String]) -> Result<winweaver_mcp::config::Config, String> 
         config.mode = winweaver_mcp::Mode::parse(&text).ok_or("--mode is read, edit or files")?;
     }
     if let Some(text) = option(args, "--registry") {
-        config.registry =
-            winweaver_mcp::RegistryAccess::parse(&text).ok_or("--registry is off, read or write")?;
+        config.registry = winweaver_mcp::RegistryAccess::parse(&text)
+            .ok_or("--registry is off, read or write")?;
     }
     if let Some(text) = option(args, "--port") {
         config.port = text.parse().map_err(|_| "--port is a number")?;

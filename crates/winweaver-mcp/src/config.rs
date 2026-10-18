@@ -114,7 +114,9 @@ impl Config {
         }
         let letters = self.token.chars().all(|c| c.is_ascii_alphanumeric());
         if !self.token.is_empty() && (self.token.len() < TOKEN_MIN || !letters) {
-            return Err(format!("the token has at least {TOKEN_MIN} letters and digits"));
+            return Err(format!(
+                "the token has at least {TOKEN_MIN} letters and digits"
+            ));
         }
         Ok(())
     }
