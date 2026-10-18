@@ -501,5 +501,7 @@
   "Permissions (coming soon)": "İzinler (yakında)",
   "Search (coming soon)": "Arama (yakında)",
   "Allow reading the registry of this PC (off at every start)": "Bu bilgisayarın kayıt defterini okumaya izin ver (her başlatmada kapalı)",
-  "Allow changing the registry too": "Kayıt defterini değiştirmeye de izin ver"
+  "Allow changing the registry too": "Kayıt defterini değiştirmeye de izin ver",
+  "Bookmarks and catalogs": "Yer imleri ve kataloglar",
+  "Allow changing the bookmarks and the catalogs (off at every start)": "Yer imlerini ve katalogları değiştirmeye izin ver (her başlatmada kapalı)"
 }

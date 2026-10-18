@@ -26,6 +26,8 @@ pub struct McpPanel {
     pub read_pc: bool,
     /// What the tools of the registry may do; off at every start.
     pub registry: winweaver_mcp::RegistryAccess,
+    /// Whether the tools may change the bookmarks and the catalog files; off at every start.
+    pub edit_library: bool,
     pub run: Option<McpRun>,
     pub error: String,
     /// The selected entry of the journal, by its place in the journal.
@@ -176,6 +178,19 @@ fn server_card(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
                     }
                 }
             });
+            ui.end_row();
+
+            ui.label(tr("Bookmarks and catalogs"));
+            if ui
+                .checkbox(
+                    &mut panel.edit_library,
+                    tr("Allow changing the bookmarks and the catalogs (off at every start)"),
+                )
+                .changed()
+                && let Some(run) = &panel.run
+            {
+                run.server.set_edit_library(panel.edit_library);
+            }
             ui.end_row();
 
             ui.label(tr("Token"));

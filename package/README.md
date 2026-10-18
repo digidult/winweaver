@@ -115,6 +115,7 @@ effect at the next start. For one start only: `winweaver.exe --renderer directx`
 | `--mode NAME` | With `--mcp`: `read` (the default) only reads, `edit` changes profiles in memory, `files` also saves them and writes the answer file |
 | `--read-pc` | With `--mcp`: allows reading the settings of this PC |
 | `--registry NAME` | With `--mcp`: `off` (the default), `read` lets the tools read the registry, `write` change it too |
+| `--edit-library` | With `--mcp`: the tools may change the bookmarks and the catalog files; reading them is always allowed |
 | `--profile NAME` | With `--mcp`: a preset or a profile of `profiles/` becomes the current one |
 | `--version` | Prints the version |
 | `--check-catalog` | Loads the built-in catalog with its translations and prints their problems |

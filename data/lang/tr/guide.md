@@ -154,6 +154,7 @@ yazılır: `--renderer=directx`.
 | `--mode NAME` | `--mcp` ile: `read` (varsayılan) yalnızca okur, `edit` profilleri bellekte değiştirir, `files` ayrıca kaydeder ve yanıt dosyasını yazar |
 | `--read-pc` | `--mcp` ile: bu bilgisayarın ayarlarını okumaya izin verir |
 | `--registry NAME` | `--mcp` ile: `off` (varsayılan), `read` araçların kayıt defterini okumasına, `write` değiştirmesine de izin verir |
+| `--edit-library` | `--mcp` ile: araçlar yer imlerini ve katalog dosyalarını değiştirebilir; okumak her zaman serbesttir |
 | `--profile NAME` | `--mcp` ile: bir hazır ayar veya `profiles/` içindeki bir profil geçerli profil olur |
 | `--version` | Sürümü yazdırır |
 | `--check-catalog` | Yerleşik kataloğu çevirileriyle yükler ve sorunlarını yazdırır |

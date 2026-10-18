@@ -501,5 +501,7 @@
   "Permissions (coming soon)": "Autorisations (bientôt)",
   "Search (coming soon)": "Recherche (bientôt)",
   "Allow reading the registry of this PC (off at every start)": "Autoriser la lecture du registre de ce PC (désactivé à chaque démarrage)",
-  "Allow changing the registry too": "Autoriser aussi la modification du registre"
+  "Allow changing the registry too": "Autoriser aussi la modification du registre",
+  "Bookmarks and catalogs": "Signets et catalogues",
+  "Allow changing the bookmarks and the catalogs (off at every start)": "Autoriser la modification des signets et des catalogues (désactivé à chaque démarrage)"
 }

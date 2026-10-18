@@ -547,6 +547,7 @@ impl App {
                 mode: winweaver_mcp::Mode::Read,
                 read_pc: false,
                 registry: winweaver_mcp::RegistryAccess::Off,
+                edit_library: false,
                 run: None,
                 error: String::new(),
                 journal_sel: None,
@@ -3725,6 +3726,9 @@ impl App {
             winweaver_mcp::Options {
                 mode: self.mcp.mode,
                 registry: self.mcp.registry,
+                edit_library: self.mcp.edit_library,
+                marks_path: self.marks_path.clone(),
+                imports_dir: self.imports_dir.clone(),
                 read_pc: self.mcp.read_pc,
                 profiles_dir: profiles_dir(),
                 output_dir: output_dir(),

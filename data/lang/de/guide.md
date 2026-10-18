@@ -161,6 +161,7 @@ oder `=`: `--renderer=directx`.
 | `--mode NAME` | Mit `--mcp`: `read` (Standard) liest nur, `edit` ändert Profile im Speicher, `files` speichert sie auch und schreibt die Antwortdatei |
 | `--read-pc` | Mit `--mcp`: erlaubt das Lesen der Einstellungen dieses PCs |
 | `--registry NAME` | Mit `--mcp`: `off` (Standard), `read` lässt die Tools die Registrierung lesen, `write` sie auch ändern |
+| `--edit-library` | Mit `--mcp`: die Tools dürfen Lesezeichen und Katalogdateien ändern; lesen dürfen sie sie immer |
 | `--profile NAME` | Mit `--mcp`: eine Vorlage oder ein Profil aus `profiles/` wird das aktuelle |
 | `--version` | Gibt die Version aus |
 | `--check-catalog` | Lädt den integrierten Katalog mit seinen Übersetzungen und gibt ihre Probleme aus |

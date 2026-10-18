@@ -1321,6 +1321,95 @@ impl CatalogFile {
         std::fs::rename(&tmp, path).map_err(|e| format!("{}: {e}", path.display()))
     }
 
+    /// A new policy of the file, empty, in a group of it: the id `admx.<file>.<name>`, the phase of
+    /// the machine, the level optional, as the editor and the MCP server start one.
+    pub fn new_policy(&self, group: &str, name: &str) -> Result<Rule, String> {
+        let id = format!("admx.{}.{}", slug(&self.id), slug(name));
+        if self.rules.iter().any(|r| r.id == id) {
+            return Err(format!("{id} is there already"));
+        }
+        if !self.groups.iter().any(|g| g.id == group) {
+            return Err(format!("the file has no group {group}"));
+        }
+        Ok(Rule {
+            id,
+            group: group.to_owned(),
+            phase: Phase::Specialize,
+            title: cut(name.trim(), 300),
+            level: Level::Optional,
+            default: false,
+            tags: Vec::new(),
+            doc: String::new(),
+            summary: String::new(),
+            effect: String::new(),
+            risk: String::new(),
+            versions: String::new(),
+            rollback: String::new(),
+            verify: String::new(),
+            note: String::new(),
+            params: IndexMap::new(),
+            requires: Vec::new(),
+            conflicts: Vec::new(),
+            actions: Vec::new(),
+        })
+    }
+
+    /// Puts a policy into the file, a new one or in place of the one of its id, and checks the
+    /// whole file; when the check fails the file stays as it was.
+    pub fn put_rule(&mut self, rule: Rule) -> Result<(), String> {
+        let mut next = self.clone();
+        match next.rules.iter_mut().find(|r| r.id == rule.id) {
+            Some(r) => *r = rule,
+            None => next.rules.push(rule),
+        }
+        next.check()?;
+        *self = next;
+        Ok(())
+    }
+
+    /// Takes a policy out of the file with its Disabled rule `<id>.off`, and the conflicts that
+    /// name them.
+    pub fn remove_rule(&mut self, id: &str) -> Result<(), String> {
+        let base = id.strip_suffix(".off").unwrap_or(id).to_owned();
+        let off = format!("{base}.off");
+        let before = self.rules.len();
+        self.rules.retain(|r| r.id != base && r.id != off);
+        if self.rules.len() == before {
+            return Err(format!("the file has no policy {id}"));
+        }
+        for r in &mut self.rules {
+            r.conflicts.retain(|c| c != &base && c != &off);
+        }
+        Ok(())
+    }
+
+    /// A new group of the file under one of its groups; its id.
+    pub fn new_group(&mut self, parent: &str, title: &str) -> Result<String, String> {
+        let title = title.trim();
+        if title.is_empty() || !safe_text(title, 200) {
+            return Err("a title of 1 to 200 safe characters is needed".to_owned());
+        }
+        if !self.groups.iter().any(|g| g.id == parent) {
+            return Err(format!("the file has no group {parent}"));
+        }
+        let base = format!("{parent}.{}", slug(title));
+        let mut id = base.clone();
+        let mut n = 2;
+        while self.groups.iter().any(|g| g.id == id) {
+            id = format!("{base}-{n}");
+            n += 1;
+        }
+        let order = 1000 + self.groups.len() as u32;
+        self.groups.push(Group {
+            id: id.clone(),
+            title: title.to_owned(),
+            order,
+            summary: String::new(),
+            parent: Some(parent.to_owned()),
+        });
+        Ok(id)
+    }
+
     /// The checks of a catalog file: only groups and rules of imports, only registry values in
     /// the machine or default user branch, safe texts, placeholders only for the parameters.
     pub fn check(&self) -> Result<(), String> {
@@ -1535,6 +1624,19 @@ pub fn compare(first: &CatalogFile, second: &CatalogFile) -> Comparison {
         }
     }
     out
+}
+
+/// A key of the registry in the form a catalog file writes it: `HKLM:\...` for the machine and
+/// `DU:\...` for the default user profile (the current user of regedit), from any form of
+/// `registry::normalize`. `None` for another root.
+pub fn catalog_path(path: &str) -> Option<String> {
+    let full = crate::registry::normalize(path)?;
+    let (hive, rest) = full.split_once('\\')?;
+    match hive {
+        "HKEY_LOCAL_MACHINE" => Some(format!("HKLM:\\{rest}")),
+        "HKEY_CURRENT_USER" => Some(format!("DU:\\{rest}")),
+        _ => None,
+    }
 }
 
 /// The extension of an archive of policy templates or of a catalog file.
@@ -2072,6 +2174,52 @@ mod tests {
         assert_eq!(d.changed[0].id, "admx.sample.turnoff");
         assert_eq!(d.changed[0].what, vec!["title", "values when off"]);
         assert_eq!(d.same, policies - 2);
+    }
+
+    /// A catalog file changes policy by policy and stays valid: a put that would break it changes
+    /// nothing, a removal takes the Disabled rule and the conflicts with it.
+    #[test]
+    fn a_catalog_file_is_edited_policy_by_policy_and_stays_valid() {
+        let mut f = sample();
+        let group = f.groups[1].id.clone();
+        let mut rule = f.new_policy(&group, "Custom thing").unwrap();
+        assert_eq!(rule.id, "admx.test.custom-thing");
+        rule.actions.push(Action::Reg {
+            path: catalog_path("HKLM\\Software\\Policies\\Test").unwrap(),
+            name: "Custom".to_owned(),
+            kind: RegKind::DWord,
+            value: Value::from(1),
+            default: None,
+            why: String::new(),
+        });
+        f.put_rule(rule.clone()).unwrap();
+        assert!(f.rules.iter().any(|r| r.id == rule.id));
+        assert!(f.new_policy(&group, "Custom thing").is_err(), "the id is taken");
+        let mut bad = rule.clone();
+        if let Action::Reg { path, .. } = &mut bad.actions[0] {
+            *path = "HKCU:\\X".to_owned();
+        }
+        assert!(f.put_rule(bad).is_err());
+        let kept = f.rules.iter().find(|r| r.id == rule.id).unwrap();
+        assert!(
+            matches!(&kept.actions[0], Action::Reg { path, .. } if path.starts_with("HKLM:")),
+            "a put that fails changes nothing"
+        );
+        f.remove_rule("admx.sample.turnoff.off").unwrap();
+        assert!(!f.rules.iter().any(|r| r.id.starts_with("admx.sample.turnoff")));
+        assert!(
+            f.rules
+                .iter()
+                .all(|r| !r.conflicts.iter().any(|c| c.starts_with("admx.sample.turnoff")))
+        );
+        let g = f.new_group(&group, "Mine").unwrap();
+        assert!(f.groups.iter().any(|x| x.id == g));
+        f.check().unwrap();
+        assert_eq!(
+            catalog_path("HKCU\\Software\\X").as_deref(),
+            Some("DU:\\Software\\X")
+        );
+        assert_eq!(catalog_path("HKU\\X"), None);
     }
 
     #[test]

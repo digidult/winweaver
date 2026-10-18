@@ -501,5 +501,7 @@
   "Permissions (coming soon)": "Izin (segera)",
   "Search (coming soon)": "Pencarian (segera)",
   "Allow reading the registry of this PC (off at every start)": "Izinkan membaca registri PC ini (mati di setiap start)",
-  "Allow changing the registry too": "Izinkan juga mengubah registri"
+  "Allow changing the registry too": "Izinkan juga mengubah registri",
+  "Bookmarks and catalogs": "Penanda dan katalog",
+  "Allow changing the bookmarks and the catalogs (off at every start)": "Izinkan mengubah penanda dan katalog (mati di setiap start)"
 }
