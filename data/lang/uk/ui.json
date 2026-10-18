@@ -617,5 +617,6 @@
   "Open {name}": "Відкрити {name}",
   "Policies": "Політики",
   "{n} rules": "правил: {n}",
-  "{n} steps run programs, change accounts or delete copies of the answer file; Undo does not take them back.": "Кроків, що запускають програми, змінюють облікові записи або видаляють копії файлу відповідей: {n}; скасування їх не повертає."
+  "{n} steps run programs, change accounts or delete copies of the answer file; Undo does not take them back.": "Кроків, що запускають програми, змінюють облікові записи або видаляють копії файлу відповідей: {n}; скасування їх не повертає.",
+  "1 value": "1 значення"
 }

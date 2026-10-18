@@ -617,5 +617,6 @@
   "Open {name}": "Buka {name}",
   "Policies": "Kebijakan",
   "{n} rules": "{n} aturan",
-  "{n} steps run programs, change accounts or delete copies of the answer file; Undo does not take them back.": "{n} langkah menjalankan program, mengubah akun, atau menghapus salinan file jawaban; Urungkan tidak mengembalikannya."
+  "{n} steps run programs, change accounts or delete copies of the answer file; Undo does not take them back.": "{n} langkah menjalankan program, mengubah akun, atau menghapus salinan file jawaban; Urungkan tidak mengembalikannya.",
+  "1 value": "1 nilai"
 }
