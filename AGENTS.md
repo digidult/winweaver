@@ -197,6 +197,16 @@ CI does not run at every push, since its Windows minutes are the dear ones:
 5. The Linux job comes first and the Windows job only after it: an unformatted push, or clippy or a test of
    the core that fails, stops before Windows.
 6. `main` runs after every merge (its archive is the build for the acceptance), a tag `v*` for the release.
+7. The mirror (the rule of 18.10.2026): when the Actions minutes of digidult/winweaver are used up, its run
+   fails in a few seconds with the annotation "The job was not started because recent account payments have
+   failed or your spending limit needs to be increased". Only then the same commit runs in the private
+   mirror https://github.com/stanislavperec-ua/winweaver (the remote `mirror` of the clone): `git push mirror
+   <branch>`, then `gh workflow run ci.yml --ref <branch> -R stanislavperec-ua/winweaver`; after a merge
+   `main` is pushed there too (its run gives the archive for the acceptance); tags never go there. The pull
+   requests and the merges stay in digidult/winweaver, and a pull request links the run of the mirror. CI
+   goes back to digidult/winweaver as soon as its runs start again (the minutes reset on the first day of a
+   month, or the customer sets a budget) and moves to the mirror again the next time they run out; a ready
+   pull request always tries digidult/winweaver first, so the switch back needs nothing.
 
 When `cargo fmt` finds differences, the Linux job fails and uploads `fmt.patch` with `Cargo.lock` in the
 artifact `ci-files`: `gh run download <run id> -n ci-files -D <folder>`, then `git apply <folder>/fmt.patch`.
