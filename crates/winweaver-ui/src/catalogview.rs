@@ -261,7 +261,9 @@ pub fn catalog_view(
     egui::CentralPanel::default().show(ui, |ui| {
         egui::ScrollArea::vertical()
             .auto_shrink(false)
-            .show(ui, |ui| detail(ui, file, &lang, doc, catalog, settings, acts));
+            .show(ui, |ui| {
+                detail(ui, file, &lang, doc, catalog, settings, acts)
+            });
     });
 }
 

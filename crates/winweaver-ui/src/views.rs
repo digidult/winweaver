@@ -3,10 +3,10 @@
 
 use eframe::egui::{self, CornerRadius, Margin, RichText, Stroke};
 use serde_json::Value;
+use winweaver_core::admx::CatalogFile;
 use winweaver_core::catalog::{
     Action, Catalog, Group, ListNames, Param, ROOT_UNATTEND, Rule, check,
 };
-use winweaver_core::admx::CatalogFile;
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::resolver::State;
 
@@ -952,7 +952,10 @@ pub(crate) fn catalog_links(
     rule: &str,
     acts: &mut Vec<Act>,
 ) {
-    for f in imports.iter().filter(|f| f.rules.iter().any(|r| r.id == rule)) {
+    for f in imports
+        .iter()
+        .filter(|f| f.rules.iter().any(|r| r.id == rule))
+    {
         if ui
             .link(trf("Show in the catalog {name}", &[("name", &f.name)]))
             .clicked()
@@ -1096,9 +1099,13 @@ pub(crate) fn rule_description(
             style::selectable_text(ui, ("risk", rule.id.as_str()), &rule.risk);
         });
     }
-    section(ui, "desc-writes", tr("What it writes"), parts.writes, |ui| {
-        writes(ui, rule)
-    });
+    section(
+        ui,
+        "desc-writes",
+        tr("What it writes"),
+        parts.writes,
+        |ui| writes(ui, rule),
+    );
     if !rule.requires.is_empty() || !rule.conflicts.is_empty() {
         section(
             ui,
