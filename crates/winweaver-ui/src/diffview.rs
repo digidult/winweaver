@@ -225,10 +225,7 @@ pub fn diff_view(
         ));
         // The profile files of the two sides open in tabs.
         ui.horizontal_wrapped(|ui| {
-            for (name, path) in [
-                (&d.base.name, &d.base.path),
-                (&d.other.name, &d.other.path),
-            ] {
+            for (name, path) in [(&d.base.name, &d.base.path), (&d.other.name, &d.other.path)] {
                 if path.is_empty() {
                     continue;
                 }

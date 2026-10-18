@@ -417,7 +417,9 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
         ui.add_space(6.0);
     }
     // A loaded import leads to its catalog tab and to the profile.
-    let import = doc.import.then(|| (doc.file.id.clone(), doc.file.name.clone()));
+    let import = doc
+        .import
+        .then(|| (doc.file.id.clone(), doc.file.name.clone()));
     let Some(form) = &mut doc.form else {
         ui.weak(tr(
             "Select a policy in the tree to edit it, or a group to add one to it.",
