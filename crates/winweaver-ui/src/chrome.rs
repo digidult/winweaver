@@ -22,6 +22,7 @@ fn doc_icon(doc: &Doc) -> &'static str {
         Doc::Catalog(_) => "\u{1F4E6}",
         Doc::Theme(_) => "\u{1F3A8}",
         Doc::Registry(_) => "\u{1F5C2}",
+        Doc::CatalogEdit(_) => "\u{270F}",
     }
 }
 
@@ -34,7 +35,7 @@ fn search_hint(doc: &Doc) -> &'static str {
         Doc::Bookmarks => "Search the bookmarks (Ctrl+F)",
         Doc::Mcp => "Filter the journal (Ctrl+F)",
         Doc::Catalog(_) => "Search policies (Ctrl+F)",
-        Doc::Settings | Doc::Theme(_) | Doc::Registry(_) => "",
+        Doc::Settings | Doc::Theme(_) | Doc::Registry(_) | Doc::CatalogEdit(_) => "",
     }
 }
 
@@ -423,6 +424,9 @@ impl App {
                     acts.push(Act::ImportOpenCatalog);
                 }
                 self.compare_tool(ui, acts, compact);
+                if tool(ui, "\u{270F}", tr("Edit"), "", true) {
+                    acts.push(Act::EditCatalog(crate::CatalogRef::Tab(self.active)));
+                }
             }
             Some(Doc::Catalog(c)) => {
                 if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
@@ -444,6 +448,14 @@ impl App {
                     acts.push(Act::ExportImport(c.id.clone()));
                 }
                 self.compare_tool(ui, acts, compact);
+                if tool(ui, "\u{270F}", tr("Edit"), "", true) {
+                    acts.push(Act::EditCatalog(crate::CatalogRef::Import(c.id.clone())));
+                }
+            }
+            Some(Doc::CatalogEdit(_)) => {
+                if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
+                    acts.push(Act::Save);
+                }
             }
             Some(Doc::Registry(d)) => {
                 if tool(ui, "\u{21BB}", tr("Refresh"), "", true) {
@@ -553,6 +565,10 @@ impl App {
                 ui.close();
             }
         }
+        if ui.button(tr("New catalog")).clicked() {
+            acts.push(Act::NewCatalog);
+            ui.close();
+        }
         ui.separator();
         if ui.button(tr("Settings of the policy templates")).clicked() {
             acts.push(Act::OpenSettingsSection(1));
@@ -616,7 +632,11 @@ impl App {
     pub(crate) fn has_nav(&self) -> bool {
         match self.docs.get(self.active) {
             Some(Doc::Profile(_)) | Some(Doc::Catalog(_)) => true,
-            Some(Doc::Settings) | Some(Doc::Theme(_)) | Some(Doc::Registry(_)) | None => false,
+            Some(Doc::Settings)
+            | Some(Doc::Theme(_))
+            | Some(Doc::Registry(_))
+            | Some(Doc::CatalogEdit(_))
+            | None => false,
             _ => !self.has_tools(),
         }
     }
@@ -625,7 +645,11 @@ impl App {
     pub(crate) fn has_search(&self) -> bool {
         !matches!(
             self.docs.get(self.active),
-            Some(Doc::Settings) | Some(Doc::Theme(_)) | Some(Doc::Registry(_)) | None
+            Some(Doc::Settings)
+                | Some(Doc::Theme(_))
+                | Some(Doc::Registry(_))
+                | Some(Doc::CatalogEdit(_))
+                | None
         )
     }
 

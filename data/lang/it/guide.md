@@ -115,6 +115,11 @@ Il pannello dei dettagli di un'opzione collega le schede dei cataloghi che la co
 criterio negli alberi di altre importazioni; anche un segnalibro dell'opzione. In Impostazioni, Generale si
 sceglie quali parti della descrizione sono aperte all'inizio.
 
+**Modifica** nella barra di una scheda di catalogo lo apre in un editor, e **Nuovo catalogo** nel menu dei
+modelli ne avvia uno vuoto tutto vostro. Un criterio riceve titolo, descrizione, il computer o il profilo
+utente predefinito e i valori del registro che scrive o rimuove; **Applica** controlla tutto il file, e
+nulla cambia se il controllo fallisce. Salva (Ctrl+S) scrive il file e lo ricarica.
+
 ## Il registro
 
 **Menu, Registro** apre il registro di questo PC in una scheda: le chiavi a sinistra, i valori della chiave

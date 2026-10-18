@@ -5,6 +5,7 @@
 //! tree with the detail panel, the Settings tab and the status bar. Every change of the profile
 //! is collected as an [`Act`] while the frame is drawn and applied afterwards.
 
+mod cataledit;
 mod catalogview;
 mod chrome;
 mod diffview;
@@ -202,6 +203,8 @@ pub enum Doc {
     Theme(Box<themeview::ThemeDoc>),
     /// The registry of this PC.
     Registry(Box<regview::RegistryDoc>),
+    /// The editor of a catalog file.
+    CatalogEdit(Box<cataledit::EditorDoc>),
 }
 
 impl Doc {
@@ -216,6 +219,7 @@ impl Doc {
             Doc::Catalog(d) => d.name.clone(),
             Doc::Theme(d) => d.title(),
             Doc::Registry(d) => d.title(),
+            Doc::CatalogEdit(d) => d.title(),
         }
     }
 
@@ -223,6 +227,7 @@ impl Doc {
         matches!(self, Doc::Profile(d) if d.dirty)
             || matches!(self, Doc::Diff(d) if d.dirty)
             || matches!(self, Doc::Theme(d) if d.dirty)
+            || matches!(self, Doc::CatalogEdit(d) if d.dirty)
     }
 }
 
@@ -349,6 +354,13 @@ pub enum Act {
     RegistryDelete(String, Option<String>),
     /// Bookmarks the key and the value of the registry tab.
     BookmarkRegistry,
+    /// Opens the editor of a loaded import or of the file of a catalog tab.
+    EditCatalog(CatalogRef),
+    /// Makes an empty catalog file among the imports and opens its editor.
+    NewCatalog,
+    /// Asks before a policy leaves the catalog of the editor in front.
+    AskCatalogEditRemove(String),
+    CatalogEditRemove(String),
     /// Compares the catalog of the active tab with another one in a page.
     CompareCatalog(CatalogRef),
     /// Looks for the catalogs of the unknown options of the active profile among the imports
@@ -574,7 +586,7 @@ impl App {
             Doc::Catalog(d) => Some(&mut d.search),
             Doc::Bookmarks => Some(&mut self.marks_search),
             Doc::Mcp => Some(&mut self.mcp_search),
-            Doc::Settings | Doc::Theme(_) | Doc::Registry(_) => None,
+            Doc::Settings | Doc::Theme(_) | Doc::Registry(_) | Doc::CatalogEdit(_) => None,
         }
     }
 
@@ -2649,11 +2661,13 @@ impl App {
                 Act::Save => match self.docs.get(self.active) {
                     Some(Doc::Diff(_)) => self.save_diff(),
                     Some(Doc::Theme(_)) => self.save_theme(false),
+                    Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
                     _ => self.save_active(false),
                 },
                 Act::SaveAs => match self.docs.get(self.active) {
                     Some(Doc::Diff(_)) => self.save_active_diff(),
                     Some(Doc::Theme(_)) => self.save_theme(true),
+                    Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
                     _ => self.save_active(true),
                 },
                 Act::EditTheme(id) => {
@@ -2908,6 +2922,24 @@ impl App {
                 Act::AskRegistryDelete => self.ask_registry_delete(),
                 Act::RegistryDelete(path, value) => self.registry_delete(&path, value.as_deref()),
                 Act::BookmarkRegistry => self.bookmark_registry(),
+                Act::EditCatalog(which) => self.edit_catalog(which),
+                Act::NewCatalog => self.new_catalog(),
+                Act::AskCatalogEditRemove(id) => {
+                    self.ask = Some(Ask {
+                        title: tr("Remove the policy").to_owned(),
+                        text: trf(
+                            "Remove the policy {id} from the catalog? It leaves the file at the next save.",
+                            &[("id", &id)],
+                        ),
+                        yes: tr("Remove").to_owned(),
+                        act: Act::CatalogEditRemove(id),
+                    });
+                }
+                Act::CatalogEditRemove(id) => {
+                    if let Some(Doc::CatalogEdit(d)) = self.docs.get_mut(self.active) {
+                        d.remove(&id);
+                    }
+                }
                 Act::ExportImport(id) => self.export_import(&id),
                 Act::StartRename(id, name) => self.renaming = Some((id, name)),
                 Act::OpenCatalog(id) => self.open_catalog(&id),
@@ -3112,6 +3144,106 @@ impl App {
                 doc.select(sel);
             }
             self.reveal_selection();
+        }
+    }
+
+    /// Opens the editor of a loaded import or of the file of a catalog tab; an editor of the same
+    /// file comes to the front.
+    fn edit_catalog(&mut self, which: CatalogRef) {
+        let import_path =
+            |dir: &Path, id: &str| dir.join(format!("{id}.{}", admx::CATALOG_EXTENSION));
+        let (file, path, import) = match &which {
+            CatalogRef::Import(id) => match self.imports.iter().find(|f| &f.id == id) {
+                Some(f) => (f.clone(), import_path(&self.imports_dir, &f.id), true),
+                None => return,
+            },
+            CatalogRef::Tab(i) => match self.docs.get(*i) {
+                Some(Doc::Catalog(c)) => match (&c.file, &c.path) {
+                    (Some(f), Some(p)) => ((**f).clone(), p.clone(), false),
+                    (None, _) => match c.catalog(&self.imports) {
+                        Some(f) => (f.clone(), import_path(&self.imports_dir, &f.id), true),
+                        None => return,
+                    },
+                    _ => return,
+                },
+                _ => return,
+            },
+        };
+        if let Some(i) = self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::CatalogEdit(e) if e.path == path))
+        {
+            self.active = i;
+            return;
+        }
+        let doc = cataledit::EditorDoc::new(file, path, import);
+        self.docs.push(Doc::CatalogEdit(Box::new(doc)));
+        self.active = self.docs.len() - 1;
+    }
+
+    /// An empty catalog file among the imports, loaded, in its editor.
+    fn new_catalog(&mut self) {
+        let mut n = 1;
+        let id = loop {
+            let id = format!("custom-{n}");
+            let path = self
+                .imports_dir
+                .join(format!("{id}.{}", admx::CATALOG_EXTENSION));
+            if !path.exists() && !self.imports.iter().any(|f| f.id == id) {
+                break id;
+            }
+            n += 1;
+        };
+        let name = trf("My policies {n}", &[("n", &n)]);
+        let file = admx::to_catalog_file(
+            &admx::Templates::default(),
+            &id,
+            &name,
+            "",
+            &clock::now_utc_iso(),
+        );
+        let path = self
+            .imports_dir
+            .join(format!("{id}.{}", admx::CATALOG_EXTENSION));
+        let _ = std::fs::create_dir_all(&self.imports_dir);
+        if let Err(e) = file.save(&path) {
+            self.status = trf("Save failed: {e}", &[("e", &e)]);
+            return;
+        }
+        self.imports.push(file.clone());
+        self.imports.sort_by_key(|f| import_order(&f.id));
+        self.mark_loaded(&id);
+        self.refresh_import_list();
+        self.rebuild_catalog();
+        let doc = cataledit::EditorDoc::new(file, path, true);
+        self.docs.push(Doc::CatalogEdit(Box::new(doc)));
+        self.active = self.docs.len() - 1;
+    }
+
+    /// Saves the file of the editor in front after a check; a loaded import is read again.
+    fn save_catalog_edit(&mut self) {
+        let Some(Doc::CatalogEdit(d)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        if let Some(parent) = d.path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        let result = d.file.check().and_then(|()| d.file.save(&d.path));
+        if let Err(e) = result {
+            self.status = trf("Save failed: {e}", &[("e", &e)]);
+            return;
+        }
+        d.dirty = false;
+        let shown = d.path.display().to_string();
+        let reload = d.import.then(|| d.file.clone());
+        self.status = trf("Saved {path}", &[("path", &shown)]);
+        if let Some(file) = reload {
+            if let Some(slot) = self.imports.iter_mut().find(|f| f.id == file.id) {
+                *slot = file;
+            }
+            self.refresh_import_list();
+            self.rebuild_catalog();
         }
     }
 
@@ -3600,7 +3732,11 @@ impl App {
                 Doc::Markdown(d) => d.path.clone(),
                 Doc::Catalog(c) => c.path.clone(),
                 Doc::Theme(t) => t.theme.path.clone(),
-                Doc::Bookmarks | Doc::Mcp | Doc::Settings | Doc::Registry(_) => None,
+                Doc::Bookmarks
+                | Doc::Mcp
+                | Doc::Settings
+                | Doc::Registry(_)
+                | Doc::CatalogEdit(_) => None,
             };
             if let Some(p) = path {
                 if i == self.active {
@@ -3988,6 +4124,7 @@ impl eframe::App for App {
             Some(Doc::Catalog(_)) => 7,
             Some(Doc::Theme(_)) => 8,
             Some(Doc::Registry(_)) => 9,
+            Some(Doc::CatalogEdit(_)) => 10,
             None => 2,
         };
         if kind == 0 {
@@ -4146,6 +4283,10 @@ impl eframe::App for App {
                     .show(ui, |ui| {
                         themeview::theme_view(ui, doc, &families, &mut acts);
                     });
+            }
+        } else if kind == 10 {
+            if let Some(Doc::CatalogEdit(doc)) = self.docs.get_mut(self.active) {
+                cataledit::editor_view(ui, doc, &mut acts);
             }
         } else if kind == 9 {
             if let Some(Doc::Registry(doc)) = self.docs.get_mut(self.active) {
@@ -5366,6 +5507,55 @@ and kept"
         harness.step();
         harness.step();
         assert!(!has(&harness, "Unknown options"), "hidden by the settings");
+    }
+
+    /// A new catalog gets a policy in its editor; a key of another root is refused and changes
+    /// nothing; the save loads the policy into the catalog; a removal asks first.
+    #[test]
+    fn a_new_catalog_is_edited_checked_and_saved() {
+        let dir = std::env::temp_dir().join(format!("winweaver-editor-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let catalog = Catalog::embedded().unwrap();
+        let settings = Settings {
+            loaded_imports: Some(Vec::new()),
+            ..Settings::default()
+        };
+        let mut app = App::new(catalog, Vec::new(), settings);
+        app.imports_dir = dir.join("imports");
+        app.apply(vec![Act::NewCatalog]);
+        let Some(Doc::CatalogEdit(d)) = app.docs.get_mut(app.active) else {
+            panic!("the editor: {}", app.status);
+        };
+        d.new_name = "Mute".to_owned();
+        d.new_policy();
+        let id = d.form.as_ref().map(|f| f.id.clone()).unwrap();
+        assert_eq!(id, "admx.custom-1.mute");
+        if let Some(form) = d.form.as_mut() {
+            form.actions.push(cataledit::ActionRow {
+                remove: false,
+                key: "HKU\\X".to_owned(),
+                name: "Mute".to_owned(),
+                kind: winweaver_core::catalog::RegKind::DWord,
+                value: "1".to_owned(),
+                keep: None,
+            });
+        }
+        d.apply();
+        assert!(d.error.is_some(), "a key of another root is refused");
+        let rule = d.file.rules.iter().find(|r| r.id == id).unwrap();
+        assert!(rule.actions.is_empty(), "and changes nothing");
+        if let Some(form) = d.form.as_mut() {
+            form.actions[0].key = "HKEY_LOCAL_MACHINE\\Software\\Policies\\Zoom".to_owned();
+        }
+        d.apply();
+        assert!(d.error.is_none(), "{:?}", d.error);
+        app.apply(vec![Act::Save]);
+        assert!(app.catalog.rule(&id).is_some(), "{}", app.status);
+        app.apply(vec![Act::AskCatalogEditRemove(id.clone())]);
+        assert!(app.ask.is_some(), "a removal asks");
+        app.apply(vec![Act::AskYes, Act::Save]);
+        assert!(app.catalog.rule(&id).is_none());
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     /// The registry tab writes a value of a type through its editor, asks before it deletes and

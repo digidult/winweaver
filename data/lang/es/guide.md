@@ -118,6 +118,11 @@ El panel de detalles de una opción enlaza las pestañas de los catálogos que l
 directiva en los árboles de otras importaciones; un marcador de la opción también. En Configuración,
 General se elige qué partes de la descripción se abren al principio.
 
+**Editar** en la barra de una pestaña de catálogo lo abre en un editor, y **Nuevo catálogo** en el menú de las
+plantillas empieza uno vacío propio. Una directiva recibe su título, su descripción, el equipo o el perfil
+de usuario predeterminado y los valores del registro que escribe o quita; **Aplicar** comprueba todo el
+archivo, y nada cambia si la comprobación falla. Guardar (Ctrl+S) escribe el archivo y lo vuelve a cargar.
+
 ## El registro
 
 **Menú, Registro** abre el registro de este equipo en una pestaña: las claves a la izquierda, los valores de

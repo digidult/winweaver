@@ -119,6 +119,12 @@ Der Detailbereich einer Option verlinkt die Katalog-Tabs, die sie enthalten, und
 den Strukturen anderer Importe; ein Lesezeichen der Option ebenso. Unter Einstellungen, Allgemein wird
 gewählt, welche Teile der Beschreibung zuerst geöffnet sind.
 
+**Bearbeiten** in der Leiste eines Katalog-Tabs öffnet den Katalog in einem Editor, und **Neuer Katalog** im
+Menü der Vorlagen beginnt einen leeren eigenen. Eine Richtlinie bekommt ihren Titel, ihre Beschreibung, den
+Computer oder das Standardbenutzerprofil und die Registrierungswerte, die sie schreibt oder entfernt;
+**Übernehmen** prüft die ganze Datei, und nichts ändert sich, wenn die Prüfung fehlschlägt. Speichern
+(Ctrl+S) schreibt die Datei und lädt sie neu.
+
 ## Die Registrierung
 
 **Menü, Registrierung** öffnet die Registrierung dieses PCs in einem Tab: die Schlüssel links, die Werte des

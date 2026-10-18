@@ -110,6 +110,11 @@ The detail panel of an option links to the catalog tabs that hold it and to the 
 trees of other imports; a bookmark of the option does the same. Settings, General choose which parts of
 the description open at first.
 
+**Edit** in the bar of a catalog tab opens the catalog in an editor, and **New catalog** in the menu of the
+templates starts an empty one of your own. A policy gets its title, its description, the computer or the
+default user profile, and the registry values it writes or removes; **Apply** checks the whole file, and
+nothing changes when the check fails. Save (Ctrl+S) writes the file and loads it again.
+
 ## The registry
 
 **Menu, Registry** opens the registry of this PC in a tab: the keys on the left, the values of the selected

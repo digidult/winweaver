@@ -113,6 +113,11 @@ Bir seçeneğin ayrıntı paneli, onu içeren katalog sekmelerine ve diğer içe
 ilkeye bağlantı verir; seçeneğin yer imi de öyle. Ayarlar, Genel'de açıklamanın hangi bölümlerinin baştan
 açık olacağı seçilir.
 
+Bir katalog sekmesinin çubuğundaki **Düzenle** kataloğu bir düzenleyicide açar, şablon menüsündeki **Yeni katalog**
+de size ait boş bir katalog başlatır. Bir ilke başlığını, açıklamasını, bilgisayarı veya varsayılan kullanıcı
+profilini ve yazdığı ya da kaldırdığı kayıt defteri değerlerini alır; **Uygula** tüm dosyayı denetler ve denetim
+başarısız olursa hiçbir şey değişmez. Kaydet (Ctrl+S) dosyayı yazar ve yeniden yükler.
+
 ## Kayıt defteri
 
 **Menü, Kayıt defteri** bu bilgisayarın kayıt defterini bir sekmede açar: anahtarlar solda, seçili anahtarın

@@ -110,6 +110,11 @@ setiap penghapusan, meminta konfirmasi lebih dulu.
 Panel detail sebuah opsi menautkan tab katalog yang memuatnya dan kebijakan yang sama di pohon impor lain;
 penanda opsi itu juga. Di Pengaturan, Umum dipilih bagian deskripsi mana yang terbuka sejak awal.
 
+**Sunting** di bilah tab katalog membuka katalog di editor, dan **Katalog baru** di menu templat memulai katalog
+kosong milik Anda. Sebuah kebijakan mendapat judul, deskripsi, komputer atau profil pengguna bawaan, dan nilai
+registri yang ditulis atau dihapusnya; **Terapkan** memeriksa seluruh file, dan tidak ada yang berubah bila
+pemeriksaan gagal. Simpan (Ctrl+S) menulis file dan memuatnya lagi.
+
 ## Registri
 
 **Menu, Registri** membuka registri PC ini di sebuah tab: kunci di kiri, nilai dari kunci terpilih di kanan

@@ -1,7 +1,8 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.6.0: the MCP tools
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.7.0: the editor of a
+catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
 catalogs from an option and a bookmark, the same policy in the trees of other imports, the policy of a catalog
@@ -95,7 +96,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      stop of Tab, the keys inside), list.rs (the painted list with columns of the
 │   │                      diff, the bookmarks and the MCP journal: widths by drag, the keys, a mini button),
 │   │                      renderer.rs (the renderers built in, the order Automatic tries, the start of a window),
-│   │                      regview.rs (the registry tab: the tree of keys, the values, the editor of a value)
+│   │                      regview.rs (the registry tab: the tree of keys, the values, the editor of a value),
+│   │                      cataledit.rs (the editor of a catalog file: its tree, the form of a policy)
 │   └── winweaver/         the executable: the window, --renderer, --mcp stdio, --mcp http, --elevated-apply
 │                          <plan> <digest> (the helper: only a plan-*.json of output/ with that SHA-256),
 │                          --version, --check-catalog, --smoke-window (CI)
@@ -318,6 +320,13 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   changes through `CatalogFile::put_rule` (the whole file is checked, a failure changes nothing),
   `remove_rule` (with its `.off` and the conflicts with it), `new_policy`, `new_group`; `admx::catalog_path`
   turns a key of regedit into `HKLM:\` or `DU:\`. The ids of catalogs are file names checked against `..`.
+- The editor of a catalog (`Doc::CatalogEdit`, `cataledit.rs`): Edit in the bar of a catalog tab
+  (`Act::EditCatalog`, an import or the file of the tab) or New catalog of the menu of the templates
+  (`custom-<n>`, an empty import, loaded). The form of a policy edits its title, its description, the phase
+  (the computer or the default user profile) and its Reg and RegRemove actions of DWORD, QWORD, SZ and
+  EXPAND_SZ with keys in the form of regedit (`admx::catalog_path` turns them into `HKLM:\` or `DU:\`);
+  other actions are kept as they are. Apply goes through `CatalogFile::put_rule`, Save (Ctrl+S) checks and
+  writes the file and loads a loaded import again; a removal asks first.
 - Every removal asks first (`App::ask`, Escape says no): an import, a bookmark of the bookmarks tab (the star
   of the navigation row stays a toggle), closing a tab discarding its changes, forgetting the recent files,
   renewing the MCP token.
