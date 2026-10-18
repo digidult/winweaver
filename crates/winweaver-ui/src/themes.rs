@@ -222,7 +222,7 @@ mod tests {
         assert_eq!(
             light.palette(),
             Palette::LIGHT,
-            "Light is the palette of the mockups"
+            "Light is the palette of the window"
         );
         let dark = list.iter().find(|t| t.id == "dark").unwrap();
         assert_eq!(dark.palette(), Palette::DARK);

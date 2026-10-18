@@ -40,7 +40,7 @@ functionality carry over; the file formats are new and no program code is ported
 | Task | Start with |
 |---|---|
 | Understand the scope and the principles | `docs/spec/00-scope.md` |
-| Design or change the interface | `docs/spec/01-ui.md`, then `docs/design/README.md` and the mockups |
+| Design or change the interface | `docs/spec/01-ui.md`, then `crates/winweaver-ui/src/style.rs` (the palette, the painted widgets) |
 | File types, formats, what lives next to the executable | `docs/spec/02-documents.md` |
 | What the program must do (feature inventory) | `docs/spec/03-features.md` |
 | Crates, modules, threads, build | `docs/spec/04-architecture.md` |
@@ -93,7 +93,7 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      catalogview.rs (the tab of an import or of a catalog file: its tree without check
 │   │                      boxes, a policy), chrome.rs (the tab row, the command bar of the active tab, the
 │   │                      navigation row with the search of the tab, the message bar, the status bar),
-│   │                      style.rs (the palette of the mockups, Segoe UI and Consolas, the painted buttons,
+│   │                      style.rs (the palette of light and dark, Segoe UI and Consolas, the painted buttons,
 │   │                      cards and chips), tree.rs (the painted tree of a profile and of a catalog tab: one
 │   │                      stop of Tab, the keys inside), list.rs (the painted list with columns of the
 │   │                      diff, the bookmarks and the MCP journal: widths by drag, the keys, a mini button),
@@ -124,8 +124,7 @@ functionality carry over; the file formats are new and no program code is ported
 │                          (Belarusian, every text: the example of a language, checked by a test of i18n.rs)
 └── docs/
     ├── releases/          release notes v<version>.md
-    ├── spec/              clean room specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
-    └── design/            UI design variants: README.md (comparison, the decision) and mockups/ (HTML)
+    └── spec/              clean room specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
 ```
 
 Next to the executable at run time (never versioned): `settings.json`, `bookmarks.wwmarks`, `profiles/`,
@@ -405,7 +404,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   of a catalog tab, the differences, the blocks of a Markdown page, the bookmarks, the MCP journal. Clearing
   a search opens the groups above the selection and scrolls it into view (`Act::SearchCleared`,
   `reveal`). The message bar folds to one line or opens with a height the user drags.
-- The look comes from `style.rs`: the palette of `docs/design/mockups/common.css` for light and dark (a
+- The look comes from `style.rs`: the palette of light and dark of variant A (the HTML mockups it came from
+  were removed on 18.10.2026, when the design had settled; a
   theme overrides its tokens, `style::COLOR_NAMES`, also with the names of the first version) and the
   fonts of the theme. `install_fonts` (before the first frame) names the families `light`, `light-strong`,
   `light-mono` and the same for `dark`; `style::apply` loads the files of the families of the two themes
@@ -437,7 +437,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   row: arrows, Home, End, Page Up and Down, Left and Right fold and go to the parent or child, Space
   toggles, Enter opens a group. A move with the keys sets `follow`, and the row comes into view at the next
   frame; the detail panel shows the new selection at once.
-- The detail panel has the cards of the mockups: the head with the title, the id with a copy button
+- The detail panel has cards: the head with the title, the id with a copy button
   (`views::id_line`), chips and the switch; Parameters, This PC and the folding Description, whose texts
   are `style::selectable_text` (a menu on the right button: copy, select all, copy all). A `doc` link
   opens the reference page in a Markdown tab at its heading (`Act::OpenDoc`, `mdview::slug`); links to
@@ -471,7 +471,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 
 | Area | State | Date |
 |---|---|---|
-| Specification | Draft 0.1; decisions of 14.10.2026 recorded in `docs/design/README.md` and below | 14.10.2026 |
+| Specification | Draft 0.1; decisions of 14.10.2026 recorded in `docs/spec/01-ui.md` and below | 14.10.2026 |
 | UI design | Variant A with the compact layout and the row switches of C and the secondary tabs of D (decided) | 14.10.2026 |
 | Core | Catalog, profiles, resolver, check, diff, bookmarks, build of the answer file, This PC (plan, judgement, capture, reports), stand-alone scripts, import of answer files and WinKickOff profiles; tests on the real data | 14.10.2026 |
 | Windows API | Reading the registry, the elevation, the locales, the Windows language and the local accounts with their groups; the native read of the whole catalog is tested on the Windows runner | 14.10.2026 |

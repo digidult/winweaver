@@ -23,14 +23,14 @@ comparison and diff files, the native read of this PC and its native apply, retu
 apply, revert and audit scripts, the import of policy templates (lists included) and catalog files,
 bookmarks of options, diff files with comments, the guide and the reference, themes with their fonts and
 an editor, the MCP server (stdio and loopback HTTP) and the interface in English, Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish
-work; the window follows the mockups of variant A and is used with the keyboard as well. Nothing has been accepted in a virtual machine yet. The specification is the
+work; the window has the layout of variant A and is used with the keyboard as well. Earlier versions were accepted in a virtual
+machine (the answer file works); the stand-alone scripts and the versions since 0.4.0 are being accepted now. The specification is the
 plan; `AGENTS.md` keeps the state.
 
 | What | Where |
 |---|---|
 | Map of the repository, rules for agents and developers | [AGENTS.md](AGENTS.md) |
 | Specification (scope, UI, documents, features, architecture) | [docs/spec/](docs/spec/README.md) |
-| UI design variants (HTML mockups, open in a browser) | [docs/design/](docs/design/README.md) |
 
 ## Languages
 

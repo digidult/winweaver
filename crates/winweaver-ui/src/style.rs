@@ -1,4 +1,4 @@
-//! The look of variant A (`docs/design/mockups/common.css`): the palette of light and dark, the
+//! The look of variant A, the layout the customer chose: the palette of light and dark, the
 //! fonts of the theme from the fonts of Windows (Segoe UI and Consolas by default), the spacing,
 //! and the small painted widgets egui has no style for: the buttons of the command bar, icon
 //! buttons, cards, section titles and chips.
@@ -11,7 +11,7 @@ use eframe::egui::{
     Stroke, StrokeKind,
 };
 
-/// The colours of the interface, the tokens of the mockups.
+/// The colours of the interface, the tokens of the palette.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Palette {
     pub dark: bool,

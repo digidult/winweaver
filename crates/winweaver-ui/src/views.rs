@@ -1,5 +1,5 @@
 //! The profile views: the tree on the left (`tree.rs` paints it) and the detail panel on the right,
-//! in the cards of the mockups.
+//! in cards.
 
 use eframe::egui::{self, CornerRadius, Margin, RichText, Stroke};
 use serde_json::Value;
@@ -450,7 +450,7 @@ pub(crate) fn header(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
     );
 }
 
-/// A card of the detail panel, with the margins of the mockups.
+/// A card of the detail panel, with its margins.
 pub(crate) fn block(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
     egui::Frame::new()
         .outer_margin(Margin {
@@ -793,7 +793,7 @@ fn default_text(default: &Option<Value>) -> String {
 }
 
 /// What a rule writes: the registry values as a table of key, name, value and the default of
-/// Windows, as in the mockups; the other actions as one line each under it.
+/// Windows; the other actions as one line each under it.
 fn writes(ui: &mut egui::Ui, rule: &Rule, acts: &mut Vec<Act>) {
     let p = style::palette(ui);
     let mut rows = Vec::new();
