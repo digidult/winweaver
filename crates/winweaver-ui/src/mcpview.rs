@@ -566,57 +566,59 @@ pub fn detail_view(
         return;
     };
     let profiles: Vec<String> = run.server.workspace().into_iter().map(|w| w.0).collect();
-    egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
-        egui::Grid::new("mcp-detail")
-            .num_columns(2)
-            .spacing([12.0, 4.0])
-            .show(ui, |ui| {
-                let rows = [
-                    (tr("Call"), entry.method.clone()),
-                    (tr("Time"), entry.time.clone()),
-                    (tr("Client"), entry.client.clone()),
-                    (tr("Result"), entry.result.clone()),
-                    (tr("Duration"), trf("{ms} ms", &[("ms", &entry.ms)])),
-                ];
-                for (name, value) in rows {
-                    ui.weak(name);
-                    ui.label(value);
-                    ui.end_row();
-                }
-            });
-        let places = places(&entry, catalog, imports, &profiles);
-        if !places.is_empty() {
-            ui.add_space(8.0);
-            style::section_title(ui, tr("Places it names"));
-            ui.horizontal_wrapped(|ui| {
-                for place in places {
-                    let (text, act) = match place {
-                        Place::Rule(id) => (id.clone(), Act::ShowInProfile(String::new(), id)),
-                        Place::Profile(name) => (name.clone(), Act::McpOpen(name)),
-                        Place::Catalog(id) => (id.clone(), Act::OpenCatalog(id)),
-                        Place::Key(key) => (key.clone(), Act::OpenRegistry(key, None)),
-                    };
-                    if ui.small_button(text).clicked() {
-                        acts.push(act);
+    egui::ScrollArea::vertical()
+        .auto_shrink(false)
+        .show(ui, |ui| {
+            egui::Grid::new("mcp-detail")
+                .num_columns(2)
+                .spacing([12.0, 4.0])
+                .show(ui, |ui| {
+                    let rows = [
+                        (tr("Call"), entry.method.clone()),
+                        (tr("Time"), entry.time.clone()),
+                        (tr("Client"), entry.client.clone()),
+                        (tr("Result"), entry.result.clone()),
+                        (tr("Duration"), trf("{ms} ms", &[("ms", &entry.ms)])),
+                    ];
+                    for (name, value) in rows {
+                        ui.weak(name);
+                        ui.label(value);
+                        ui.end_row();
                     }
-                }
-            });
-        }
-        for (title, value) in [
-            (tr("Arguments"), &entry.arguments),
-            (tr("Answer"), &entry.answer),
-        ] {
-            ui.add_space(8.0);
-            style::section_title(ui, title);
-            let mut text = serde_json::to_string_pretty(value).unwrap_or_default();
-            ui.add(
-                egui::TextEdit::multiline(&mut text)
-                    .font(egui::TextStyle::Monospace)
-                    .desired_width(f32::INFINITY)
-                    .interactive(true),
-            );
-        }
-    });
+                });
+            let places = places(&entry, catalog, imports, &profiles);
+            if !places.is_empty() {
+                ui.add_space(8.0);
+                style::section_title(ui, tr("Places it names"));
+                ui.horizontal_wrapped(|ui| {
+                    for place in places {
+                        let (text, act) = match place {
+                            Place::Rule(id) => (id.clone(), Act::ShowInProfile(String::new(), id)),
+                            Place::Profile(name) => (name.clone(), Act::McpOpen(name)),
+                            Place::Catalog(id) => (id.clone(), Act::OpenCatalog(id)),
+                            Place::Key(key) => (key.clone(), Act::OpenRegistry(key, None)),
+                        };
+                        if ui.small_button(text).clicked() {
+                            acts.push(act);
+                        }
+                    }
+                });
+            }
+            for (title, value) in [
+                (tr("Arguments"), &entry.arguments),
+                (tr("Answer"), &entry.answer),
+            ] {
+                ui.add_space(8.0);
+                style::section_title(ui, title);
+                let mut text = serde_json::to_string_pretty(value).unwrap_or_default();
+                ui.add(
+                    egui::TextEdit::multiline(&mut text)
+                        .font(egui::TextStyle::Monospace)
+                        .desired_width(f32::INFINITY)
+                        .interactive(true),
+                );
+            }
+        });
 }
 
 #[cfg(test)]
