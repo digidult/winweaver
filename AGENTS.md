@@ -1,8 +1,8 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.11.0: the search of the
-registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.12.0: MCP configuration files,
+the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
 catalogs from an option and a bookmark, the same policy in the trees of other imports, the policy of a catalog
@@ -80,7 +80,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      apps through the package API of Windows), execute.rs
 │   │                      (the executor of an apply plan with its backup, the start of the executable as
 │   │                      administrator)
-│   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal, token), tools.rs (the
+│   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal, token), config.rs (the
+│   │                      .wwmcp configuration files), log.rs (the JSON lines log, the crash handlers), tools.rs (the
 │   │                      34 tools and 3 resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and
 │   │                      Origin checks); tests/server.rs (both transports on a free loopback port)
 │   ├── winweaver-ui/      the window on eframe (variant A): lib.rs (tabs, menu, command bar, navigation,
@@ -129,7 +130,8 @@ functionality carry over; the file formats are new and no program code is ported
 
 Next to the executable at run time (never versioned): `settings.json`, `bookmarks.wwmarks`, `profiles/`,
 `output/` (the answer file, the scripts, plan and backup files of the native apply), `imports/` (catalog files of
-the imported policy templates), `drafts/` (unsaved profiles), `logs/` (winweaver-<date>.log, mcp-<date>.log),
+the imported policy templates), `drafts/` (unsaved profiles), `mcp/` (MCP configurations, `default.wwmcp` of the
+MCP tab), `logs/` (winweaver-<date>.log, mcp-<date>.jsonl),
 `lang/<code>/` (more or overriding translations), `themes/` (more themes, `<id>.wwtheme`, also `<id>.json`
 of the predecessor; the id of an embedded theme replaces it).
 
@@ -275,14 +277,23 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   Base64 (`Set-AccountText`), the profile is embedded as ASCII JSON in `Extensions/Profile`.
 - The language setting `""` follows the language of the Windows interface; it switches the interface and the
   catalog texts together (`i18n::current()`).
-- Logs and crashes (`winweaver_mcp::log`, set up first in `main`): the MCP server writes `logs/mcp-<date>.log`
+- Logs and crashes (`winweaver_mcp::log`, set up first in `main`): the MCP server writes `logs/mcp-<date>.jsonl`
+  (one JSON object a line: `time`, `level`, then `text` or the fields of an event; `log::event`)
   (transport start and stop, every request with its time, refusals and transport errors; ids and switches
   only, never a token, a password, a key or a free text). The panic hook and the filter of unhandled Windows
   exceptions (`winweaver_win::on_fatal_exception`: access violation, stack overflow) write the crash into the
   MCP log for a headless process or a thread named `mcp-*`, else into `winweaver-<date>.log`. A panic inside a
   request is caught (`Server::handle_text`): the request gets the error -32603 and the server goes on; a
   release build has no console, so `eprintln!` of a headless process also goes to the log (`refuse`).
-- MCP: the mode is never saved (read at every start), nor is read_pc; the token is saved in settings.json;
+- MCP: every setting of a server is a configuration file `mcp/<name>.wwmcp` (`config::Config`, strict, saved by the
+  MCP tab at every change through `App::persist_mcp`; `settings.json` keeps no MCP field any more, an old
+  `mcp_token` is read once into `mcp/default.wwmcp`): the transport for a start without the window, port, token,
+  mode, read_pc, registry, edit_library, the first profile and `detailed_log`. `winweaver --mcp FILE` serves as the
+  file says, `--mcp stdio|http --config FILE` too, and the other options change it for that start
+  (`mcp_config` of `main.rs`). The journal keeps every call with its arguments and answer (`redact` leaves out
+  password, product_key, token and authorization; an answer is cut at 16 KB); the detailed log writes them as
+  DETAIL events. The MCP tab shows the selected call in a right panel (`mcpview::detail_view`) with buttons to the
+  places it names (`mcpview::places`: rules, workspace profiles, catalog files, registry keys);
   errors start with not_allowed, not_found, invalid, write_failed or read_failed; passwords and the product
   key are replaced by `***` in every answer.
 - Native apply: the window writes `output/plan-<stamp>.json` (with a random nonce, so no two plans are equal)
@@ -337,13 +348,13 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   stop; `regview::Search`, a thread named `registry-search`, `App::poll_registry_search`). `views::writes` puts a button
   next to every key that opens the tab there (`Act::OpenRegistry`). A bookmark of the registry has the
   document `registry` (`Bookmark::registry`: the key in `path`, the value in `item`) and lists the rules that
-  write it (`registry::writers`). MCP: `Options::registry` (`RegistryAccess` off, read, write; off at every
-  start, `--registry`, the switches of the MCP tab) gates `read_registry_key`, `search_registry` (at most 500 places within 100000 keys), `set_registry_value`,
+  write it (`registry::writers`). MCP: `Options::registry` (`RegistryAccess` off, read, write; off by default,
+  `--registry`, the switches of the MCP tab, saved in its file) gates `read_registry_key`, `search_registry` (at most 500 places within 100000 keys), `set_registry_value`,
   `delete_registry_value`, `create_registry_key`, `delete_registry_key`.
 - MCP, bookmarks and catalogs: `list_bookmarks`, `list_catalogs` (by `CatalogHeader::read`), `get_catalog` (the
   groups, or the policies of a group) and `get_catalog_policy` read always, like profiles; `add_bookmark`,
   `set_bookmark_comment`, `remove_bookmark`, `set_catalog_policy` and `remove_catalog_policy` need
-  `Options::edit_library` (`--edit-library`, the switch of the MCP tab, off at every start). A catalog
+  `Options::edit_library` (`--edit-library`, the switch of the MCP tab, off by default). A catalog
   changes through `CatalogFile::put_rule` (the whole file is checked, a failure changes nothing),
   `remove_rule` (with its `.off` and the conflicts with it), `new_policy`, `new_group`; `admx::catalog_path`
   turns a key of regedit into `HKLM:\` or `DU:\`. The ids of catalogs are file names checked against `..`.

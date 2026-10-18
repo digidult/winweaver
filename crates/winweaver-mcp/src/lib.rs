@@ -7,6 +7,7 @@
 //! the folders of the program). Reading this PC needs the option `read_pc`. Nothing through MCP
 //! ever applies settings, elevates, deletes or imports.
 
+pub mod config;
 pub mod http;
 pub mod log;
 pub mod stdio;
@@ -16,6 +17,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 
 use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use winweaver_core::catalog::Catalog;
 use winweaver_core::clock;
@@ -26,9 +28,14 @@ pub const PROTOCOL_VERSION: &str = "2025-06-18";
 /// The largest message the server reads.
 pub const MAX_MESSAGE: usize = 4 * 1024 * 1024;
 const JOURNAL_SIZE: usize = 500;
+/// The longest answer the journal keeps for the panel of the MCP tab and the detailed log.
+const ANSWER_KEPT: usize = 16 * 1024;
+/// The fields whose values never reach the journal or the log.
+const SECRETS: [&str; 4] = ["password", "product_key", "token", "authorization"];
 
 /// What the tools may do.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Mode {
     Read,
     Edit,
@@ -54,8 +61,9 @@ impl Mode {
     }
 }
 
-/// What the tools of the registry may do: off by default and at every start, like reading this PC.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// What the tools of the registry may do: off unless the configuration of the server allows it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum RegistryAccess {
     #[default]
     Off,
@@ -83,7 +91,8 @@ impl RegistryAccess {
     }
 }
 
-/// The options of a server; none of them is ever saved.
+/// The options of a server, from its configuration file (`config::Config`) and the folders of the
+/// program.
 #[derive(Debug, Clone)]
 pub struct Options {
     pub mode: Mode,
@@ -101,6 +110,8 @@ pub struct Options {
     pub profiles_dir: PathBuf,
     /// The folder the answer file is written into.
     pub output_dir: PathBuf,
+    /// Whether the log keeps every request and answer whole, without secrets.
+    pub detailed_log: bool,
 }
 
 /// A profile of the workspace.
@@ -120,6 +131,47 @@ pub struct Entry {
     /// The arguments that are identifiers, numbers or switches; other texts are not shown.
     pub detail: String,
     pub result: String,
+    /// The whole arguments and the answer, without passwords, keys and tokens, for the panel of
+    /// the MCP tab; a long answer is cut to its first characters.
+    pub arguments: Value,
+    pub answer: Value,
+    /// How long the call took, in milliseconds.
+    pub ms: u64,
+}
+
+/// A copy of a value without the values of the secret fields (passwords, the product key, tokens).
+pub fn redact(value: &Value) -> Value {
+    match value {
+        Value::Object(map) => Value::Object(
+            map.iter()
+                .map(|(k, v)| {
+                    let secret = SECRETS.iter().any(|s| k.eq_ignore_ascii_case(s));
+                    let v = if secret && !v.is_null() {
+                        Value::from("***")
+                    } else {
+                        redact(v)
+                    };
+                    (k.clone(), v)
+                })
+                .collect(),
+        ),
+        Value::Array(items) => Value::Array(items.iter().map(redact).collect()),
+        other => other.clone(),
+    }
+}
+
+/// An answer for the journal: without secrets, and as the start of its text when it is long.
+fn kept(value: &Value) -> Value {
+    let value = redact(value);
+    let text = value.to_string();
+    if text.len() <= ANSWER_KEPT {
+        return value;
+    }
+    let mut end = ANSWER_KEPT;
+    while !text.is_char_boundary(end) {
+        end -= 1;
+    }
+    Value::from(format!("{}... ({} bytes in all)", &text[..end], text.len()))
 }
 
 pub(crate) struct State {
@@ -211,9 +263,32 @@ impl Server {
         self
     }
 
-    /// The last requests, the newest last.
+    pub fn set_detailed_log(&self, on: bool) {
+        self.lock().options.detailed_log = on;
+    }
+
+    /// The last requests, the newest last, without their arguments and answers (the list of the
+    /// MCP tab reads it at every frame).
     pub fn journal(&self) -> Vec<Entry> {
-        self.lock().journal.clone()
+        self.lock()
+            .journal
+            .iter()
+            .map(|e| Entry {
+                time: e.time.clone(),
+                client: e.client.clone(),
+                method: e.method.clone(),
+                detail: e.detail.clone(),
+                result: e.result.clone(),
+                arguments: Value::Null,
+                answer: Value::Null,
+                ms: e.ms,
+            })
+            .collect()
+    }
+
+    /// One request of the journal whole, by its place in the journal.
+    pub fn journal_entry(&self, index: usize) -> Option<Entry> {
+        self.lock().journal.get(index).cloned()
     }
 
     /// The name of the client that sent `initialize`.
@@ -360,7 +435,14 @@ impl Server {
             let mut state = self.lock();
             state.client = client;
         }
-        self.record("initialize", String::new(), "ok".to_owned());
+        self.record(Call {
+            method: "initialize",
+            detail: String::new(),
+            result: "ok",
+            arguments: params,
+            answer: &Value::Null,
+            ms: 0,
+        });
         json!({
             "protocolVersion": PROTOCOL_VERSION,
             "capabilities": { "tools": { "listChanged": false }, "resources": { "listChanged": false } },
@@ -391,9 +473,24 @@ impl Server {
                 ),
             ),
         }
+        let answer = match &outcome {
+            Ok(value) => value.clone(),
+            Err(e) => Value::from(format!("{}: {}", e.kind, e.message)),
+        };
+        let result = match &outcome {
+            Ok(_) => "ok",
+            Err(e) => e.kind,
+        };
+        self.record(Call {
+            method: name,
+            detail,
+            result,
+            arguments: &args,
+            answer: &answer,
+            ms: u64::try_from(ms).unwrap_or(u64::MAX),
+        });
         match outcome {
             Ok(value) => {
-                self.record(name, detail, "ok".to_owned());
                 let text = serde_json::to_string_pretty(&value).unwrap_or_default();
                 json!({
                     "content": [{ "type": "text", "text": tools::fit(&text) }],
@@ -402,7 +499,6 @@ impl Server {
                 })
             }
             Err(e) => {
-                self.record(name, detail, e.kind.to_owned());
                 json!({
                     "content": [{ "type": "text", "text": format!("{}: {}", e.kind, e.message) }],
                     "isError": true,
@@ -419,11 +515,14 @@ impl Server {
         };
         match text {
             Some(text) => {
-                self.record(
-                    "resources/read",
-                    uri.chars().take(80).collect(),
-                    "ok".to_owned(),
-                );
+                self.record(Call {
+                    method: "resources/read",
+                    detail: uri.chars().take(80).collect(),
+                    result: "ok",
+                    arguments: params,
+                    answer: &Value::from(format!("{} characters", text.chars().count())),
+                    ms: 0,
+                });
                 let mime = if uri == "winweaver://skill" {
                     "text/markdown"
                 } else {
@@ -435,19 +534,47 @@ impl Server {
         }
     }
 
-    fn record(&self, method: &str, detail: String, result: String) {
+    /// Puts a call into the journal, and into the log when the log is detailed.
+    fn record(&self, call: Call<'_>) {
         let mut state = self.lock();
         let client = state.client.clone();
-        state.journal.push(Entry {
+        let entry = Entry {
             time: clock::now_utc_iso(),
             client,
-            method: method.to_owned(),
-            detail,
-            result,
-        });
+            method: call.method.to_owned(),
+            detail: call.detail,
+            result: call.result.to_owned(),
+            arguments: redact(call.arguments),
+            answer: kept(call.answer),
+            ms: call.ms,
+        };
+        if state.options.detailed_log {
+            log::event(
+                "DETAIL",
+                json!({
+                    "client": entry.client,
+                    "call": entry.method,
+                    "result": entry.result,
+                    "ms": entry.ms,
+                    "arguments": entry.arguments,
+                    "answer": entry.answer,
+                }),
+            );
+        }
+        state.journal.push(entry);
         let excess = state.journal.len().saturating_sub(JOURNAL_SIZE);
         state.journal.drain(..excess);
     }
+}
+
+/// One call for the journal.
+struct Call<'a> {
+    method: &'a str,
+    detail: String,
+    result: &'a str,
+    arguments: &'a Value,
+    answer: &'a Value,
+    ms: u64,
 }
 
 fn error(id: Value, code: i64, message: &str) -> Value {
@@ -502,6 +629,7 @@ mod tests {
                 read_pc: false,
                 profiles_dir: std::env::temp_dir(),
                 output_dir: std::env::temp_dir(),
+                detailed_log: false,
             },
         );
         let failed = server

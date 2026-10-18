@@ -152,10 +152,7 @@ un endroit trouvé l'affiche. Les droits des clés viendront plus tard.
 
 ## Le serveur MCP
 
-**Menu, Serveur MCP** ouvre l'onglet du serveur par lequel les agents IA lisent les profils et, si le
-mode le permet, les modifient. Le serveur démarre en mode lecture ; le mode modification lui permet de
-modifier les profils en mémoire, le mode fichiers de les enregistrer et d'écrire le fichier de
-réponses. La lecture de ce PC nécessite sa propre autorisation, désactivée à chaque démarrage.
+**Menu, Serveur MCP** ouvre l'onglet du serveur par lequel les agents d'IA lisent les profils et, si le mode le permet, les modifient. L'onglet édite un fichier de configuration, `mcp/default.wwmcp` à côté du programme, et l'enregistre à chaque modification : le port et le jeton, le mode (read lit seulement, edit modifie les profils en mémoire, files les enregistre aussi et écrit le fichier de réponses), les autorisations de lire ce PC, de lire ou modifier le registre et de modifier les signets et les catalogues, le profil avec lequel le serveur démarre et le journal détaillé. **Ouvrir** prend un autre fichier `.wwmcp` et **Enregistrer sous** en fait une copie ; `winweaver --mcp FILE` sert sans la fenêtre comme le dit le fichier. Le journal du serveur en marche liste chaque appel ; **Afficher les détails** ouvre à sa droite un panneau avec les arguments et la réponse de l'appel choisi et des boutons vers les règles, profils, catalogues et clés du registre qu'il cite. Le journal du serveur est `logs/mcp-<date>.jsonl`, un objet JSON par ligne ; le journal détaillé, désactivé par défaut, garde chaque requête et réponse en entier, sans mots de passe, clés ni jetons.
 
 ## Le moteur de rendu
 
@@ -183,6 +180,9 @@ démarrage. Le journal de `logs/` indique avec quoi la fenêtre dessine.
 | `--registry NAME` | Avec `--mcp` : `off` (par défaut), `read` laisse les outils lire le registre, `write` aussi le modifier |
 | `--edit-library` | Avec `--mcp` : les outils peuvent modifier les signets et les fichiers de catalogue ; les lire est toujours permis |
 | `--profile NAME` | Avec `--mcp` : un préréglage ou un profil de `profiles/` devient le profil courant |
+| `--mcp FILE` | Sert MCP sans la fenêtre comme le dit un fichier de configuration : un chemin vers un fichier `.wwmcp` ou un nom du dossier `mcp` à côté du programme |
+| `--config FILE` | Avec `--mcp stdio` ou `--mcp http` : les paramètres d'un fichier de configuration, le jeton aussi ; les autres options les changent pour ce démarrage |
+| `--detailed-log` | Avec `--mcp` : le journal garde chaque requête et réponse en entier, sans mots de passe, clés ni jetons |
 | `--version` | Affiche la version |
 | `--check-catalog` | Charge le catalogue intégré avec ses traductions et affiche leurs problèmes |
 | `--help` | Affiche la liste des paramètres |
@@ -211,7 +211,7 @@ vont dans la console d'où le programme a été démarré et dans `logs/`.
 
 `settings.json` (langue, thème, fichiers récents, onglets de la dernière session), `profiles/` (vos
 profils), `output/` (le fichier de réponses et les scripts), `drafts/` (modifications non enregistrées,
-restaurées au démarrage suivant), `logs/` (ce qu'a fait le programme), `bookmarks.wwmarks`. Rien n'est
+restaurées au démarrage suivant), `mcp/` (les configurations du serveur MCP), `logs/` (ce qu'a fait le programme), `bookmarks.wwmarks`. Rien n'est
 écrit ailleurs.
 
 ## Pas encore disponible

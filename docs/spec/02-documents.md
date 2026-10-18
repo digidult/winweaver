@@ -10,6 +10,7 @@ Draft 0.1, 14.10.2026.
 | Diff | `.wwdiff` | The differences between two profiles | Two-sided tree |
 | Catalog file | `.wwcatalog` | Imported policy templates (records of policies), exchangeable between PCs | Tree without check boxes |
 | Bookmark file | `.wwmarks` | Positions with comments | List |
+| MCP configuration | `.wwmcp` | The transport, port, token, mode and switches of an MCP server, its first profile, the detailed log | The MCP tab |
 | Markdown page | `.md` | Documentation, the guide, any Markdown file | Rendered page |
 | Answer file | `autounattend.xml` | The build; opened as a profile when it embeds one, imported by its actions otherwise | Opens as a profile |
 
@@ -148,7 +149,8 @@ WinWeaver/
 ├── profiles/              the user's profiles (the default folder of Open and Save)
 ├── docs/                  the user documentation in English (Markdown, served in the Markdown tabs)
 ├── drafts/                drafts of unsaved documents
-├── logs/                  winweaver-<date>.log (the window), mcp-<date>.log (the MCP server, its crashes)
+├── mcp/*.wwmcp           MCP configurations; default.wwmcp is the one of the MCP tab
+├── logs/                  winweaver-<date>.log (the window), mcp-<date>.jsonl (the MCP server, its crashes)
 └── output/                autounattend.xml and the generated scripts
 ```
 

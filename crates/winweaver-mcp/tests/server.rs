@@ -34,6 +34,7 @@ fn server(mode: Mode, dir: &std::path::Path) -> Server {
             read_pc: false,
             profiles_dir: dir.join("profiles"),
             output_dir: dir.join("output"),
+            detailed_log: false,
         },
     )
 }

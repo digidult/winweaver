@@ -34,7 +34,8 @@ keeps its settings and files in that folder. The guide opens at the first start 
 - **Bookmarks** of rules with comments (`.wwmarks`), **themes** with their colours and fonts (`.wwtheme`) and an editor.
 - **Languages**: English, Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish built in,
   Belarusian as a file, more as files (below); "Follow Windows" takes the language of Windows when it is one of them.
-- **MCP server** for AI agents: they read and, when you allow it, change profiles. See `agents/README.md`.
+- **MCP server** for AI agents: they read and, when you allow it, change profiles. Its settings are a file of
+  `mcp/` (`default.wwmcp`); the journal shows every call with its details. See `agents/README.md`.
 
 Every new answer file goes to a virtual machine first, never straight to working computers.
 
@@ -84,7 +85,7 @@ generic key selects the edition during the installation; it does not activate Wi
 | `output/` | Answer files, scripts, plans and backups of changes of this PC |
 | `imports/` | Imported policy templates |
 | `themes/` | Your themes (`<name>.wwtheme`) |
-| `drafts/`, `logs/` | Unsaved changes; the logs of each day: `winweaver-<date>.log` of the window, `mcp-<date>.log` of the MCP server, with the reason when the program fails |
+| `drafts/`, `logs/` | Unsaved changes; the logs of each day: `winweaver-<date>.log` of the window, `mcp-<date>.jsonl` of the MCP server (one JSON object a line), with the reason when the program fails |
 
 ## Keys
 
@@ -119,6 +120,9 @@ effect at the next start. For one start only: `winweaver.exe --renderer directx`
 | `--registry NAME` | With `--mcp`: `off` (the default), `read` lets the tools read the registry, `write` change it too |
 | `--edit-library` | With `--mcp`: the tools may change the bookmarks and the catalog files; reading them is always allowed |
 | `--profile NAME` | With `--mcp`: a preset or a profile of `profiles/` becomes the current one |
+| `--mcp FILE` | Serves MCP without the window as a configuration file says: a path to a `.wwmcp` file, or a name of the folder `mcp` next to the program |
+| `--config FILE` | With `--mcp stdio` or `--mcp http`: the settings of a configuration file, the token too; the other options change them for this start |
+| `--detailed-log` | With `--mcp`: the log keeps every request and answer whole, without passwords, keys and tokens |
 | `--version` | Prints the version |
 | `--check-catalog` | Loads the built-in catalog with its translations and prints their problems |
 | `--help` | Prints the list of parameters |

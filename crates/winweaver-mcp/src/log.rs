@@ -1,16 +1,19 @@
 //! The log of the MCP server and the crash handlers of the process. The server writes a file of
-//! the day in the logs folder next to the executable, `mcp-<date>.log`, apart from the log of the
-//! window: the start and the stop of a transport, every request with its result and its time, the
-//! refusals and errors of the transports. A panic, or an exception of Windows that nothing handles
-//! (an access violation, a stack overflow), is written before the process ends: into the MCP log
-//! from a thread of the server or a process that only serves MCP, into the log of the window
-//! (`winweaver-<date>.log`) from any other thread. No token, password, key or free text of a
-//! profile is ever written.
+//! the day in the logs folder next to the executable, `mcp-<date>.jsonl`, apart from the log of the
+//! window: one JSON object a line (`time`, `level`, then `text` or the fields of an event) for the
+//! start and the stop of a transport, every request with its result and its time, the refusals and
+//! errors of the transports, and, when the configuration asks for the detailed log, every request
+//! and answer whole (`level` DETAIL). A panic, or an exception of Windows that nothing handles (an
+//! access violation, a stack overflow), is written before the process ends: into the MCP log from a
+//! thread of the server or a process that only serves MCP, into the log of the window
+//! (`winweaver-<date>.log`) from any other thread. No token, password or product key is ever
+//! written.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 
+use serde_json::{Value, json};
 use winweaver_core::clock;
 
 /// The logs folder and whether the process only serves MCP; set once by [`init`].
@@ -20,17 +23,36 @@ static WRITING: Mutex<()> = Mutex::new(());
 
 /// The file of the MCP log of today, once [`init`] ran.
 pub fn file_of_today() -> Option<PathBuf> {
-    TARGET.get().map(|(dir, _)| dir.join(name("mcp")))
+    TARGET.get().map(|(dir, _)| dir.join(name(MCP)))
 }
+
+/// The two logs: the one of the MCP server (JSON lines) and the one of the window (text lines).
+const MCP: &str = "mcp";
+const WINDOW: &str = "winweaver";
 
 fn name(kind: &str) -> String {
     let now = clock::now_utc_iso();
-    format!("{kind}-{}.log", now.get(..10).unwrap_or("unknown"))
+    let ext = if kind == MCP { "jsonl" } else { "log" };
+    format!("{kind}-{}.{ext}", now.get(..10).unwrap_or("unknown"))
+}
+
+/// The line of a log: a JSON object for the MCP log, `[time] [level] text` for the window.
+fn formatted(file: &Path, level: &str, text: &str) -> String {
+    let json = file.extension().is_some_and(|e| e == "jsonl");
+    if json {
+        json!({ "time": clock::now_utc_iso(), "level": level, "text": text }).to_string()
+    } else {
+        format!("[{}] [{level}] {text}", clock::now_utc_iso())
+    }
 }
 
 /// Writes a line. A crash takes the lock only when it is free: the thread that crashed may hold
 /// it.
 fn append(file: &Path, level: &str, text: &str, crash: bool) {
+    write_line(file, &formatted(file, level, text), crash);
+}
+
+fn write_line(file: &Path, line: &str, crash: bool) {
     let guard = if crash {
         WRITING.try_lock().ok()
     } else {
@@ -44,7 +66,7 @@ fn append(file: &Path, level: &str, text: &str, crash: bool) {
         .append(true)
         .open(file)
     {
-        let _ = writeln!(f, "[{}] [{level}] {text}", clock::now_utc_iso());
+        let _ = writeln!(f, "{line}");
         let _ = f.flush();
     }
     drop(guard);
@@ -54,7 +76,22 @@ fn append(file: &Path, level: &str, text: &str, crash: bool) {
 pub fn line(level: &str, text: &str) {
     if let Some((dir, _)) = TARGET.get() {
         let text = text.replace(['\r', '\n'], " ");
-        append(&dir.join(name("mcp")), level, &text, false);
+        append(&dir.join(name(MCP)), level, &text, false);
+    }
+}
+
+/// Appends an event to the MCP log: the fields of an object after its time and level; nothing
+/// before [`init`].
+pub fn event(level: &str, fields: Value) {
+    if let Some((dir, _)) = TARGET.get() {
+        let mut line = serde_json::Map::new();
+        line.insert("time".to_owned(), Value::from(clock::now_utc_iso()));
+        line.insert("level".to_owned(), Value::from(level));
+        if let Value::Object(fields) = fields {
+            line.extend(fields);
+        }
+        let text = Value::Object(line).to_string();
+        write_line(&dir.join(name(MCP)), &text, false);
     }
 }
 
@@ -62,7 +99,7 @@ pub fn line(level: &str, text: &str) {
 pub fn window_line(level: &str, text: &str) {
     if let Some((dir, _)) = TARGET.get() {
         let text = text.replace(['\r', '\n'], " ");
-        append(&dir.join(name("winweaver")), level, &text, false);
+        append(&dir.join(name(WINDOW)), level, &text, false);
     }
 }
 
@@ -73,9 +110,9 @@ fn crash_file() -> Option<PathBuf> {
         .name()
         .is_some_and(|n| n.starts_with("mcp"));
     let kind = if *headless || server_thread {
-        "mcp"
+        MCP
     } else {
-        "winweaver"
+        WINDOW
     };
     Some(dir.join(name(kind)))
 }
@@ -172,6 +209,18 @@ pub fn panic_text(payload: &(dyn std::any::Any + Send)) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_mcp_log_is_json_lines() {
+        let file = Path::new("logs").join(name(MCP));
+        assert!(file.to_string_lossy().ends_with(".jsonl"), "{file:?}");
+        let line: Value = serde_json::from_str(&formatted(&file, "INFO", "a \"quoted\" text")).unwrap();
+        assert_eq!(line["level"], "INFO");
+        assert_eq!(line["text"], "a \"quoted\" text");
+        assert!(name(WINDOW).ends_with(".log"));
+        let text = formatted(&Path::new("logs").join(name(WINDOW)), "WARN", "x");
+        assert!(text.ends_with("[WARN] x"), "{text}");
+    }
 
     #[test]
     fn exceptions_have_names() {

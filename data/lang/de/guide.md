@@ -149,10 +149,7 @@ später.
 
 ## Der MCP-Server
 
-**Menü, MCP-Server** öffnet die Registerkarte des Servers, über den KI-Agents Profile lesen und, wenn der
-Modus es zulässt, ändern. Der Server startet im Modus „Lesen“; „Bearbeiten“ erlaubt ihm, Profile im
-Arbeitsspeicher zu ändern, „Dateien“ erlaubt ihm, sie zu speichern und die Antwortdatei zu schreiben. Das
-Einlesen dieses PCs erfordert eine eigene Berechtigung, die bei jedem Start ausgeschaltet ist.
+**Menü, MCP-Server** öffnet den Tab des Servers, über den KI-Agenten Profile lesen und, wenn der Modus es erlaubt, ändern. Der Tab bearbeitet eine Konfigurationsdatei, `mcp/default.wwmcp` neben dem Programm, und speichert sie bei jeder Änderung: Port und Token, den Modus (read liest nur, edit ändert Profile im Speicher, files speichert sie auch und schreibt die Antwortdatei), die Erlaubnis, diesen PC zu lesen, die Registrierung zu lesen oder zu ändern und Lesezeichen und Kataloge zu ändern, das Profil, mit dem der Server beginnt, und das ausführliche Protokoll. **Öffnen** nimmt eine andere `.wwmcp`-Datei, **Speichern unter** legt eine Kopie an; `winweaver --mcp FILE` dient ohne Fenster so, wie die Datei es sagt. Das Protokoll des laufenden Servers listet jeden Aufruf; **Details einblenden** öffnet rechts davon einen Bereich mit den Argumenten und der Antwort des gewählten Aufrufs und Schaltflächen zu den Regeln, Profilen, Katalogen und Registrierungsschlüsseln, die er nennt. Das Protokoll des Servers ist `logs/mcp-<Datum>.jsonl`, ein JSON-Objekt pro Zeile; das ausführliche Protokoll, standardmäßig aus, hält jede Anfrage und Antwort vollständig fest, ohne Passwörter, Schlüssel und Token.
 
 ## Der Renderer
 
@@ -180,6 +177,9 @@ oder `=`: `--renderer=directx`.
 | `--registry NAME` | Mit `--mcp`: `off` (Standard), `read` lässt die Tools die Registrierung lesen, `write` sie auch ändern |
 | `--edit-library` | Mit `--mcp`: die Tools dürfen Lesezeichen und Katalogdateien ändern; lesen dürfen sie sie immer |
 | `--profile NAME` | Mit `--mcp`: eine Vorlage oder ein Profil aus `profiles/` wird das aktuelle |
+| `--mcp FILE` | Bedient MCP ohne Fenster so, wie eine Konfigurationsdatei es sagt: ein Pfad zu einer `.wwmcp`-Datei oder ein Name aus dem Ordner `mcp` neben dem Programm |
+| `--config FILE` | Mit `--mcp stdio` oder `--mcp http`: die Einstellungen einer Konfigurationsdatei, auch das Token; die anderen Optionen ändern sie für diesen Start |
+| `--detailed-log` | Mit `--mcp`: das Protokoll hält jede Anfrage und Antwort vollständig fest, ohne Passwörter, Schlüssel und Token |
 | `--version` | Gibt die Version aus |
 | `--check-catalog` | Lädt den integrierten Katalog mit seinen Übersetzungen und gibt ihre Probleme aus |
 | `--help` | Gibt die Liste der Parameter aus |
@@ -208,7 +208,7 @@ Meldungen gehen an die Konsole, aus der das Programm gestartet wurde, und nach `
 
 `settings.json` (Sprache, Design, zuletzt verwendete Dateien, die Registerkarten der letzten Sitzung),
 `profiles/` (Ihre Profile), `output/` (die Antwortdatei und die Skripts), `drafts/` (nicht gespeicherte
-Änderungen, die beim nächsten Start wiederhergestellt werden), `logs/` (was das Programm getan hat),
+Änderungen, die beim nächsten Start wiederhergestellt werden), `mcp/` (die Konfigurationen des MCP-Servers), `logs/` (was das Programm getan hat),
 `bookmarks.wwmarks`. An anderer Stelle wird nichts geschrieben.
 
 ## Noch nicht verfügbar

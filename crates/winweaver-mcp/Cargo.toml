@@ -11,6 +11,7 @@ authors.workspace = true
 [dependencies]
 winweaver-core = { path = "../winweaver-core" }
 winweaver-win = { path = "../winweaver-win" }
+serde.workspace = true
 serde_json.workspace = true
 indexmap.workspace = true
 getrandom = "0.4"

@@ -137,10 +137,7 @@ menampilkannya. Hak akses kunci menyusul.
 
 ## Server MCP
 
-**Menu, Server MCP** membuka tab server yang digunakan agen AI untuk membaca profil dan, bila mode
-mengizinkan, mengubahnya. Server dimulai dalam mode baca (read); mode edit memungkinkannya mengubah profil
-di memori, mode file (files) memungkinkannya menyimpan profil dan menulis file jawaban. Membaca PC ini
-memerlukan izin tersendiri, yang nonaktif setiap kali program dimulai.
+**Menu, Server MCP** membuka tab server yang dipakai agen AI untuk membaca profil dan, bila mode mengizinkan, mengubahnya. Tab ini menyunting file konfigurasi, `mcp/default.wwmcp` di samping program, dan menyimpannya setiap kali ada perubahan: port dan token, mode (read hanya membaca, edit mengubah profil di memori, files juga menyimpannya dan menulis file jawaban), izin membaca PC ini, membaca atau mengubah registri, dan mengubah penanda serta katalog, profil awal server, dan log terperinci. **Buka** mengambil file `.wwmcp` lain dan **Simpan sebagai** membuat salinan; `winweaver --mcp FILE` melayani tanpa jendela sesuai isi file. Log server yang berjalan mencantumkan setiap panggilan; **Tampilkan rincian** membuka panel di sebelah kanannya dengan argumen dan jawaban panggilan terpilih serta tombol ke aturan, profil, katalog, dan kunci registri yang disebutnya. Log server adalah `logs/mcp-<tanggal>.jsonl`, satu objek JSON per baris; log terperinci, mati secara bawaan, menyimpan setiap permintaan dan jawaban utuh tanpa kata sandi, kunci, dan token.
 
 ## Perender
 
@@ -168,6 +165,9 @@ menyebutkan apa yang dipakai jendela untuk menggambar.
 | `--registry NAME` | Dengan `--mcp`: `off` (default), `read` mengizinkan alat membaca registri, `write` juga mengubahnya |
 | `--edit-library` | Dengan `--mcp`: alat boleh mengubah penanda dan file katalog; membacanya selalu diizinkan |
 | `--profile NAME` | Dengan `--mcp`: preset atau profil dari `profiles/` menjadi profil saat ini |
+| `--mcp FILE` | Melayani MCP tanpa jendela sesuai file konfigurasi: jalur ke file `.wwmcp` atau nama dari folder `mcp` di samping program |
+| `--config FILE` | Dengan `--mcp stdio` atau `--mcp http`: pengaturan dari file konfigurasi, termasuk token; opsi lain mengubahnya untuk start ini |
+| `--detailed-log` | Dengan `--mcp`: log menyimpan setiap permintaan dan jawaban utuh, tanpa kata sandi, kunci, dan token |
 | `--version` | Menampilkan versi |
 | `--check-catalog` | Memuat katalog bawaan dengan terjemahannya dan menampilkan masalahnya |
 | `--help` | Menampilkan daftar parameter |
@@ -196,7 +196,7 @@ tempat program dijalankan dan ke `logs/`.
 
 `settings.json` (bahasa, tema, file terbaru, tab dari sesi terakhir), `profiles/` (profil
 Anda), `output/` (file jawaban dan skrip), `drafts/` (perubahan yang belum disimpan, dipulihkan saat
-program dimulai berikutnya), `logs/` (apa yang dilakukan program), `bookmarks.wwmarks`. Tidak ada yang
+program dimulai berikutnya), `mcp/` (konfigurasi server MCP), `logs/` (apa yang dilakukan program), `bookmarks.wwmarks`. Tidak ada yang
 ditulis di tempat lain.
 
 ## Belum tersedia

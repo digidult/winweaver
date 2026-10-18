@@ -18,12 +18,15 @@ const USAGE: &str = "WinWeaver
                               open the window, trying that renderer first (this start only)
   winweaver --version         print the version
   winweaver --check-catalog   load the embedded catalog and report its problems
-  winweaver --mcp stdio [--mode read|edit|files] [--read-pc] [--registry off|read|write]
-                     [--edit-library] [--profile NAME]
+  winweaver --mcp FILE        serve MCP as a configuration file says (FILE.wwmcp, a path or
+                              a name of the mcp folder next to the program)
+  winweaver --mcp stdio [--config FILE] [--mode read|edit|files] [--read-pc]
+                     [--registry off|read|write] [--edit-library] [--detailed-log] [--profile NAME]
                               serve MCP on standard input and output
-  winweaver --mcp http --token TOKEN [--port N] [--mode ...] [--read-pc] [--registry ...]
-                     [--edit-library] [--profile NAME]
+  winweaver --mcp http [--config FILE] [--token TOKEN] [--port N] [--mode ...] [--read-pc]
+                     [--registry ...] [--edit-library] [--detailed-log] [--profile NAME]
                               serve MCP on http://127.0.0.1:N/mcp (port 8765 by default)
+                              the options change what the configuration file says, for this start
   winweaver --smoke-window [--renderer ...]
                               open a small window, draw two frames, print what drew them
   winweaver --help            this text";
@@ -73,8 +76,73 @@ fn refuse(text: &str) {
     winweaver_mcp::log::line("ERROR", text);
 }
 
+/// The file of a configuration given on the command line: the path, or a name (with or without
+/// its extension) of the mcp folder next to the executable.
+fn config_path(text: &str) -> std::path::PathBuf {
+    let path = std::path::PathBuf::from(text);
+    if path.exists() {
+        return path;
+    }
+    let ext = winweaver_mcp::config::EXTENSION;
+    let name = if path.extension().is_some_and(|e| e == ext) {
+        text.to_owned()
+    } else {
+        format!("{text}.{ext}")
+    };
+    winweaver_mcp::config::Config::folder(&winweaver_ui::exe_dir()).join(name)
+}
+
+/// The configuration of a start without the window: the file of `--mcp FILE` or `--config FILE`,
+/// else the defaults, with the options of the command line over it.
+fn mcp_config(args: &[String]) -> Result<winweaver_mcp::config::Config, String> {
+    use winweaver_mcp::config::{Config, Transport};
+    let first = args.first().map(String::as_str).unwrap_or("");
+    let (file, transport) = match first {
+        "stdio" => (option(args, "--config"), Some(Transport::Stdio)),
+        "http" => (option(args, "--config"), Some(Transport::Http)),
+        "" => return Err("--mcp needs a configuration file, stdio or http".to_owned()),
+        other => (Some(other.to_owned()), None),
+    };
+    let mut config = match &file {
+        Some(f) => Config::load(&config_path(f))?,
+        None => Config::default(),
+    };
+    if let Some(t) = transport {
+        config.transport = t;
+    }
+    if let Some(text) = option(args, "--mode") {
+        config.mode = winweaver_mcp::Mode::parse(&text).ok_or("--mode is read, edit or files")?;
+    }
+    if let Some(text) = option(args, "--registry") {
+        config.registry =
+            winweaver_mcp::RegistryAccess::parse(&text).ok_or("--registry is off, read or write")?;
+    }
+    if let Some(text) = option(args, "--port") {
+        config.port = text.parse().map_err(|_| "--port is a number")?;
+    }
+    if let Some(token) = option(args, "--token") {
+        config.token = token;
+    }
+    if let Some(name) = option(args, "--profile") {
+        config.profile = name;
+    }
+    let flag = |name: &str| args.iter().any(|a| a == name);
+    config.read_pc |= flag("--read-pc");
+    config.edit_library |= flag("--edit-library");
+    config.detailed_log |= flag("--detailed-log");
+    config.check()?;
+    Ok(config)
+}
+
 fn mcp(args: &[String]) -> ExitCode {
-    let transport = args.first().map(String::as_str).unwrap_or("");
+    let config = match mcp_config(args) {
+        Ok(c) => c,
+        Err(e) => {
+            refuse(&e);
+            return ExitCode::from(2);
+        }
+    };
+    let transport = config.transport.name();
     winweaver_mcp::log::line(
         "INFO",
         &format!(
@@ -83,27 +151,7 @@ fn mcp(args: &[String]) -> ExitCode {
             std::process::id()
         ),
     );
-    let mode = match option(args, "--mode")
-        .as_deref()
-        .map(winweaver_mcp::Mode::parse)
-    {
-        None => winweaver_mcp::Mode::Read,
-        Some(Some(m)) => m,
-        Some(None) => {
-            refuse("--mode is read, edit or files");
-            return ExitCode::from(2);
-        }
-    };
-    let registry = match option(args, "--registry").as_deref() {
-        None => winweaver_mcp::RegistryAccess::Off,
-        Some(text) => match winweaver_mcp::RegistryAccess::parse(text) {
-            Some(r) => r,
-            None => {
-                refuse("--registry is off, read or write");
-                return ExitCode::from(2);
-            }
-        },
-    };
+    let mode = config.mode;
     let catalog = match Catalog::embedded() {
         Ok(c) => c,
         Err(e) => {
@@ -118,42 +166,37 @@ fn mcp(args: &[String]) -> ExitCode {
         &winweaver_ui::PRESETS,
         winweaver_mcp::Options {
             mode,
-            registry,
-            edit_library: args.iter().any(|a| a == "--edit-library"),
+            registry: config.registry,
+            edit_library: config.edit_library,
             marks_path: dir.join(winweaver_core::bookmarks::DEFAULT_FILE),
             imports_dir: winweaver_ui::imports_dir(),
-            read_pc: args.iter().any(|a| a == "--read-pc"),
+            read_pc: config.read_pc,
             profiles_dir: dir.join("profiles"),
             output_dir: dir.join("output"),
+            detailed_log: config.detailed_log,
         },
     );
-    if let Some(name) = option(args, "--profile")
-        && let Err(e) = server.select(&name)
+    if !config.profile.is_empty()
+        && let Err(e) = server.select(&config.profile)
     {
-        refuse(&format!("--profile {name}: {e}"));
+        refuse(&format!("the profile {}: {e}", config.profile));
         return ExitCode::from(2);
     }
-    match transport {
-        "stdio" => match winweaver_mcp::stdio::serve(&server) {
+    match config.transport {
+        winweaver_mcp::config::Transport::Stdio => match winweaver_mcp::stdio::serve(&server) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 refuse(&format!("stdio: {e}"));
                 ExitCode::FAILURE
             }
         },
-        "http" => {
-            let Some(token) = option(args, "--token").filter(|t| t.len() >= 32) else {
-                refuse("--token of at least 32 characters is needed");
+        winweaver_mcp::config::Transport::Http => {
+            let token = config.token.clone();
+            if token.len() < winweaver_mcp::config::TOKEN_MIN {
+                refuse("a token of 32 characters or more is needed (--token or the file)");
                 return ExitCode::from(2);
-            };
-            let port = match option(args, "--port").map(|p| p.parse::<u16>()) {
-                None => 8765,
-                Some(Ok(p)) => p,
-                Some(Err(_)) => {
-                    refuse("--port is a number");
-                    return ExitCode::from(2);
-                }
-            };
+            }
+            let port = config.port;
             match winweaver_mcp::http::HttpServer::start(std::sync::Arc::new(server), port, token) {
                 Ok(http) => {
                     eprintln!("WinWeaver MCP on {} (mode {})", http.url(), mode.name());
@@ -166,11 +209,6 @@ fn mcp(args: &[String]) -> ExitCode {
                     ExitCode::FAILURE
                 }
             }
-        }
-        _ => {
-            refuse("--mcp stdio or --mcp http");
-            eprintln!("{USAGE}");
-            ExitCode::from(2)
         }
     }
 }
