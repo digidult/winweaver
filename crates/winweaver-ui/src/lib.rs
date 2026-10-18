@@ -5648,6 +5648,20 @@ mod tests {
         harness
             .state_mut()
             .apply(vec![Act::UseTheme("light".to_owned())]);
+        // A registry file of the plan of the first preset, at its first key.
+        let catalog = Catalog::embedded().unwrap();
+        let profile = Profile::parse(PRESETS[0].1, PRESETS[0].0).unwrap();
+        let ids: Vec<String> = catalog.rules().iter().map(|r| r.id.clone()).collect();
+        let plan = winweaver_core::apply::plan_apply(&catalog, &profile, &ids, "shot");
+        let reg = dir.join("Apply-Office.reg");
+        let file = RegFile::from_plan(&plan, "Apply the profile Office");
+        file.save(&reg).unwrap();
+        harness.state_mut().apply(vec![Act::OpenPath(reg)]);
+        if let Some(Doc::RegFile(d)) = harness.state_mut().docs.last_mut() {
+            let key = |l: &Line| matches!(l, Line::Key { .. });
+            d.at = d.file.lines.iter().position(key);
+        }
+        shot(&mut harness, "12-regfile");
         harness.set_size(egui::vec2(1000.0, 700.0));
         shot(&mut harness, "09-compact");
     }
