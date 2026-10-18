@@ -57,6 +57,11 @@ ini adalah file Markdown; halaman dokumentasi terbuka dengan cara yang sama, mas
   pohon saat Anda mengetik dan mengingat apa yang pernah Anda cari.
 - **Pohon dan panel detail**: pohon di sebelah kiri, item yang dipilih di sebelah kanan. Deskripsi
   diciutkan dengan Ctrl+D. Aturan dari grup yang dipilih menampilkan tombol alih di ujung barisnya.
+- **Tautan**: setiap aturan, grup, katalog, file profil, dan kunci registri yang disebut tampilan
+  mengarah ke sana: aturan yang dibutuhkan suatu aturan, yang membutuhkannya, dan yang berkonflik
+  dengannya; aturan yang disebut dalam pesan; grup di atas dan di dalam sebuah grup; kebijakan yang sama
+  di katalog lain; aturan yang menulis kunci registri, di tab registri dan di file registri. Tautan di
+  profil membuka pohonnya hingga ke item; dari tab lain, tautan menampilkan aturan di tab profil pertama.
 - **Bilah status**: status dokumen, versi katalog, server MCP, dan pesan terakhir.
 
 ## PC Ini
@@ -73,6 +78,11 @@ apa pun:
   PowerShell untuk PC ini atau PC lain. Jalankan skrip penerapan atau pengembalian sebagai administrator,
   terlebih dahulu di PC uji; skrip ini menyimpan cadangan yang dapat dipulihkan oleh `Undo-Apply.ps1` di
   sampingnya. Laporan skrip audit dibuka dengan **Buka laporan audit** dan menjadi profil.
+- **Simpan file registri** atau **file registri pengembalian ke default** menulis nilai registri dari
+  pilihan sebagai file `.reg` untuk regedit atau `reg import`; yang tidak dapat dimuat file registri
+  (langkah skrip, aplikasi, kapabilitas) tetap ada di dalamnya sebagai komentar. Nilai profil pengguna
+  default ditulis ke `HKEY_USERS\UnattendDefault`, dan komentar di awal file menjelaskan cara memuat
+  hive-nya di sana.
 
 Aturan yang hanya bekerja selama instalasi atau saat pengguna masuk pertama kali tidak dibaca.
 
@@ -96,6 +106,8 @@ di profil tempat perbandingan dibuat; "Simpan sebagai file perbedaan" menyimpan 
 Buka menerima profil (`.wwprofile`), perbandingan (`.wwdiff`), file penanda (`.wwmarks`), halaman Markdown,
 file jawaban yang dibuat oleh WinWeaver atau WinKickOff (profil yang tersemat di dalamnya), profil WinKickOff,
 dan laporan audit (`.json`).
+
+File registri (`.reg`) terbuka di tabnya sendiri, seperti yang dijelaskan di bagian tentang registri.
 
 ## Templat kebijakan
 
@@ -134,6 +146,14 @@ nilai dengan komentar, dan penanda itu menampilkan aturan yang menulisnya. **Car
 terpilih seperti pencarian regedit: di nama kunci, nama nilai, dan data, hanya seluruh string bila diminta.
 Pencarian berjalan di latar belakang, **Hentikan** menghentikannya, dan klik pada tempat yang ditemukan
 menampilkannya. Hak akses kunci menyusul.
+
+File registri (`.reg`) terbuka di tabnya sendiri sebagai struktur, bukan teks: di kiri kunci dan komentar
+file sesuai urutannya, di kanan kunci terpilih dengan nilainya dalam tipe regedit dan komentar di
+antaranya, tautan ke tab registri, serta aturan dari katalog yang dimuat yang menulis kunci itu atau
+nilai terpilih. **Kunci baru**, **Nilai baru**, **Sunting**, dan **Hapus** ada di bilah, dan penghapusan
+bertanya terlebih dahulu. **Simpan** menulis kembali setiap baris: komentar dan baris yang tidak dibaca
+program tetap di tempatnya. File yang disimpan dari **PC Ini** menyebut aturannya dalam komentar, dan
+panah komentar seperti itu menunjukkan aturan di profil.
 
 ## Server MCP
 

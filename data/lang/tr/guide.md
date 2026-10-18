@@ -58,6 +58,12 @@ sayfaları da aynı şekilde, her biri kendi sekmesinde açılır.
   ağacı filtreler ve aradıklarınızı hatırlar.
 - **Ağaç ve ayrıntı paneli**: solda ağaç, sağda seçili öğe. Açıklama Ctrl+D ile daraltılır. Seçili bir
   grubun kuralları, satırlarının sonunda bir anahtar gösterir.
+- **Bağlantılar**: bir görünümün adını verdiği her kural, grup, katalog, profil dosyası ve kayıt defteri
+  anahtarı kendisine götürür: bir kuralın ihtiyaç duyduğu kurallar, ona ihtiyaç duyanlar ve onunla
+  çakışanlar; iletilerde adı geçen kurallar; bir grubun üstündeki ve içindeki gruplar; diğer
+  kataloglardaki aynı ilke; bir kayıt defteri anahtarını yazan kurallar, kayıt defteri sekmesinde ve
+  kayıt dosyasında. Profildeki bir bağlantı ağacını öğeye kadar açar; başka bir sekmeden kuralı ilk
+  profil sekmesinde gösterir.
 - **Durum çubuğu**: belgenin durumu, katalog sürümü, MCP sunucusu ve son ileti.
 
 ## Bu bilgisayar
@@ -75,6 +81,11 @@ Komut çubuğundaki **Bu bilgisayar**, bu bilgisayarın ayarlarını hiçbir şe
   önce bir test bilgisayarında çalıştırın; betik, yanındaki `Undo-Apply.ps1` dosyasının geri yüklediği
   bir yedek kaydeder. Bir denetim betiğinin raporu **Denetim raporu aç** ile açılır ve bir profile
   dönüşür.
+- **Kayıt dosyasını kaydet** veya **varsayılanlara dönüş kayıt dosyasını kaydet**, seçimin kayıt defteri
+  değerlerini regedit veya `reg import` için bir `.reg` dosyası olarak yazar; bir kayıt dosyasının
+  tutamadıkları (betik adımları, uygulamalar, özellikler) içinde yorum olarak kalır. Varsayılan kullanıcı
+  profilinin değerleri `HKEY_USERS\UnattendDefault` altına gider ve dosyanın başındaki yorum, kovanının
+  oraya nasıl yükleneceğini anlatır.
 
 Yalnızca yükleme sırasında veya bir kullanıcının ilk oturum açmasında etkili olan kurallar okunmaz.
 
@@ -98,6 +109,8 @@ herhangi bir profile uygulanabilen bir `.wwdiff` dosyası olarak saklar.
 Aç komutu; profilleri (`.wwprofile`), karşılaştırmaları (`.wwdiff`), yer işareti dosyalarını
 (`.wwmarks`), Markdown sayfalarını, WinWeaver veya WinKickOff tarafından oluşturulan yanıt dosyalarını
 (içerdikleri profil), WinKickOff profillerini ve denetim raporlarını (`.json`) kabul eder.
+
+Bir kayıt dosyası (`.reg`), kayıt defteri bölümünde anlatıldığı gibi kendi sekmesinde açılır.
 
 ## İlke şablonları
 
@@ -137,6 +150,14 @@ yorumla saklar, yer imi de onu yazan kuralları listeler. Çubuktaki **Bul** se�
 araması gibi arar: anahtar adlarında, değer adlarında ve verilerde, istenirse yalnızca dizenin tamamında.
 Arama arka planda yürür, **Durdur** onu bitirir ve bulunan bir yere tıklamak onu gösterir. Anahtarların
 hakları daha sonra gelecek.
+
+Bir kayıt dosyası (`.reg`) kendi sekmesinde metin olarak değil, yapı olarak açılır: solda dosyanın
+anahtarları ve yorumları sırasıyla, sağda seçili anahtar, regedit türlerindeki değerleri ve aralarındaki
+yorumlarla, kayıt defteri sekmesine bir bağlantı ve anahtarı ya da seçili değeri yazan yüklü
+kataloglardaki kurallar. **Yeni anahtar**, **Yeni değer**, **Düzenle** ve **Sil** çubuktadır; silme önce
+sorar. **Kaydet** her satırı geri yazar: yorumlar ve programın okumadığı satırlar yerinde kalır. **Bu
+bilgisayar** ile kaydedilen bir dosya kurallarını yorumlarda adlandırır ve böyle bir yorumun oku, kuralı
+profilde gösterir.
 
 ## MCP sunucusu
 

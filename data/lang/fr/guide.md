@@ -61,6 +61,12 @@ les pages de documentation s'ouvrent de la même façon, chacune dans son propre
 - **Arborescence et volet de détails** : l'arborescence à gauche, l'élément sélectionné à droite. La
   description se réduit avec Ctrl+D. Les règles d'un groupe sélectionné affichent un commutateur en fin
   de ligne.
+- **Liens** : chaque règle, groupe, catalogue, fichier de profil et clé de registre qu'une vue nomme y
+  mène : les règles dont une règle a besoin, celles qui ont besoin d'elle et celles avec lesquelles elle
+  est en conflit ; les règles nommées dans les messages ; les groupes au-dessus et à l'intérieur d'un
+  groupe ; la même stratégie dans d'autres catalogues ; les règles qui écrivent une clé de registre, dans
+  l'onglet du registre et dans un fichier de registre. Un lien dans un profil ouvre son arbre jusqu'à
+  l'élément ; depuis un autre onglet, il montre la règle dans le premier onglet de profil.
 - **Barre d'état** : l'état du document, la version du catalogue, le serveur MCP et le dernier message.
 
 ## Ce PC
@@ -79,6 +85,11 @@ Windows, sans rien modifier :
   d'application ou de retour en tant qu'administrateur, d'abord sur un PC de test ; il enregistre une
   sauvegarde que le script `Undo-Apply.ps1` placé à côté restaure. Le rapport d'un script d'audit
   s'ouvre avec **Ouvrir un rapport d'audit** et devient un profil.
+- **Enregistrer un fichier de registre** ou **un fichier de registre de retour aux valeurs par défaut**
+  écrit les valeurs du registre de la sélection dans un fichier `.reg` pour regedit ou `reg import` ; ce
+  qu'un fichier de registre ne peut pas contenir (étapes de scripts, applications, fonctionnalités) y
+  reste en commentaires. Les valeurs du profil utilisateur par défaut vont dans
+  `HKEY_USERS\UnattendDefault`, et le commentaire en tête du fichier explique comment y charger sa ruche.
 
 Les règles qui n'agissent que pendant l'installation ou à la première connexion d'un utilisateur ne
 sont pas lues.
@@ -106,6 +117,8 @@ s'appliquer à n'importe quel profil.
 Ouvrir accepte les profils (`.wwprofile`), les fichiers de différences (`.wwdiff`), les fichiers de
 signets (`.wwmarks`), les pages Markdown, les fichiers de réponses générés par WinWeaver ou WinKickOff
 (le profil qu'ils contiennent), les profils WinKickOff et les rapports d'audit (`.json`).
+
+Un fichier de registre (`.reg`) s'ouvre dans un onglet à lui, comme le décrit la section sur le registre.
 
 ## Modèles de stratégie
 
@@ -149,6 +162,15 @@ signet liste les règles qui l'écrivent. **Rechercher** dans la barre cherche s
 recherche de regedit : dans les noms des clés, les noms des valeurs et les données, la chaîne entière
 uniquement si on le demande. La recherche se fait en arrière-plan, **Arrêter** l'interrompt, et un clic sur
 un endroit trouvé l'affiche. Les droits des clés viendront plus tard.
+
+Un fichier de registre (`.reg`) s'ouvre dans un onglet à lui, comme une structure et non comme du texte :
+à gauche les clés et les commentaires du fichier dans leur ordre, à droite la clé sélectionnée avec ses
+valeurs dans les types de regedit et les commentaires entre elles, un lien vers l'onglet du registre et
+les règles des catalogues chargés qui écrivent la clé ou la valeur sélectionnée. **Nouvelle clé**,
+**Nouvelle valeur**, **Modifier** et **Supprimer** sont dans la barre, et une suppression demande
+d'abord. **Enregistrer** réécrit chaque ligne : les commentaires et les lignes que le programme ne lit
+pas restent à leur place. Un fichier enregistré depuis **Ce PC** nomme ses règles dans des commentaires,
+et la flèche d'un tel commentaire montre la règle dans le profil.
 
 ## Le serveur MCP
 

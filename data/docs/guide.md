@@ -56,6 +56,11 @@ documentation pages open the same way, each in its own tab.
   you type and remembers what you searched.
 - **Tree and detail panel**: the tree on the left, the selected item on the right. The description
   folds with Ctrl+D. The rules of a selected group show a switch at the end of their rows.
+- **Links**: every rule, group, catalog, profile file and registry key a view names leads to it: the
+  rules a rule needs, the ones that need it and the ones it conflicts with; the rules named in the
+  messages; the groups above and inside a group; the same policy in other catalogs; the rules that write
+  a registry key, in the registry tab and in a registry file. A link in a profile opens its tree down to
+  the item; from another tab it shows the rule in the first profile tab.
 - **Status bar**: the state of the document, the catalog version, the MCP server and the last message.
 
 ## This PC
@@ -72,6 +77,10 @@ anything:
   script for this or another PC. Run an apply or return script as administrator, first on a test PC;
   it saves a backup that `Undo-Apply.ps1` next to it restores. The report of an audit script opens
   with **Open an audit report** and becomes a profile.
+- **Save a registry file** or **a return-to-defaults registry file** writes the registry values of the
+  selection as a `.reg` file for regedit or `reg import`; what a registry file cannot hold (script steps,
+  apps, capabilities) stays in it as comments. The values of the default user profile go to
+  `HKEY_USERS\UnattendDefault`, and the comment at the top of the file tells how to load its hive there.
 
 Rules that act only during installation or at the first sign-in of a user are not read.
 
@@ -95,6 +104,8 @@ file that applies later to any profile.
 Open accepts profiles (`.wwprofile`), diffs (`.wwdiff`), bookmark files (`.wwmarks`), Markdown pages,
 answer files built by WinWeaver or WinKickOff (the profile they embed), WinKickOff profiles and audit
 reports (`.json`).
+
+A registry file (`.reg`) opens in a tab of its own, as the section on the registry describes.
 
 ## Policy templates
 
@@ -134,6 +145,14 @@ and the value with a comment, and the bookmark lists the rules that write it. **
 bar searches under the selected key as Find of regedit does: in the names of keys, the names of values and
 the data, by the whole string only when asked. The search runs in the background, **Stop** ends it, and a
 click on a place found shows it. The rights of keys come later.
+
+A registry file (`.reg`) opens in a tab of its own, as a structure rather than as text: on the left the
+keys and the comments of the file in their order, on the right the selected key with its values in the
+types of regedit and the comments between them, a link to the registry tab and the rules of the loaded
+catalogs that write the key or the selected value. **New key**, **New value**, **Edit** and **Delete**
+are in the bar, and a deletion asks first. **Save** writes every line back: the comments and the lines
+the program does not read stay where they were. A file saved from **This PC** names its rules in
+comments, and the arrow of such a comment shows the rule in the profile.
 
 ## The MCP server
 

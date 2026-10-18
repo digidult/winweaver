@@ -15,6 +15,7 @@ mod list;
 mod marksview;
 mod mcpview;
 mod mdview;
+mod regfileview;
 mod regview;
 mod renderer;
 mod session;
@@ -39,6 +40,7 @@ use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::import;
 use winweaver_core::jsonfile;
 use winweaver_core::profile::{self, Account, Install, Languages, Profile};
+use winweaver_core::regfile::{self, Line, RegFile};
 use winweaver_core::render;
 use winweaver_core::resolver::{self, Resolution};
 use winweaver_core::scripts;
@@ -205,6 +207,8 @@ pub enum Doc {
     Registry(Box<regview::RegistryDoc>),
     /// The editor of a catalog file.
     CatalogEdit(Box<cataledit::EditorDoc>),
+    /// A registry file (`.reg`).
+    RegFile(Box<regfileview::RegFileDoc>),
 }
 
 impl Doc {
@@ -220,6 +224,7 @@ impl Doc {
             Doc::Theme(d) => d.title(),
             Doc::Registry(d) => d.title(),
             Doc::CatalogEdit(d) => d.title(),
+            Doc::RegFile(d) => d.title(),
         }
     }
 
@@ -228,6 +233,7 @@ impl Doc {
             || matches!(self, Doc::Diff(d) if d.dirty)
             || matches!(self, Doc::Theme(d) if d.dirty)
             || matches!(self, Doc::CatalogEdit(d) if d.dirty)
+            || matches!(self, Doc::RegFile(d) if d.dirty)
     }
 }
 
@@ -292,6 +298,8 @@ type TitleColors = (bool, [u8; 3], [u8; 3], [u8; 3]);
 /// A change requested while a frame was drawn, applied after it.
 pub enum Act {
     Select(Sel),
+    /// Selects an item of the profile in front and opens its tree down to it: a link of a view.
+    Reveal(Sel),
     Toggle(String, bool),
     SetGroup(String, bool),
     SetParam(String, String, Value),
@@ -317,6 +325,16 @@ pub enum Act {
     /// Compare the selected rules with this PC in the messages panel.
     CheckOnPc,
     SaveScript(ScriptKind),
+    /// Saves the registry steps of the apply (false) or the return (true) of the selection as a
+    /// registry file.
+    SaveRegFile(bool),
+    /// Edits the selected line of the registry file in front.
+    RegFileEdit,
+    /// Starts a new key or a new value in the registry file in front.
+    RegFileNew(regfileview::EditKind),
+    /// Asks before lines leave the registry file in front, then removes them.
+    AskRegFileRemove,
+    RegFileRemove(Vec<usize>),
     /// Import the templates of this Windows (None), of a folder or a catalog file.
     ImportTemplates(ImportSource),
     /// Loads an import that is not loaded, or forgets one that is.
@@ -378,6 +396,9 @@ pub enum Act {
     /// Opens the tab of an import.
     OpenCatalog(String),
     CatalogSelect(String),
+    /// Selects a group (`g:<id>`) or a policy of the catalog tab in front and opens its tree down
+    /// to it: a link of a view.
+    CatalogReveal(String),
     CatalogExpand(String, bool),
     /// Shows a policy of an import (the import, the rule) in the tree of a profile.
     ShowInProfile(String, String),
@@ -606,6 +627,7 @@ impl App {
             Doc::Catalog(d) => Some(&mut d.search),
             Doc::Bookmarks => Some(&mut self.marks_search),
             Doc::Mcp => Some(&mut self.mcp_search),
+            Doc::RegFile(d) => Some(&mut d.search),
             Doc::Settings | Doc::Theme(_) | Doc::Registry(_) | Doc::CatalogEdit(_) => None,
         }
     }
@@ -634,13 +656,15 @@ impl App {
             }
             Some(Doc::Catalog(c)) => {
                 let mut chain = Vec::new();
-                if let Some(file) = c.catalog(&self.imports)
-                    && let Some(rule) = c
-                        .sel
-                        .as_deref()
-                        .and_then(|id| file.rules.iter().find(|r| r.id == id))
-                {
-                    let mut next = Some(rule.group.clone());
+                if let Some(file) = c.catalog(&self.imports) {
+                    let group = |id: &str| file.groups.iter().find(|x| x.id == id);
+                    let rule = |id: &str| file.rules.iter().find(|r| r.id == id);
+                    // The groups above the selected policy, or above the selected group.
+                    let mut next = match (c.sel.as_deref(), c.group.as_deref()) {
+                        (Some(id), _) => rule(id).map(|r| r.group.clone()),
+                        (None, Some(id)) => group(id).and_then(|g| g.parent.clone()),
+                        (None, None) => None,
+                    };
                     while let Some(g) = next {
                         next = file
                             .groups
@@ -656,6 +680,7 @@ impl App {
             Some(Doc::Diff(d)) => d.reveal = true,
             Some(Doc::Bookmarks) => self.marks_tab.reveal = true,
             Some(Doc::Mcp) => self.mcp.journal_reveal = true,
+            Some(Doc::RegFile(d)) => d.follow = true,
             _ => {}
         }
     }
@@ -1015,7 +1040,10 @@ impl App {
             Sel::None | Sel::Form(_) | Sel::Unknown(_) => None,
             Sel::Group(id) if id == UNKNOWN_GROUP => None,
             Sel::Group(id) => Some(id.clone()),
-            Sel::Rule(id) => self.catalog.rule(id).map(|r| r.group.clone()),
+            Sel::Rule(id) => doc
+                .focus
+                .clone()
+                .or_else(|| self.catalog.rule(id).map(|r| r.group.clone())),
         };
         let in_unknown = match &doc.sel {
             Sel::Unknown(_) => true,
@@ -1410,6 +1438,13 @@ impl App {
             .is_some_and(|e| e == winweaver_mcp::config::EXTENSION)
         {
             self.open_mcp_config(path);
+            return;
+        }
+        if path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case(regfile::EXTENSION))
+        {
+            self.open_reg_path(path);
             return;
         }
         let ext = path
@@ -1872,6 +1907,122 @@ impl App {
             "Saved {} ({summary}); run it as administrator, first on a test PC",
             path.display()
         );
+    }
+
+    /// Saves the registry steps of the apply or the return of the selection as a registry file, as
+    /// the scripts are saved; the steps a registry file cannot hold are comments in it.
+    fn save_plan_reg(&mut self, revert: bool) {
+        let ids = self.selection_ids();
+        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+            self.status = tr("Save a registry file: the active tab is not a profile").to_owned();
+            return;
+        };
+        let stem = file_stem(&doc.profile.name);
+        let profile = &doc.profile.name;
+        let (plan, title, name) = if revert {
+            (
+                winweaver_core::apply::plan_revert(&self.catalog, &ids, "reg"),
+                format!("Return the rules of {profile} to the defaults of Windows"),
+                format!("Revert-{stem}.{}", regfile::EXTENSION),
+            )
+        } else {
+            (
+                winweaver_core::apply::plan_apply(&self.catalog, &doc.profile, &ids, "reg"),
+                format!("Apply the profile {profile}"),
+                format!("Apply-{stem}.{}", regfile::EXTENSION),
+            )
+        };
+        let file = RegFile::from_plan(&plan, &title);
+        let values = file
+            .lines
+            .iter()
+            .filter(|l| matches!(l, Line::Value { .. }))
+            .count();
+        if values == 0 {
+            let text = tr("Nothing for a registry file: the selection writes no registry value");
+            self.status = text.to_owned();
+            return;
+        }
+        let start = output_dir();
+        let dialog = rfd::FileDialog::new()
+            .set_title(tr("Save the registry file"))
+            .add_filter(tr("Registry files"), &[regfile::EXTENSION])
+            .set_file_name(name);
+        let dialog = if start.is_dir() {
+            dialog.set_directory(start)
+        } else {
+            dialog
+        };
+        let Some(path) = dialog.save_file() else {
+            return;
+        };
+        let path = reg_extension(path);
+        if let Err(e) = file.save(&path) {
+            self.status = trf("Registry file not saved: {e}", &[("e", &e)]);
+            return;
+        }
+        self.status = trf(
+            "Saved {path} ({n} values); import it as administrator, first on a test PC",
+            &[("path", &path.display()), ("n", &values)],
+        );
+    }
+
+    /// Opens a registry file in a tab of its own, or brings its tab to the front.
+    fn open_reg_path(&mut self, path: PathBuf) {
+        if let Some(i) = self
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::RegFile(r) if r.path == path))
+        {
+            self.active = i;
+            return;
+        }
+        match RegFile::load(&path) {
+            Ok(file) => {
+                let doc = regfileview::RegFileDoc::new(file, path.clone());
+                self.docs.push(Doc::RegFile(Box::new(doc)));
+                self.active = self.docs.len() - 1;
+                self.status = trf("Opened {path}", &[("path", &path.display())]);
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+        }
+    }
+
+    /// Saves the registry file in front at its place, or at one the user picks.
+    fn save_reg_doc(&mut self, ask: bool) {
+        let Some(Doc::RegFile(d)) = self.docs.get(self.active) else {
+            return;
+        };
+        let path = if ask {
+            let name = d.title();
+            let dialog = rfd::FileDialog::new()
+                .set_title(tr("Save the registry file as"))
+                .add_filter(tr("Registry files"), &[regfile::EXTENSION])
+                .set_file_name(name);
+            let dialog = match d.path.parent() {
+                Some(dir) if dir.is_dir() => dialog.set_directory(dir),
+                _ => dialog,
+            };
+            match dialog.save_file() {
+                Some(p) => reg_extension(p),
+                None => return,
+            }
+        } else {
+            d.path.clone()
+        };
+        let Some(Doc::RegFile(d)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        match d.file.save(&path) {
+            Ok(()) => {
+                d.path = path.clone();
+                d.dirty = false;
+                self.status = trf("Saved {path}", &[("path", &path.display())]);
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+        }
     }
 
     /// Opens the report of an audit script made on another PC and reads it into a new profile.
@@ -2506,6 +2657,8 @@ impl App {
         if let Some(Doc::Profile(doc)) = self.docs.get_mut(index) {
             doc.expanded.extend(groups);
             doc.select(Sel::Rule(rule.to_owned()));
+            doc.focus = None;
+            doc.reveal = true;
         }
     }
 
@@ -2664,6 +2817,13 @@ impl App {
                         doc.focus = None;
                     }
                 }
+                Act::Reveal(sel) => {
+                    if let Some(doc) = self.active_profile() {
+                        doc.select(sel);
+                        doc.focus = None;
+                    }
+                    self.reveal_selection();
+                }
                 Act::SelectIn(sel, group) => {
                     if let Some(doc) = self.active_profile() {
                         doc.select(sel);
@@ -2788,6 +2948,7 @@ impl App {
                     Some(Doc::Diff(_)) => self.save_diff(),
                     Some(Doc::Theme(_)) => self.save_theme(false),
                     Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
+                    Some(Doc::RegFile(_)) => self.save_reg_doc(false),
                     _ => self.save_active(false),
                 },
                 Act::SaveAs => match self.docs.get(self.active) {
@@ -2795,6 +2956,7 @@ impl App {
                     Some(Doc::Diff(_)) => self.save_active_diff(),
                     Some(Doc::Theme(_)) => self.save_theme(true),
                     Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
+                    Some(Doc::RegFile(_)) => self.save_reg_doc(true),
                     _ => self.save_active(true),
                 },
                 Act::EditTheme(id) => {
@@ -2935,6 +3097,36 @@ impl App {
                 Act::ReadSelection => self.read_pc(true),
                 Act::CheckOnPc => self.check_on_pc(),
                 Act::SaveScript(kind) => self.save_script(kind),
+                Act::SaveRegFile(revert) => self.save_plan_reg(revert),
+                Act::RegFileEdit => {
+                    if let Some(Doc::RegFile(d)) = self.docs.get_mut(self.active)
+                        && let Some(line) = d.target()
+                    {
+                        d.start_edit(line);
+                    }
+                }
+                Act::RegFileNew(kind) => {
+                    if let Some(Doc::RegFile(d)) = self.docs.get_mut(self.active) {
+                        d.start_new(kind);
+                    }
+                }
+                Act::AskRegFileRemove => {
+                    if let Some(Doc::RegFile(d)) = self.docs.get(self.active)
+                        && let Some((lines, text)) = d.removal()
+                    {
+                        self.ask = Some(Ask {
+                            title: tr("Remove from the file").to_owned(),
+                            text,
+                            yes: tr("Remove").to_owned(),
+                            act: Act::RegFileRemove(lines),
+                        });
+                    }
+                }
+                Act::RegFileRemove(lines) => {
+                    if let Some(Doc::RegFile(d)) = self.docs.get_mut(self.active) {
+                        d.remove_lines(&lines);
+                    }
+                }
                 Act::OpenReport => self.open_report(),
                 Act::ImportTemplates(source) => self.start_import(source),
                 Act::ToggleImport(id) => {
@@ -3095,6 +3287,10 @@ impl App {
                             c.sel = Some(key);
                         }
                     }
+                }
+                Act::CatalogReveal(key) => {
+                    self.apply(vec![Act::CatalogSelect(key)]);
+                    self.reveal_selection();
                 }
                 Act::CatalogExpand(gid, open) => {
                     if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) {
@@ -3951,6 +4147,7 @@ impl App {
                 | Doc::Settings
                 | Doc::Registry(_)
                 | Doc::CatalogEdit(_) => None,
+                Doc::RegFile(d) => Some(d.path.clone()),
             };
             if let Some(p) = path {
                 if i == self.active {
@@ -4433,6 +4630,7 @@ impl eframe::App for App {
             Some(Doc::Theme(_)) => 8,
             Some(Doc::Registry(_)) => 9,
             Some(Doc::CatalogEdit(_)) => 10,
+            Some(Doc::RegFile(_)) => 11,
             None => 2,
         };
         if kind == 0 {
@@ -4510,6 +4708,7 @@ impl eframe::App for App {
             let search = &self.mcp_search;
             let imports: Vec<String> = self.imports.iter().map(|f| f.id.clone()).collect();
             let catalog = &self.catalog;
+            let texts = texts_for(&self.texts, &i18n::current());
             let p = style::palette(ui);
             let settings_frame = egui::Frame::new().fill(p.bg);
             if panel.run.is_some() {
@@ -4534,7 +4733,7 @@ impl eframe::App for App {
                                 .inner_margin(egui::Margin::same(12)),
                         )
                         .show(ui, |ui| {
-                            mcpview::detail_view(ui, panel, catalog, &imports, &mut acts)
+                            mcpview::detail_view(ui, panel, catalog, texts, &imports, &mut acts)
                         });
                 }
                 egui::CentralPanel::default()
@@ -4588,6 +4787,7 @@ impl eframe::App for App {
                     file,
                     doc,
                     &self.catalog,
+                    &self.imports,
                     &self.settings,
                     &mut acts,
                 ),
@@ -4611,9 +4811,15 @@ impl eframe::App for App {
             if let Some(Doc::CatalogEdit(doc)) = self.docs.get_mut(self.active) {
                 cataledit::editor_view(ui, doc, &mut acts);
             }
+        } else if kind == 11 {
+            let texts = texts_for(&self.texts, &i18n::current());
+            if let Some(Doc::RegFile(doc)) = self.docs.get_mut(self.active) {
+                regfileview::regfile_view(ui, doc, &self.catalog, texts, &self.imports, &mut acts);
+            }
         } else if kind == 9 {
+            let texts = texts_for(&self.texts, &i18n::current());
             if let Some(Doc::Registry(doc)) = self.docs.get_mut(self.active) {
-                regview::registry_view(ui, doc, &mut acts);
+                regview::registry_view(ui, doc, &self.catalog, texts, &mut acts);
             }
         } else if kind == 1 {
             let p = style::palette(ui);
@@ -4999,6 +5205,15 @@ pub fn file_stem(name: &str) -> String {
 }
 
 /// The path with the profile extension when it has none.
+/// A path the save dialog gave, with the extension of a registry file when it has none.
+fn reg_extension(path: PathBuf) -> PathBuf {
+    if path.extension().is_some() {
+        path
+    } else {
+        path.with_extension(regfile::EXTENSION)
+    }
+}
+
 fn with_extension(path: PathBuf) -> PathBuf {
     if path.extension().is_some() {
         path
@@ -5041,6 +5256,7 @@ fn pick_any() -> Option<PathBuf> {
                 winweaver_mcp::config::EXTENSION,
             ],
         )
+        .add_filter(tr("Registry files"), &[regfile::EXTENSION])
         .add_filter(tr("Policy templates (opened without importing)"), &["admx"])
         .add_filter(tr("Answer files (the profile they embed)"), &["xml"])
         .add_filter(tr("WinKickOff profiles and audit reports"), &["json"])
@@ -5690,6 +5906,81 @@ and kept"
         app.open_path(dir.join("missing.wwprofile"));
         assert!(app.status.starts_with("Open failed"), "{}", app.status);
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_registry_file_opens_in_its_tab_and_keeps_its_comments() {
+        let catalog = Catalog::embedded().unwrap();
+        let dir = std::env::temp_dir().join(format!("winweaver-reg-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("sample.reg");
+        let text = [
+            regfile::HEADER,
+            "",
+            "; kept",
+            "[HKEY_CURRENT_USER\\Software\\WinWeaver]",
+            "\"A\"=dword:00000001",
+        ]
+        .join("\r\n");
+        std::fs::write(&path, text).unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        app.apply(vec![Act::OpenPath(path.clone())]);
+        let Some(Doc::RegFile(d)) = app.docs.get_mut(app.active) else {
+            panic!("the file has no tab: {}", app.status);
+        };
+        // A new value goes after the last value of the selected key.
+        d.at = Some(2);
+        d.start_new(regfileview::EditKind::Value);
+        let edit = d.edit.as_mut().unwrap();
+        edit.name = "B".to_owned();
+        edit.text = "text".to_owned();
+        assert!(d.apply_edit());
+        assert!(app.docs[app.active].dirty());
+        app.apply(vec![Act::Save]);
+        assert!(!app.docs[app.active].dirty(), "{}", app.status);
+        let saved = RegFile::load(&path).unwrap().to_text();
+        assert!(saved.contains("; kept"), "{saved}");
+        assert!(saved.contains("\"B\"=\"text\""), "{saved}");
+        // Removing the key asks first; its comment stays.
+        if let Some(Doc::RegFile(d)) = app.docs.get_mut(app.active) {
+            d.line = None;
+        }
+        app.apply(vec![Act::AskRegFileRemove]);
+        assert!(app.ask.is_some());
+        app.apply(vec![Act::AskYes]);
+        let Some(Doc::RegFile(d)) = app.docs.get(app.active) else {
+            panic!("the tab of the file is gone");
+        };
+        let text = d.file.to_text();
+        assert!(text.contains("; kept"), "{text}");
+        assert!(!text.contains("WinWeaver]"), "{text}");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn a_link_selects_and_opens_the_tree_down_to_it() {
+        let catalog = Catalog::embedded().unwrap();
+        let group = catalog
+            .groups()
+            .iter()
+            .find(|g| g.parent.is_some())
+            .map(|g| g.id.clone())
+            .unwrap();
+        let parent = catalog
+            .group(&group)
+            .and_then(|g| g.parent.clone())
+            .unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        if let Some(Doc::Profile(doc)) = app.docs.get_mut(0) {
+            doc.expanded.clear();
+        }
+        app.apply(vec![Act::Reveal(Sel::Group(group.clone()))]);
+        let Some(Doc::Profile(doc)) = app.docs.first() else {
+            panic!("a profile");
+        };
+        assert_eq!(doc.sel, Sel::Group(group));
+        assert!(doc.expanded.contains(&parent), "the tree opens to it");
+        assert!(doc.reveal);
     }
 
     const SAMPLE_ADMX: &str = r#"<?xml version="1.0" encoding="utf-8"?>

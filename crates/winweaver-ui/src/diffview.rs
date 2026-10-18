@@ -223,6 +223,18 @@ pub fn diff_view(
             ),
             12.0,
         ));
+        // The profile files of the two sides open in tabs.
+        ui.horizontal_wrapped(|ui| {
+            for (name, path) in [(&d.base.name, &d.base.path), (&d.other.name, &d.other.path)] {
+                if path.is_empty() {
+                    continue;
+                }
+                let text = trf("Open {name}", &[("name", name)]);
+                if ui.link(text).on_hover_text(path.as_str()).clicked() {
+                    acts.push(Act::OpenPath(std::path::PathBuf::from(path)));
+                }
+            }
+        });
     });
     let items = shown(catalog, texts, doc);
     let columns = [
@@ -422,7 +434,8 @@ pub fn diff_detail(
             });
             match item.rule {
                 Some(rule) => {
-                    views::rule_description(ui, catalog, texts, rule, settings, false, acts)
+                    let link = views::RuleLink::Elsewhere;
+                    views::rule_description(ui, catalog, texts, rule, settings, link, acts)
                 }
                 None if item.key.starts_with("rule:") => {
                     views::block(ui, |ui| {

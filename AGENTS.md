@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.12.0: MCP configuration files,
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
 the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
@@ -73,7 +73,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      import (an answer file or a WinKickOff profile as a profile), apply (the plan of a
 │   │                      native apply, return or undo, the backup format of the scripts), admx (ADMX and ADML to
 │   │                      rules, catalog files .wwcatalog, their check, merge), registry (keys and values in the types
-│   │                      of regedit, paths of regedit, the rules that write a key, a registry in memory); tests/ on the real data
+│   │                      of regedit, paths of regedit, the rules that write a key, a registry in memory), regfile (`.reg`
+│   │                      files: every line kept, the registry steps of a plan as a file); tests/ on the real data
 │   ├── winweaver-win/     the Windows API: native.rs (thispc::Machine: the registry, the elevation, the locale
 │   │                      names, the language of Windows, the local accounts and their groups), dism.rs
 │   │                      (the features and capabilities through dismapi.dll), apps.rs (the removal of
@@ -100,7 +101,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      diff, the bookmarks and the MCP journal: widths by drag, the keys, a mini button),
 │   │                      renderer.rs (the renderers built in, the order Automatic tries, the start of a window),
 │   │                      regview.rs (the registry tab: the tree of keys, the values, the editor of a value),
-│   │                      cataledit.rs (the editor of a catalog file: its tree, the form of a policy)
+│   │                      cataledit.rs (the editor of a catalog file: its tree, the form of a policy),
+│   │                      regfileview.rs (the tab of a `.reg` file: the outline, the values of a key)
 │   └── winweaver/         the executable: the window, --renderer, --mcp stdio, --mcp http, --elevated-apply
 │                          <plan> <digest> (the helper: only a plan-*.json of output/ with that SHA-256),
 │                          --version, --check-catalog, --smoke-window (CI)
@@ -351,6 +353,20 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   write it (`registry::writers`). MCP: `Options::registry` (`RegistryAccess` off, read, write; off by default,
   `--registry`, the switches of the MCP tab, saved in its file) gates `read_registry_key`, `search_registry` (at most 500 places within 100000 keys), `set_registry_value`,
   `delete_registry_value`, `create_registry_key`, `delete_registry_key`.
+- Registry files (`winweaver_core::regfile`, `Doc::RegFile`, `regfileview.rs`): `RegFile::parse` keeps every
+  line (`Line::Blank`, `Comment`, `Key` with its deletion, `Value` with `None` for a deletion, `Other` for a
+  line it does not read), joins the values continued by `\`, and `to_text` writes them back with CR LF;
+  `save` writes UTF-16 LE with its mark for version 5 and the text as it is for REGEDIT4. A text of several
+  lines goes as hex(1). The tab is an outline (`regfileview::items`: a key with the comments right above it
+  and the lines between its values, or comments alone) and the lines of the selected key in a list; a
+  removal asks first and takes a key with its values, never its comments. The rules that write a key come
+  from an index of the catalog made again when its count of rules changes; `HKEY_USERS\UnattendDefault` is
+  looked up as the current user. This PC saves `Apply-<profile>.reg` and `Revert-<profile>.reg` through
+  `RegFile::from_plan` (`Act::SaveRegFile`): the registry steps of `apply::plan_apply` or `plan_revert`, the
+  default user profile at `HKEY_USERS\UnattendDefault` with the commands that load its hive in the
+  comments, a list that is not additive as `[-key]` before its values, a comment `; Rule <id>` before the
+  steps of each rule (the arrow of the comment shows the rule), and the steps a registry file cannot hold
+  (programs, capabilities, apps, the skipped ones) as comments.
 - MCP, bookmarks and catalogs: `list_bookmarks`, `list_catalogs` (by `CatalogHeader::read`), `get_catalog` (the
   groups, or the policies of a group) and `get_catalog_policy` read always, like profiles; `add_bookmark`,
   `set_bookmark_comment`, `remove_bookmark`, `set_catalog_policy` and `remove_catalog_policy` need
@@ -365,6 +381,16 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   EXPAND_SZ with keys in the form of regedit (`admx::catalog_path` turns them into `HKLM:\` or `DU:\`);
   other actions are kept as they are. Apply goes through `CatalogFile::put_rule`, Save (Ctrl+S) checks and
   writes the file and loads a loaded import again; a removal asks first.
+- Links (the list of 18.10.2026, item 4): a rule named in a view leads where `views::RuleLink` says
+  (`Profile`: `Act::Reveal`, select and open the tree down to it; `Catalog(file)`: `Act::CatalogReveal`
+  in the tree of the catalog tab for a policy of its file; `Elsewhere`: `Act::ShowInProfile` in the first
+  profile tab, which now scrolls to it). `rule_description` takes the `RuleLink` of its tab and lists the
+  rules a rule needs, the ones that need it and its conflicts both ways. `views::linked_text` turns the
+  ids of rules and the registry paths of a text into links (the message bar); the crumbs of a catalog tab
+  select every group above, the crumb of a rule of a profile keeps the group it is shown in. The registry
+  tab names the rules that write the selected key or value (`regview::Writers`, kept until the selection
+  or the count of rules changes), the catalog editor opens a key in the registry tab and its policy in the
+  catalog tab and the profile, the places of an MCP call show the titles of rules.
 - Every removal asks first (`App::ask`, Escape says no): an import, a bookmark of the bookmarks tab (the star
   of the navigation row stays a toggle), closing a tab discarding its changes, forgetting the recent files,
   renewing the MCP token.

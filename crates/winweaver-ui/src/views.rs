@@ -29,6 +29,105 @@ pub fn gsummary<'a>(texts: Option<&'a CatalogTexts>, group: &'a Group) -> &'a st
     texts.map_or(group.summary.as_str(), |t| t.group_summary(group))
 }
 
+/// Where a link to a rule leads from the view it is drawn in.
+#[derive(Clone, Copy)]
+pub(crate) enum RuleLink<'a> {
+    /// The profile tab in front: the rule is selected there and its tree opens to it.
+    Profile,
+    /// The catalog tab in front: a policy of its file is selected in its tree, another rule in the
+    /// profile.
+    Catalog(&'a CatalogFile),
+    /// Any other tab: the rule is shown in the first profile tab.
+    Elsewhere,
+}
+
+impl RuleLink<'_> {
+    /// What a click on a link to the rule `id` does.
+    pub(crate) fn act(self, id: &str) -> Act {
+        let id = id.to_owned();
+        match self {
+            RuleLink::Profile => Act::Reveal(Sel::Rule(id)),
+            RuleLink::Catalog(file) if file.rules.iter().any(|r| r.id == id) => {
+                Act::CatalogReveal(id)
+            }
+            RuleLink::Catalog(_) | RuleLink::Elsewhere => Act::ShowInProfile(String::new(), id),
+        }
+    }
+}
+
+/// A piece of a text: plain words, or a rule of the catalog or a key of the registry it names.
+enum Piece<'a> {
+    Text(String),
+    Rule(&'a Rule),
+    Key(String),
+}
+
+/// The pieces of a text, the ids of rules and the paths of the registry apart from the words.
+fn pieces<'a>(catalog: &'a Catalog, text: &str) -> Vec<Piece<'a>> {
+    const AROUND: [char; 10] = [',', '.', ';', ':', ')', '(', '!', '?', '"', '\''];
+    let mut out = Vec::new();
+    let mut plain = String::new();
+    for word in text.split_inclusive(char::is_whitespace) {
+        let start = word.len() - word.trim_start_matches(['(', '"', '\'']).len();
+        let end = word.trim_end().trim_end_matches(AROUND).len().max(start);
+        let core = &word[start..end];
+        let key = (core.starts_with("HK") || core.starts_with("DU:")) && core.contains('\\');
+        let found = match catalog.rule(core) {
+            Some(rule) => Some(Piece::Rule(rule)),
+            None if key => winweaver_core::registry::normalize(core).map(Piece::Key),
+            None => None,
+        };
+        match found {
+            Some(piece) => {
+                plain.push_str(&word[..start]);
+                if !plain.is_empty() {
+                    out.push(Piece::Text(std::mem::take(&mut plain)));
+                }
+                out.push(piece);
+                plain.push_str(&word[end..]);
+            }
+            None => plain.push_str(word),
+        }
+    }
+    if !plain.is_empty() {
+        out.push(Piece::Text(plain));
+    }
+    out
+}
+
+/// A text with links to the rules of the catalog and the keys of the registry it names.
+pub(crate) fn linked_text(
+    ui: &mut egui::Ui,
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    text: &str,
+    color: egui::Color32,
+    link: RuleLink,
+    acts: &mut Vec<Act>,
+) {
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing.x = 0.0;
+        for piece in pieces(catalog, text) {
+            match piece {
+                Piece::Text(t) => {
+                    ui.label(RichText::new(t).color(color));
+                }
+                Piece::Rule(rule) => {
+                    let shown = ui.link(rtitle(texts, rule)).on_hover_text(&rule.id);
+                    if shown.clicked() {
+                        acts.push(link.act(&rule.id));
+                    }
+                }
+                Piece::Key(path) => {
+                    if ui.link(path.as_str()).clicked() {
+                        acts.push(Act::OpenRegistry(path.clone(), None));
+                    }
+                }
+            }
+        }
+    });
+}
+
 fn ptitle<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule, name: &'a str) -> &'a str {
     match texts {
         Some(t) => t.param_title(rule, name),
@@ -695,6 +794,34 @@ fn group_detail(
             style::selectable_text(ui, ("group-summary", id), summary)
         });
     }
+    // The group above and the groups in it, as links.
+    let parent = group.parent.as_deref().and_then(|p| catalog.group(p));
+    let children = catalog.child_groups(Some(id));
+    if parent.is_some() || !children.is_empty() {
+        block(ui, |ui| {
+            if let Some(p) = parent {
+                ui.horizontal_wrapped(|ui| {
+                    ui.weak(tr("In the group"));
+                    if ui.link(gtitle(texts, p)).clicked() {
+                        acts.push(Act::Reveal(Sel::Group(p.id.clone())));
+                    }
+                });
+            }
+            if !children.is_empty() {
+                style::section_title(ui, tr("Groups in it"));
+                ui.add_space(4.0);
+            }
+            for g in children {
+                ui.horizontal_wrapped(|ui| {
+                    if ui.link(gtitle(texts, g)).clicked() {
+                        acts.push(Act::Reveal(Sel::Group(g.id.clone())));
+                    }
+                    let n = catalog.rules_under(&g.id).len();
+                    ui.weak(trf("{n} rules", &[("n", &n)]));
+                });
+            }
+        });
+    }
     block(ui, |ui| {
         style::section_title(ui, tr("This PC, this selection"));
         ui.add_space(4.0);
@@ -706,7 +833,9 @@ fn group_detail(
             ui.horizontal(|ui| {
                 rule_checkbox(ui, catalog, texts, doc, rule, rtitle(texts, rule), acts);
                 if ui.small_button(tr("open")).clicked() {
-                    acts.push(Act::Select(Sel::Rule(rule.id.clone())));
+                    // In this group, also for a policy another import holds first.
+                    let sel = Sel::Rule(rule.id.clone());
+                    acts.push(Act::SelectIn(sel, Some(id.to_owned())));
                 }
             });
         }
@@ -728,6 +857,11 @@ fn this_pc_buttons(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
             (
                 tr("Save a return-to-defaults script..."),
                 Act::SaveScript(ScriptKind::Revert),
+            ),
+            (tr("Save a registry file..."), Act::SaveRegFile(false)),
+            (
+                tr("Save a return-to-defaults registry file..."),
+                Act::SaveRegFile(true),
             ),
         ] {
             if ui.button(text).clicked() {
@@ -910,6 +1044,7 @@ fn other_catalogs(
     ui: &mut egui::Ui,
     catalog: &Catalog,
     texts: Option<&CatalogTexts>,
+    imports: &[CatalogFile],
     rule: &Rule,
     acts: &mut Vec<Act>,
 ) {
@@ -946,9 +1081,20 @@ fn other_catalogs(
         for other in similar {
             ui.horizontal_wrapped(|ui| {
                 if ui.link(rtitle(texts, other)).clicked() {
-                    acts.push(Act::Select(Sel::Rule(other.id.clone())));
+                    acts.push(Act::Reveal(Sel::Rule(other.id.clone())));
                 }
-                ui.weak(import_of(catalog, texts, &other.group));
+                // The import, a link to its catalog tab at the policy.
+                let holds = |f: &&CatalogFile| f.rules.iter().any(|r| r.id == other.id);
+                match imports.iter().find(holds) {
+                    Some(f) => {
+                        if ui.link(import_of(catalog, texts, &other.group)).clicked() {
+                            acts.push(Act::OpenCatalogAt(f.id.clone(), other.id.clone()));
+                        }
+                    }
+                    None => {
+                        ui.weak(import_of(catalog, texts, &other.group));
+                    }
+                }
             });
         }
     });
@@ -1016,7 +1162,7 @@ fn rule_detail(
                         ui.label(style::muted(ui, tr("set by the built-in rule"), 12.0));
                         let title = catalog.rule(by).map_or(by, |r| rtitle(texts, r));
                         if ui.link(title).clicked() {
-                            acts.push(Act::Select(Sel::Rule(by.to_owned())));
+                            acts.push(Act::Reveal(Sel::Rule(by.to_owned())));
                         }
                     }
                     None => {
@@ -1027,7 +1173,7 @@ fn rule_detail(
                     ui.label(style::muted(ui, tr("blocked: needs"), 12.0));
                     let title = catalog.rule(by).map_or(by.as_str(), |r| rtitle(texts, r));
                     if ui.link(title).clicked() {
-                        acts.push(Act::Select(Sel::Rule(by.clone())));
+                        acts.push(Act::Reveal(Sel::Rule(by.clone())));
                     }
                 }
             }
@@ -1054,19 +1200,20 @@ fn rule_detail(
         this_pc_buttons(ui, acts);
         catalog_links(ui, imports, &rule.id, acts);
     });
-    other_catalogs(ui, catalog, texts, rule, acts);
-    rule_description(ui, catalog, texts, rule, settings, true, acts);
+    other_catalogs(ui, catalog, texts, imports, rule, acts);
+    rule_description(ui, catalog, texts, rule, settings, RuleLink::Profile, acts);
 }
 
 /// The description of a rule under its title, folded with Ctrl+D: what it does, the risk, what it
-/// writes, its dependencies (links that select them when `links`), versions and the reference.
+/// writes, the rules it needs or conflicts with and the ones that need it (links that lead where
+/// `link` says), versions and the reference.
 pub(crate) fn rule_description(
     ui: &mut egui::Ui,
     catalog: &Catalog,
     texts: Option<&CatalogTexts>,
     rule: &Rule,
     settings: &Settings,
-    links: bool,
+    link: RuleLink,
     acts: &mut Vec<Act>,
 ) {
     let open = settings.desc_open;
@@ -1115,7 +1262,19 @@ pub(crate) fn rule_description(
         parts.writes,
         |ui| writes(ui, rule, acts),
     );
-    if !rule.requires.is_empty() || !rule.conflicts.is_empty() {
+    // The rules it names and the rules that name it, both ways.
+    let requires: Vec<&str> = rule.requires.iter().map(String::as_str).collect();
+    let mut needed_by = Vec::new();
+    let mut conflicts: Vec<&str> = rule.conflicts.iter().map(String::as_str).collect();
+    for other in catalog.rules() {
+        if other.requires.contains(&rule.id) {
+            needed_by.push(other.id.as_str());
+        }
+        if other.conflicts.contains(&rule.id) && !conflicts.contains(&other.id.as_str()) {
+            conflicts.push(other.id.as_str());
+        }
+    }
+    if !requires.is_empty() || !needed_by.is_empty() || !conflicts.is_empty() {
         section(
             ui,
             "desc-deps",
@@ -1123,19 +1282,16 @@ pub(crate) fn rule_description(
             parts.deps,
             |ui| {
                 for (label, list) in [
-                    (tr("Needs"), &rule.requires),
-                    (tr("Conflicts with"), &rule.conflicts),
+                    (tr("Needs"), &requires),
+                    (tr("Needed by"), &needed_by),
+                    (tr("Conflicts with"), &conflicts),
                 ] {
                     for other in list {
                         ui.horizontal(|ui| {
                             ui.weak(label);
-                            let title = catalog
-                                .rule(other)
-                                .map_or(other.as_str(), |r| rtitle(texts, r));
-                            if !links {
-                                ui.label(title);
-                            } else if ui.link(title).clicked() {
-                                acts.push(Act::Select(Sel::Rule(other.clone())));
+                            let title = catalog.rule(other).map_or(*other, |r| rtitle(texts, r));
+                            if ui.link(title).on_hover_text(*other).clicked() {
+                                acts.push(link.act(other));
                             }
                         });
                     }
@@ -1314,4 +1470,34 @@ pub fn detail_view(
                     });
             }
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_text_links_the_rules_and_keys_it_names() {
+        let catalog = Catalog::embedded().unwrap();
+        let id = catalog.rules()[0].id.clone();
+        let text = format!("Conflicts with {id}: see HKLM:\\Software\\X, then.");
+        let found = pieces(&catalog, &text);
+        let kinds: Vec<&str> = found
+            .iter()
+            .map(|p| match p {
+                Piece::Text(_) => "text",
+                Piece::Rule(_) => "rule",
+                Piece::Key(_) => "key",
+            })
+            .collect();
+        assert_eq!(kinds, ["text", "rule", "text", "key", "text"]);
+        let Piece::Key(key) = &found[3] else {
+            panic!("a key");
+        };
+        assert_eq!(key, "HKEY_LOCAL_MACHINE\\Software\\X");
+        let Piece::Text(end) = &found[4] else {
+            panic!("the text after it");
+        };
+        assert_eq!(end, ", then.");
+    }
 }

@@ -23,6 +23,7 @@ keeps its settings and files in that folder. The guide opens at the first start 
   what is in effect; check the selected rules; apply them or
   return them to the Windows defaults as administrator with a backup of every value, and undo a change from its backup.
   For other PCs it saves stand-alone scripts that apply, revert, audit and undo; their audit report opens as a profile.
+  The registry values of an apply or a return also go to a registry file (`.reg`) for regedit.
 - **Policy templates**: import the ADMX templates of this Windows, of a folder, of a zip archive (as Chrome, Edge and
   Firefox ship them, read without unpacking) or a catalog file, also zipped; their policies
   become rules. Only the imports checked in the settings are loaded. Options of a profile whose catalog is not
@@ -30,7 +31,11 @@ keeps its settings and files in that folder. The guide opens at the first start 
   their imports. Compare sets two catalogs side by side; Edit opens a catalog in an editor, New catalog starts
   one of your own. An `.admx` or `.wwcatalog` file also opens as a tab without importing.
 - **Registry** of this PC in a tab: keys, values of every type of regedit, edits and deletions that ask
-  first, bookmarks of keys; every list of what a rule writes opens its key there.
+  first, bookmarks of keys; every list of what a rule writes opens its key there. A registry file (`.reg`) opens
+  as a tab of its keys, values and comments, with the rules that write each key, and is saved without losing a line.
+- **Links** to everything a view names: the rules a rule needs, the ones that need it or conflict with it, the rules
+  named in the messages, the groups above and inside a group, the same policy in other catalogs, the rules that write
+  a registry key; a click shows the item where it lives.
 - **Bookmarks** of rules with comments (`.wwmarks`), **themes** with their colours and fonts (`.wwtheme`) and an editor.
 - **Languages**: English, Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish built in,
   Belarusian as a file, more as files (below); "Follow Windows" takes the language of Windows when it is one of them.

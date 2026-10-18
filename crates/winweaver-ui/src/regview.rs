@@ -10,6 +10,8 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::mpsc::Receiver;
 
 use eframe::egui;
+use winweaver_core::catalog::Catalog;
+use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::registry::{self, Found, HIVES, Key, NEW_TYPES, Registry};
 
 /// The most places a search of the tab lists.
@@ -76,7 +78,19 @@ impl Search {
 }
 
 use crate::i18n::{tr, trf};
-use crate::{Act, style, tree};
+use crate::{Act, style, tree, views};
+
+/// The most rules the line above the values names.
+const WRITERS_MAX: usize = 12;
+
+/// The rules of the catalog that write the selected key or value, kept until the selection or the
+/// catalog changes.
+pub struct Writers {
+    key: String,
+    value: Option<String>,
+    rules: usize,
+    ids: Vec<String>,
+}
 
 /// What the editor of the tab makes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -113,10 +127,11 @@ pub struct RegistryDoc {
     /// The selected key comes into view at the next frame.
     pub reveal: bool,
     pub search: Search,
+    writers: Option<Writers>,
 }
 
 /// The name of the default value as regedit shows it.
-fn value_title(name: &str) -> &str {
+pub(crate) fn value_title(name: &str) -> &str {
     if name.is_empty() {
         tr("(Default)")
     } else {
@@ -137,6 +152,7 @@ impl RegistryDoc {
             edit: None,
             reveal: false,
             search: Search::default(),
+            writers: None,
         };
         doc.go(reg, path, value);
         doc
@@ -279,8 +295,71 @@ fn rows(
     }
 }
 
-/// The tab: the address row, the tree of keys, the values, the editor.
-pub fn registry_view(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
+/// The rules that write the selected value, or the key when no value is selected, as links to
+/// the profile.
+fn writers_line(
+    ui: &mut egui::Ui,
+    doc: &mut RegistryDoc,
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    acts: &mut Vec<Act>,
+) {
+    let key = doc.path.to_lowercase();
+    let rules = catalog.rules().len();
+    let fresh = doc
+        .writers
+        .as_ref()
+        .is_some_and(|w| w.key == key && w.value == doc.value && w.rules == rules);
+    if !fresh {
+        let found = registry::writers(catalog, &doc.path, doc.value.as_deref());
+        doc.writers = Some(Writers {
+            key,
+            value: doc.value.clone(),
+            rules,
+            ids: found.iter().map(|r| r.id.clone()).collect(),
+        });
+    }
+    let Some(w) = &doc.writers else {
+        return;
+    };
+    if w.ids.is_empty() {
+        return;
+    }
+    ui.horizontal_wrapped(|ui| {
+        match &w.value {
+            Some(v) => {
+                let name = value_title(v);
+                ui.weak(trf("Rules that write {name}", &[("name", &name)]));
+            }
+            None => {
+                ui.weak(tr("Rules that write it"));
+            }
+        }
+        for id in w.ids.iter().take(WRITERS_MAX) {
+            let title = catalog
+                .rule(id)
+                .map_or(id.as_str(), |r| views::rtitle(texts, r));
+            if ui.link(title).on_hover_text(id).clicked() {
+                acts.push(views::RuleLink::Elsewhere.act(id));
+            }
+        }
+        if w.ids.len() > WRITERS_MAX {
+            let more = w.ids.len() - WRITERS_MAX;
+            ui.weak(trf("and {n} more", &[("n", &more)]));
+        }
+    });
+    ui.add_space(6.0);
+}
+
+/// The tab: the address row, the tree of keys, the rules that write the selection, the values,
+/// the editor.
+pub fn registry_view(
+    ui: &mut egui::Ui,
+    doc: &mut RegistryDoc,
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    acts: &mut Vec<Act>,
+) {
     let p = style::palette(ui);
     egui::Panel::top("registry-address")
         .frame(
@@ -352,7 +431,10 @@ pub fn registry_view(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Ac
                 .fill(p.bg)
                 .inner_margin(egui::Margin::same(12)),
         )
-        .show(ui, |ui| values(ui, doc, acts));
+        .show(ui, |ui| {
+            writers_line(ui, doc, catalog, texts, acts);
+            values(ui, doc, acts);
+        });
     editor(ui.ctx(), doc, acts);
 }
 
