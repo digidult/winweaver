@@ -10,7 +10,7 @@ use winweaver_core::profile::{self, Profile};
 use winweaver_core::resolver::{self, State as RuleState};
 use winweaver_core::{clock, render, thispc, validate};
 
-use crate::{Mode, Server, State, WsDoc};
+use crate::{Mode, RegistryAccess, Server, State, WsDoc};
 
 /// The longest text of one tool result; longer results are cut with a note.
 const TEXT_LIMIT: usize = 60_000;
@@ -181,6 +181,42 @@ pub(crate) fn definitions() -> Vec<Value> {
             ),
         ),
         tool(
+            "read_registry_key",
+            "Reads a key of the registry of this PC: its subkeys and its values with their types (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY, REG_NONE). A path like HKEY_LOCAL_MACHINE\\Software or HKLM\\Software. Needs the option registry read or write.",
+            schema(json!({ "path": s("The key") }), &["path"]),
+        ),
+        tool(
+            "set_registry_value",
+            "Writes a value of a key that exists. The data is text: lines for REG_MULTI_SZ, a decimal or 0x hexadecimal number for REG_DWORD and REG_QWORD, hexadecimal pairs for REG_BINARY. Needs the option registry write.",
+            schema(
+                json!({
+                    "path": s("The key"),
+                    "name": s("The value; empty for the default value of the key"),
+                    "type": s("REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD or REG_BINARY"),
+                    "data": s("The data as text")
+                }),
+                &["path", "name", "type", "data"],
+            ),
+        ),
+        tool(
+            "delete_registry_value",
+            "Deletes a value of a key. Needs the option registry write.",
+            schema(
+                json!({ "path": s("The key"), "name": s("The value") }),
+                &["path", "name"],
+            ),
+        ),
+        tool(
+            "create_registry_key",
+            "Creates a key and the keys above it that are missing. Needs the option registry write.",
+            schema(json!({ "path": s("The new key") }), &["path"]),
+        ),
+        tool(
+            "delete_registry_key",
+            "Deletes a key with all its subkeys and values; a hive is never deleted. Needs the option registry write.",
+            schema(json!({ "path": s("The key") }), &["path"]),
+        ),
+        tool(
             "read_this_pc",
             "Reads the settings of this PC into a new workspace profile (on the base of the current one). Needs the option read_pc and mode edit; reads only.",
             schema(json!({}), &[]),
@@ -297,6 +333,29 @@ fn need(state: &State, mode: Mode) -> Result<(), ToolError> {
 
 fn arg<'a>(args: &'a Value, name: &str) -> Option<&'a Value> {
     args.get(name).filter(|v| !v.is_null())
+}
+
+/// A text argument that may be empty or left out.
+fn optional_text(args: &Value, name: &str) -> String {
+    args.get(name)
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_owned()
+}
+
+/// The tools of the registry: off unless the user allows them, writing only when allowed too.
+fn registry_allowed(state: &State, write: bool) -> Result<(), ToolError> {
+    match (state.options.registry, write) {
+        (RegistryAccess::Write, _) | (RegistryAccess::Read, false) => Ok(()),
+        (RegistryAccess::Read, true) => Err(fail(
+            "not_allowed",
+            "writing the registry is off; the user allows it in the window (MCP tab) or with --registry write",
+        )),
+        (RegistryAccess::Off, _) => Err(fail(
+            "not_allowed",
+            "the registry is off; the user allows it in the window (MCP tab) or with --registry read or write",
+        )),
+    }
 }
 
 fn text_arg(args: &Value, name: &str) -> Result<String, ToolError> {
@@ -1035,6 +1094,56 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
                 "languages": diff.languages.iter().map(|(k, f)| (k.clone(), json!({ "a": f.base, "b": f.other }))).collect::<serde_json::Map<_, _>>(),
                 "accounts_differ": diff.accounts.is_some(),
             }))
+        }
+        "read_registry_key" => {
+            registry_allowed(state, false)?;
+            let path = text_arg(args, "path")?;
+            let key = server
+                .registry
+                .read(&path)
+                .map_err(|e| fail("read_failed", e))?;
+            Ok(json!(key))
+        }
+        "set_registry_value" => {
+            registry_allowed(state, true)?;
+            let path = text_arg(args, "path")?;
+            let name = optional_text(args, "name");
+            let kind = text_arg(args, "type")?;
+            let data = winweaver_core::registry::Data::parse(&kind, &optional_text(args, "data"))
+                .map_err(|e| fail("invalid", e))?;
+            server
+                .registry
+                .set(&path, &name, &data)
+                .map_err(|e| fail("write_failed", e))?;
+            Ok(json!({ "written": path, "name": name, "type": kind }))
+        }
+        "delete_registry_value" => {
+            registry_allowed(state, true)?;
+            let path = text_arg(args, "path")?;
+            let name = optional_text(args, "name");
+            server
+                .registry
+                .delete_value(&path, &name)
+                .map_err(|e| fail("write_failed", e))?;
+            Ok(json!({ "deleted": path, "name": name }))
+        }
+        "create_registry_key" => {
+            registry_allowed(state, true)?;
+            let path = text_arg(args, "path")?;
+            server
+                .registry
+                .create_key(&path)
+                .map_err(|e| fail("write_failed", e))?;
+            Ok(json!({ "created": path }))
+        }
+        "delete_registry_key" => {
+            registry_allowed(state, true)?;
+            let path = text_arg(args, "path")?;
+            server
+                .registry
+                .delete_key(&path)
+                .map_err(|e| fail("write_failed", e))?;
+            Ok(json!({ "deleted": path }))
         }
         "read_this_pc" => {
             if !state.options.read_pc {

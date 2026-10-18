@@ -57,6 +57,15 @@ pub fn target<'a>(
         summary: String::new(),
         missing: false,
     };
+    if b.is_registry() {
+        t.title = if b.item.is_empty() {
+            b.path.rsplit('\\').next().unwrap_or(&b.path).to_owned()
+        } else {
+            b.item.clone()
+        };
+        t.group = b.path.clone();
+        return t;
+    }
     if !b.is_option() {
         t.group = b.document.clone();
         return t;
@@ -226,7 +235,9 @@ pub fn marks_view(
 }
 
 fn open_hint(b: &Bookmark) -> String {
-    if b.path.is_empty() {
+    if b.is_registry() {
+        tr("Open in the registry").to_owned()
+    } else if b.path.is_empty() {
         tr("Show the option in the profile in front").to_owned()
     } else {
         trf("Open {name} at this option", &[("name", &profile_name(b))])
@@ -294,9 +305,16 @@ pub fn marks_detail(
                 });
             });
             views::block(ui, |ui| {
-                style::section_title(ui, tr("Profile"));
+                let title = if b.is_registry() {
+                    tr("Registry")
+                } else {
+                    tr("Profile")
+                };
+                style::section_title(ui, title);
                 ui.add_space(4.0);
-                if b.path.is_empty() {
+                if b.is_registry() {
+                    style::selectable_text(ui, ("mark-key", i), &b.path);
+                } else if b.path.is_empty() {
                     ui.label(style::muted(
                         ui,
                         tr("No profile file: the option is shown in the profile in front."),
@@ -310,6 +328,25 @@ pub fn marks_detail(
                     acts.push(Act::GoToMark(i));
                 }
             });
+            if b.is_registry() {
+                let value = (!b.item.is_empty()).then_some(b.item.as_str());
+                let rules = winweaver_core::registry::writers(catalog, &b.path, value);
+                views::block(ui, |ui| {
+                    style::section_title(ui, tr("Rules that write it"));
+                    ui.add_space(4.0);
+                    if rules.is_empty() {
+                        ui.weak(tr("No rule of the loaded catalogs writes it."));
+                    }
+                    for rule in rules {
+                        ui.horizontal_wrapped(|ui| {
+                            if ui.link(rtitle(texts, rule)).clicked() {
+                                acts.push(Act::ShowInProfile(String::new(), rule.id.clone()));
+                            }
+                            views::catalog_links(ui, imports, &rule.id, acts);
+                        });
+                    }
+                });
+            }
             views::block(ui, |ui| {
                 style::section_title(ui, tr("Comment"));
                 ui.add_space(4.0);

@@ -14,6 +14,7 @@ mod list;
 mod marksview;
 mod mcpview;
 mod mdview;
+mod regview;
 mod renderer;
 mod session;
 mod settings;
@@ -199,6 +200,8 @@ pub enum Doc {
     Catalog(Box<catalogview::CatalogDoc>),
     /// The editor of a theme.
     Theme(Box<themeview::ThemeDoc>),
+    /// The registry of this PC.
+    Registry(Box<regview::RegistryDoc>),
 }
 
 impl Doc {
@@ -212,6 +215,7 @@ impl Doc {
             Doc::Settings => tr("Settings").to_owned(),
             Doc::Catalog(d) => d.name.clone(),
             Doc::Theme(d) => d.title(),
+            Doc::Registry(d) => d.title(),
         }
     }
 
@@ -328,6 +332,23 @@ pub enum Act {
     ShowIn(String, String),
     /// Opens the tab of a loaded import, or brings it to the front, at a rule.
     OpenCatalogAt(String, String),
+    /// Opens the registry tab, or brings it to the front, at a key and a value of it.
+    OpenRegistry(String, Option<String>),
+    /// Shows a key in the registry tab, and a value of it.
+    RegistryGo(String, Option<String>),
+    RegistryExpand(String, bool),
+    RegistryRefresh,
+    /// Edits the selected value of the registry tab.
+    RegistryEdit,
+    /// Starts a new key or a new value of a type in the registry tab.
+    RegistryNew(regview::EditKind, &'static str),
+    /// Writes what the editor of the registry tab holds.
+    RegistrySave,
+    /// Asks before the selected value, or the key without one, is deleted.
+    AskRegistryDelete,
+    RegistryDelete(String, Option<String>),
+    /// Bookmarks the key and the value of the registry tab.
+    BookmarkRegistry,
     /// Compares the catalog of the active tab with another one in a page.
     CompareCatalog(CatalogRef),
     /// Looks for the catalogs of the unknown options of the active profile among the imports
@@ -422,6 +443,8 @@ pub struct App {
     importing: Option<std::sync::mpsc::Receiver<Result<CatalogFile, String>>>,
     /// The folder of the catalog files of the imports.
     imports_dir: PathBuf,
+    /// The registry the registry tab reads and changes: of this PC, or in memory for the tests.
+    registry: std::sync::Arc<dyn winweaver_core::registry::Registry>,
     /// Every catalog file of that folder, loaded or not, for the settings: listed at the start,
     /// when the settings open and after a change of the imports.
     import_list: Vec<ImportEntry>,
@@ -487,6 +510,7 @@ impl App {
             imports: Vec::new(),
             importing: None,
             imports_dir: imports_dir(),
+            registry: winweaver_win::this_registry(),
             import_list: Vec::new(),
             catalog,
             texts,
@@ -522,6 +546,7 @@ impl App {
                 token: String::new(),
                 mode: winweaver_mcp::Mode::Read,
                 read_pc: false,
+                registry: winweaver_mcp::RegistryAccess::Off,
                 run: None,
                 error: String::new(),
                 journal_sel: None,
@@ -548,7 +573,7 @@ impl App {
             Doc::Catalog(d) => Some(&mut d.search),
             Doc::Bookmarks => Some(&mut self.marks_search),
             Doc::Mcp => Some(&mut self.mcp_search),
-            Doc::Settings | Doc::Theme(_) => None,
+            Doc::Settings | Doc::Theme(_) | Doc::Registry(_) => None,
         }
     }
 
@@ -2321,7 +2346,7 @@ impl App {
     /// Shows a policy of an import in the tree of a profile: an import that is not loaded is, the
     /// first profile tab comes to the front, the groups above the policy open and it is selected.
     fn show_in_profile(&mut self, import: &str, rule: &str) {
-        if !self.imports.iter().any(|f| f.id == import) {
+        if !import.is_empty() && !self.imports.iter().any(|f| f.id == import) {
             if let Err(e) = self.load_import(import) {
                 self.status = trf("The import was not loaded: {e}", &[("e", &e)]);
                 return;
@@ -2849,6 +2874,39 @@ impl App {
                     });
                 }
                 Act::CompareCatalog(other) => self.compare_catalog(other),
+                Act::OpenRegistry(path, value) => self.open_registry(&path, value.as_deref()),
+                Act::RegistryGo(path, value) => {
+                    let reg = self.registry.clone();
+                    if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+                        d.go(&*reg, &path, value.as_deref());
+                    }
+                }
+                Act::RegistryExpand(path, open) => {
+                    let reg = self.registry.clone();
+                    if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+                        d.expand(&*reg, &path, open);
+                    }
+                }
+                Act::RegistryRefresh => {
+                    let reg = self.registry.clone();
+                    if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+                        d.refresh(&*reg);
+                    }
+                }
+                Act::RegistryEdit => {
+                    if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+                        d.start_edit(regview::EditKind::Value, "");
+                    }
+                }
+                Act::RegistryNew(kind, type_name) => {
+                    if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+                        d.start_edit(kind, type_name);
+                    }
+                }
+                Act::RegistrySave => self.registry_save(),
+                Act::AskRegistryDelete => self.ask_registry_delete(),
+                Act::RegistryDelete(path, value) => self.registry_delete(&path, value.as_deref()),
+                Act::BookmarkRegistry => self.bookmark_registry(),
                 Act::ExportImport(id) => self.export_import(&id),
                 Act::StartRename(id, name) => self.renaming = Some((id, name)),
                 Act::OpenCatalog(id) => self.open_catalog(&id),
@@ -3014,6 +3072,11 @@ impl App {
             return;
         };
         self.marks_tab.sel = Some(i);
+        if mark.is_registry() {
+            let value = (!mark.item.is_empty()).then_some(mark.item.as_str());
+            self.open_registry(&mark.path, value);
+            return;
+        }
         let path = PathBuf::from(&mark.path);
         if !mark.path.is_empty() && path.is_file() {
             self.open_path(path);
@@ -3049,6 +3112,152 @@ impl App {
             }
             self.reveal_selection();
         }
+    }
+
+    /// Opens the registry tab, or brings it to the front, at a key and a value of it.
+    fn open_registry(&mut self, path: &str, value: Option<&str>) {
+        let reg = self.registry.clone();
+        match self.docs.iter().position(|d| matches!(d, Doc::Registry(_))) {
+            Some(i) => {
+                self.active = i;
+                if let Some(Doc::Registry(d)) = self.docs.get_mut(i) {
+                    d.go(&*reg, path, value);
+                }
+            }
+            None => {
+                let doc = regview::RegistryDoc::new(&*reg, path, value);
+                self.docs.push(Doc::Registry(Box::new(doc)));
+                self.active = self.docs.len() - 1;
+            }
+        }
+    }
+
+    /// Writes the value or makes the key of the editor of the registry tab; an error stays in
+    /// the editor.
+    fn registry_save(&mut self) {
+        use regview::EditKind;
+        let reg = self.registry.clone();
+        let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        let Some(edit) = &d.edit else {
+            return;
+        };
+        let kind = edit.kind;
+        let name = if kind == EditKind::Value {
+            edit.name.clone()
+        } else {
+            edit.name.trim().to_owned()
+        };
+        let (type_name, text) = (edit.type_name.clone(), edit.text.clone());
+        let taken = d
+            .key
+            .as_ref()
+            .is_some_and(|k| k.values.iter().any(|v| v.name.eq_ignore_ascii_case(&name)));
+        let result: Result<Option<String>, String> = match kind {
+            EditKind::NewKey => {
+                if name.is_empty() || name.contains('\\') {
+                    Err(tr("A name without backslashes is needed").to_owned())
+                } else {
+                    let path = format!("{}\\{name}", d.path);
+                    reg.create_key(&path).map(|()| Some(path))
+                }
+            }
+            EditKind::NewValue if taken => {
+                Err(tr("A value of this name is there already").to_owned())
+            }
+            _ => winweaver_core::registry::Data::parse(&type_name, &text)
+                .and_then(|data| reg.set(&d.path, &name, &data).map(|()| None)),
+        };
+        match result {
+            Ok(key) => {
+                d.edit = None;
+                match key {
+                    Some(path) => d.go(&*reg, &path, None),
+                    None => {
+                        d.value = Some(name);
+                        d.refresh(&*reg);
+                    }
+                }
+            }
+            Err(e) => {
+                if let Some(edit) = &mut d.edit {
+                    edit.error = Some(e);
+                }
+            }
+        }
+    }
+
+    /// Asks before the selected value of the registry tab, or its key without one, is deleted.
+    fn ask_registry_delete(&mut self) {
+        let Some(Doc::Registry(d)) = self.docs.get(self.active) else {
+            return;
+        };
+        let path = d.path.clone();
+        let (text, act) = match d.selected() {
+            Some(v) => (
+                trf(
+                    "Delete the value {name} of {key}?",
+                    &[("name", &v.name), ("key", &path)],
+                ),
+                Act::RegistryDelete(path.clone(), Some(v.name.clone())),
+            ),
+            None if winweaver_core::registry::parent(&path).is_none() => {
+                self.status = tr("A hive is not deleted").to_owned();
+                return;
+            }
+            None => (
+                trf(
+                    "Delete the key {key} with all its subkeys and values?",
+                    &[("key", &path)],
+                ),
+                Act::RegistryDelete(path.clone(), None),
+            ),
+        };
+        self.ask = Some(Ask {
+            title: tr("Delete from the registry").to_owned(),
+            text,
+            yes: tr("Delete").to_owned(),
+            act,
+        });
+    }
+
+    fn registry_delete(&mut self, path: &str, value: Option<&str>) {
+        let reg = self.registry.clone();
+        let result = match value {
+            Some(v) => reg.delete_value(path, v),
+            None => reg.delete_key(path),
+        };
+        if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+            if value.is_none() && result.is_ok() {
+                let up = winweaver_core::registry::parent(path)
+                    .unwrap_or(path)
+                    .to_owned();
+                d.go(&*reg, &up, None);
+            } else {
+                d.refresh(&*reg);
+            }
+        }
+        self.status = match result {
+            Ok(()) => tr("Deleted").to_owned(),
+            Err(e) => e,
+        };
+    }
+
+    /// Bookmarks the key of the registry tab and its selected value.
+    fn bookmark_registry(&mut self) {
+        let Some(Doc::Registry(d)) = self.docs.get(self.active) else {
+            return;
+        };
+        let mut mark = Bookmark::registry(&d.path, d.value.as_deref().unwrap_or(""));
+        if self.marks.find(&mark).is_some() {
+            self.status = tr("This is bookmarked already").to_owned();
+            return;
+        }
+        mark.created = clock::now_utc_iso();
+        self.marks.items.push(mark);
+        self.save_marks();
+        self.status = tr("Bookmarked").to_owned();
     }
 
     /// The catalog of the active tab and the other one, side by side in a Markdown page.
@@ -3390,7 +3599,7 @@ impl App {
                 Doc::Markdown(d) => d.path.clone(),
                 Doc::Catalog(c) => c.path.clone(),
                 Doc::Theme(t) => t.theme.path.clone(),
-                Doc::Bookmarks | Doc::Mcp | Doc::Settings => None,
+                Doc::Bookmarks | Doc::Mcp | Doc::Settings | Doc::Registry(_) => None,
             };
             if let Some(p) = path {
                 if i == self.active {
@@ -3515,6 +3724,7 @@ impl App {
             &PRESETS,
             winweaver_mcp::Options {
                 mode: self.mcp.mode,
+                registry: self.mcp.registry,
                 read_pc: self.mcp.read_pc,
                 profiles_dir: profiles_dir(),
                 output_dir: output_dir(),
@@ -3773,6 +3983,7 @@ impl eframe::App for App {
             Some(Doc::Mcp) => 6,
             Some(Doc::Catalog(_)) => 7,
             Some(Doc::Theme(_)) => 8,
+            Some(Doc::Registry(_)) => 9,
             None => 2,
         };
         if kind == 0 {
@@ -3931,6 +4142,10 @@ impl eframe::App for App {
                     .show(ui, |ui| {
                         themeview::theme_view(ui, doc, &families, &mut acts);
                     });
+            }
+        } else if kind == 9 {
+            if let Some(Doc::Registry(doc)) = self.docs.get_mut(self.active) {
+                regview::registry_view(ui, doc, &mut acts);
             }
         } else if kind == 1 {
             let p = style::palette(ui);
@@ -5147,6 +5362,50 @@ and kept"
         harness.step();
         harness.step();
         assert!(!has(&harness, "Unknown options"), "hidden by the settings");
+    }
+
+    /// The registry tab writes a value of a type through its editor, asks before it deletes and
+    /// bookmarks a value; here on a registry in memory.
+    #[test]
+    fn the_registry_tab_edits_asks_and_bookmarks() {
+        use winweaver_core::registry::{Data, MemoryRegistry, Registry};
+        let dir = std::env::temp_dir().join(format!("winweaver-reg-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        app.marks_path = dir.join("marks.wwmarks");
+        let reg = std::sync::Arc::new(MemoryRegistry::default());
+        let key = "HKEY_CURRENT_USER\\Software\\WinWeaverTest";
+        reg.create_key(key).unwrap();
+        app.registry = reg.clone();
+        app.apply(vec![Act::OpenRegistry("HKCU:\\Software\\WinWeaverTest".to_owned(), None)]);
+        let Some(Doc::Registry(d)) = app.docs.get(app.active) else {
+            panic!("the registry tab");
+        };
+        assert_eq!(d.path, key);
+        app.apply(vec![Act::RegistryNew(regview::EditKind::NewValue, "REG_DWORD")]);
+        if let Some(Doc::Registry(d)) = app.docs.get_mut(app.active)
+            && let Some(edit) = &mut d.edit
+        {
+            edit.name = "N".to_owned();
+            edit.text = "0x10".to_owned();
+        }
+        app.apply(vec![Act::RegistrySave]);
+        assert_eq!(reg.read(key).unwrap().values[0].data, Data::Dword(16));
+        app.apply(vec![Act::AskRegistryDelete]);
+        assert!(app.ask.is_some(), "a deletion asks");
+        app.apply(vec![Act::AskNo, Act::BookmarkRegistry]);
+        assert_eq!(reg.read(key).unwrap().values.len(), 1);
+        assert!(
+            app.marks
+                .items
+                .iter()
+                .any(|b| b.is_registry() && b.path == key && b.item == "N")
+        );
+        app.apply(vec![Act::AskRegistryDelete, Act::AskYes]);
+        assert!(reg.read(key).unwrap().values.is_empty());
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     /// A link opens the catalog tab of an import at the policy, and the same policy in the tree

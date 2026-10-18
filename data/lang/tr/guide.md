@@ -113,6 +113,16 @@ Bir seçeneğin ayrıntı paneli, onu içeren katalog sekmelerine ve diğer içe
 ilkeye bağlantı verir; seçeneğin yer imi de öyle. Ayarlar, Genel'de açıklamanın hangi bölümlerinin baştan
 açık olacağı seçilir.
 
+## Kayıt defteri
+
+**Menü, Kayıt defteri** bu bilgisayarın kayıt defterini bir sekmede açar: anahtarlar solda, seçili anahtarın
+değerleri türleriyle (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY) sağda, yol üstteki
+satırda. Çift tıklama bir değeri düzenler; Yeni anahtar, Yeni değer, Düzenle ve Sil çubuktadır ve silme önce
+onay ister. Bilgisayarın anahtarları (HKEY_LOCAL_MACHINE) yalnızca WinWeaver yönetici olarak çalıştığında
+değişir. **Ne yazar** içindeki bir anahtarın yanındaki düğme onu burada açar. **Yer imi** anahtarı ve değeri bir
+yorumla saklar, yer imi de onu yazan kuralları listeler. Anahtarların hakları ve kayıt defterinde arama daha
+sonra gelecek.
+
 ## MCP sunucusu
 
 **Menü, MCP sunucusu**, yapay zeka aracılarının profilleri okuduğu ve mod izin verdiğinde değiştirdiği
@@ -143,6 +153,7 @@ yazılır: `--renderer=directx`.
 | `--port N` | `--mcp http` ile: başka bir bağlantı noktası |
 | `--mode NAME` | `--mcp` ile: `read` (varsayılan) yalnızca okur, `edit` profilleri bellekte değiştirir, `files` ayrıca kaydeder ve yanıt dosyasını yazar |
 | `--read-pc` | `--mcp` ile: bu bilgisayarın ayarlarını okumaya izin verir |
+| `--registry NAME` | `--mcp` ile: `off` (varsayılan), `read` araçların kayıt defterini okumasına, `write` değiştirmesine de izin verir |
 | `--profile NAME` | `--mcp` ile: bir hazır ayar veya `profiles/` içindeki bir profil geçerli profil olur |
 | `--version` | Sürümü yazdırır |
 | `--check-catalog` | Yerleşik kataloğu çevirileriyle yükler ve sorunlarını yazdırır |

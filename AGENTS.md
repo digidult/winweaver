@@ -1,7 +1,8 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.4.0: links to the
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.5.0: the registry
+tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
 catalogs from an option and a bookmark, the same policy in the trees of other imports, the policy of a catalog
 tab in the cards of a profile, the parts of the description open at first, wider editors of lists, the guide
 and the README with the organization and the way of work; before it on 17.10.2026 0.3.0: templates in
@@ -69,7 +70,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      in-memory machine), scripts (stand-alone Apply, Revert, Audit and Undo scripts),
 │   │                      import (an answer file or a WinKickOff profile as a profile), apply (the plan of a
 │   │                      native apply, return or undo, the backup format of the scripts), admx (ADMX and ADML to
-│   │                      rules, catalog files .wwcatalog, their check, merge); tests/ on the real data
+│   │                      rules, catalog files .wwcatalog, their check, merge), registry (keys and values in the types
+│   │                      of regedit, paths of regedit, the rules that write a key, a registry in memory); tests/ on the real data
 │   ├── winweaver-win/     the Windows API: native.rs (thispc::Machine: the registry, the elevation, the locale
 │   │                      names, the language of Windows, the local accounts and their groups), execute.rs
 │   │                      (the executor of an apply plan with its backup, the start of the executable as
@@ -91,7 +93,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      cards and chips), tree.rs (the painted tree of a profile and of a catalog tab: one
 │   │                      stop of Tab, the keys inside), list.rs (the painted list with columns of the
 │   │                      diff, the bookmarks and the MCP journal: widths by drag, the keys, a mini button),
-│   │                      renderer.rs (the renderers built in, the order Automatic tries, the start of a window)
+│   │                      renderer.rs (the renderers built in, the order Automatic tries, the start of a window),
+│   │                      regview.rs (the registry tab: the tree of keys, the values, the editor of a value)
 │   └── winweaver/         the executable: the window, --renderer, --mcp stdio, --mcp http, --elevated-apply
 │                          <plan> <digest> (the helper: only a plan-*.json of output/ with that SHA-256),
 │                          --version, --check-catalog, --smoke-window (CI)
@@ -296,6 +299,17 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   bookmark. The policy of a catalog tab is drawn with `views::header`, `block` and `rule_description`;
   `Settings::desc_sections` gives the parts of the description open at first (the id of a part holds the
   setting, so a change shows at once).
+- The registry (`winweaver_core::registry`, `winweaver_win::NativeRegistry` with winreg, `this_registry()`):
+  paths in the form of regedit (`registry::normalize` takes `HKLM:\`, `HKLM\`, `Computer\...`; `DU:` is shown
+  as the current user), `Data` in the types of regedit (REG_LINK and the resource lists are shown, not
+  edited). The registry tab (`Doc::Registry`, `regview.rs`) reads through `App::registry` in the acts after
+  the frame (tests put a `MemoryRegistry` there); a change without the rights says that it needs WinWeaver
+  as administrator; the rights of keys and the search are disabled buttons. `views::writes` puts a button
+  next to every key that opens the tab there (`Act::OpenRegistry`). A bookmark of the registry has the
+  document `registry` (`Bookmark::registry`: the key in `path`, the value in `item`) and lists the rules that
+  write it (`registry::writers`). MCP: `Options::registry` (`RegistryAccess` off, read, write; off at every
+  start, `--registry`, the switches of the MCP tab) gates `read_registry_key`, `set_registry_value`,
+  `delete_registry_value`, `create_registry_key`, `delete_registry_key`.
 - Every removal asks first (`App::ask`, Escape says no): an import, a bookmark of the bookmarks tab (the star
   of the navigation row stays a toggle), closing a tab discarding its changes, forgetting the recent files,
   renewing the MCP token.

@@ -27,6 +27,8 @@ keeps its settings and files in that folder. The guide opens at the first start 
   become rules. Only the imports checked in the settings are loaded. Options of a profile whose catalog is not
   loaded stay in the profile under Unknown options and are left out of the build; Load catalogs finds and loads
   their imports. Compare sets two catalogs side by side. An `.admx` or `.wwcatalog` file also opens as a tab without importing.
+- **Registry** of this PC in a tab: keys, values of every type of regedit, edits and deletions that ask
+  first, bookmarks of keys; every list of what a rule writes opens its key there.
 - **Bookmarks** of rules with comments (`.wwmarks`), **themes** with their colours and fonts (`.wwtheme`) and an editor.
 - **Languages**: English, Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish built in,
   Belarusian as a file, more as files (below); "Follow Windows" takes the language of Windows when it is one of them.
@@ -112,6 +114,7 @@ effect at the next start. For one start only: `winweaver.exe --renderer directx`
 | `--port N` | With `--mcp http`: another port |
 | `--mode NAME` | With `--mcp`: `read` (the default) only reads, `edit` changes profiles in memory, `files` also saves them and writes the answer file |
 | `--read-pc` | With `--mcp`: allows reading the settings of this PC |
+| `--registry NAME` | With `--mcp`: `off` (the default), `read` lets the tools read the registry, `write` change it too |
 | `--profile NAME` | With `--mcp`: a preset or a profile of `profiles/` becomes the current one |
 | `--version` | Prints the version |
 | `--check-catalog` | Loads the built-in catalog with its translations and prints their problems |

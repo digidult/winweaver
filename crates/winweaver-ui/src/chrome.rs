@@ -21,6 +21,7 @@ fn doc_icon(doc: &Doc) -> &'static str {
         Doc::Settings => "\u{2699}",
         Doc::Catalog(_) => "\u{1F4E6}",
         Doc::Theme(_) => "\u{1F3A8}",
+        Doc::Registry(_) => "\u{1F5C2}",
     }
 }
 
@@ -33,7 +34,7 @@ fn search_hint(doc: &Doc) -> &'static str {
         Doc::Bookmarks => "Search the bookmarks (Ctrl+F)",
         Doc::Mcp => "Filter the journal (Ctrl+F)",
         Doc::Catalog(_) => "Search policies (Ctrl+F)",
-        Doc::Settings | Doc::Theme(_) => "",
+        Doc::Settings | Doc::Theme(_) | Doc::Registry(_) => "",
     }
 }
 
@@ -278,6 +279,12 @@ impl App {
         item(ui, tr("Guide"), "F1", Act::OpenGuide);
         item(ui, tr("License"), "", Act::OpenLicense);
         item(ui, tr("Bookmarks"), "", Act::OpenMarks);
+        item(
+            ui,
+            tr("Registry"),
+            "",
+            Act::OpenRegistry("HKEY_LOCAL_MACHINE".to_owned(), None),
+        );
         item(ui, tr("MCP server"), "", Act::OpenMcp);
         item(ui, tr("Settings"), "Ctrl+,", Act::OpenSettings);
         ui.separator();
@@ -438,6 +445,34 @@ impl App {
                 }
                 self.compare_tool(ui, acts, compact);
             }
+            Some(Doc::Registry(d)) => {
+                if tool(ui, "\u{21BB}", tr("Refresh"), "", true) {
+                    acts.push(Act::RegistryRefresh);
+                }
+                sep(ui);
+                if tool(ui, "\u{1F4C1}", tr("New key"), "", true) {
+                    acts.push(Act::RegistryNew(crate::regview::EditKind::NewKey, ""));
+                }
+                if tool(ui, "\u{2795}", tr("New value"), "", true) {
+                    acts.push(Act::RegistryNew(
+                        crate::regview::EditKind::NewValue,
+                        "REG_SZ",
+                    ));
+                }
+                if tool(ui, "\u{270F}", tr("Edit"), "", d.selected().is_some()) {
+                    acts.push(Act::RegistryEdit);
+                }
+                if tool(ui, "\u{1F5D1}", tr("Delete"), "", true) {
+                    acts.push(Act::AskRegistryDelete);
+                }
+                sep(ui);
+                if tool(ui, "\u{2605}", tr("Bookmark"), "", true) {
+                    acts.push(Act::BookmarkRegistry);
+                }
+                // The rights of keys and a search of the registry come later.
+                let _ = tool(ui, "\u{1F512}", tr("Permissions (coming soon)"), "", false);
+                let _ = tool(ui, "\u{1F50D}", tr("Search (coming soon)"), "", false);
+            }
             Some(Doc::Settings) => {}
             None => {
                 if tool(ui, "\u{1F4C4}", tr("New"), "Ctrl+N", true) {
@@ -581,7 +616,7 @@ impl App {
     pub(crate) fn has_nav(&self) -> bool {
         match self.docs.get(self.active) {
             Some(Doc::Profile(_)) | Some(Doc::Catalog(_)) => true,
-            Some(Doc::Settings) | Some(Doc::Theme(_)) | None => false,
+            Some(Doc::Settings) | Some(Doc::Theme(_)) | Some(Doc::Registry(_)) | None => false,
             _ => !self.has_tools(),
         }
     }
@@ -590,7 +625,7 @@ impl App {
     pub(crate) fn has_search(&self) -> bool {
         !matches!(
             self.docs.get(self.active),
-            Some(Doc::Settings) | Some(Doc::Theme(_)) | None
+            Some(Doc::Settings) | Some(Doc::Theme(_)) | Some(Doc::Registry(_)) | None
         )
     }
 

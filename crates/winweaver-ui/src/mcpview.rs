@@ -24,6 +24,8 @@ pub struct McpPanel {
     pub token: String,
     pub mode: Mode,
     pub read_pc: bool,
+    /// What the tools of the registry may do; off at every start.
+    pub registry: winweaver_mcp::RegistryAccess,
     pub run: Option<McpRun>,
     pub error: String,
     /// The selected entry of the journal, by its place in the journal.
@@ -144,6 +146,36 @@ fn server_card(ui: &mut egui::Ui, panel: &mut McpPanel, acts: &mut Vec<Act>) {
             {
                 run.server.set_read_pc(panel.read_pc);
             }
+            ui.end_row();
+
+            ui.label(tr("Registry"));
+            ui.vertical(|ui| {
+                use winweaver_mcp::RegistryAccess;
+                let mut read = panel.registry != RegistryAccess::Off;
+                let mut write = panel.registry == RegistryAccess::Write;
+                let a = ui
+                    .checkbox(
+                        &mut read,
+                        tr("Allow reading the registry of this PC (off at every start)"),
+                    )
+                    .changed();
+                let b = ui
+                    .add_enabled(
+                        read,
+                        egui::Checkbox::new(&mut write, tr("Allow changing the registry too")),
+                    )
+                    .changed();
+                if a || b {
+                    panel.registry = match (read, write) {
+                        (false, _) => RegistryAccess::Off,
+                        (true, false) => RegistryAccess::Read,
+                        (true, true) => RegistryAccess::Write,
+                    };
+                    if let Some(run) = &panel.run {
+                        run.server.set_registry(panel.registry);
+                    }
+                }
+            });
             ui.end_row();
 
             ui.label(tr("Token"));
