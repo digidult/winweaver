@@ -767,7 +767,10 @@ fn rights_window(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>
         .show(ctx, |ui| {
             ui.weak(&edit.path);
             ui.add_space(4.0);
-            let owner = edit.names.get(&edit.rights.owner).unwrap_or(&edit.rights.owner);
+            let owner = edit
+                .names
+                .get(&edit.rights.owner)
+                .unwrap_or(&edit.rights.owner);
             ui.label(trf("Owner: {name}", &[("name", owner)]));
             let mut inherit = !edit.rights.protected;
             let text = tr("Inherit the entries of the key above");

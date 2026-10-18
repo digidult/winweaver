@@ -213,7 +213,9 @@ impl Rights {
                         let close = rest[open..]
                             .find(')')
                             .ok_or("an entry of the access list has no end")?;
-                        rights.entries.push(entry_of(&rest[open + 1..open + close])?);
+                        rights
+                            .entries
+                            .push(entry_of(&rest[open + 1..open + close])?);
                         rest = &rest[open + close + 1..];
                     }
                 }

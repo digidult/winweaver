@@ -288,7 +288,9 @@ impl Registry for NativeRegistry {
 
     fn account_sid(&self, name: &str) -> Option<String> {
         use windows_sys::Win32::Security::Authorization::ConvertSidToStringSidW;
-        use windows_sys::Win32::Security::{LookupAccountNameW, SECURITY_MAX_SID_SIZE, SID_NAME_USE};
+        use windows_sys::Win32::Security::{
+            LookupAccountNameW, SECURITY_MAX_SID_SIZE, SID_NAME_USE,
+        };
         let text = wide(name);
         // A SID of the largest size, aligned for its 32-bit sub-authorities.
         let mut sid = [0u32; SECURITY_MAX_SID_SIZE as usize / 4];
@@ -388,7 +390,9 @@ mod tests {
         reg.create_key(&key).unwrap();
         let mut rights = Rights::parse(&reg.security(&key).unwrap()).unwrap();
         assert!(!rights.entries.is_empty());
-        rights.entries.push(Entry::new("BU", false, false, Scope::Key));
+        rights
+            .entries
+            .push(Entry::new("BU", false, false, Scope::Key));
         reg.set_security(&key, &rights.dacl(), rights.protected)
             .unwrap();
         let again = Rights::parse(&reg.security(&key).unwrap()).unwrap();
