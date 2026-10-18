@@ -18,9 +18,9 @@ const USAGE: &str = "WinWeaver
                               open the window, trying that renderer first (this start only)
   winweaver --version         print the version
   winweaver --check-catalog   load the embedded catalog and report its problems
-  winweaver --mcp stdio [--mode read|edit|files] [--read-pc] [--profile NAME]
+  winweaver --mcp stdio [--mode read|edit|files] [--read-pc] [--registry off|read|write] [--profile NAME]
                               serve MCP on standard input and output
-  winweaver --mcp http --token TOKEN [--port N] [--mode ...] [--read-pc] [--profile NAME]
+  winweaver --mcp http --token TOKEN [--port N] [--mode ...] [--read-pc] [--registry ...] [--profile NAME]
                               serve MCP on http://127.0.0.1:N/mcp (port 8765 by default)
   winweaver --smoke-window [--renderer ...]
                               open a small window, draw two frames, print what drew them
@@ -92,6 +92,16 @@ fn mcp(args: &[String]) -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    let registry = match option(args, "--registry").as_deref() {
+        None => winweaver_mcp::RegistryAccess::Off,
+        Some(text) => match winweaver_mcp::RegistryAccess::parse(text) {
+            Some(r) => r,
+            None => {
+                refuse("--registry is off, read or write");
+                return ExitCode::from(2);
+            }
+        },
+    };
     let catalog = match Catalog::embedded() {
         Ok(c) => c,
         Err(e) => {
@@ -106,6 +116,7 @@ fn mcp(args: &[String]) -> ExitCode {
         &winweaver_ui::PRESETS,
         winweaver_mcp::Options {
             mode,
+            registry,
             read_pc: args.iter().any(|a| a == "--read-pc"),
             profiles_dir: dir.join("profiles"),
             output_dir: dir.join("output"),

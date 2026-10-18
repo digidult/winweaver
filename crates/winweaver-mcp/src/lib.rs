@@ -54,10 +54,41 @@ impl Mode {
     }
 }
 
+/// What the tools of the registry may do: off by default and at every start, like reading this PC.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum RegistryAccess {
+    #[default]
+    Off,
+    Read,
+    /// Reading and writing.
+    Write,
+}
+
+impl RegistryAccess {
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "off" => Some(Self::Off),
+            "read" => Some(Self::Read),
+            "write" => Some(Self::Write),
+            _ => None,
+        }
+    }
+
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::Read => "read",
+            Self::Write => "write",
+        }
+    }
+}
+
 /// The options of a server; none of them is ever saved.
 #[derive(Debug, Clone)]
 pub struct Options {
     pub mode: Mode,
+    /// What the tools of the registry may do.
+    pub registry: RegistryAccess,
     /// Whether the tool read_this_pc may read the settings of this PC.
     pub read_pc: bool,
     /// The folder of the profiles the tools load and save.
@@ -97,6 +128,8 @@ pub(crate) struct State {
 pub struct Server {
     pub catalog: Catalog,
     pub presets: Vec<(String, Profile)>,
+    /// The registry the tools of the registry read and change: of this PC, or in memory.
+    pub(crate) registry: std::sync::Arc<dyn winweaver_core::registry::Registry>,
     state: Mutex<State>,
 }
 
@@ -128,6 +161,7 @@ impl Server {
         Self {
             catalog,
             presets,
+            registry: winweaver_win::this_registry(),
             state: Mutex::new(State {
                 options,
                 docs,
@@ -152,6 +186,19 @@ impl Server {
 
     pub fn set_read_pc(&self, on: bool) {
         self.lock().options.read_pc = on;
+    }
+
+    pub fn set_registry(&self, access: RegistryAccess) {
+        self.lock().options.registry = access;
+    }
+
+    /// The server with another registry, as the tests give one in memory.
+    pub fn with_registry(
+        mut self,
+        registry: std::sync::Arc<dyn winweaver_core::registry::Registry>,
+    ) -> Self {
+        self.registry = registry;
+        self
     }
 
     /// The last requests, the newest last.
@@ -438,6 +485,7 @@ mod tests {
             &[],
             Options {
                 mode: Mode::Read,
+                registry: RegistryAccess::Off,
                 read_pc: false,
                 profiles_dir: std::env::temp_dir(),
                 output_dir: std::env::temp_dir(),

@@ -110,6 +110,16 @@ The detail panel of an option links to the catalog tabs that hold it and to the 
 trees of other imports; a bookmark of the option does the same. Settings, General choose which parts of
 the description open at first.
 
+## The registry
+
+**Menu, Registry** opens the registry of this PC in a tab: the keys on the left, the values of the selected
+key on the right with their types (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY),
+the path in the row above. A double click edits a value; New key, New value, Edit and Delete are in the
+bar, and a deletion asks first. Keys of the machine (HKEY_LOCAL_MACHINE) change only when WinWeaver runs
+as administrator. The button next to a key in **What it writes** opens it here. **Bookmark** keeps the key
+and the value with a comment, and the bookmark lists the rules that write it. The rights of keys and a
+search of the registry come later.
+
 ## The MCP server
 
 **Menu, MCP server** opens the tab of the server through which AI agents read profiles and, when the
@@ -140,6 +150,7 @@ names what the window draws with.
 | `--port N` | With `--mcp http`: another port |
 | `--mode NAME` | With `--mcp`: `read` (the default) only reads, `edit` changes profiles in memory, `files` also saves them and writes the answer file |
 | `--read-pc` | With `--mcp`: allows reading the settings of this PC |
+| `--registry NAME` | With `--mcp`: `off` (the default), `read` lets the tools read the registry, `write` change it too |
 | `--profile NAME` | With `--mcp`: a preset or a profile of `profiles/` becomes the current one |
 | `--version` | Prints the version |
 | `--check-catalog` | Loads the built-in catalog with its translations and prints their problems |

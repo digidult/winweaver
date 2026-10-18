@@ -9,7 +9,7 @@ use std::sync::Arc;
 use serde_json::{Value, json};
 use winweaver_core::catalog::Catalog;
 use winweaver_mcp::http::HttpServer;
-use winweaver_mcp::{Mode, Options, Server};
+use winweaver_mcp::{Mode, Options, RegistryAccess, Server};
 
 const OFFICE: &str = include_str!("../../../data/presets/office.wwprofile");
 const STRICT: &str = include_str!("../../../data/presets/strict.wwprofile");
@@ -27,11 +27,57 @@ fn server(mode: Mode, dir: &std::path::Path) -> Server {
         &[("Office", OFFICE), ("Strict", STRICT)],
         Options {
             mode,
+            registry: RegistryAccess::Off,
             read_pc: false,
             profiles_dir: dir.join("profiles"),
             output_dir: dir.join("output"),
         },
     )
+}
+
+/// The tools of the registry are off until allowed, and write only when writing is allowed; here on
+/// a registry in memory.
+#[test]
+fn the_registry_tools_are_off_until_allowed() {
+    let dir = folder("registry");
+    let s = server(Mode::Read, &dir)
+        .with_registry(Arc::new(winweaver_core::registry::MemoryRegistry::default()));
+    let key = "HKCU\\Software\\WinWeaverTest";
+    assert_eq!(
+        error_kind(&s, "read_registry_key", json!({ "path": "HKCU" })),
+        "not_allowed"
+    );
+    s.set_registry(RegistryAccess::Read);
+    ok(&s, "read_registry_key", json!({ "path": "HKCU" }));
+    assert_eq!(
+        error_kind(&s, "create_registry_key", json!({ "path": key })),
+        "not_allowed"
+    );
+    s.set_registry(RegistryAccess::Write);
+    ok(&s, "create_registry_key", json!({ "path": key }));
+    ok(
+        &s,
+        "set_registry_value",
+        json!({ "path": key, "name": "N", "type": "REG_DWORD", "data": "0x10" }),
+    );
+    let read = ok(&s, "read_registry_key", json!({ "path": key }));
+    assert_eq!(
+        read["values"][0]["data"],
+        json!({ "type": "REG_DWORD", "data": 16 })
+    );
+    assert_eq!(
+        error_kind(
+            &s,
+            "set_registry_value",
+            json!({ "path": key, "name": "N", "type": "REG_DWORD", "data": "x" })
+        ),
+        "invalid"
+    );
+    ok(&s, "delete_registry_key", json!({ "path": key }));
+    assert_eq!(
+        error_kind(&s, "read_registry_key", json!({ "path": key })),
+        "read_failed"
+    );
 }
 
 fn call(s: &Server, name: &str, args: Value) -> Value {
@@ -86,7 +132,7 @@ fn the_protocol_answers_and_lists_the_tools() {
         .iter()
         .map(|t| t["name"].as_str().unwrap())
         .collect();
-    assert_eq!(names.len(), 19, "{names:?}");
+    assert_eq!(names.len(), 24, "{names:?}");
     for n in [
         "get_status",
         "set_rule",

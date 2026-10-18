@@ -119,6 +119,17 @@ Der Detailbereich einer Option verlinkt die Katalog-Tabs, die sie enthalten, und
 den Strukturen anderer Importe; ein Lesezeichen der Option ebenso. Unter Einstellungen, Allgemein wird
 gewählt, welche Teile der Beschreibung zuerst geöffnet sind.
 
+## Die Registrierung
+
+**Menü, Registrierung** öffnet die Registrierung dieses PCs in einem Tab: die Schlüssel links, die Werte des
+gewählten Schlüssels rechts mit ihren Typen (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD,
+REG_BINARY), der Pfad in der Zeile darüber. Ein Doppelklick bearbeitet einen Wert; Neuer Schlüssel, Neuer
+Wert, Bearbeiten und Löschen stehen in der Leiste, und ein Löschen fragt zuerst. Schlüssel des Computers
+(HKEY_LOCAL_MACHINE) ändern sich nur, wenn WinWeaver als Administrator läuft. Die Schaltfläche neben einem
+Schlüssel in **Was es schreibt** öffnet ihn hier. **Lesezeichen** hält den Schlüssel und den Wert mit einem
+Kommentar fest, und das Lesezeichen nennt die Regeln, die ihn schreiben. Die Rechte von Schlüsseln und eine
+Suche in der Registrierung kommen später.
+
 ## Der MCP-Server
 
 **Menü, MCP-Server** öffnet die Registerkarte des Servers, über den KI-Agents Profile lesen und, wenn der
@@ -149,6 +160,7 @@ oder `=`: `--renderer=directx`.
 | `--port N` | Mit `--mcp http`: ein anderer Port |
 | `--mode NAME` | Mit `--mcp`: `read` (Standard) liest nur, `edit` ändert Profile im Speicher, `files` speichert sie auch und schreibt die Antwortdatei |
 | `--read-pc` | Mit `--mcp`: erlaubt das Lesen der Einstellungen dieses PCs |
+| `--registry NAME` | Mit `--mcp`: `off` (Standard), `read` lässt die Tools die Registrierung lesen, `write` sie auch ändern |
 | `--profile NAME` | Mit `--mcp`: eine Vorlage oder ein Profil aus `profiles/` wird das aktuelle |
 | `--version` | Gibt die Version aus |
 | `--check-catalog` | Lädt den integrierten Katalog mit seinen Übersetzungen und gibt ihre Probleme aus |

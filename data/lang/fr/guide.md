@@ -121,6 +121,17 @@ Le panneau de détails d'une option renvoie aux onglets des catalogues qui la co
 stratégie dans les arborescences d'autres importations ; un signet de l'option aussi. Paramètres, Général
 choisit quelles parties de la description sont ouvertes d'abord.
 
+## Le registre
+
+**Menu, Registre** ouvre le registre de ce PC dans un onglet : les clés à gauche, les valeurs de la clé
+choisie à droite avec leurs types (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY),
+le chemin dans la ligne du dessus. Un double clic modifie une valeur ; Nouvelle clé, Nouvelle valeur,
+Modifier et Supprimer sont dans la barre, et une suppression demande d'abord confirmation. Les clés de la
+machine (HKEY_LOCAL_MACHINE) ne changent que si WinWeaver tourne en administrateur. Le bouton à côté d'une
+clé dans **Ce qu'elle écrit** l'ouvre ici. **Signet** garde la clé et la valeur avec un commentaire, et le
+signet liste les règles qui l'écrivent. Les droits des clés et une recherche dans le registre viendront
+plus tard.
+
 ## Le serveur MCP
 
 **Menu, Serveur MCP** ouvre l'onglet du serveur par lequel les agents IA lisent les profils et, si le
@@ -151,6 +162,7 @@ démarrage. Le journal de `logs/` indique avec quoi la fenêtre dessine.
 | `--port N` | Avec `--mcp http` : un autre port |
 | `--mode NAME` | Avec `--mcp` : `read` (par défaut) lit seulement, `edit` modifie les profils en mémoire, `files` les enregistre aussi et écrit le fichier de réponses |
 | `--read-pc` | Avec `--mcp` : permet de lire les paramètres de ce PC |
+| `--registry NAME` | Avec `--mcp` : `off` (par défaut), `read` laisse les outils lire le registre, `write` aussi le modifier |
 | `--profile NAME` | Avec `--mcp` : un préréglage ou un profil de `profiles/` devient le profil courant |
 | `--version` | Affiche la version |
 | `--check-catalog` | Charge le catalogue intégré avec ses traductions et affiche leurs problèmes |

@@ -32,6 +32,8 @@ pub enum BookmarksError {
 
 /// The kind of document of a bookmark of an option.
 pub const OPTION: &str = "profile";
+/// The document of a bookmark of the registry: `path` is the key, `item` the value (empty for the key).
+pub const REGISTRY: &str = "registry";
 
 /// A bookmark of an option: its id (a rule, a group or a form) in `item`, the profile it was made
 /// in as a link (`path`, empty for an unsaved profile or a catalog), a comment and the time. Its
@@ -60,6 +62,20 @@ impl Bookmark {
         }
     }
 
+    /// The bookmark of a key of the registry, or of one of its values.
+    pub fn registry(key: &str, value: &str) -> Self {
+        Self {
+            document: REGISTRY.to_owned(),
+            path: key.to_owned(),
+            item: value.to_owned(),
+            ..Self::default()
+        }
+    }
+
+    pub fn is_registry(&self) -> bool {
+        self.document == REGISTRY
+    }
+
     /// Whether this is the bookmark of an option.
     pub fn is_option(&self) -> bool {
         self.document == OPTION && !self.item.is_empty()
@@ -70,6 +86,10 @@ impl Bookmark {
     pub fn same_position(&self, other: &Bookmark) -> bool {
         if self.is_option() && other.is_option() {
             return self.item == other.item;
+        }
+        if self.is_registry() && other.is_registry() {
+            return self.path.eq_ignore_ascii_case(&other.path)
+                && self.item.eq_ignore_ascii_case(&other.item);
         }
         self.document == other.document && self.path == other.path && self.item == other.item
     }

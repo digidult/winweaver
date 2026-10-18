@@ -118,6 +118,17 @@ El panel de detalles de una opción enlaza las pestañas de los catálogos que l
 directiva en los árboles de otras importaciones; un marcador de la opción también. En Configuración,
 General se elige qué partes de la descripción se abren al principio.
 
+## El registro
+
+**Menú, Registro** abre el registro de este equipo en una pestaña: las claves a la izquierda, los valores de
+la clave elegida a la derecha con sus tipos (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD,
+REG_BINARY), la ruta en la fila de arriba. Un doble clic edita un valor; Nueva clave, Nuevo valor, Editar y
+Eliminar están en la barra, y una eliminación pide confirmación antes. Las claves del equipo
+(HKEY_LOCAL_MACHINE) solo cambian cuando WinWeaver se ejecuta como administrador. El botón junto a una clave
+en **Qué escribe** la abre aquí. **Marcador** guarda la clave y el valor con un comentario, y el marcador
+muestra las reglas que la escriben. Los permisos de las claves y la búsqueda en el registro llegarán más
+tarde.
+
 ## El servidor MCP
 
 **Menú, Servidor MCP** abre la pestaña del servidor a través del cual los agentes de IA leen perfiles y,
@@ -148,6 +159,7 @@ registro de `logs/` indica con qué dibuja la ventana.
 | `--port N` | Con `--mcp http`: otro puerto |
 | `--mode NAME` | Con `--mcp`: `read` (por defecto) solo lee, `edit` cambia los perfiles en memoria, `files` además los guarda y escribe el archivo de respuesta |
 | `--read-pc` | Con `--mcp`: permite leer la configuración de este equipo |
+| `--registry NAME` | Con `--mcp`: `off` (por defecto), `read` deja que las herramientas lean el registro, `write` que también lo cambien |
 | `--profile NAME` | Con `--mcp`: un perfil predefinido o un perfil de `profiles/` pasa a ser el actual |
 | `--version` | Muestra la versión |
 | `--check-catalog` | Carga el catálogo integrado con sus traducciones y muestra sus problemas |

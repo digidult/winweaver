@@ -794,7 +794,7 @@ fn default_text(default: &Option<Value>) -> String {
 
 /// What a rule writes: the registry values as a table of key, name, value and the default of
 /// Windows, as in the mockups; the other actions as one line each under it.
-fn writes(ui: &mut egui::Ui, rule: &Rule) {
+fn writes(ui: &mut egui::Ui, rule: &Rule, acts: &mut Vec<Act>) {
     let p = style::palette(ui);
     let mut rows = Vec::new();
     let mut others = Vec::new();
@@ -866,7 +866,16 @@ fn writes(ui: &mut egui::Ui, rule: &Rule) {
                 }
                 ui.end_row();
                 for (path, name, value, default) in &rows {
-                    cell(ui, path, true, false, widths[0]);
+                    ui.horizontal(|ui| {
+                        cell(ui, path, true, false, widths[0] - 24.0);
+                        let open = ui
+                            .small_button("\u{2197}")
+                            .on_hover_text(tr("Open in the registry"));
+                        if open.clicked() {
+                            let value = (!name.is_empty()).then(|| name.clone());
+                            acts.push(Act::OpenRegistry((*path).to_owned(), value));
+                        }
+                    });
                     cell(ui, name, false, false, widths[1]);
                     cell(ui, value, false, false, widths[2]);
                     cell(ui, default, false, true, widths[3]);
@@ -1104,7 +1113,7 @@ pub(crate) fn rule_description(
         "desc-writes",
         tr("What it writes"),
         parts.writes,
-        |ui| writes(ui, rule),
+        |ui| writes(ui, rule, acts),
     );
     if !rule.requires.is_empty() || !rule.conflicts.is_empty() {
         section(

@@ -10,7 +10,25 @@ mod execute;
 mod native;
 
 #[cfg(windows)]
+mod registry;
+
+#[cfg(windows)]
 pub use native::NativeMachine;
+#[cfg(windows)]
+pub use registry::NativeRegistry;
+
+/// The registry of this PC for the registry tab and the MCP server; one in memory where the
+/// Windows API is not available.
+pub fn this_registry() -> std::sync::Arc<dyn winweaver_core::registry::Registry> {
+    #[cfg(windows)]
+    {
+        std::sync::Arc::new(NativeRegistry)
+    }
+    #[cfg(not(windows))]
+    {
+        std::sync::Arc::new(winweaver_core::registry::MemoryRegistry::default())
+    }
+}
 
 /// The machine of this PC, or `None` where the Windows API is not available.
 pub fn this_pc() -> Option<Box<dyn Machine>> {

@@ -110,6 +110,16 @@ setiap penghapusan, meminta konfirmasi lebih dulu.
 Panel detail sebuah opsi menautkan tab katalog yang memuatnya dan kebijakan yang sama di pohon impor lain;
 penanda opsi itu juga. Di Pengaturan, Umum dipilih bagian deskripsi mana yang terbuka sejak awal.
 
+## Registri
+
+**Menu, Registri** membuka registri PC ini di sebuah tab: kunci di kiri, nilai dari kunci terpilih di kanan
+beserta jenisnya (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY), jalurnya di baris
+atas. Klik ganda menyunting nilai; Kunci baru, Nilai baru, Sunting, dan Hapus ada di bilah, dan penghapusan
+meminta konfirmasi lebih dulu. Kunci mesin (HKEY_LOCAL_MACHINE) hanya berubah bila WinWeaver berjalan sebagai
+administrator. Tombol di samping kunci pada **Yang ditulis** membukanya di sini. **Penanda** menyimpan kunci dan
+nilai dengan komentar, dan penanda itu menampilkan aturan yang menulisnya. Hak akses kunci dan pencarian di
+registri menyusul.
+
 ## Server MCP
 
 **Menu, Server MCP** membuka tab server yang digunakan agen AI untuk membaca profil dan, bila mode
@@ -140,6 +150,7 @@ menyebutkan apa yang dipakai jendela untuk menggambar.
 | `--port N` | Dengan `--mcp http`: port lain |
 | `--mode NAME` | Dengan `--mcp`: `read` (default) hanya membaca, `edit` mengubah profil di memori, `files` juga menyimpannya dan menulis file jawaban |
 | `--read-pc` | Dengan `--mcp`: mengizinkan membaca pengaturan PC ini |
+| `--registry NAME` | Dengan `--mcp`: `off` (default), `read` mengizinkan alat membaca registri, `write` juga mengubahnya |
 | `--profile NAME` | Dengan `--mcp`: preset atau profil dari `profiles/` menjadi profil saat ini |
 | `--version` | Menampilkan versi |
 | `--check-catalog` | Memuat katalog bawaan dengan terjemahannya dan menampilkan masalahnya |

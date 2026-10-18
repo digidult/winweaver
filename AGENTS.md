@@ -1,7 +1,8 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.4.0: links to the
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.5.0: the registry
+tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
 catalogs from an option and a bookmark, the same policy in the trees of other imports, the policy of a catalog
 tab in the cards of a profile, the parts of the description open at first, wider editors of lists, the guide
 and the README with the organization and the way of work; before it on 17.10.2026 0.3.0: templates in
@@ -69,13 +70,14 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      in-memory machine), scripts (stand-alone Apply, Revert, Audit and Undo scripts),
 │   │                      import (an answer file or a WinKickOff profile as a profile), apply (the plan of a
 │   │                      native apply, return or undo, the backup format of the scripts), admx (ADMX and ADML to
-│   │                      rules, catalog files .wwcatalog, their check, merge); tests/ on the real data
+│   │                      rules, catalog files .wwcatalog, their check, merge), registry (keys and values in the types
+│   │                      of regedit, paths of regedit, the rules that write a key, a registry in memory); tests/ on the real data
 │   ├── winweaver-win/     the Windows API: native.rs (thispc::Machine: the registry, the elevation, the locale
 │   │                      names, the language of Windows, the local accounts and their groups), execute.rs
 │   │                      (the executor of an apply plan with its backup, the start of the executable as
 │   │                      administrator)
 │   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal, token), tools.rs (the
-│   │                      19 tools and 3 resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and
+│   │                      24 tools and 3 resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and
 │   │                      Origin checks); tests/server.rs (both transports on a free loopback port)
 │   ├── winweaver-ui/      the window on eframe (variant A): lib.rs (tabs, menu, command bar, navigation,
 │   │                      search, shortcuts, file dialogs, This PC, build, session, the actions applied after
@@ -91,7 +93,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      cards and chips), tree.rs (the painted tree of a profile and of a catalog tab: one
 │   │                      stop of Tab, the keys inside), list.rs (the painted list with columns of the
 │   │                      diff, the bookmarks and the MCP journal: widths by drag, the keys, a mini button),
-│   │                      renderer.rs (the renderers built in, the order Automatic tries, the start of a window)
+│   │                      renderer.rs (the renderers built in, the order Automatic tries, the start of a window),
+│   │                      regview.rs (the registry tab: the tree of keys, the values, the editor of a value)
 │   └── winweaver/         the executable: the window, --renderer, --mcp stdio, --mcp http, --elevated-apply
 │                          <plan> <digest> (the helper: only a plan-*.json of output/ with that SHA-256),
 │                          --version, --check-catalog, --smoke-window (CI)
@@ -296,6 +299,17 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   bookmark. The policy of a catalog tab is drawn with `views::header`, `block` and `rule_description`;
   `Settings::desc_sections` gives the parts of the description open at first (the id of a part holds the
   setting, so a change shows at once).
+- The registry (`winweaver_core::registry`, `winweaver_win::NativeRegistry` with winreg, `this_registry()`):
+  paths in the form of regedit (`registry::normalize` takes `HKLM:\`, `HKLM\`, `Computer\...`; `DU:` is shown
+  as the current user), `Data` in the types of regedit (REG_LINK and the resource lists are shown, not
+  edited). The registry tab (`Doc::Registry`, `regview.rs`) reads through `App::registry` in the acts after
+  the frame (tests put a `MemoryRegistry` there); a change without the rights says that it needs WinWeaver
+  as administrator; the rights of keys and the search are disabled buttons. `views::writes` puts a button
+  next to every key that opens the tab there (`Act::OpenRegistry`). A bookmark of the registry has the
+  document `registry` (`Bookmark::registry`: the key in `path`, the value in `item`) and lists the rules that
+  write it (`registry::writers`). MCP: `Options::registry` (`RegistryAccess` off, read, write; off at every
+  start, `--registry`, the switches of the MCP tab) gates `read_registry_key`, `set_registry_value`,
+  `delete_registry_value`, `create_registry_key`, `delete_registry_key`.
 - Every removal asks first (`App::ask`, Escape says no): an import, a bookmark of the bookmarks tab (the star
   of the navigation row stays a toggle), closing a tab discarding its changes, forgetting the recent files,
   renewing the MCP token.
@@ -417,7 +431,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Core | Catalog, profiles, resolver, check, diff, bookmarks, build of the answer file, This PC (plan, judgement, capture, reports), stand-alone scripts, import of answer files and WinKickOff profiles; tests on the real data | 14.10.2026 |
 | Windows API | Reading the registry, the elevation, the locales, the Windows language and the local accounts with their groups; the native read of the whole catalog is tested on the Windows runner | 14.10.2026 |
 | Window | Tabs, menu, command bar of each tab (icons above labels), navigation, search per tab, the painted tree and lists with the keyboard, detail panel with copy and selectable texts, forms, check, build, diff tab with comments, bookmarks of options, Markdown tabs with anchors, This PC (read, check, scripts, reports), MCP tab with its journal, settings, translations uk, ru, de, es, fr, id, it and tr, drafts, restored tabs, log, themes with fonts (Light, Dark, Latte, Matrix, more as files) and their editor, the title bar in their colours; pull requests #13 to #17 for the list of 15.10.2026 | 15.10.2026 |
-| MCP server | stdio and HTTP, 19 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
+| MCP server | stdio and HTTP, 24 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
 | Native apply | Plans, the elevated helper, the backup and undo (pull request #2), the default user profile loaded and unloaded by the helper; tested in a test key of HKCU and of the default profile on the runner | 14.10.2026 |
 | Policy templates | ADMX import, catalog files, the settings section (pull request #3), lists and multi-line texts (`reg-list`, list parameters), policies linked to built-in rules; only the checked imports read, the unknown options of a profile in their group with Load catalogs | 16.10.2026 |
 | Not yet | Features and capabilities read natively (they need DISM and administrator rights) | |

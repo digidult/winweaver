@@ -115,6 +115,17 @@ Il pannello dei dettagli di un'opzione collega le schede dei cataloghi che la co
 criterio negli alberi di altre importazioni; anche un segnalibro dell'opzione. In Impostazioni, Generale si
 sceglie quali parti della descrizione sono aperte all'inizio.
 
+## Il registro
+
+**Menu, Registro** apre il registro di questo PC in una scheda: le chiavi a sinistra, i valori della chiave
+scelta a destra con i loro tipi (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY), il
+percorso nella riga sopra. Un doppio clic modifica un valore; Nuova chiave, Nuovo valore, Modifica ed
+Elimina sono nella barra, e un'eliminazione chiede prima conferma. Le chiavi del computer
+(HKEY_LOCAL_MACHINE) cambiano solo se WinWeaver gira come amministratore. Il pulsante accanto a una chiave
+in **Che cosa scrive** la apre qui. **Segnalibro** conserva la chiave e il valore con un commento, e il
+segnalibro elenca le regole che la scrivono. I permessi delle chiavi e la ricerca nel registro arriveranno
+più avanti.
+
 ## Il server MCP
 
 **Menu, Server MCP** apre la scheda del server tramite il quale gli agenti di IA leggono i profili e,
@@ -145,6 +156,7 @@ in `logs/` indica con che cosa disegna la finestra.
 | `--port N` | Con `--mcp http`: un'altra porta |
 | `--mode NAME` | Con `--mcp`: `read` (predefinito) legge soltanto, `edit` modifica i profili in memoria, `files` li salva anche e scrive il file di risposte |
 | `--read-pc` | Con `--mcp`: consente di leggere le impostazioni di questo PC |
+| `--registry NAME` | Con `--mcp`: `off` (predefinito), `read` lascia leggere il registro agli strumenti, `write` anche modificarlo |
 | `--profile NAME` | Con `--mcp`: una preimpostazione o un profilo di `profiles/` diventa quello corrente |
 | `--version` | Stampa la versione |
 | `--check-catalog` | Carica il catalogo integrato con le sue traduzioni e stampa i loro problemi |
