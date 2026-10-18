@@ -982,6 +982,10 @@ impl App {
                                         (tr("Languages").to_owned(), Sel::Form(Form::Languages))
                                     }
                                     Target::Profile => (doc.profile.name.clone(), Sel::None),
+                                    // Their group, unless the settings hide it from the tree.
+                                    Target::Unknown if self.settings.hide_unknown => {
+                                        (doc.profile.name.clone(), Sel::None)
+                                    }
                                     Target::Unknown => (
                                         tr("Unknown options").to_owned(),
                                         Sel::Group(crate::UNKNOWN_GROUP.to_owned()),
