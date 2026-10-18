@@ -86,6 +86,10 @@ Die Features und Funktionen von Windows werden über DISM gelesen, wenn WinWeave
 das verlängert das Lesen um einige Sekunden. Ohne diese Rechte bleiben sie nicht lesbar.
 Das Lesen läuft im Hintergrund: Das Fenster arbeitet weiter, und ein Kreisel in der Statusleiste zeigt es an.
 
+Beim Anwenden als Administrator entfernt eine Regel, die Funktionen von Windows entfernt, diese ebenfalls
+über DISM; die Sicherung nennt sie, aber „Rückgängig machen“ bringt sie nicht zurück. Apps entfernt das
+Anwendungsskript.
+
 ## Profile vergleichen
 
 **Menü, Mit einer Datei vergleichen** oder **Mit einer Vorlage vergleichen** öffnet eine Registerkarte mit
@@ -206,4 +210,4 @@ Meldungen gehen an die Konsole, aus der das Programm gestartet wurde, und nach `
 
 ## Noch nicht verfügbar
 
-Das Entfernen von Apps und Funktionen direkt im Fenster: Bis dahin erledigt das das Anwendungsskript.
+Das Entfernen von Apps direkt im Fenster: Bis dahin erledigt das das Anwendungsskript.

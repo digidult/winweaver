@@ -530,5 +530,6 @@
   "This PC could not be read: {e}": "Не вдалося прочитати цей ПК: {e}",
   "The read of this PC failed; the log names the error": "Читання цього ПК не вдалося; помилку записано в журнал",
   "Read this PC: the tab of the profile was closed": "Читання цього ПК: вкладку профілю закрито",
-  "Check on this PC: the tab of the profile was closed": "Перевірка на цьому ПК: вкладку профілю закрито"
+  "Check on this PC: the tab of the profile was closed": "Перевірка на цьому ПК: вкладку профілю закрито",
+  "{n} steps remove capabilities of Windows; Undo does not bring them back.": "Кроків, що видаляють можливості Windows: {n}; скасування їх не поверне."
 }

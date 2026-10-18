@@ -530,5 +530,6 @@
   "This PC could not be read: {e}": "Impossibile leggere questo PC: {e}",
   "The read of this PC failed; the log names the error": "La lettura di questo PC non è riuscita; il log indica l'errore",
   "Read this PC: the tab of the profile was closed": "Lettura di questo PC: la scheda del profilo è stata chiusa",
-  "Check on this PC: the tab of the profile was closed": "Verifica su questo PC: la scheda del profilo è stata chiusa"
+  "Check on this PC: the tab of the profile was closed": "Verifica su questo PC: la scheda del profilo è stata chiusa",
+  "{n} steps remove capabilities of Windows; Undo does not bring them back.": "{n} passaggi rimuovono capacità di Windows; Annulla non le ripristina."
 }

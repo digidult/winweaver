@@ -530,5 +530,6 @@
   "This PC could not be read: {e}": "Не ўдалося прачытаць гэты ПК: {e}",
   "The read of this PC failed; the log names the error": "Чытанне гэтага ПК не ўдалося; памылка запісана ў журнал",
   "Read this PC: the tab of the profile was closed": "Чытанне гэтага ПК: укладка профілю была закрыта",
-  "Check on this PC: the tab of the profile was closed": "Праверка на гэтым ПК: укладка профілю была закрыта"
+  "Check on this PC: the tab of the profile was closed": "Праверка на гэтым ПК: укладка профілю была закрыта",
+  "{n} steps remove capabilities of Windows; Undo does not bring them back.": "Крокаў, якія выдаляюць магчымасці Windows: {n}; адмена іх не верне."
 }

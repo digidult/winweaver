@@ -85,6 +85,10 @@ Las características y funcionalidades de Windows se leen mediante DISM cuando W
 administrador, lo que añade unos segundos a la lectura; sin esos permisos no se pueden leer.
 La lectura se hace en segundo plano: la ventana sigue funcionando y un indicador en la barra de estado la muestra.
 
+Al aplicar como administrador, una regla que quita funcionalidades de Windows también las quita mediante
+DISM; la copia de seguridad las nombra, pero Deshacer no las devuelve. Las aplicaciones las quita el script
+de aplicación.
+
 ## Comparar perfiles
 
 **Menú, Comparar con un archivo** o **Comparar con un perfil predefinido** abre una pestaña de comparación:
@@ -204,5 +208,4 @@ escribe nada en ningún otro sitio.
 
 ## Todavía no disponible
 
-Quitar aplicaciones y funcionalidades directamente desde la ventana: mientras tanto lo hace el script de
-aplicación.
+Quitar aplicaciones directamente desde la ventana: mientras tanto lo hace el script de aplicación.

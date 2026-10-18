@@ -9,7 +9,7 @@ use std::sync::{Mutex, OnceLock};
 use windows_sys::Win32::System::LibraryLoader::{
     GetProcAddress, LOAD_LIBRARY_SEARCH_SYSTEM32, LoadLibraryExW,
 };
-use winweaver_core::thispc::Components;
+use winweaver_core::thispc::{self, Components};
 
 /// `DISM_ONLINE_IMAGE` of dismapi.h: the Windows that runs.
 const ONLINE_IMAGE: &str = "DISM_{53BFAE52-B167-4E2F-A258-0A37B57FF845}";
@@ -19,6 +19,8 @@ const LOG_ERRORS: i32 = 0;
 const PACKAGE_NONE: i32 = 0;
 /// `DismStateInstalled` of `DismPackageFeatureState`.
 const INSTALLED: u32 = 4;
+/// `ERROR_SUCCESS_REBOOT_REQUIRED` as an HRESULT: done, and Windows wants a restart.
+const REBOOT_REQUIRED: i32 = 3010;
 
 /// `DismFeature` and `DismCapability` have the same layout: a name and a
 /// `DismPackageFeatureState`, packed to one byte like every structure of dismapi.h.
@@ -36,6 +38,10 @@ type GetFeatures = unsafe extern "system" fn(u32, *const u16, i32, *mut *mut Ite
 type GetCapabilities = unsafe extern "system" fn(u32, *mut *mut Item, *mut u32) -> i32;
 type Delete = unsafe extern "system" fn(*const c_void) -> i32;
 type CloseSession = unsafe extern "system" fn(u32) -> i32;
+/// A handle of an event, and a pointer the reader passes as null.
+type Event = *mut c_void;
+type Ptr = *const c_void;
+type RemoveCapability = unsafe extern "system" fn(u32, *const u16, Event, Ptr, Ptr) -> i32;
 
 /// The functions of dismapi.dll that the reader calls.
 struct Api {
@@ -44,6 +50,8 @@ struct Api {
     get_features: GetFeatures,
     /// Windows 10 and later; `None` where DISM has no capabilities.
     get_capabilities: Option<GetCapabilities>,
+    /// Windows 10 and later, like the list of capabilities.
+    remove_capability: Option<RemoveCapability>,
     delete: Delete,
     close_session: CloseSession,
 }
@@ -102,6 +110,8 @@ fn load() -> Result<Api, String> {
             get_features: std::mem::transmute::<Proc, GetFeatures>(need("DismGetFeatures")?),
             get_capabilities: find("DismGetCapabilities")
                 .map(|p| std::mem::transmute::<Proc, GetCapabilities>(p)),
+            remove_capability: find("DismRemoveCapability")
+                .map(|p| std::mem::transmute::<Proc, RemoveCapability>(p)),
             delete: std::mem::transmute::<Proc, Delete>(need("DismDelete")?),
             close_session: std::mem::transmute::<Proc, CloseSession>(need("DismCloseSession")?),
         })
@@ -172,19 +182,12 @@ fn named(list: Vec<(String, u32)>, name: fn(u32) -> &'static str) -> Vec<(String
     list.into_iter().map(|(n, s)| (n, name(s).into())).collect()
 }
 
-/// Reads the features and the capabilities in one session of DISM, one reader at a time.
-pub fn components() -> Components {
-    // Whether DISM was initialized; a failed start is tried again at the next read.
+/// Runs `work` in a session of DISM on the running Windows, one session at a time.
+fn in_session<T>(work: impl FnOnce(&Api, u32) -> T) -> Result<T, String> {
+    // Whether DISM was initialized; a failed start is tried again at the next call.
     static STARTED: Mutex<bool> = Mutex::new(false);
     let mut started = STARTED.lock().unwrap_or_else(|e| e.into_inner());
-    let both = |e: String| Components {
-        features: Err(e.clone()),
-        capabilities: Err(e),
-    };
-    let api = match api() {
-        Ok(api) => api,
-        Err(e) => return both(e),
-    };
+    let api = api()?;
     if !*started {
         // The log of DISM goes to the temp folder instead of the folder of Windows.
         let path = std::env::temp_dir().join("winweaver-dism.log");
@@ -192,7 +195,7 @@ pub fn components() -> Components {
         // SAFETY: the log path is a terminated wide string; no scratch folder is given.
         let hr = unsafe { (api.initialize)(LOG_ERRORS, log.as_ptr(), std::ptr::null()) };
         if hr < 0 {
-            return both(failed("DismInitialize", hr));
+            return Err(failed("DismInitialize", hr));
         }
         *started = true;
     }
@@ -202,28 +205,83 @@ pub fn components() -> Components {
     // SAFETY: the image is a terminated wide string; the session is written on success.
     let hr = unsafe { (api.open_session)(image.as_ptr(), null, null, &mut session) };
     if hr < 0 {
-        both(failed("DismOpenSession", hr))
-    } else {
+        return Err(failed("DismOpenSession", hr));
+    }
+    let done = work(api, session);
+    // SAFETY: the session was opened above and is closed once.
+    unsafe { (api.close_session)(session) };
+    Ok(done)
+}
+
+/// The capabilities of an open session with their states.
+fn capabilities(api: &Api, session: u32) -> Result<Vec<(String, String)>, String> {
+    let Some(get) = api.get_capabilities else {
+        return Err("this Windows has no capabilities in DISM".to_owned());
+    };
+    items(api, "DismGetCapabilities", |array, count| {
+        // SAFETY: an open session; DISM writes the array and its count.
+        unsafe { get(session, array, count) }
+    })
+    .map(|list| named(list, capability_state))
+}
+
+/// Reads the features and the capabilities in one session of DISM.
+pub fn components() -> Components {
+    let read = in_session(|api, session| {
         let features = items(api, "DismGetFeatures", |array, count| {
+            let null = std::ptr::null();
             // SAFETY: an open session; DISM writes the array and its count.
             unsafe { (api.get_features)(session, null, PACKAGE_NONE, array, count) }
         })
         .map(|list| named(list, feature_state));
-        let capabilities = match api.get_capabilities {
-            Some(get) => items(api, "DismGetCapabilities", |array, count| {
-                // SAFETY: an open session; DISM writes the array and its count.
-                unsafe { get(session, array, count) }
-            })
-            .map(|list| named(list, capability_state)),
-            None => Err("this Windows has no capabilities in DISM".to_owned()),
-        };
-        // SAFETY: the session was opened above and is closed once.
-        unsafe { (api.close_session)(session) };
         Components {
             features,
-            capabilities,
+            capabilities: capabilities(api, session),
         }
-    }
+    });
+    read.unwrap_or_else(|e| Components {
+        features: Err(e.clone()),
+        capabilities: Err(e),
+    })
+}
+
+/// What a removal of capabilities did.
+#[derive(Debug, Default)]
+pub struct Removal {
+    /// The names of the capabilities removed.
+    pub removed: Vec<String>,
+    /// Whether Windows wants a restart to finish.
+    pub restart: bool,
+    /// The capabilities that could not be removed, each with its error.
+    pub failed: Vec<String>,
+}
+
+/// Removes every installed capability whose name matches a pattern of `Get-WindowsCapability
+/// -Name`, as `Remove-Capability` of the apply script does.
+pub fn remove_capabilities(pattern: &str) -> Result<Removal, String> {
+    in_session(|api, session| {
+        let Some(remove) = api.remove_capability else {
+            return Err("this Windows cannot remove capabilities through DISM".to_owned());
+        };
+        let mut done = Removal::default();
+        for (name, state) in capabilities(api, session)? {
+            if state != "Installed" || !thispc::wildcard(pattern, &name) {
+                continue;
+            }
+            let wide_name = wide(&name);
+            let (cancel, null) = (std::ptr::null_mut(), std::ptr::null());
+            // SAFETY: an open session and a terminated name; no cancel event, no progress.
+            let hr = unsafe { remove(session, wide_name.as_ptr(), cancel, null, null) };
+            if hr < 0 {
+                done.failed
+                    .push(format!("{name}: {}", failed("DismRemoveCapability", hr)));
+            } else {
+                done.restart |= hr == REBOOT_REQUIRED;
+                done.removed.push(name);
+            }
+        }
+        Ok(done)
+    })?
 }
 
 #[cfg(test)]
@@ -262,6 +320,9 @@ mod tests {
             );
             // A second read in the same process goes on in the same start of DISM.
             assert!(components().features.is_ok());
+            // A pattern that matches nothing removes nothing.
+            let none = remove_capabilities("WinWeaver.Nothing~~~~*").expect("a removal");
+            assert!(none.removed.is_empty() && none.failed.is_empty(), "{none:?}");
         } else if let Err(e) = read.features {
             assert!(!e.is_empty());
         }

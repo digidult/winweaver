@@ -78,7 +78,7 @@ native writes -> report.
   for; the plan and the report are JSON files in `output/` with random names; the helper writes the
   backup before the first change, applies each action with the Windows API (registry, service start
   type, scheduled task through the Task Scheduler COM API or `schtasks` as the last resort, app removal
-  through the deployment API, Defender settings through the WMI or the policy keys), logs every step and
+  through the deployment API, capability removal through the DISM API, Defender settings through the WMI or the policy keys), logs every step and
   reports per action. The non-elevated process shows the report.
 - The helper refuses a plan file it did not get from its own folder and checks its bytes: the window
   passes the SHA-256 of the plan it wrote on the command line, the helper reads the file once and runs

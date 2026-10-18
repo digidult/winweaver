@@ -79,6 +79,9 @@ The optional features and the capabilities of Windows are read through DISM when
 administrator, which adds a few seconds to the read; without the rights they stay not readable.
 The read runs in the background: the window goes on working, and a spinner in the status bar shows it.
 
+Applied as administrator, a rule that removes capabilities of Windows removes them through DISM as well;
+the backup names them, and Undo does not bring them back. Apps are removed by the apply script.
+
 ## Comparing profiles
 
 **Menu, Compare with a file** or **Compare with a preset** opens a diff tab: every difference between
@@ -194,4 +197,4 @@ next start), `logs/` (what the program did), `bookmarks.wwmarks`. Nothing is wri
 
 ## Not there yet
 
-Removing apps and capabilities from the window: the apply script does it meanwhile.
+Removing apps from the window: the apply script does it meanwhile.

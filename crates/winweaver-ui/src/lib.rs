@@ -2135,6 +2135,12 @@ impl App {
                 if plan.uses_default_user() {
                     ui.label(tr("The default user profile changes too: accounts created from now on get its settings."));
                 }
+                if plan.removals() > 0 {
+                    ui.label(trf(
+                        "{n} steps remove capabilities of Windows; Undo does not bring them back.",
+                        &[("n", &plan.removals())],
+                    ));
+                }
                 ui.label(tr("Every registry value is saved to a backup in the output folder before its change; Undo restores it."));
                 ui.add_space(8.0);
                 ui.horizontal(|ui| {

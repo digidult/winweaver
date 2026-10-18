@@ -530,5 +530,6 @@
   "This PC could not be read: {e}": "PC ini tidak dapat dibaca: {e}",
   "The read of this PC failed; the log names the error": "Pembacaan PC ini gagal; log menyebutkan kesalahannya",
   "Read this PC: the tab of the profile was closed": "Baca PC ini: tab profil sudah ditutup",
-  "Check on this PC: the tab of the profile was closed": "Pemeriksaan di PC ini: tab profil sudah ditutup"
+  "Check on this PC: the tab of the profile was closed": "Pemeriksaan di PC ini: tab profil sudah ditutup",
+  "{n} steps remove capabilities of Windows; Undo does not bring them back.": "{n} langkah menghapus kemampuan Windows; Batalkan perubahan tidak mengembalikannya."
 }

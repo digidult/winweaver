@@ -1,8 +1,8 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.8.1: This PC read in the
-background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.9.0: capabilities removed
+natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
 catalogs from an option and a bookmark, the same policy in the trees of other imports, the policy of a catalog
@@ -290,8 +290,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   helper reads the file once and refuses another folder, name or digest (`apply::digest`), so a plan changed
   after the permission never runs,
   backs up every registry value into `output/backup-<stamp>.json` (the format of the apply script, so
-  `Undo-Apply.ps1` restores it too) and writes `plan-<stamp>-report.json`. Script steps, app and capability
-  removals and the profiles of other users stay with the stand-alone script. The default user profile is
+  `Undo-Apply.ps1` restores it too) and writes `plan-<stamp>-report.json`. Script steps, app removals
+  and the profiles of other users stay with the stand-alone script; capabilities are removed through DISM
+  (`Op::RemoveCapability`, `dism::remove_capabilities`), named in the backup as `capability-removed` the way
+  the apply script names them, and no undo brings them back (the confirmation says so). The default user profile is
   written natively: `DU:` paths become `HKU:\UnattendDefault\...` (the key of the apply script), and the
   helper loads the hive there with the backup and restore privileges and unloads it after the last step;
   its test runs only on the CI runner as administrator (`GITHUB_ACTIONS`).
@@ -473,7 +475,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Native apply | Plans, the elevated helper, the backup and undo (pull request #2), the default user profile loaded and unloaded by the helper; tested in a test key of HKCU and of the default profile on the runner | 14.10.2026 |
 | Policy templates | ADMX import, catalog files, the settings section (pull request #3), lists and multi-line texts (`reg-list`, list parameters), policies linked to built-in rules; only the checked imports read, the unknown options of a profile in their group with Load catalogs | 16.10.2026 |
 | This PC | Features and capabilities read natively through DISM as administrator (0.8.0) | 18.10.2026 |
-| Not yet | App and capability removals applied natively (the apply script does them) | |
+| Native apply | Capabilities removed through DISM, named in the backup, not restored by an undo (0.9.0) | 18.10.2026 |
+| Not yet | App removals applied natively (the apply script does them; they need the package API of Windows) | |
 | Acceptance | Nothing of WinWeaver has been tried in a VM yet: the build of the answer file, the read of a PC and the scripts need the acceptance the predecessor had | |
 
 Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and

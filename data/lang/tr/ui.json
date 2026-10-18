@@ -530,5 +530,6 @@
   "This PC could not be read: {e}": "Bu bilgisayar okunamadı: {e}",
   "The read of this PC failed; the log names the error": "Bu bilgisayarın okunması başarısız oldu; hata günlükte yazılı",
   "Read this PC: the tab of the profile was closed": "Bu bilgisayarı okuma: profilin sekmesi kapatıldı",
-  "Check on this PC: the tab of the profile was closed": "Bu bilgisayarda denetim: profilin sekmesi kapatıldı"
+  "Check on this PC: the tab of the profile was closed": "Bu bilgisayarda denetim: profilin sekmesi kapatıldı",
+  "{n} steps remove capabilities of Windows; Undo does not bring them back.": "{n} adım Windows yeteneklerini kaldırır; Geri al onları geri getirmez."
 }

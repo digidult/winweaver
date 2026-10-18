@@ -530,5 +530,6 @@
   "This PC could not be read: {e}": "No se pudo leer este equipo: {e}",
   "The read of this PC failed; the log names the error": "La lectura de este equipo falló; el registro indica el error",
   "Read this PC: the tab of the profile was closed": "Leer este equipo: la pestaña del perfil se cerró",
-  "Check on this PC: the tab of the profile was closed": "Comprobación en este equipo: la pestaña del perfil se cerró"
+  "Check on this PC: the tab of the profile was closed": "Comprobación en este equipo: la pestaña del perfil se cerró",
+  "{n} steps remove capabilities of Windows; Undo does not bring them back.": "{n} pasos quitan funcionalidades de Windows; Deshacer no las devuelve."
 }

@@ -530,5 +530,6 @@
   "This PC could not be read: {e}": "Dieser PC konnte nicht eingelesen werden: {e}",
   "The read of this PC failed; the log names the error": "Das Einlesen dieses PCs ist fehlgeschlagen; das Protokoll nennt den Fehler",
   "Read this PC: the tab of the profile was closed": "Diesen PC einlesen: Der Tab des Profils wurde geschlossen",
-  "Check on this PC: the tab of the profile was closed": "Prüfung auf diesem PC: Der Tab des Profils wurde geschlossen"
+  "Check on this PC: the tab of the profile was closed": "Prüfung auf diesem PC: Der Tab des Profils wurde geschlossen",
+  "{n} steps remove capabilities of Windows; Undo does not bring them back.": "{n} Schritte entfernen Funktionen von Windows; „Rückgängig machen“ bringt sie nicht zurück."
 }

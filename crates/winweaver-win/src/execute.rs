@@ -1,5 +1,6 @@
-//! The executor of an apply plan, run by the elevated helper: registry values, service start types
-//! and programs of the system folder, each change backed up first. It never runs a script.
+//! The executor of an apply plan, run by the elevated helper: registry values, service start types,
+//! programs of the system folder and capability removals through DISM, each change backed up
+//! first. It never runs a script.
 
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -369,7 +370,44 @@ fn describe(op: &Op) -> String {
         }
         Op::ServiceStart { name, start } => format!("service {name} start type {start}"),
         Op::Run { file, args } => format!("{file} {}", args.join(" ")),
+        Op::RemoveCapability { pattern } => format!("capabilities {pattern} removed"),
     }
+}
+
+/// Removes the capabilities of a pattern; each one removed goes into the backup the way the
+/// apply script names it, so `Undo-Apply.ps1` lists it as not restorable.
+fn remove_capabilities(pattern: &str, backup: &mut Vec<BackupEntry>) -> (&'static str, String) {
+    let done = match crate::dism::remove_capabilities(pattern) {
+        Ok(done) => done,
+        Err(e) => return ("failed", e),
+    };
+    for name in &done.removed {
+        backup.push(BackupEntry {
+            kind: "capability-removed".to_owned(),
+            path: String::new(),
+            name: name.clone(),
+            existed: true,
+            value_type: None,
+            value: Value::Null,
+        });
+    }
+    let mut notes = Vec::new();
+    if done.removed.is_empty() && done.failed.is_empty() {
+        notes.push("none is installed".to_owned());
+    }
+    if !done.removed.is_empty() {
+        notes.push(format!("removed {}", done.removed.join(", ")));
+    }
+    if done.restart {
+        notes.push("Windows finishes it after a restart".to_owned());
+    }
+    notes.extend(done.failed.iter().cloned());
+    let status = if done.failed.is_empty() {
+        "ok"
+    } else {
+        "failed"
+    };
+    (status, notes.join("; "))
 }
 
 /// Runs a plan: every registry value is saved to `backup-<stamp>.json` in `out_dir` before its
@@ -475,6 +513,7 @@ pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
                 Ok(note) => ("ok", note),
                 Err(e) => ("failed", e),
             },
+            Op::RemoveCapability { pattern } => remove_capabilities(pattern, &mut backup),
         };
         report.results.push(StepResult {
             rule: step.rule.clone(),
