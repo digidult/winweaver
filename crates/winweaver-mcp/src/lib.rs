@@ -89,6 +89,12 @@ pub struct Options {
     pub mode: Mode,
     /// What the tools of the registry may do.
     pub registry: RegistryAccess,
+    /// Whether the tools may change the bookmarks and the catalog files; reading them is always
+    /// allowed, like reading profiles.
+    pub edit_library: bool,
+    /// The bookmark file and the folder of the catalog files of the imports.
+    pub marks_path: PathBuf,
+    pub imports_dir: PathBuf,
     /// Whether the tool read_this_pc may read the settings of this PC.
     pub read_pc: bool,
     /// The folder of the profiles the tools load and save.
@@ -190,6 +196,10 @@ impl Server {
 
     pub fn set_registry(&self, access: RegistryAccess) {
         self.lock().options.registry = access;
+    }
+
+    pub fn set_edit_library(&self, on: bool) {
+        self.lock().options.edit_library = on;
     }
 
     /// The server with another registry, as the tests give one in memory.
@@ -486,6 +496,9 @@ mod tests {
             Options {
                 mode: Mode::Read,
                 registry: RegistryAccess::Off,
+                edit_library: false,
+                marks_path: std::env::temp_dir().join("winweaver-no-marks.wwmarks"),
+                imports_dir: std::env::temp_dir().join("winweaver-no-imports"),
                 read_pc: false,
                 profiles_dir: std::env::temp_dir(),
                 output_dir: std::env::temp_dir(),

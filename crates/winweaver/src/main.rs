@@ -18,9 +18,11 @@ const USAGE: &str = "WinWeaver
                               open the window, trying that renderer first (this start only)
   winweaver --version         print the version
   winweaver --check-catalog   load the embedded catalog and report its problems
-  winweaver --mcp stdio [--mode read|edit|files] [--read-pc] [--registry off|read|write] [--profile NAME]
+  winweaver --mcp stdio [--mode read|edit|files] [--read-pc] [--registry off|read|write]
+                     [--edit-library] [--profile NAME]
                               serve MCP on standard input and output
-  winweaver --mcp http --token TOKEN [--port N] [--mode ...] [--read-pc] [--registry ...] [--profile NAME]
+  winweaver --mcp http --token TOKEN [--port N] [--mode ...] [--read-pc] [--registry ...]
+                     [--edit-library] [--profile NAME]
                               serve MCP on http://127.0.0.1:N/mcp (port 8765 by default)
   winweaver --smoke-window [--renderer ...]
                               open a small window, draw two frames, print what drew them
@@ -117,6 +119,9 @@ fn mcp(args: &[String]) -> ExitCode {
         winweaver_mcp::Options {
             mode,
             registry,
+            edit_library: args.iter().any(|a| a == "--edit-library"),
+            marks_path: dir.join(winweaver_core::bookmarks::DEFAULT_FILE),
+            imports_dir: winweaver_ui::imports_dir(),
             read_pc: args.iter().any(|a| a == "--read-pc"),
             profiles_dir: dir.join("profiles"),
             output_dir: dir.join("output"),

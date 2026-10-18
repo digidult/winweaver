@@ -4,6 +4,8 @@
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
+use winweaver_core::admx::{self, CatalogFile, CatalogHeader};
+use winweaver_core::bookmarks::{Bookmark, Bookmarks};
 use winweaver_core::catalog::{Action, Catalog, Param, Rule, check};
 use winweaver_core::diff::{Diff, Side};
 use winweaver_core::profile::{self, Profile};
@@ -181,6 +183,77 @@ pub(crate) fn definitions() -> Vec<Value> {
             ),
         ),
         tool(
+            "list_bookmarks",
+            "The bookmarks of the user: options of profiles and keys of the registry, with their comments. The index names a bookmark for the other tools.",
+            schema(json!({}), &[]),
+        ),
+        tool(
+            "add_bookmark",
+            "Adds a bookmark with a comment: of an option (kind option, item the id of a rule, path the profile file or empty) or of the registry (kind registry, path the key, item the value or empty). Needs the option edit_library.",
+            schema(
+                json!({
+                    "kind": s("option or registry"),
+                    "item": s("The id of a rule, or the value of the key"),
+                    "path": s("The profile file of an option, or the key of the registry"),
+                    "comment": s("A comment")
+                }),
+                &["kind", "item"],
+            ),
+        ),
+        tool(
+            "set_bookmark_comment",
+            "Changes the comment of a bookmark. Needs the option edit_library.",
+            schema(
+                json!({ "index": { "type": "integer", "description": "The index of list_bookmarks" }, "comment": s("The comment") }),
+                &["index", "comment"],
+            ),
+        ),
+        tool(
+            "remove_bookmark",
+            "Removes a bookmark. Needs the option edit_library.",
+            schema(
+                json!({ "index": { "type": "integer", "description": "The index of list_bookmarks" } }),
+                &["index"],
+            ),
+        ),
+        tool(
+            "list_catalogs",
+            "The catalog files of the imported policy templates next to the program: id, name and size. Only the first bytes of each are read.",
+            schema(json!({}), &[]),
+        ),
+        tool(
+            "get_catalog",
+            "A catalog file: without a group its groups with their counts of policies, with a group the policies of that group (id, title).",
+            schema(
+                json!({ "id": s("The id of list_catalogs"), "group": s("A group of the file") }),
+                &["id"],
+            ),
+        ),
+        tool(
+            "get_catalog_policy",
+            "A policy of a catalog file as JSON (texts, parameters, registry actions), with its Disabled rule when it has one.",
+            schema(
+                json!({ "id": s("The id of the catalog"), "policy": s("The id of the policy") }),
+                &["id", "policy"],
+            ),
+        ),
+        tool(
+            "set_catalog_policy",
+            "Writes a policy into a catalog file, a new one or in place of the one of its id, as JSON in the form of get_catalog_policy; the whole file is checked, then saved. The program reads it at its next load. Needs the option edit_library.",
+            schema(
+                json!({ "id": s("The id of the catalog"), "policy": { "type": "object", "description": "The policy" } }),
+                &["id", "policy"],
+            ),
+        ),
+        tool(
+            "remove_catalog_policy",
+            "Removes a policy with its Disabled rule from a catalog file and saves it. Needs the option edit_library.",
+            schema(
+                json!({ "id": s("The id of the catalog"), "policy": s("The id of the policy") }),
+                &["id", "policy"],
+            ),
+        ),
+        tool(
             "read_registry_key",
             "Reads a key of the registry of this PC: its subkeys and its values with their types (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY, REG_NONE). A path like HKEY_LOCAL_MACHINE\\Software or HKLM\\Software. Needs the option registry read or write.",
             schema(json!({ "path": s("The key") }), &["path"]),
@@ -333,6 +406,68 @@ fn need(state: &State, mode: Mode) -> Result<(), ToolError> {
 
 fn arg<'a>(args: &'a Value, name: &str) -> Option<&'a Value> {
     args.get(name).filter(|v| !v.is_null())
+}
+
+/// The bookmarks and the catalog files: read always, changed only when the user allows it.
+fn library_allowed(state: &State) -> Result<(), ToolError> {
+    if state.options.edit_library {
+        Ok(())
+    } else {
+        Err(fail(
+            "not_allowed",
+            "changing the bookmarks and the catalogs is off; the user allows it in the window (MCP tab) or with --edit-library",
+        ))
+    }
+}
+
+fn load_marks(state: &State) -> Result<Bookmarks, ToolError> {
+    Bookmarks::load_or_default(&state.options.marks_path)
+        .map_err(|e| fail("read_failed", e.to_string()))
+}
+
+fn save_marks(state: &State, marks: &Bookmarks) -> Result<(), ToolError> {
+    marks
+        .save(&state.options.marks_path)
+        .map_err(|e| fail("write_failed", e.to_string()))
+}
+
+/// The comment of a bookmark, at most 4000 characters without control characters but line breaks.
+fn comment_arg(args: &Value) -> Result<String, ToolError> {
+    let comment = optional_text(args, "comment");
+    if comment.chars().count() > 4000
+        || comment
+            .chars()
+            .any(|c| c.is_control() && c != '\n' && c != '\t')
+    {
+        return Err(fail(
+            "invalid",
+            "a comment has at most 4000 characters and no control characters",
+        ));
+    }
+    Ok(comment)
+}
+
+/// A catalog file of the imports folder by its id (the name of the file), read and checked; its path.
+fn load_catalog(state: &State, args: &Value) -> Result<(CatalogFile, PathBuf), ToolError> {
+    let id = text_arg(args, "id")?;
+    if id.is_empty()
+        || id.len() > 120
+        || !id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
+        || id.starts_with('.')
+    {
+        return Err(fail(
+            "invalid",
+            "id is the name of a catalog of list_catalogs",
+        ));
+    }
+    let path = state
+        .options
+        .imports_dir
+        .join(format!("{id}.{}", admx::CATALOG_EXTENSION));
+    let file = CatalogFile::load(&path).map_err(|e| fail("not_found", e))?;
+    Ok((file, path))
 }
 
 /// A text argument that may be empty or left out.
@@ -1094,6 +1229,146 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
                 "languages": diff.languages.iter().map(|(k, f)| (k.clone(), json!({ "a": f.base, "b": f.other }))).collect::<serde_json::Map<_, _>>(),
                 "accounts_differ": diff.accounts.is_some(),
             }))
+        }
+        "list_bookmarks" => {
+            let marks = load_marks(state)?;
+            let items: Vec<Value> = marks
+                .items
+                .iter()
+                .enumerate()
+                .map(|(i, b)| {
+                    let kind = if b.is_registry() {
+                        "registry"
+                    } else if b.is_option() {
+                        "option"
+                    } else {
+                        b.document.as_str()
+                    };
+                    json!({ "index": i, "kind": kind, "item": b.item, "path": b.path, "comment": b.comment, "created": b.created })
+                })
+                .collect();
+            Ok(json!({ "bookmarks": items }))
+        }
+        "add_bookmark" => {
+            library_allowed(state)?;
+            let item = optional_text(args, "item");
+            let path = optional_text(args, "path");
+            let mut mark = match text_arg(args, "kind")?.as_str() {
+                "option" if !item.is_empty() => Bookmark::option(&item, &path),
+                "registry" => {
+                    let key = winweaver_core::registry::normalize(&path)
+                        .ok_or_else(|| fail("invalid", "path is not a key of the registry"))?;
+                    Bookmark::registry(&key, &item)
+                }
+                _ => {
+                    return Err(fail("invalid", "kind is option (with an item) or registry"));
+                }
+            };
+            mark.comment = comment_arg(args)?;
+            mark.created = clock::now_utc_iso();
+            let mut marks = load_marks(state)?;
+            if marks.find(&mark).is_some() {
+                return Err(fail("invalid", "this is bookmarked already"));
+            }
+            marks.items.push(mark);
+            save_marks(state, &marks)?;
+            Ok(json!({ "index": marks.items.len() - 1 }))
+        }
+        "set_bookmark_comment" | "remove_bookmark" => {
+            library_allowed(state)?;
+            let index = args
+                .get("index")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| fail("invalid", "index is a number of list_bookmarks"))?
+                as usize;
+            let mut marks = load_marks(state)?;
+            if index >= marks.items.len() {
+                return Err(fail("not_found", format!("no bookmark {index}")));
+            }
+            if name == "remove_bookmark" {
+                marks.items.remove(index);
+            } else {
+                marks.items[index].comment = comment_arg(args)?;
+            }
+            save_marks(state, &marks)?;
+            Ok(json!({ "index": index, "done": name }))
+        }
+        "list_catalogs" => {
+            let mut files: Vec<Value> = Vec::new();
+            if let Ok(entries) = std::fs::read_dir(&state.options.imports_dir) {
+                let mut paths: Vec<PathBuf> = entries
+                    .filter_map(Result::ok)
+                    .map(|e| e.path())
+                    .filter(|p| p.extension().is_some_and(|e| e == admx::CATALOG_EXTENSION))
+                    .collect();
+                paths.sort();
+                for p in paths {
+                    let id = p
+                        .file_stem()
+                        .map(|s| s.to_string_lossy().into_owned())
+                        .unwrap_or_default();
+                    let name = CatalogHeader::read(&p).map_or_else(|| id.clone(), |h| h.name);
+                    let bytes = std::fs::metadata(&p).map(|m| m.len()).unwrap_or(0);
+                    files.push(json!({ "id": id, "name": name, "bytes": bytes }));
+                }
+            }
+            Ok(json!({ "catalogs": files }))
+        }
+        "get_catalog" => {
+            let (file, _) = load_catalog(state, args)?;
+            match args.get("group").and_then(Value::as_str) {
+                None => {
+                    let groups: Vec<Value> = file
+                        .groups
+                        .iter()
+                        .map(|g| {
+                            let n = file
+                                .rules
+                                .iter()
+                                .filter(|r| r.group == g.id && !r.id.ends_with(".off"))
+                                .count();
+                            json!({ "id": g.id, "title": g.title, "parent": g.parent, "policies": n })
+                        })
+                        .collect();
+                    Ok(json!({ "id": file.id, "name": file.name, "groups": groups }))
+                }
+                Some(group) => {
+                    let policies: Vec<Value> = file
+                        .rules
+                        .iter()
+                        .filter(|r| r.group == group && !r.id.ends_with(".off"))
+                        .map(|r| json!({ "id": r.id, "title": r.title }))
+                        .collect();
+                    Ok(json!({ "group": group, "policies": policies }))
+                }
+            }
+        }
+        "get_catalog_policy" => {
+            let (file, _) = load_catalog(state, args)?;
+            let policy = text_arg(args, "policy")?;
+            let rule = file
+                .rules
+                .iter()
+                .find(|r| r.id == policy)
+                .ok_or_else(|| fail("not_found", format!("no policy {policy}")))?;
+            let off = file.rules.iter().find(|r| r.id == format!("{policy}.off"));
+            Ok(json!({ "policy": rule, "off": off }))
+        }
+        "set_catalog_policy" | "remove_catalog_policy" => {
+            library_allowed(state)?;
+            let (mut file, path) = load_catalog(state, args)?;
+            if name == "remove_catalog_policy" {
+                let policy = text_arg(args, "policy")?;
+                file.remove_rule(&policy)
+                    .map_err(|e| fail("not_found", e))?;
+            } else {
+                let rule: Rule =
+                    serde_json::from_value(args.get("policy").cloned().unwrap_or_default())
+                        .map_err(|e| fail("invalid", format!("policy: {e}")))?;
+                file.put_rule(rule).map_err(|e| fail("invalid", e))?;
+            }
+            file.save(&path).map_err(|e| fail("write_failed", e))?;
+            Ok(json!({ "saved": file.id, "policies": file.rules.len() }))
         }
         "read_registry_key" => {
             registry_allowed(state, false)?;

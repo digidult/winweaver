@@ -160,6 +160,7 @@ registro de `logs/` indica con qué dibuja la ventana.
 | `--mode NAME` | Con `--mcp`: `read` (por defecto) solo lee, `edit` cambia los perfiles en memoria, `files` además los guarda y escribe el archivo de respuesta |
 | `--read-pc` | Con `--mcp`: permite leer la configuración de este equipo |
 | `--registry NAME` | Con `--mcp`: `off` (por defecto), `read` deja que las herramientas lean el registro, `write` que también lo cambien |
+| `--edit-library` | Con `--mcp`: las herramientas pueden cambiar los marcadores y los archivos de catálogo; leerlos siempre está permitido |
 | `--profile NAME` | Con `--mcp`: un perfil predefinido o un perfil de `profiles/` pasa a ser el actual |
 | `--version` | Muestra la versión |
 | `--check-catalog` | Carga el catálogo integrado con sus traducciones y muestra sus problemas |

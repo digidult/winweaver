@@ -163,6 +163,7 @@ démarrage. Le journal de `logs/` indique avec quoi la fenêtre dessine.
 | `--mode NAME` | Avec `--mcp` : `read` (par défaut) lit seulement, `edit` modifie les profils en mémoire, `files` les enregistre aussi et écrit le fichier de réponses |
 | `--read-pc` | Avec `--mcp` : permet de lire les paramètres de ce PC |
 | `--registry NAME` | Avec `--mcp` : `off` (par défaut), `read` laisse les outils lire le registre, `write` aussi le modifier |
+| `--edit-library` | Avec `--mcp` : les outils peuvent modifier les signets et les fichiers de catalogue ; les lire est toujours permis |
 | `--profile NAME` | Avec `--mcp` : un préréglage ou un profil de `profiles/` devient le profil courant |
 | `--version` | Affiche la version |
 | `--check-catalog` | Charge le catalogue intégré avec ses traductions et affiche leurs problèmes |

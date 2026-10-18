@@ -501,5 +501,7 @@
   "Permissions (coming soon)": "Дозволи (незабаром)",
   "Search (coming soon)": "Пошук (незабаром)",
   "Allow reading the registry of this PC (off at every start)": "Дозволити читання реєстру цього ПК (вимкнено під час кожного запуску)",
-  "Allow changing the registry too": "Дозволити й зміну реєстру"
+  "Allow changing the registry too": "Дозволити й зміну реєстру",
+  "Bookmarks and catalogs": "Закладки й каталоги",
+  "Allow changing the bookmarks and the catalogs (off at every start)": "Дозволити зміну закладок і каталогів (вимкнено під час кожного запуску)"
 }

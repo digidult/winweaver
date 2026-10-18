@@ -151,6 +151,7 @@ menyebutkan apa yang dipakai jendela untuk menggambar.
 | `--mode NAME` | Dengan `--mcp`: `read` (default) hanya membaca, `edit` mengubah profil di memori, `files` juga menyimpannya dan menulis file jawaban |
 | `--read-pc` | Dengan `--mcp`: mengizinkan membaca pengaturan PC ini |
 | `--registry NAME` | Dengan `--mcp`: `off` (default), `read` mengizinkan alat membaca registri, `write` juga mengubahnya |
+| `--edit-library` | Dengan `--mcp`: alat boleh mengubah penanda dan file katalog; membacanya selalu diizinkan |
 | `--profile NAME` | Dengan `--mcp`: preset atau profil dari `profiles/` menjadi profil saat ini |
 | `--version` | Menampilkan versi |
 | `--check-catalog` | Memuat katalog bawaan dengan terjemahannya dan menampilkan masalahnya |

@@ -501,5 +501,7 @@
   "Permissions (coming soon)": "Berechtigungen (bald)",
   "Search (coming soon)": "Suche (bald)",
   "Allow reading the registry of this PC (off at every start)": "Lesen der Registrierung dieses PCs erlauben (bei jedem Start aus)",
-  "Allow changing the registry too": "Auch das Ändern der Registrierung erlauben"
+  "Allow changing the registry too": "Auch das Ändern der Registrierung erlauben",
+  "Bookmarks and catalogs": "Lesezeichen und Kataloge",
+  "Allow changing the bookmarks and the catalogs (off at every start)": "Ändern der Lesezeichen und Kataloge erlauben (bei jedem Start aus)"
 }
