@@ -132,7 +132,7 @@ fn the_protocol_answers_and_lists_the_tools() {
         .iter()
         .map(|t| t["name"].as_str().unwrap())
         .collect();
-    assert_eq!(names.len(), 19, "{names:?}");
+    assert_eq!(names.len(), 24, "{names:?}");
     for n in [
         "get_status",
         "set_rule",

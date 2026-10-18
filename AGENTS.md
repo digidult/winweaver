@@ -77,7 +77,7 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      (the executor of an apply plan with its backup, the start of the executable as
 │   │                      administrator)
 │   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal, token), tools.rs (the
-│   │                      19 tools and 3 resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and
+│   │                      24 tools and 3 resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and
 │   │                      Origin checks); tests/server.rs (both transports on a free loopback port)
 │   ├── winweaver-ui/      the window on eframe (variant A): lib.rs (tabs, menu, command bar, navigation,
 │   │                      search, shortcuts, file dialogs, This PC, build, session, the actions applied after
@@ -431,7 +431,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Core | Catalog, profiles, resolver, check, diff, bookmarks, build of the answer file, This PC (plan, judgement, capture, reports), stand-alone scripts, import of answer files and WinKickOff profiles; tests on the real data | 14.10.2026 |
 | Windows API | Reading the registry, the elevation, the locales, the Windows language and the local accounts with their groups; the native read of the whole catalog is tested on the Windows runner | 14.10.2026 |
 | Window | Tabs, menu, command bar of each tab (icons above labels), navigation, search per tab, the painted tree and lists with the keyboard, detail panel with copy and selectable texts, forms, check, build, diff tab with comments, bookmarks of options, Markdown tabs with anchors, This PC (read, check, scripts, reports), MCP tab with its journal, settings, translations uk, ru, de, es, fr, id, it and tr, drafts, restored tabs, log, themes with fonts (Light, Dark, Latte, Matrix, more as files) and their editor, the title bar in their colours; pull requests #13 to #17 for the list of 15.10.2026 | 15.10.2026 |
-| MCP server | stdio and HTTP, 19 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
+| MCP server | stdio and HTTP, 24 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
 | Native apply | Plans, the elevated helper, the backup and undo (pull request #2), the default user profile loaded and unloaded by the helper; tested in a test key of HKCU and of the default profile on the runner | 14.10.2026 |
 | Policy templates | ADMX import, catalog files, the settings section (pull request #3), lists and multi-line texts (`reg-list`, list parameters), policies linked to built-in rules; only the checked imports read, the unknown options of a profile in their group with Load catalogs | 16.10.2026 |
 | Not yet | Features and capabilities read natively (they need DISM and administrator rights) | |
