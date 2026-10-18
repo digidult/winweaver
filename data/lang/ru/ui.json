@@ -617,5 +617,6 @@
   "Open {name}": "Открыть {name}",
   "Policies": "Политики",
   "{n} rules": "правил: {n}",
-  "{n} steps run programs, change accounts or delete copies of the answer file; Undo does not take them back.": "Шагов, которые запускают программы, меняют учётные записи или удаляют копии файла ответов: {n}; отмена их не возвращает."
+  "{n} steps run programs, change accounts or delete copies of the answer file; Undo does not take them back.": "Шагов, которые запускают программы, меняют учётные записи или удаляют копии файла ответов: {n}; отмена их не возвращает.",
+  "1 value": "1 значение"
 }

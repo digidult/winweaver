@@ -617,5 +617,6 @@
   "Open {name}": "{name} aç",
   "Policies": "İlkeler",
   "{n} rules": "{n} kural",
-  "{n} steps run programs, change accounts or delete copies of the answer file; Undo does not take them back.": "{n} adım program çalıştırır, hesapları değiştirir veya yanıt dosyasının kopyalarını siler; Geri al bunları geri getirmez."
+  "{n} steps run programs, change accounts or delete copies of the answer file; Undo does not take them back.": "{n} adım program çalıştırır, hesapları değiştirir veya yanıt dosyasının kopyalarını siler; Geri al bunları geri getirmez.",
+  "1 value": "1 değer"
 }

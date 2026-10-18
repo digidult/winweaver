@@ -617,5 +617,6 @@
   "Open {name}": "Ouvrir {name}",
   "Policies": "Stratégies",
   "{n} rules": "{n} règles",
-  "{n} steps run programs, change accounts or delete copies of the answer file; Undo does not take them back.": "{n} étapes exécutent des programmes, modifient des comptes ou suppriment des copies du fichier de réponses ; Annuler ne les reprend pas."
+  "{n} steps run programs, change accounts or delete copies of the answer file; Undo does not take them back.": "{n} étapes exécutent des programmes, modifient des comptes ou suppriment des copies du fichier de réponses ; Annuler ne les reprend pas.",
+  "1 value": "1 valeur"
 }

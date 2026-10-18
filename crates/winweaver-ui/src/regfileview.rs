@@ -144,6 +144,22 @@ fn in_default_user(path: &str) -> bool {
 
 /// The key of a path as the catalog names it, in lower case: the default user profile of a plan
 /// is the current user there, as `DU:` is read.
+/// A key as the outline shows it: the short name of its hive, and only the last three parts of a
+/// longer path, so that the keys of one branch are told apart; the head of the tab shows it whole.
+fn short_path(path: &str) -> String {
+    let (hive, rest) = path.split_once('\\').unwrap_or((path, ""));
+    let short = registry::HIVES
+        .iter()
+        .find(|(long, _)| long.eq_ignore_ascii_case(hive))
+        .map_or(hive, |(_, s)| *s);
+    let parts: Vec<&str> = rest.split('\\').filter(|p| !p.is_empty()).collect();
+    match parts.len() {
+        0 => short.to_owned(),
+        1..=3 => format!("{short}\\{}", parts.join("\\")),
+        n => format!("{short}\\...\\{}", parts[n - 3..].join("\\")),
+    }
+}
+
 fn catalog_key(path: &str) -> String {
     let path = registry::normalize(path).unwrap_or_else(|| path.to_owned());
     let lower = path.to_lowercase();
@@ -549,7 +565,7 @@ fn outline_row(lines: &[Line], item: &Item, index: usize) -> tree::Row<Option<us
     let (title, right, icon, muted) = match item {
         Item::Key { line, lines: range } => {
             let (path, delete) = match &lines[*line] {
-                Line::Key { path, delete } => (path.clone(), *delete),
+                Line::Key { path, delete } => (short_path(path), *delete),
                 _ => (String::new(), false),
             };
             let values = range
@@ -689,7 +705,12 @@ fn key_head(
             if *delete {
                 style::chip(ui, tr("Deleted with its subkeys"), true);
             } else {
-                style::chip(ui, &trf("{n} values", &[("n", &values)]), false);
+                let count = if values == 1 {
+                    tr("1 value").to_owned()
+                } else {
+                    trf("{n} values", &[("n", &values)])
+                };
+                style::chip(ui, &count, false);
             }
             if in_default_user(path) {
                 style::chip(ui, tr("Default user profile"), false);
@@ -1132,6 +1153,10 @@ mod tests {
         assert_eq!(found[2], Item::Notes { lines: 9..10 });
         assert!(matches!(found[3], Item::Key { line: 11, .. }));
         assert_eq!(rule_of_comment("; Rule a.b"), Some("a.b"));
+        let long = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU";
+        assert_eq!(short_path(long), "HKLM\\...\\Windows\\WindowsUpdate\\AU");
+        let short = short_path("HKEY_CURRENT_USER\\Software\\X");
+        assert_eq!(short, "HKCU\\Software\\X");
         assert_eq!(rule_of_comment("; The head"), None);
         assert_eq!(
             catalog_key("HKEY_USERS\\UnattendDefault\\Software\\X"),
