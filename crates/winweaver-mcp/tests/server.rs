@@ -89,17 +89,31 @@ fn bookmarks_and_catalogs_are_read_and_changed_only_when_allowed() {
     let dir = folder("library");
     let s = server(Mode::Read, &dir);
     assert_eq!(ok(&s, "list_bookmarks", json!({}))["bookmarks"], json!([]));
-    let add = json!({ "kind": "registry", "path": "HKLM\\Software\\X", "item": "V", "comment": "check" });
+    let add =
+        json!({ "kind": "registry", "path": "HKLM\\Software\\X", "item": "V", "comment": "check" });
     assert_eq!(error_kind(&s, "add_bookmark", add.clone()), "not_allowed");
     s.set_edit_library(true);
     ok(&s, "add_bookmark", add.clone());
     assert_eq!(error_kind(&s, "add_bookmark", add), "invalid", "only once");
     let list = ok(&s, "list_bookmarks", json!({}));
-    assert_eq!(list["bookmarks"][0]["path"], json!("HKEY_LOCAL_MACHINE\\Software\\X"));
-    ok(&s, "set_bookmark_comment", json!({ "index": 0, "comment": "done" }));
-    assert_eq!(ok(&s, "list_bookmarks", json!({}))["bookmarks"][0]["comment"], json!("done"));
+    assert_eq!(
+        list["bookmarks"][0]["path"],
+        json!("HKEY_LOCAL_MACHINE\\Software\\X")
+    );
+    ok(
+        &s,
+        "set_bookmark_comment",
+        json!({ "index": 0, "comment": "done" }),
+    );
+    assert_eq!(
+        ok(&s, "list_bookmarks", json!({}))["bookmarks"][0]["comment"],
+        json!("done")
+    );
     ok(&s, "remove_bookmark", json!({ "index": 0 }));
-    assert_eq!(error_kind(&s, "remove_bookmark", json!({ "index": 0 })), "not_found");
+    assert_eq!(
+        error_kind(&s, "remove_bookmark", json!({ "index": 0 })),
+        "not_found"
+    );
 
     let imports = dir.join("imports");
     std::fs::create_dir_all(&imports).unwrap();
@@ -117,13 +131,32 @@ fn bookmarks_and_catalogs_are_read_and_changed_only_when_allowed() {
     let root = groups["groups"][0]["id"].as_str().unwrap().to_owned();
     let mut rule = file.new_policy(&root, "Custom").unwrap();
     rule.title = "A custom policy".to_owned();
-    ok(&s, "set_catalog_policy", json!({ "id": "mine", "policy": rule }));
-    let read = ok(&s, "get_catalog_policy", json!({ "id": "mine", "policy": "admx.mine.custom" }));
+    ok(
+        &s,
+        "set_catalog_policy",
+        json!({ "id": "mine", "policy": rule }),
+    );
+    let read = ok(
+        &s,
+        "get_catalog_policy",
+        json!({ "id": "mine", "policy": "admx.mine.custom" }),
+    );
     assert_eq!(read["policy"]["title"], json!("A custom policy"));
-    assert_eq!(error_kind(&s, "get_catalog", json!({ "id": "..\\x" })), "invalid");
-    ok(&s, "remove_catalog_policy", json!({ "id": "mine", "policy": "admx.mine.custom" }));
     assert_eq!(
-        error_kind(&s, "get_catalog_policy", json!({ "id": "mine", "policy": "admx.mine.custom" })),
+        error_kind(&s, "get_catalog", json!({ "id": "..\\x" })),
+        "invalid"
+    );
+    ok(
+        &s,
+        "remove_catalog_policy",
+        json!({ "id": "mine", "policy": "admx.mine.custom" }),
+    );
+    assert_eq!(
+        error_kind(
+            &s,
+            "get_catalog_policy",
+            json!({ "id": "mine", "policy": "admx.mine.custom" })
+        ),
         "not_found"
     );
 }

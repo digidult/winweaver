@@ -2194,7 +2194,10 @@ mod tests {
         });
         f.put_rule(rule.clone()).unwrap();
         assert!(f.rules.iter().any(|r| r.id == rule.id));
-        assert!(f.new_policy(&group, "Custom thing").is_err(), "the id is taken");
+        assert!(
+            f.new_policy(&group, "Custom thing").is_err(),
+            "the id is taken"
+        );
         let mut bad = rule.clone();
         if let Action::Reg { path, .. } = &mut bad.actions[0] {
             *path = "HKCU:\\X".to_owned();
@@ -2206,12 +2209,16 @@ mod tests {
             "a put that fails changes nothing"
         );
         f.remove_rule("admx.sample.turnoff.off").unwrap();
-        assert!(!f.rules.iter().any(|r| r.id.starts_with("admx.sample.turnoff")));
         assert!(
-            f.rules
+            !f.rules
                 .iter()
-                .all(|r| !r.conflicts.iter().any(|c| c.starts_with("admx.sample.turnoff")))
+                .any(|r| r.id.starts_with("admx.sample.turnoff"))
         );
+        assert!(f.rules.iter().all(|r| {
+            !r.conflicts
+                .iter()
+                .any(|c| c.starts_with("admx.sample.turnoff"))
+        }));
         let g = f.new_group(&group, "Mine").unwrap();
         assert!(f.groups.iter().any(|x| x.id == g));
         f.check().unwrap();

@@ -421,7 +421,8 @@ fn library_allowed(state: &State) -> Result<(), ToolError> {
 }
 
 fn load_marks(state: &State) -> Result<Bookmarks, ToolError> {
-    Bookmarks::load_or_default(&state.options.marks_path).map_err(|e| fail("read_failed", e.to_string()))
+    Bookmarks::load_or_default(&state.options.marks_path)
+        .map_err(|e| fail("read_failed", e.to_string()))
 }
 
 fn save_marks(state: &State, marks: &Bookmarks) -> Result<(), ToolError> {
@@ -456,7 +457,10 @@ fn load_catalog(state: &State, args: &Value) -> Result<(CatalogFile, PathBuf), T
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '.'))
         || id.starts_with('.')
     {
-        return Err(fail("invalid", "id is the name of a catalog of list_catalogs"));
+        return Err(fail(
+            "invalid",
+            "id is the name of a catalog of list_catalogs",
+        ));
     }
     let path = state
         .options
@@ -1257,10 +1261,7 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
                     Bookmark::registry(&key, &item)
                 }
                 _ => {
-                    return Err(fail(
-                        "invalid",
-                        "kind is option (with an item) or registry",
-                    ));
+                    return Err(fail("invalid", "kind is option (with an item) or registry"));
                 }
             };
             mark.comment = comment_arg(args)?;
@@ -1350,10 +1351,7 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
                 .iter()
                 .find(|r| r.id == policy)
                 .ok_or_else(|| fail("not_found", format!("no policy {policy}")))?;
-            let off = file
-                .rules
-                .iter()
-                .find(|r| r.id == format!("{policy}.off"));
+            let off = file.rules.iter().find(|r| r.id == format!("{policy}.off"));
             Ok(json!({ "policy": rule, "off": off }))
         }
         "set_catalog_policy" | "remove_catalog_policy" => {
@@ -1364,8 +1362,9 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
                 file.remove_rule(&policy)
                     .map_err(|e| fail("not_found", e))?;
             } else {
-                let rule: Rule = serde_json::from_value(args.get("policy").cloned().unwrap_or_default())
-                    .map_err(|e| fail("invalid", format!("policy: {e}")))?;
+                let rule: Rule =
+                    serde_json::from_value(args.get("policy").cloned().unwrap_or_default())
+                        .map_err(|e| fail("invalid", format!("policy: {e}")))?;
                 file.put_rule(rule).map_err(|e| fail("invalid", e))?;
             }
             file.save(&path).map_err(|e| fail("write_failed", e))?;
