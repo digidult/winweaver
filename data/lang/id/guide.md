@@ -80,9 +80,9 @@ Fitur dan kemampuan Windows dibaca melalui DISM saat WinWeaver berjalan sebagai 
 pembacaan bertambah beberapa detik; tanpa hak tersebut keduanya tidak dapat dibaca.
 Pembacaan berjalan di latar belakang: jendela tetap bekerja, dan indikator di bilah status menunjukkannya.
 
-Saat diterapkan sebagai administrator, aturan yang menghapus kemampuan Windows juga menghapusnya melalui
-DISM; cadangan mencantumkannya, tetapi Batalkan perubahan tidak mengembalikannya. Aplikasi dihapus oleh skrip
-penerapan.
+Saat diterapkan sebagai administrator, aturan yang menghapus aplikasi atau kemampuan Windows juga
+menghapusnya dari jendela: kemampuan melalui DISM, aplikasi untuk semua pengguna dan untuk akun yang dibuat
+kemudian. Cadangan mencantumkannya, tetapi Batalkan perubahan tidak mengembalikannya.
 
 ## Membandingkan profil
 
@@ -199,4 +199,5 @@ ditulis di tempat lain.
 
 ## Belum tersedia
 
-Menghapus aplikasi langsung dari jendela: sementara ini skrip penerapan yang melakukannya.
+Langkah skrip beberapa aturan dan profil pengguna lain saat diterapkan dari jendela: sementara ini skrip
+penerapan yang melakukannya.

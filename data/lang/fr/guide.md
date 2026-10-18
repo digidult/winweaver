@@ -89,9 +89,9 @@ illisibles.
 La lecture se fait en arrière-plan : la fenêtre continue de fonctionner, et un indicateur dans la barre d'état
 la signale.
 
-Appliquée en tant qu'administrateur, une règle qui supprime des capacités de Windows les supprime aussi via
-DISM ; la sauvegarde les nomme, mais l'annulation ne les rétablit pas. Les applications sont supprimées par
-le script d'application.
+Appliquée en tant qu'administrateur, une règle qui supprime des applications ou des capacités de Windows les
+supprime aussi depuis la fenêtre : les capacités via DISM, les applications pour tous les utilisateurs et
+pour les comptes créés plus tard. La sauvegarde les nomme, mais l'annulation ne les rétablit pas.
 
 ## Comparer des profils
 
@@ -214,5 +214,5 @@ restaurées au démarrage suivant), `logs/` (ce qu'a fait le programme), `bookma
 
 ## Pas encore disponible
 
-La suppression des applications directement depuis la fenêtre : en attendant, le script d'application s'en
-charge.
+Les étapes de script de certaines règles et les profils des autres utilisateurs, appliqués depuis la fenêtre :
+en attendant, le script d'application s'en charge.

@@ -84,8 +84,9 @@ amministratore, il che aggiunge qualche secondo alla lettura; senza questi dirit
 La lettura avviene in background: la finestra continua a funzionare e un indicatore nella barra di stato la
 mostra.
 
-Applicata come amministratore, una regola che rimuove capacità di Windows le rimuove anche tramite DISM; il
-backup le elenca, ma Annulla non le ripristina. Le app vengono rimosse dallo script di applicazione.
+Applicata come amministratore, una regola che rimuove app o capacità di Windows le rimuove anche dalla
+finestra: le capacità tramite DISM, le app per tutti gli utenti e per gli account creati in seguito. Il backup
+le elenca, ma Annulla non le ripristina.
 
 ## Confronto dei profili
 
@@ -205,4 +206,5 @@ scrive nulla altrove.
 
 ## Non ancora disponibile
 
-La rimozione di app direttamente dalla finestra: nel frattempo se ne occupa lo script di applicazione.
+I passaggi di script di alcune regole e i profili di altri utenti, applicati dalla finestra: nel frattempo
+se ne occupa lo script di applicazione.

@@ -2128,7 +2128,7 @@ impl App {
                 ));
                 if !plan.skipped.is_empty() {
                     ui.label(trf(
-                        "{n} steps are left to the stand-alone script (scripts, app removals, values without a known Windows default).",
+                        "{n} steps are left to the stand-alone script (scripts, the profiles of other users, values without a known Windows default).",
                         &[("n", &plan.skipped.len())],
                     ));
                 }
@@ -2137,7 +2137,7 @@ impl App {
                 }
                 if plan.removals() > 0 {
                     ui.label(trf(
-                        "{n} steps remove capabilities of Windows; Undo does not bring them back.",
+                        "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.",
                         &[("n", &plan.removals())],
                     ));
                 }

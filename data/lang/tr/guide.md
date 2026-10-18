@@ -82,8 +82,9 @@ Windows özellikleri ve yetenekleri, WinWeaver yönetici olarak çalıştığın
 okumaya birkaç saniye ekler. Bu haklar olmadan okunamazlar.
 Okuma arka planda yürür: pencere çalışmaya devam eder ve durum çubuğundaki bir gösterge bunu belirtir.
 
-Yönetici olarak uygulandığında, Windows yeteneklerini kaldıran bir kural onları DISM üzerinden de kaldırır;
-yedek onları listeler, ancak Geri al onları geri getirmez. Uygulamaları uygulama betiği kaldırır.
+Yönetici olarak uygulandığında, Windows uygulamalarını veya yeteneklerini kaldıran bir kural onları
+pencereden de kaldırır: yetenekleri DISM üzerinden, uygulamaları tüm kullanıcılar ve sonradan oluşturulan
+hesaplar için. Yedek onları listeler, ancak Geri al onları geri getirmez.
 
 ## Profilleri karşılaştırma
 
@@ -201,4 +202,5 @@ kaydedilmemiş değişiklikler), `logs/` (programın yaptıkları), `bookmarks.w
 
 ## Henüz yok
 
-Uygulamaları doğrudan pencereden kaldırma: o zamana kadar bunu uygulama betiği yapar.
+Bazı kuralların betik adımları ve diğer kullanıcıların profilleri, pencereden uygulandığında: o zamana
+kadar bunu uygulama betiği yapar.

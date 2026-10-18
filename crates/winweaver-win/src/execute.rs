@@ -1,6 +1,6 @@
 //! The executor of an apply plan, run by the elevated helper: registry values, service start types,
-//! programs of the system folder and capability removals through DISM, each change backed up
-//! first. It never runs a script.
+//! programs of the system folder, capability removals through DISM and app removals through the
+//! package API, each change backed up first. It never runs a script.
 
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -371,7 +371,39 @@ fn describe(op: &Op) -> String {
         Op::ServiceStart { name, start } => format!("service {name} start type {start}"),
         Op::Run { file, args } => format!("{file} {}", args.join(" ")),
         Op::RemoveCapability { pattern } => format!("capabilities {pattern} removed"),
+        Op::RemoveApps { names } => format!("apps {} removed", names.join(", ")),
     }
+}
+
+/// Removes apps for every user and for new accounts; each app found goes into the backup the way
+/// the apply script names it, so `Undo-Apply.ps1` lists it as not restorable.
+fn remove_apps(names: &[String], backup: &mut Vec<BackupEntry>) -> (&'static str, String) {
+    let done = match crate::apps::remove_apps(names) {
+        Ok(done) => done,
+        Err(e) => return ("failed", e),
+    };
+    for name in &done.found {
+        backup.push(BackupEntry {
+            kind: "app-removed".to_owned(),
+            path: String::new(),
+            name: name.clone(),
+            existed: true,
+            value_type: None,
+            value: Value::Null,
+        });
+    }
+    let mut notes = Vec::new();
+    if done.found.is_empty() {
+        notes.push("none is installed or provisioned".to_owned());
+    }
+    notes.extend(done.done.iter().cloned());
+    notes.extend(done.failed.iter().cloned());
+    let status = if done.failed.is_empty() {
+        "ok"
+    } else {
+        "failed"
+    };
+    (status, notes.join("; "))
 }
 
 /// Removes the capabilities of a pattern; each one removed goes into the backup the way the
@@ -514,6 +546,7 @@ pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
                 Err(e) => ("failed", e),
             },
             Op::RemoveCapability { pattern } => remove_capabilities(pattern, &mut backup),
+            Op::RemoveApps { names } => remove_apps(names, &mut backup),
         };
         report.results.push(StepResult {
             rule: step.rule.clone(),

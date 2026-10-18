@@ -5,6 +5,8 @@
 use winweaver_core::thispc::Machine;
 
 #[cfg(windows)]
+mod apps;
+#[cfg(windows)]
 mod dism;
 #[cfg(windows)]
 mod execute;

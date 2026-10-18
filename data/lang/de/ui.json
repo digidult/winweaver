@@ -95,7 +95,6 @@
   "Undo a change": "Änderung rückgängig machen",
   "Apply to this PC": "Auf diesen PC anwenden",
   "{n} changes of this PC run as administrator; Windows asks for the permission first.": "{n} Änderungen dieses PCs werden als Administrator ausgeführt; Windows fragt zuerst nach der Berechtigung.",
-  "{n} steps are left to the stand-alone script (scripts, app removals, values without a known Windows default).": "{n} Schritte bleiben dem eigenständigen Skript überlassen (Skripts, Entfernen von Apps, Werte ohne bekannten Windows-Standardwert).",
   "The default user profile changes too: accounts created from now on get its settings.": "Auch das Standardbenutzerprofil ändert sich: Konten, die ab jetzt erstellt werden, erhalten seine Einstellungen.",
   "Every registry value is saved to a backup in the output folder before its change; Undo restores it.": "Jeder Registrierungswert wird vor seiner Änderung in einer Sicherung im Ordner output gespeichert; „Rückgängig machen“ stellt ihn wieder her.",
   "Change this PC": "Diesen PC ändern",
@@ -531,5 +530,6 @@
   "The read of this PC failed; the log names the error": "Das Einlesen dieses PCs ist fehlgeschlagen; das Protokoll nennt den Fehler",
   "Read this PC: the tab of the profile was closed": "Diesen PC einlesen: Der Tab des Profils wurde geschlossen",
   "Check on this PC: the tab of the profile was closed": "Prüfung auf diesem PC: Der Tab des Profils wurde geschlossen",
-  "{n} steps remove capabilities of Windows; Undo does not bring them back.": "{n} Schritte entfernen Funktionen von Windows; „Rückgängig machen“ bringt sie nicht zurück."
+  "{n} steps are left to the stand-alone script (scripts, the profiles of other users, values without a known Windows default).": "{n} Schritte bleiben dem eigenständigen Skript überlassen (Skripts, Profile anderer Benutzer, Werte ohne bekannten Windows-Standardwert).",
+  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "{n} Schritte entfernen Apps oder Funktionen von Windows; „Rückgängig machen“ bringt sie nicht zurück."
 }

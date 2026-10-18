@@ -95,7 +95,6 @@
   "Undo a change": "Annulation d'une modification",
   "Apply to this PC": "Application à ce PC",
   "{n} changes of this PC run as administrator; Windows asks for the permission first.": "Modifications de ce PC exécutées en tant qu'administrateur : {n}. Windows demande d'abord l'autorisation.",
-  "{n} steps are left to the stand-alone script (scripts, app removals, values without a known Windows default).": "Étapes laissées au script autonome : {n} (scripts, suppressions d'applications, valeurs sans valeur par défaut connue de Windows).",
   "The default user profile changes too: accounts created from now on get its settings.": "Le profil utilisateur par défaut est également modifié : les comptes créés à partir de maintenant reçoivent ses paramètres.",
   "Every registry value is saved to a backup in the output folder before its change; Undo restores it.": "Chaque valeur du Registre est enregistrée dans une sauvegarde du dossier output avant sa modification ; l'annulation la restaure.",
   "Change this PC": "Modifier ce PC",
@@ -531,5 +530,6 @@
   "The read of this PC failed; the log names the error": "La lecture de ce PC a échoué ; le journal indique l'erreur",
   "Read this PC: the tab of the profile was closed": "Lecture de ce PC : l'onglet du profil a été fermé",
   "Check on this PC: the tab of the profile was closed": "Vérification sur ce PC : l'onglet du profil a été fermé",
-  "{n} steps remove capabilities of Windows; Undo does not bring them back.": "Étapes qui suppriment des capacités de Windows : {n} ; l'annulation ne les rétablit pas."
+  "{n} steps are left to the stand-alone script (scripts, the profiles of other users, values without a known Windows default).": "Étapes laissées au script autonome : {n} (scripts, profils des autres utilisateurs, valeurs sans valeur par défaut connue de Windows).",
+  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "Étapes qui suppriment des applications ou des capacités de Windows : {n} ; l'annulation ne les rétablit pas."
 }

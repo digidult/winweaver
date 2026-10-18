@@ -5,9 +5,9 @@
 //!
 //! The default user profile (`DU:` paths) is written at `HKU:\UnattendDefault`, where the helper
 //! loads its hive: the key of the stand-alone apply script too. Capabilities are removed through
-//! DISM; the backup names them, and no undo brings them back. What the plan cannot do natively
-//! (scripts of the rules, app removals, the profiles of other users) is listed as skipped: the
-//! stand-alone apply script does it.
+//! DISM and apps through the package API of Windows; the backup names them, and no undo brings
+//! them back. What the plan cannot do natively (scripts of the rules, the profiles of other users)
+//! is listed as skipped: the stand-alone apply script does it.
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -58,6 +58,9 @@ pub enum Op {
     /// Removes every installed capability whose name matches a pattern of
     /// `Get-WindowsCapability -Name`; the backup names each one, and no undo brings it back.
     RemoveCapability { pattern: String },
+    /// Removes the provisioned packages and the packages of every user of the apps with these
+    /// names; the backup names each one found, and no undo brings it back.
+    RemoveApps { names: Vec<String> },
 }
 
 impl Op {
@@ -67,7 +70,10 @@ impl Op {
             Op::SetValue { path, .. } | Op::DeleteValue { path, .. } | Op::SetList { path, .. } => {
                 in_default_user(path)
             }
-            Op::ServiceStart { .. } | Op::Run { .. } | Op::RemoveCapability { .. } => false,
+            Op::ServiceStart { .. }
+            | Op::Run { .. }
+            | Op::RemoveCapability { .. }
+            | Op::RemoveApps { .. } => false,
         }
     }
 }
@@ -147,11 +153,11 @@ impl Plan {
         self.steps.iter().any(|s| s.op.in_default_user())
     }
 
-    /// The steps that remove capabilities, which no undo brings back.
+    /// The steps that remove apps or capabilities, which no undo brings back.
     pub fn removals(&self) -> usize {
         self.steps
             .iter()
-            .filter(|s| matches!(s.op, Op::RemoveCapability { .. }))
+            .filter(|s| matches!(s.op, Op::RemoveCapability { .. } | Op::RemoveApps { .. }))
             .count()
     }
 }
@@ -271,9 +277,9 @@ fn apply_ops(
         Action::Capability { pattern } => vec![Op::RemoveCapability {
             pattern: pattern.clone(),
         }],
-        Action::Appx { .. } => {
-            return Err("app removals: the stand-alone apply script does them".to_owned());
-        }
+        Action::Appx { names } => vec![Op::RemoveApps {
+            names: names.clone(),
+        }],
         Action::XmlPeCommand { .. }
         | Action::XmlSpecializeCommand { .. }
         | Action::XmlSetting { .. }
@@ -591,22 +597,20 @@ mod tests {
                 .iter()
                 .any(|s| matches!(&s.op, Op::Run { file, .. } if file == "net.exe"))
         );
-        assert!(
-            plan.skipped
-                .iter()
-                .any(|(id, why)| id == "apps.remove-quick-assist" && why.contains("app"))
-        );
-        // The capability of the same rule is removed natively.
+        // Quick Assist goes natively: its capability and its app.
+        let id = "apps.remove-quick-assist";
+        assert!(!plan.skipped.iter().any(|(rule, _)| rule == id));
         let capability = Op::RemoveCapability {
             pattern: "App.Support.QuickAssist*".to_owned(),
         };
-        assert!(
-            plan.steps
-                .iter()
-                .any(|s| s.rule == "apps.remove-quick-assist" && s.op == capability)
-        );
-        assert!(plan.removals() >= 1);
-        assert!(!capability.in_default_user());
+        let app = Op::RemoveApps {
+            names: vec!["MicrosoftCorporationII.QuickAssist".to_owned()],
+        };
+        for op in [&capability, &app] {
+            assert!(plan.steps.iter().any(|s| s.rule == id && &s.op == op));
+            assert!(!op.in_default_user());
+        }
+        assert!(plan.removals() >= 2);
         assert!(
             plan.uses_default_user(),
             "the default user profile is written natively"

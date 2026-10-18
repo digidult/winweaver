@@ -95,7 +95,6 @@
   "Undo a change": "Скасування зміни",
   "Apply to this PC": "Застосування до цього ПК",
   "{n} changes of this PC run as administrator; Windows asks for the permission first.": "Змін цього ПК від імені адміністратора: {n}; спершу Windows запитає дозвіл.",
-  "{n} steps are left to the stand-alone script (scripts, app removals, values without a known Windows default).": "Кроків для окремого скрипту: {n} (скрипти, видалення програм, значення без відомого типового значення Windows).",
   "The default user profile changes too: accounts created from now on get its settings.": "Змінюється й профіль користувача за замовчуванням: його налаштування отримають облікові записи, створені відтепер.",
   "Every registry value is saved to a backup in the output folder before its change; Undo restores it.": "Кожне значення реєстру зберігається в резервну копію в папці output до зміни; скасування його відновлює.",
   "Change this PC": "Змінити цей ПК",
@@ -531,5 +530,6 @@
   "The read of this PC failed; the log names the error": "Читання цього ПК не вдалося; помилку записано в журнал",
   "Read this PC: the tab of the profile was closed": "Читання цього ПК: вкладку профілю закрито",
   "Check on this PC: the tab of the profile was closed": "Перевірка на цьому ПК: вкладку профілю закрито",
-  "{n} steps remove capabilities of Windows; Undo does not bring them back.": "Кроків, що видаляють можливості Windows: {n}; скасування їх не поверне."
+  "{n} steps are left to the stand-alone script (scripts, the profiles of other users, values without a known Windows default).": "Кроків для окремого скрипту: {n} (скрипти, профілі інших користувачів, значення без відомого типового значення Windows).",
+  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "Кроків, що видаляють застосунки або можливості Windows: {n}; скасування їх не поверне."
 }

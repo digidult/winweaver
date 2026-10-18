@@ -95,7 +95,6 @@
   "Undo a change": "Değişikliği geri alma",
   "Apply to this PC": "Bu bilgisayara uygulama",
   "{n} changes of this PC run as administrator; Windows asks for the permission first.": "Bu bilgisayarda {n} değişiklik yönetici olarak çalışır; Windows önce izin ister.",
-  "{n} steps are left to the stand-alone script (scripts, app removals, values without a known Windows default).": "{n} adım bağımsız betiğe bırakılır (betikler, uygulama kaldırmaları, bilinen bir Windows varsayılanı olmayan değerler).",
   "The default user profile changes too: accounts created from now on get its settings.": "Varsayılan kullanıcı profili de değişir: bundan sonra oluşturulan hesaplar onun ayarlarını alır.",
   "Every registry value is saved to a backup in the output folder before its change; Undo restores it.": "Her kayıt defteri değeri, değiştirilmeden önce output klasöründeki bir yedeğe kaydedilir; Geri al onu geri yükler.",
   "Change this PC": "Bu bilgisayarı değiştir",
@@ -531,5 +530,6 @@
   "The read of this PC failed; the log names the error": "Bu bilgisayarın okunması başarısız oldu; hata günlükte yazılı",
   "Read this PC: the tab of the profile was closed": "Bu bilgisayarı okuma: profilin sekmesi kapatıldı",
   "Check on this PC: the tab of the profile was closed": "Bu bilgisayarda denetim: profilin sekmesi kapatıldı",
-  "{n} steps remove capabilities of Windows; Undo does not bring them back.": "{n} adım Windows yeteneklerini kaldırır; Geri al onları geri getirmez."
+  "{n} steps are left to the stand-alone script (scripts, the profiles of other users, values without a known Windows default).": "{n} adım bağımsız betiğe bırakılır (betikler, diğer kullanıcıların profilleri, bilinen bir Windows varsayılanı olmayan değerler).",
+  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "{n} adım Windows uygulamalarını veya yeteneklerini kaldırır; Geri al onları geri getirmez."
 }
