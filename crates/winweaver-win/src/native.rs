@@ -4,7 +4,9 @@ use std::io;
 
 use winreg::RegKey;
 use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, HKEY_USERS, KEY_READ, RegType};
-use winweaver_core::thispc::{Components, InputLanguage, Machine, ReadAccount, RegData, SystemInfo};
+use winweaver_core::thispc::{
+    Components, InputLanguage, Machine, ReadAccount, RegData, SystemInfo,
+};
 
 /// This PC, read through the Windows API. It never writes.
 #[derive(Debug, Clone, Copy, Default)]
