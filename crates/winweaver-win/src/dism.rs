@@ -322,7 +322,10 @@ mod tests {
             assert!(components().features.is_ok());
             // A pattern that matches nothing removes nothing.
             let none = remove_capabilities("WinWeaver.Nothing~~~~*").expect("a removal");
-            assert!(none.removed.is_empty() && none.failed.is_empty(), "{none:?}");
+            assert!(
+                none.removed.is_empty() && none.failed.is_empty(),
+                "{none:?}"
+            );
         } else if let Err(e) = read.features {
             assert!(!e.is_empty());
         }
