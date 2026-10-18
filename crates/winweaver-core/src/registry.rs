@@ -325,6 +325,24 @@ pub trait Registry: Send + Sync {
     fn create_key(&self, path: &str) -> Result<(), String>;
     /// Deletes a key with everything under it.
     fn delete_key(&self, path: &str) -> Result<(), String>;
+    /// The owner and the access list of a key in SDDL (`security::Rights::parse` reads it).
+    fn security(&self, path: &str) -> Result<String, String> {
+        Err(format!("{path}: the rights of keys are not read here"))
+    }
+    /// Writes the access list of a key from SDDL (`security::Rights::dacl`); `protected` stops the
+    /// inheritance of the key above.
+    fn set_security(&self, path: &str, _dacl: &str, _protected: bool) -> Result<(), String> {
+        Err(format!("{path}: the rights of keys are not changed here"))
+    }
+    /// The name of an account by its security identifier or an alias of SDDL, as this Windows
+    /// calls it.
+    fn account_name(&self, _sid: &str) -> Option<String> {
+        None
+    }
+    /// The security identifier of an account by its name.
+    fn account_sid(&self, _name: &str) -> Option<String> {
+        None
+    }
 }
 
 /// What a search of the registry looks at, as Find of regedit does.
@@ -441,11 +459,20 @@ pub fn search(
 pub struct MemoryRegistry {
     /// Keys by their path in lower case: the path as written and the values.
     keys: Mutex<BTreeMap<String, (String, Vec<Value>)>>,
+    /// The rights of keys written by `set_security`, by their path in lower case.
+    rights: Mutex<BTreeMap<String, String>>,
 }
+
+/// The rights of a key of the registry in memory that has none of its own: what it inherits.
+pub const MEMORY_RIGHTS: &str = "O:BAG:SYD:AI(A;CIID;KA;;;BA)(A;CIID;KR;;;BU)";
 
 impl MemoryRegistry {
     fn keys(&self) -> std::sync::MutexGuard<'_, BTreeMap<String, (String, Vec<Value>)>> {
         self.keys.lock().unwrap_or_else(|e| e.into_inner())
+    }
+
+    fn rights(&self) -> std::sync::MutexGuard<'_, BTreeMap<String, String>> {
+        self.rights.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     fn checked(path: &str) -> Result<String, String> {
@@ -536,6 +563,37 @@ impl Registry for MemoryRegistry {
         self.keys()
             .retain(|k, _| k != &lower && !k.starts_with(&prefix));
         Ok(())
+    }
+
+    fn security(&self, path: &str) -> Result<String, String> {
+        let path = Self::checked(path)?;
+        self.read(&path)?;
+        let own = self.rights().get(&path.to_lowercase()).cloned();
+        Ok(own.unwrap_or_else(|| MEMORY_RIGHTS.to_owned()))
+    }
+
+    fn set_security(&self, path: &str, dacl: &str, protected: bool) -> Result<(), String> {
+        let path = Self::checked(path)?;
+        self.read(&path)?;
+        crate::security::Rights::parse(dacl)?;
+        // What the key inherits comes after its own entries unless it is protected.
+        let inherited = if protected { "" } else { "(A;CIID;KA;;;BA)" };
+        let text = format!("O:BA{dacl}{inherited}");
+        self.rights().insert(path.to_lowercase(), text);
+        Ok(())
+    }
+
+    fn account_name(&self, sid: &str) -> Option<String> {
+        crate::security::alias_title(sid).map(str::to_owned)
+    }
+
+    fn account_sid(&self, name: &str) -> Option<String> {
+        use crate::security::alias_title;
+        let titled = |a: &&str| alias_title(a).is_some_and(|t| t.eq_ignore_ascii_case(name));
+        ["BA", "BU", "SY", "WD", "AU"]
+            .into_iter()
+            .find(titled)
+            .map(str::to_owned)
     }
 }
 

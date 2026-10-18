@@ -151,16 +151,22 @@ nulla cambia se il controllo fallisce. Salva (Ctrl+S) scrive il file e lo ricari
 
 ## Il registro
 
-**Menu, Registro** apre il registro di questo PC in una scheda: le chiavi a sinistra, i valori della chiave
-scelta a destra con i loro tipi (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY), il
-percorso nella riga sopra. Un doppio clic modifica un valore; Nuova chiave, Nuovo valore, Modifica ed
-Elimina sono nella barra, e un'eliminazione chiede prima conferma. Le chiavi del computer
-(HKEY_LOCAL_MACHINE) cambiano solo se WinWeaver gira come amministratore. Il pulsante accanto a una chiave
-in **Che cosa scrive** la apre qui. **Segnalibro** conserva la chiave e il valore con un commento, e il
-segnalibro elenca le regole che la scrivono. **Trova** nella barra cerca sotto la chiave scelta come la ricerca di
-regedit: nei nomi delle chiavi, nei nomi dei valori e nei dati, solo la stringa intera se richiesto. La
-ricerca avviene in background, **Arresta** la interrompe e un clic su un punto trovato lo mostra. I permessi
-delle chiavi arriveranno più avanti.
+**Menu, Registro** apre il registro di questo PC in una scheda: le chiavi a sinistra, i valori della
+chiave scelta a destra con i loro tipi (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD,
+REG_BINARY), il percorso nella riga sopra. Un doppio clic modifica un valore; Nuova chiave, Nuovo valore,
+Modifica ed Elimina sono nella barra, e un'eliminazione chiede prima conferma. Le chiavi del computer
+(HKEY_LOCAL_MACHINE) cambiano solo se WinWeaver gira come amministratore. Il pulsante accanto a una
+chiave in **Che cosa scrive** la apre qui. **Segnalibro** conserva la chiave e il valore con un commento,
+e il segnalibro elenca le regole che la scrivono. **Trova** nella barra cerca sotto la chiave scelta come
+la ricerca di regedit: nei nomi delle chiavi, nei nomi dei valori e nei dati, solo la stringa intera se
+richiesto. La ricerca avviene in background, **Arresta** la interrompe e un clic su un punto trovato lo
+mostra.
+
+**Autorizzazioni** nella barra mostra il proprietario e l'elenco di accesso della chiave selezionata: le
+voci ereditate sono mostrate, le voci proprie della chiave cambiano (consenti o nega, controllo completo
+o lettura, a cosa si applicano), un account o un gruppo di questo PC riceve una nuova voce e
+l'ereditarietà dalla chiave superiore si può disattivare. Applica chiede prima; una chiave del computer
+cambia solo con WinWeaver avviato come amministratore.
 
 Un file di registro (`.reg`) si apre in una scheda propria, come struttura e non come testo: a sinistra
 le chiavi e i commenti del file nel loro ordine, a destra la chiave selezionata con i suoi valori nei
@@ -236,4 +242,4 @@ scrive nulla altrove.
 
 ## Non ancora disponibile
 
-Le autorizzazioni delle chiavi di registro nella scheda del registro.
+Per ora nulla del piano: ciò che serve dopo al programma verrà dall'uso.

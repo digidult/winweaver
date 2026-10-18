@@ -143,15 +143,20 @@ nothing changes when the check fails. Save (Ctrl+S) writes the file and loads it
 
 ## The registry
 
-**Menu, Registry** opens the registry of this PC in a tab: the keys on the left, the values of the selected
-key on the right with their types (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY),
-the path in the row above. A double click edits a value; New key, New value, Edit and Delete are in the
-bar, and a deletion asks first. Keys of the machine (HKEY_LOCAL_MACHINE) change only when WinWeaver runs
-as administrator. The button next to a key in **What it writes** opens it here. **Bookmark** keeps the key
-and the value with a comment, and the bookmark lists the rules that write it. **Find** in the
-bar searches under the selected key as Find of regedit does: in the names of keys, the names of values and
-the data, by the whole string only when asked. The search runs in the background, **Stop** ends it, and a
-click on a place found shows it. The rights of keys come later.
+**Menu, Registry** opens the registry of this PC in a tab: the keys on the left, the values of the
+selected key on the right with their types (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD,
+REG_BINARY), the path in the row above. A double click edits a value; New key, New value, Edit and Delete
+are in the bar, and a deletion asks first. Keys of the machine (HKEY_LOCAL_MACHINE) change only when
+WinWeaver runs as administrator. The button next to a key in **What it writes** opens it here.
+**Bookmark** keeps the key and the value with a comment, and the bookmark lists the rules that write it.
+**Find** in the bar searches under the selected key as Find of regedit does: in the names of keys, the
+names of values and the data, by the whole string only when asked. The search runs in the background,
+**Stop** ends it, and a click on a place found shows it.
+
+**Permissions** in the bar shows the owner and the access list of the selected key: the entries it
+inherits are shown, its own entries change (allow or deny, full control or read, where they apply), an
+account or a group of this PC gets a new entry, and the inheritance from the key above can be turned off.
+Apply asks first; a key of the machine changes only with WinWeaver as administrator.
 
 A registry file (`.reg`) opens in a tab of its own, as a structure rather than as text: on the left the
 keys and the comments of the file in their order, on the right the selected key with its values in the
@@ -226,4 +231,4 @@ next start), `mcp/` (the configurations of the MCP server), `logs/` (what the pr
 
 ## Not there yet
 
-The rights of registry keys in the registry tab.
+Nothing of the plan for now: what the program needs next comes from its use.

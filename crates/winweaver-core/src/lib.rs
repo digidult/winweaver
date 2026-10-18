@@ -19,6 +19,7 @@ pub mod render;
 pub mod resolver;
 pub mod resources;
 pub mod scripts;
+pub mod security;
 pub mod thispc;
 pub mod validate;
 

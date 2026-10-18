@@ -1,8 +1,9 @@
 //! The registry tab (customer list of 18.10.2026, item 9): the keys of this PC as a tree on the left,
 //! the values of the selected key on the right, an address row on top, an editor of a value in the
 //! types of regedit and a search under the selected key at the bottom, which runs in a thread of
-//! its own. The rights of keys are not there yet; their button says so. Reading and writing go
-//! through acts applied after the frame, with the registry of the window (`App::registry`).
+//! its own, the rules that write the selection above the values, and the permissions of the key in
+//! a window. Reading and writing go through acts applied after the frame, with the registry of the
+//! window (`App::registry`).
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -13,6 +14,7 @@ use eframe::egui;
 use winweaver_core::catalog::Catalog;
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::registry::{self, Found, HIVES, Key, NEW_TYPES, Registry};
+use winweaver_core::security::{Entry, Rights, Scope};
 
 /// The most places a search of the tab lists.
 pub const SEARCH_LIMIT: usize = 5000;
@@ -128,6 +130,8 @@ pub struct RegistryDoc {
     pub reveal: bool,
     pub search: Search,
     writers: Option<Writers>,
+    /// The window of the rights of the selected key.
+    pub rights: Option<RightsEdit>,
 }
 
 /// The name of the default value as regedit shows it.
@@ -153,6 +157,7 @@ impl RegistryDoc {
             reveal: false,
             search: Search::default(),
             writers: None,
+            rights: None,
         };
         doc.go(reg, path, value);
         doc
@@ -436,6 +441,7 @@ pub fn registry_view(
             values(ui, doc, acts);
         });
     editor(ui.ctx(), doc, acts);
+    rights_window(ui.ctx(), doc, acts);
 }
 
 /// What a search found, in a line.
@@ -662,5 +668,185 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
         });
     if close {
         doc.edit = None;
+    }
+}
+
+/// The rights of a key in the window over the tab: its owner and its access list, the entries of
+/// the key itself changed here, the inherited ones shown.
+pub struct RightsEdit {
+    pub path: String,
+    pub rights: Rights,
+    /// The names of the accounts by their security identifiers, read when the window opens.
+    pub names: HashMap<String, String>,
+    /// The account typed for a new entry.
+    pub add: String,
+    pub error: Option<String>,
+    pub changed: bool,
+}
+
+/// What an entry gives, as regedit names it.
+fn access_title(entry: &Entry) -> String {
+    if entry.full() {
+        tr("Full control").to_owned()
+    } else if entry.read() {
+        tr("Read").to_owned()
+    } else {
+        let mask = format!("0x{:x}", entry.mask);
+        trf("Special ({mask})", &[("mask", &mask)])
+    }
+}
+
+fn scope_title(scope: Scope) -> &'static str {
+    match scope {
+        Scope::Key => tr("This key only"),
+        Scope::KeyAndSubkeys => tr("This key and subkeys"),
+        Scope::Subkeys => tr("Subkeys only"),
+    }
+}
+
+/// The controls of an entry of the key itself: allow or deny, the access, where it applies;
+/// whether one changed.
+fn entry_controls(ui: &mut egui::Ui, i: usize, entry: &mut Entry) -> bool {
+    let mut changed = false;
+    let mut deny = entry.deny;
+    let kind = if deny { tr("Deny") } else { tr("Allow") };
+    egui::ComboBox::from_id_salt(("rights-type", i))
+        .selected_text(kind)
+        .show_ui(ui, |ui| {
+            ui.selectable_value(&mut deny, false, tr("Allow"));
+            ui.selectable_value(&mut deny, true, tr("Deny"));
+        });
+    if deny != entry.deny {
+        entry.deny = deny;
+        changed = true;
+    }
+    let mut pick = None;
+    let (full, read) = (entry.full(), entry.read());
+    egui::ComboBox::from_id_salt(("rights-access", i))
+        .selected_text(access_title(entry))
+        .show_ui(ui, |ui| {
+            if ui.selectable_label(full, tr("Full control")).clicked() {
+                pick = Some(true);
+            }
+            if ui.selectable_label(read && !full, tr("Read")).clicked() {
+                pick = Some(false);
+            }
+        });
+    if let Some(f) = pick {
+        entry.set_full(f);
+        changed = true;
+    }
+    let mut scope = entry.scope;
+    egui::ComboBox::from_id_salt(("rights-scope", i))
+        .selected_text(scope_title(scope))
+        .show_ui(ui, |ui| {
+            for s in [Scope::Key, Scope::KeyAndSubkeys, Scope::Subkeys] {
+                ui.selectable_value(&mut scope, s, scope_title(s));
+            }
+        });
+    if scope != entry.scope {
+        entry.scope = scope;
+        changed = true;
+    }
+    changed
+}
+
+/// The window of the rights of a key: the owner, the inheritance, the entries and a new one.
+fn rights_window(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
+    let Some(edit) = &mut doc.rights else {
+        return;
+    };
+    let mut close = false;
+    let mut gone = None;
+    egui::Window::new(tr("Permissions"))
+        .id(egui::Id::new("registry-rights"))
+        .collapsible(false)
+        .resizable(true)
+        .default_width(680.0)
+        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+        .show(ctx, |ui| {
+            ui.weak(&edit.path);
+            ui.add_space(4.0);
+            let owner = edit
+                .names
+                .get(&edit.rights.owner)
+                .unwrap_or(&edit.rights.owner);
+            ui.label(trf("Owner: {name}", &[("name", owner)]));
+            let mut inherit = !edit.rights.protected;
+            let text = tr("Inherit the entries of the key above");
+            if ui.checkbox(&mut inherit, text).changed() {
+                edit.rights.protected = !inherit;
+                edit.changed = true;
+            }
+            ui.add_space(6.0);
+            let mut changed = false;
+            egui::Grid::new("registry-rights-grid")
+                .num_columns(5)
+                .striped(true)
+                .spacing([12.0, 6.0])
+                .show(ui, |ui| {
+                    for title in [tr("Account"), tr("Type"), tr("Access"), tr("Applies to")] {
+                        ui.strong(title);
+                    }
+                    ui.label("");
+                    ui.end_row();
+                    for (i, entry) in edit.rights.entries.iter_mut().enumerate() {
+                        let name = edit.names.get(&entry.sid).unwrap_or(&entry.sid);
+                        ui.label(name.as_str()).on_hover_text(&entry.sid);
+                        if entry.inherited || entry.other.is_some() {
+                            ui.weak(if entry.deny { tr("Deny") } else { tr("Allow") });
+                            ui.weak(access_title(entry));
+                            ui.weak(scope_title(entry.scope));
+                            ui.weak(if entry.inherited {
+                                tr("inherited")
+                            } else {
+                                tr("kept as it is")
+                            });
+                        } else {
+                            changed |= entry_controls(ui, i, entry);
+                            let remove = ui.small_button("\u{2715}");
+                            if remove.on_hover_text(tr("Remove the entry")).clicked() {
+                                gone = Some(i);
+                            }
+                        }
+                        ui.end_row();
+                    }
+                });
+            if changed {
+                edit.changed = true;
+            }
+            ui.add_space(6.0);
+            ui.horizontal(|ui| {
+                ui.add(
+                    egui::TextEdit::singleline(&mut edit.add)
+                        .hint_text(tr("An account or a group of this PC"))
+                        .desired_width(260.0),
+                );
+                if ui.button(tr("Add")).clicked() {
+                    acts.push(Act::RegistryRightsAdd);
+                }
+            });
+            if let Some(e) = &edit.error {
+                ui.colored_label(style::palette(ui).warn, e);
+            }
+            ui.add_space(8.0);
+            ui.horizontal(|ui| {
+                let apply = ui.add_enabled(edit.changed, egui::Button::new(tr("Apply")));
+                if apply.clicked() {
+                    acts.push(Act::AskRegistryRights);
+                }
+                if ui.button(tr("Cancel")).clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
+                {
+                    close = true;
+                }
+            });
+        });
+    if let Some(i) = gone {
+        edit.rights.entries.remove(i);
+        edit.changed = true;
+    }
+    if close {
+        doc.rights = None;
     }
 }

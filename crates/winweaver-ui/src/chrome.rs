@@ -522,8 +522,9 @@ impl App {
                 if tool(ui, "\u{1F50D}", tr("Find"), "", true) {
                     acts.push(Act::RegistrySearch);
                 }
-                // The rights of keys come later.
-                let _ = tool(ui, "\u{1F512}", tr("Permissions (coming soon)"), "", false);
+                if tool(ui, "\u{1F512}", tr("Permissions"), "", true) {
+                    acts.push(Act::RegistryRights);
+                }
             }
             Some(Doc::Settings) => {}
             None => {
@@ -981,6 +982,14 @@ impl App {
                                         (tr("Languages").to_owned(), Sel::Form(Form::Languages))
                                     }
                                     Target::Profile => (doc.profile.name.clone(), Sel::None),
+                                    // Their group, unless the settings hide it from the tree.
+                                    Target::Unknown if self.settings.hide_unknown => {
+                                        (doc.profile.name.clone(), Sel::None)
+                                    }
+                                    Target::Unknown => (
+                                        tr("Unknown options").to_owned(),
+                                        Sel::Group(crate::UNKNOWN_GROUP.to_owned()),
+                                    ),
                                 };
                                 if ui.link(label).clicked() {
                                     acts.push(Act::Reveal(sel));

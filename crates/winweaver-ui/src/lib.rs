@@ -378,6 +378,13 @@ pub enum Act {
     RegistryFind,
     /// Stops the search of the registry tab.
     RegistryFindStop,
+    /// Opens the window of the rights of the selected key of the registry tab.
+    RegistryRights,
+    /// Adds an entry for the account typed in the window of the rights.
+    RegistryRightsAdd,
+    /// Asks before the rights of the key change, then writes them.
+    AskRegistryRights,
+    RegistryRightsSave,
     /// Opens the editor of a loaded import or of the file of a catalog tab.
     EditCatalog(CatalogRef),
     /// Makes an empty catalog file among the imports and opens its editor.
@@ -402,6 +409,8 @@ pub enum Act {
     CatalogExpand(String, bool),
     /// Shows a policy of an import (the import, the rule) in the tree of a profile.
     ShowInProfile(String, String),
+    /// Shows a group in the tree of the first profile tab.
+    ShowGroupInProfile(String),
     CancelRename,
     RenameImport(String, String),
     /// Prepare the native apply (false) or the return to the defaults (true) of the selection.
@@ -3257,6 +3266,24 @@ impl App {
                     }
                 }
                 Act::AskRegistryDelete => self.ask_registry_delete(),
+                Act::RegistryRights => self.registry_rights(),
+                Act::RegistryRightsAdd => self.registry_rights_add(),
+                Act::AskRegistryRights => {
+                    if let Some(Doc::Registry(d)) = self.docs.get(self.active)
+                        && let Some(edit) = &d.rights
+                    {
+                        self.ask = Some(Ask {
+                            title: tr("Change the rights").to_owned(),
+                            text: trf(
+                                "Change the rights of {path}? A wrong access list can shut Windows or a program out of the key.",
+                                &[("path", &edit.path)],
+                            ),
+                            yes: tr("Change").to_owned(),
+                            act: Act::RegistryRightsSave,
+                        });
+                    }
+                }
+                Act::RegistryRightsSave => self.registry_rights_save(),
                 Act::RegistryDelete(path, value) => self.registry_delete(&path, value.as_deref()),
                 Act::BookmarkRegistry => self.bookmark_registry(),
                 Act::EditCatalog(which) => self.edit_catalog(which),
@@ -3308,6 +3335,15 @@ impl App {
                     }
                 }
                 Act::ShowInProfile(import, rule) => self.show_in_profile(&import, &rule),
+                Act::ShowGroupInProfile(group) => {
+                    match self.docs.iter().position(|d| matches!(d, Doc::Profile(_))) {
+                        Some(index) => {
+                            self.active = index;
+                            self.apply(vec![Act::Reveal(Sel::Group(group))]);
+                        }
+                        None => self.status = tr("Open a profile first").to_owned(),
+                    }
+                }
                 Act::CancelRename => self.renaming = None,
                 Act::RenameImport(id, name) => self.rename_import(&id, &name),
                 Act::PlanNative(revert) => self.plan_native(revert),
@@ -3585,6 +3621,94 @@ impl App {
             }
             self.refresh_import_list();
             self.rebuild_catalog();
+        }
+    }
+
+    /// Opens the window of the rights of the selected key of the registry tab in front: its owner
+    /// and its access list with the names of the accounts.
+    fn registry_rights(&mut self) {
+        use winweaver_core::security::{self, Rights};
+        let reg = self.registry.clone();
+        let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        let path = d.path.clone();
+        let rights = match reg.security(&path).and_then(|s| Rights::parse(&s)) {
+            Ok(rights) => rights,
+            Err(e) => {
+                d.error = Some(e);
+                return;
+            }
+        };
+        let mut names = std::collections::HashMap::new();
+        let owner = std::iter::once(&rights.owner);
+        for sid in owner.chain(rights.entries.iter().map(|e| &e.sid)) {
+            if sid.is_empty() || names.contains_key(sid) {
+                continue;
+            }
+            let name = reg
+                .account_name(sid)
+                .or_else(|| security::alias_title(sid).map(str::to_owned))
+                .unwrap_or_else(|| sid.clone());
+            names.insert(sid.clone(), name);
+        }
+        d.rights = Some(regview::RightsEdit {
+            path,
+            rights,
+            names,
+            add: String::new(),
+            error: None,
+            changed: false,
+        });
+    }
+
+    /// Adds an entry that lets the account typed in the window of the rights read the key.
+    fn registry_rights_add(&mut self) {
+        use winweaver_core::security::{Entry, Scope};
+        let reg = self.registry.clone();
+        let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        let Some(edit) = &mut d.rights else {
+            return;
+        };
+        let name = edit.add.trim().to_owned();
+        if name.is_empty() {
+            return;
+        }
+        match reg.account_sid(&name) {
+            Some(sid) => {
+                let shown = reg.account_name(&sid).unwrap_or(name);
+                edit.names.insert(sid.clone(), shown);
+                let entry = Entry::new(&sid, false, false, Scope::KeyAndSubkeys);
+                edit.rights.entries.push(entry);
+                edit.add.clear();
+                edit.error = None;
+                edit.changed = true;
+            }
+            None => {
+                let text = trf("No account of this PC: {name}", &[("name", &name)]);
+                edit.error = Some(text);
+            }
+        }
+    }
+
+    /// Writes the access list of the window of the rights to its key.
+    fn registry_rights_save(&mut self) {
+        let reg = self.registry.clone();
+        let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        let Some(edit) = &mut d.rights else {
+            return;
+        };
+        let dacl = edit.rights.dacl();
+        match reg.set_security(&edit.path, &dacl, edit.rights.protected) {
+            Ok(()) => {
+                self.status = trf("The rights of {path} changed", &[("path", &edit.path)]);
+                d.rights = None;
+            }
+            Err(e) => edit.error = Some(e),
         }
     }
 
@@ -5155,7 +5279,7 @@ fn unknown_issues(profile: &Profile) -> Vec<Issue> {
     }
     vec![Issue {
         severity: Severity::Warning,
-        target: Target::Profile,
+        target: Target::Unknown,
         text: trf(
             "Open: {n} options of catalogs that are not loaded are kept in the profile and left out of the build",
             &[("n", &profile.unknown.len())],
@@ -6000,6 +6124,57 @@ and kept"
         };
         assert_eq!(doc.sel, Sel::Group(group));
         assert!(doc.expanded.contains(&parent), "the tree opens to it");
+        assert!(doc.reveal);
+    }
+
+    #[test]
+    fn the_rights_of_a_key_change_after_a_question() {
+        use winweaver_core::registry::{MemoryRegistry, Registry};
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        let reg = std::sync::Arc::new(MemoryRegistry::default());
+        let key = "HKEY_CURRENT_USER\\Software\\WinWeaverRights";
+        reg.create_key(key).unwrap();
+        app.registry = reg.clone();
+        app.apply(vec![Act::OpenRegistry(key.to_owned(), None)]);
+        app.apply(vec![Act::RegistryRights]);
+        let open = |app: &App| match app.docs.get(app.active) {
+            Some(Doc::Registry(d)) => d.rights.is_some(),
+            _ => false,
+        };
+        let Some(Doc::Registry(d)) = app.docs.get_mut(app.active) else {
+            panic!("the registry tab");
+        };
+        let rights = d.rights.as_mut().expect("the window of the rights");
+        assert_eq!(rights.rights.entries.len(), 2, "what the key inherits");
+        let owner = rights.names.get("BA").map(String::as_str);
+        assert_eq!(owner, Some("Administrators"));
+        rights.add = "Users".to_owned();
+        app.apply(vec![Act::RegistryRightsAdd, Act::AskRegistryRights]);
+        assert!(app.ask.is_some(), "a change of the rights asks first");
+        assert!(open(&app));
+        app.apply(vec![Act::AskYes]);
+        let text = reg.security(key).unwrap();
+        assert!(text.contains("(A;CI;KR;;;BU)"), "{text}");
+        assert!(!open(&app), "the window closes");
+    }
+
+    #[test]
+    fn a_group_shows_in_the_profile_from_another_tab() {
+        let catalog = Catalog::embedded().unwrap();
+        let group = catalog
+            .groups()
+            .iter()
+            .find(|g| g.parent.is_some())
+            .map(|g| g.id.clone())
+            .unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        app.apply(vec![Act::OpenMarks, Act::ShowGroupInProfile(group.clone())]);
+        assert_eq!(app.active, 0, "the profile tab comes to the front");
+        let Some(Doc::Profile(doc)) = app.docs.first() else {
+            panic!("a profile");
+        };
+        assert_eq!(doc.sel, Sel::Group(group));
         assert!(doc.reveal);
     }
 

@@ -148,15 +148,21 @@ başarısız olursa hiçbir şey değişmez. Kaydet (Ctrl+S) dosyayı yazar ve y
 
 ## Kayıt defteri
 
-**Menü, Kayıt defteri** bu bilgisayarın kayıt defterini bir sekmede açar: anahtarlar solda, seçili anahtarın
-değerleri türleriyle (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY) sağda, yol üstteki
-satırda. Çift tıklama bir değeri düzenler; Yeni anahtar, Yeni değer, Düzenle ve Sil çubuktadır ve silme önce
-onay ister. Bilgisayarın anahtarları (HKEY_LOCAL_MACHINE) yalnızca WinWeaver yönetici olarak çalıştığında
-değişir. **Ne yazar** içindeki bir anahtarın yanındaki düğme onu burada açar. **Yer imi** anahtarı ve değeri bir
-yorumla saklar, yer imi de onu yazan kuralları listeler. Çubuktaki **Bul** seçili anahtarın altında regedit'in
-araması gibi arar: anahtar adlarında, değer adlarında ve verilerde, istenirse yalnızca dizenin tamamında.
-Arama arka planda yürür, **Durdur** onu bitirir ve bulunan bir yere tıklamak onu gösterir. Anahtarların
-hakları daha sonra gelecek.
+**Menü, Kayıt defteri** bu bilgisayarın kayıt defterini bir sekmede açar: anahtarlar solda, seçili
+anahtarın değerleri türleriyle (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY)
+sağda, yol üstteki satırda. Çift tıklama bir değeri düzenler; Yeni anahtar, Yeni değer, Düzenle ve Sil
+çubuktadır ve silme önce onay ister. Bilgisayarın anahtarları (HKEY_LOCAL_MACHINE) yalnızca WinWeaver
+yönetici olarak çalıştığında değişir. **Ne yazar** içindeki bir anahtarın yanındaki düğme onu burada
+açar. **Yer imi** anahtarı ve değeri bir yorumla saklar, yer imi de onu yazan kuralları listeler.
+Çubuktaki **Bul** seçili anahtarın altında regedit'in araması gibi arar: anahtar adlarında, değer
+adlarında ve verilerde, istenirse yalnızca dizenin tamamında. Arama arka planda yürür, **Durdur** onu
+bitirir ve bulunan bir yere tıklamak onu gösterir.
+
+Çubuktaki **İzinler**, seçili anahtarın sahibini ve erişim listesini gösterir: devralınan girdiler
+gösterilir, anahtarın kendi girdileri değişir (izin ver veya reddet, tam denetim veya okuma, nelere
+uygulandığı), bu bilgisayarın bir hesabı veya grubu yeni bir girdi alır ve üstteki anahtardan devralma
+kapatılabilir. Uygula önce sorar; bilgisayarın bir anahtarı yalnızca WinWeaver yönetici olarak çalışırken
+değişir.
 
 Bir kayıt dosyası (`.reg`) kendi sekmesinde metin olarak değil, yapı olarak açılır: solda dosyanın
 anahtarları ve yorumları sırasıyla, sağda seçili anahtar, regedit türlerindeki değerleri ve aralarındaki
@@ -232,4 +238,4 @@ kaydedilmemiş değişiklikler), `mcp/` (MCP sunucusunun yapılandırmaları), `
 
 ## Henüz yok
 
-Kayıt defteri sekmesinde kayıt defteri anahtarlarının izinleri.
+Şimdilik plandan eksik bir şey yok: programın bundan sonra neye ihtiyacı olduğunu kullanım gösterecek.

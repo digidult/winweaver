@@ -293,8 +293,17 @@ pub fn marks_detail(
                     }
                 });
                 ui.horizontal_wrapped(|ui| {
-                    if !t.group.is_empty() {
-                        style::chip(ui, &t.group, false);
+                    match t.rule {
+                        // The group of an option leads to it in the profile.
+                        Some(rule) if !t.group.is_empty() => {
+                            if ui.link(t.group.as_str()).clicked() {
+                                acts.push(Act::ShowGroupInProfile(rule.group.clone()));
+                            }
+                        }
+                        _ if !t.group.is_empty() => {
+                            style::chip(ui, &t.group, false);
+                        }
+                        _ => {}
                     }
                     if let Some(source) = &t.source {
                         // The import of the option, a link to its catalog tab at it.
