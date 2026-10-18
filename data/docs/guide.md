@@ -75,6 +75,9 @@ anything:
 
 Rules that act only during installation or at the first sign-in of a user are not read.
 
+The optional features and the capabilities of Windows are read through DISM when WinWeaver runs as
+administrator, which adds a few seconds to the read; without the rights they stay not readable.
+
 ## Comparing profiles
 
 **Menu, Compare with a file** or **Compare with a preset** opens a diff tab: every difference between
@@ -190,5 +193,4 @@ next start), `logs/` (what the program did), `bookmarks.wwmarks`. Nothing is wri
 
 ## Not there yet
 
-Reading the features and capabilities of Windows directly from the program: the audit script reads them
-meanwhile.
+Removing apps and capabilities from the window: the apply script does it meanwhile.

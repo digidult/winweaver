@@ -6,8 +6,9 @@ use serde_json::Value;
 use winweaver_core::catalog::{Action, Catalog, Param, Phase, Rule};
 use winweaver_core::profile::Profile;
 use winweaver_core::thispc::{
-    self, FIRST_SIGN_IN, InputLanguage, MemoryMachine, NOTE_CURRENT_USER, ONLY_DURING_INSTALL,
-    Probe, ReadAccount, RegData, Report, SIGN_IN_SCREEN, Status, SystemInfo, Verdict,
+    self, FIRST_SIGN_IN, InputLanguage, MemoryMachine, NOTE_ADMIN, NOTE_CURRENT_USER,
+    NOTE_NOT_ON_BUILD, ONLY_DURING_INSTALL, Probe, ReadAccount, RegData, Report, SIGN_IN_SCREEN,
+    Status, SystemInfo, Verdict,
 };
 
 fn office() -> Profile {
@@ -488,4 +489,97 @@ fn a_rule_partly_in_effect_names_what_differs() {
     assert!(!profile.is_on(id));
     assert_eq!(summary.partly.len(), 1);
     assert_eq!(summary.partly[0].0, id);
+}
+
+/// The results of the checks of one rule.
+fn results(catalog: &Catalog, machine: &MemoryMachine, id: &str) -> Vec<thispc::CheckResult> {
+    let plan = thispc::plan(catalog, &office(), &[id.to_owned()]);
+    thispc::run(machine, &plan, false, "t").results
+}
+
+#[test]
+fn capability_patterns_match_as_get_windows_capability_does() {
+    let w = thispc::wildcard;
+    assert!(w("VBSCRIPT*", "VBSCRIPT~~~~"));
+    assert!(w("vbscript*", "VBSCRIPT~~~~"));
+    assert!(w("*Assist*", "App.Support.QuickAssist~~~~0.0.1.0"));
+    assert!(w("a?c*", "ABCdef"));
+    assert!(w("a*b", "acb"));
+    assert!(!w("a*b", "acbc"));
+    assert!(!w("VBSCRIPT*", "XVBSCRIPT"));
+    assert!(!w("VBSCRIPT", "VBSCRIPT~~~~"));
+}
+
+/// Features and capabilities are read once and only by an administrator, judged as the audit
+/// script judges them.
+#[test]
+fn features_and_capabilities_are_read_by_an_administrator() {
+    let catalog = Catalog::embedded().unwrap();
+    let pair = |n: &str, s: &str| (n.to_owned(), s.to_owned());
+    let mut m = MemoryMachine {
+        admin: true,
+        features: vec![
+            pair(
+                "MicrosoftWindowsPowerShellV2Root",
+                "DisabledWithPayloadRemoved",
+            ),
+            pair("MicrosoftWindowsPowerShellV2", "Disabled"),
+        ],
+        capabilities: vec![
+            pair("VBSCRIPT~~~~", "Installed"),
+            pair("App.Support.QuickAssist~~~~0.0.1.0", "NotPresent"),
+        ],
+        ..MemoryMachine::default()
+    };
+    let id = "logging.powershell-v2-off";
+    let plan = thispc::plan(&catalog, &office(), &[id.to_owned()]);
+    assert_eq!(plan.admin_checks(), 2);
+    // Both features are off, and a clean Windows has them on: the rule is in effect.
+    assert_eq!(reading(&catalog, &m, id).verdict, Verdict::InEffect);
+
+    let vbs = results(&catalog, &m, "scripts.remove-vbscript");
+    assert_eq!(vbs.len(), 1);
+    assert_eq!(vbs[0].status, Status::Differs);
+    assert_eq!(vbs[0].current, "VBSCRIPT~~~~");
+    assert_eq!(vbs[0].expected, "NotPresent");
+    let assist = results(&catalog, &m, "apps.remove-quick-assist");
+    let capability = assist
+        .iter()
+        .find(|r| r.check.starts_with("capability "))
+        .unwrap();
+    assert_eq!(capability.status, Status::Ok, "{capability:?}");
+
+    // A feature this build of Windows lacks is as the rule wants, with a note.
+    let smb = results(&catalog, &m, "network.smb1-off");
+    let feature = smb
+        .iter()
+        .find(|r| r.check == "feature SMB1Protocol")
+        .unwrap();
+    assert_eq!(feature.status, Status::Ok);
+    assert_eq!(feature.current, "absent");
+    assert_eq!(feature.note, NOTE_NOT_ON_BUILD);
+
+    // A failure of the reader leaves them unknown with its error.
+    m.components_error = "DISM error 0x80070005".to_owned();
+    let failed = results(&catalog, &m, id);
+    assert!(
+        failed
+            .iter()
+            .all(|r| r.status == Status::Unknown && r.note == m.components_error),
+        "{failed:?}"
+    );
+
+    // Without the rights nothing is asked of the reader.
+    let user = MemoryMachine {
+        admin: false,
+        ..m.clone()
+    };
+    let unread = results(&catalog, &user, id);
+    assert!(
+        unread
+            .iter()
+            .all(|r| r.status == Status::Unknown && r.note == NOTE_ADMIN),
+        "{unread:?}"
+    );
+    assert_eq!(reading(&catalog, &user, id).verdict, Verdict::NotReadable);
 }

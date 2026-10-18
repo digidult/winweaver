@@ -23,9 +23,11 @@ pub const FIRST_SIGN_IN: &str =
 pub const SIGN_IN_SCREEN: &str = "changes the sign-in screen; not applied to a running system";
 /// The note of a check of the default user profile, made in HKCU of the current user.
 pub const NOTE_CURRENT_USER: &str = "current user instead of the default profile";
-/// The note of a check the native read cannot make yet; the audit script can.
-pub const NOTE_NOT_NATIVE: &str =
-    "not readable by the program yet; the audit script reads it as administrator";
+/// The note of a check of a feature or a capability without administrator rights, as the audit
+/// script writes it.
+pub const NOTE_ADMIN: &str = "administrator rights needed";
+/// The note of a feature that this build of Windows does not have.
+pub const NOTE_NOT_ON_BUILD: &str = "not present on this build";
 const SERVICES: &str = "HKLM:\\SYSTEM\\CurrentControlSet\\Services";
 const USER_PACKAGES: &str = "HKCU:\\Software\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository\\Packages";
 const PROVISIONED_PACKAGES: &str =
@@ -159,6 +161,52 @@ pub struct Plan {
     pub checks: Vec<Check>,
     /// The rules left out and why.
     pub excluded: Vec<(String, &'static str)>,
+}
+
+impl Plan {
+    /// The checks of features and capabilities, which Windows shows to an administrator only.
+    pub fn admin_checks(&self) -> usize {
+        self.checks
+            .iter()
+            .filter(|c| {
+                matches!(
+                    c.probe,
+                    Probe::Feature { .. } | Probe::CapabilityAbsent { .. }
+                )
+            })
+            .count()
+    }
+}
+
+/// Whether a name matches a pattern of `Get-WindowsCapability -Name`: `*` is any text, `?` one
+/// character, and letters match without regard to case.
+pub fn wildcard(pattern: &str, name: &str) -> bool {
+    let pattern: Vec<char> = pattern.to_lowercase().chars().collect();
+    let name: Vec<char> = name.to_lowercase().chars().collect();
+    let (mut p, mut n) = (0, 0);
+    // The position after the last `*` and the character of the name it covers up to.
+    let mut star: Option<(usize, usize)> = None;
+    while n < name.len() {
+        match pattern.get(p) {
+            Some('*') => {
+                star = Some((p + 1, n));
+                p += 1;
+            }
+            Some(&c) if c == '?' || c == name[n] => {
+                p += 1;
+                n += 1;
+            }
+            _ => match star {
+                Some((after, covered)) => {
+                    p = after;
+                    n = covered + 1;
+                    star = Some((after, covered + 1));
+                }
+                None => return false,
+            },
+        }
+    }
+    pattern[p..].iter().all(|&c| c == '*')
 }
 
 /// The path a check reads: the default user profile is read in HKCU of the current user.
@@ -384,6 +432,19 @@ pub trait Machine {
     fn computer_name(&self) -> String;
     /// The data of the forms (edition, time zone, languages).
     fn system_info(&self) -> SystemInfo;
+    /// The optional features and the capabilities of Windows; asked only of an administrator,
+    /// once for a whole run.
+    fn components(&self) -> Components;
+}
+
+/// The optional features and the capabilities of Windows, each a name with its state.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Components {
+    /// States as `Get-WindowsOptionalFeature` names them: `Enabled`, `Disabled`,
+    /// `DisabledWithPayloadRemoved`, `EnablePending`, `DisablePending`.
+    pub features: Result<Vec<(String, String)>, String>,
+    /// States as `Get-WindowsCapability` names them: `Installed`, `NotPresent`, `Staged`.
+    pub capabilities: Result<Vec<(String, String)>, String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -620,7 +681,17 @@ fn matches_expected(kind: RegKind, data: &RegData, expected: &Value) -> bool {
     }
 }
 
-fn evaluate(machine: &dyn Machine, check: &Check) -> CheckResult {
+/// The current text and whether a feature is in the state a rule wants; the audit script
+/// compares with `-like "<state>*"`, so `Disabled` also takes `DisabledWithPayloadRemoved`.
+fn feature_state(list: &[(String, String)], name: &str, state: &str) -> Option<(String, bool)> {
+    let (_, current) = list.iter().find(|(n, _)| n.eq_ignore_ascii_case(name))?;
+    let ok = current
+        .to_ascii_lowercase()
+        .starts_with(&state.to_ascii_lowercase());
+    Some((current.clone(), ok))
+}
+
+fn evaluate(machine: &dyn Machine, components: Option<&Components>, check: &Check) -> CheckResult {
     match &check.probe {
         Probe::Reg {
             path,
@@ -721,9 +792,34 @@ fn evaluate(machine: &dyn Machine, check: &Check) -> CheckResult {
                 result(check, Status::Differs, found.join(","), &notes.join("; "))
             }
         }
-        Probe::Feature { .. } | Probe::CapabilityAbsent { .. } => {
-            result(check, Status::Unknown, String::new(), NOTE_NOT_NATIVE)
-        }
+        Probe::Feature { name, state, .. } => match components.map(|c| &c.features) {
+            None => result(check, Status::Unknown, String::new(), NOTE_ADMIN),
+            Some(Err(e)) => result(check, Status::Unknown, String::new(), e),
+            Some(Ok(list)) => match feature_state(list, name, state) {
+                None => result(check, Status::Ok, "absent".to_owned(), NOTE_NOT_ON_BUILD),
+                Some((current, ok)) => {
+                    let status = if ok { Status::Ok } else { Status::Differs };
+                    result(check, status, current, "")
+                }
+            },
+        },
+        Probe::CapabilityAbsent { pattern } => match components.map(|c| &c.capabilities) {
+            None => result(check, Status::Unknown, String::new(), NOTE_ADMIN),
+            Some(Err(e)) => result(check, Status::Unknown, String::new(), e),
+            Some(Ok(list)) => {
+                let installed: Vec<&str> = list
+                    .iter()
+                    .filter(|(n, s)| s.eq_ignore_ascii_case("Installed") && wildcard(pattern, n))
+                    .map(|(n, _)| n.as_str())
+                    .collect();
+                let status = if installed.is_empty() {
+                    Status::Ok
+                } else {
+                    Status::Differs
+                };
+                result(check, status, installed.join(","), "")
+            }
+        },
         Probe::Unknown { .. } => result(
             check,
             Status::Unknown,
@@ -733,14 +829,25 @@ fn evaluate(machine: &dyn Machine, check: &Check) -> CheckResult {
     }
 }
 
-/// Runs the checks of a plan on a machine, with the data of the forms when asked.
+/// Runs the checks of a plan on a machine, with the data of the forms when asked. The features
+/// and capabilities are read once, and only by an administrator.
 pub fn run(machine: &dyn Machine, plan: &Plan, read_system: bool, time: &str) -> Report {
+    let admin = machine.is_admin();
+    let components = if admin && plan.admin_checks() > 0 {
+        Some(machine.components())
+    } else {
+        None
+    };
     Report {
         computer: machine.computer_name(),
-        admin: machine.is_admin(),
+        admin,
         time: time.to_owned(),
         system: read_system.then(|| machine.system_info()),
-        results: plan.checks.iter().map(|c| evaluate(machine, c)).collect(),
+        results: plan
+            .checks
+            .iter()
+            .map(|c| evaluate(machine, components.as_ref(), c))
+            .collect(),
     }
 }
 
@@ -1127,6 +1234,12 @@ pub struct MemoryMachine {
     pub denied: Vec<String>,
     pub admin: bool,
     pub system: SystemInfo,
+    /// The optional features with their states.
+    pub features: Vec<(String, String)>,
+    /// The capabilities with their states.
+    pub capabilities: Vec<(String, String)>,
+    /// When not empty, the features and capabilities cannot be read and this is the error.
+    pub components_error: String,
 }
 
 impl MemoryMachine {
@@ -1179,5 +1292,19 @@ impl Machine for MemoryMachine {
 
     fn system_info(&self) -> SystemInfo {
         self.system.clone()
+    }
+
+    fn components(&self) -> Components {
+        let list = |items: &[(String, String)]| {
+            if self.components_error.is_empty() {
+                Ok(items.to_vec())
+            } else {
+                Err(self.components_error.clone())
+            }
+        };
+        Components {
+            features: list(&self.features),
+            capabilities: list(&self.capabilities),
+        }
     }
 }

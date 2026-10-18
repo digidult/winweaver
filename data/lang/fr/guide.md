@@ -83,6 +83,10 @@ Windows, sans rien modifier :
 Les règles qui n'agissent que pendant l'installation ou à la première connexion d'un utilisateur ne
 sont pas lues.
 
+Les fonctionnalités et capacités de Windows sont lues via DISM lorsque WinWeaver s'exécute en tant
+qu'administrateur, ce qui ajoute quelques secondes à la lecture ; sans ces droits, elles restent
+illisibles.
+
 ## Comparer des profils
 
 **Menu, Comparer avec un fichier** ou **Comparer avec un préréglage** ouvre un onglet de comparaison :
@@ -204,5 +208,5 @@ restaurées au démarrage suivant), `logs/` (ce qu'a fait le programme), `bookma
 
 ## Pas encore disponible
 
-La lecture des fonctionnalités et capacités de Windows directement depuis le programme : en attendant, le
-script d'audit les lit.
+La suppression des applications et des capacités directement depuis la fenêtre : en attendant, le script
+d'application s'en charge.

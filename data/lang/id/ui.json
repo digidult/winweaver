@@ -523,5 +523,6 @@
   "Remove the policy": "Hapus kebijakan",
   "Remove the policy {id} from the catalog? It leaves the file at the next save.": "Hapus kebijakan {id} dari katalog? Kebijakan keluar dari file saat penyimpanan berikutnya.",
   "My policies {n}": "Kebijakan saya {n}",
-  "New catalog": "Katalog baru"
+  "New catalog": "Katalog baru",
+  "This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator": "PC Ini: fitur dan kemampuan Windows hanya dibaca saat WinWeaver berjalan sebagai administrator"
 }

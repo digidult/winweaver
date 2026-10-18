@@ -76,6 +76,9 @@ apa pun:
 
 Aturan yang hanya bekerja selama instalasi atau saat pengguna masuk pertama kali tidak dibaca.
 
+Fitur dan kemampuan Windows dibaca melalui DISM saat WinWeaver berjalan sebagai administrator, sehingga
+pembacaan bertambah beberapa detik; tanpa hak tersebut keduanya tidak dapat dibaca.
+
 ## Membandingkan profil
 
 **Menu, Bandingkan dengan file** atau **Bandingkan dengan preset** membuka tab perbandingan: setiap perbedaan
@@ -191,4 +194,4 @@ ditulis di tempat lain.
 
 ## Belum tersedia
 
-Membaca fitur dan kemampuan Windows langsung dari program: sementara ini skrip audit yang membacanya.
+Menghapus aplikasi dan kemampuan langsung dari jendela: sementara ini skrip penerapan yang melakukannya.

@@ -523,5 +523,6 @@
   "Remove the policy": "Удалить политику",
   "Remove the policy {id} from the catalog? It leaves the file at the next save.": "Удалить политику {id} из каталога? Она исчезнет из файла при следующем сохранении.",
   "My policies {n}": "Мои политики {n}",
-  "New catalog": "Новый каталог"
+  "New catalog": "Новый каталог",
+  "This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator": "Этот ПК: компоненты и возможности Windows читаются, только когда WinWeaver запущен от имени администратора"
 }

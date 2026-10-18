@@ -79,6 +79,9 @@ modificare nulla:
 
 Le regole che agiscono solo durante l'installazione o al primo accesso di un utente non vengono lette.
 
+Le funzionalità e le capacità di Windows vengono lette tramite DISM quando WinWeaver è eseguito come
+amministratore, il che aggiunge qualche secondo alla lettura; senza questi diritti restano non leggibili.
+
 ## Confronto dei profili
 
 **Menu, Confronta con un file** o **Confronta con una preimpostazione** apre una scheda di confronto:
@@ -197,5 +200,5 @@ scrive nulla altrove.
 
 ## Non ancora disponibile
 
-La lettura delle funzionalità e delle capacità di Windows direttamente dal programma: nel frattempo le
-legge lo script di controllo.
+La rimozione di app e capacità direttamente dalla finestra: nel frattempo se ne occupa lo script di
+applicazione.

@@ -1594,6 +1594,9 @@ impl App {
         let (mut profile, summary) =
             thispc::capture(&self.catalog, &base, &readings, report.system.as_ref());
         let mut issues = capture_issues(&summary);
+        if !report.admin && plan.admin_checks() > 0 {
+            issues.push(admin_issue());
+        }
         if !plan.excluded.is_empty() {
             issues.push(Issue {
                 severity: Severity::Info,
@@ -1650,6 +1653,9 @@ impl App {
         let report = thispc::run(machine.as_ref(), &plan, false, &clock::now_utc_iso());
         let readings = thispc::judge(catalog, &plan, &report.results);
         let mut issues = Vec::new();
+        if !report.admin && plan.admin_checks() > 0 {
+            issues.push(admin_issue());
+        }
         let mut differ = 0;
         for r in &readings {
             let on = doc.resolution.in_effect(&r.rule);
@@ -4346,6 +4352,16 @@ fn list_split(ui: &egui::Ui) -> (f32, std::ops::RangeInclusive<f32>) {
     let width = ui.available_width();
     let max = (width - 300.0).max(320.0);
     ((width * 0.55).clamp(320.0, max), 320.0..=max)
+}
+
+/// The note of a read of this PC without the rights that the features and capabilities need.
+fn admin_issue() -> Issue {
+    Issue {
+        severity: Severity::Info,
+        target: Target::Profile,
+        text: tr("This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator")
+            .to_owned(),
+    }
 }
 
 /// The messages of a read of this PC or of a report: its notes, and every rule partly in effect

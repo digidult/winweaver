@@ -1,8 +1,8 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.7.0: the editor of a
-catalog; 0.6.0: the MCP tools
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.8.0: features and
+capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
 catalogs from an option and a bookmark, the same policy in the trees of other imports, the policy of a catalog
@@ -75,7 +75,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      rules, catalog files .wwcatalog, their check, merge), registry (keys and values in the types
 │   │                      of regedit, paths of regedit, the rules that write a key, a registry in memory); tests/ on the real data
 │   ├── winweaver-win/     the Windows API: native.rs (thispc::Machine: the registry, the elevation, the locale
-│   │                      names, the language of Windows, the local accounts and their groups), execute.rs
+│   │                      names, the language of Windows, the local accounts and their groups), dism.rs
+│   │                      (the features and capabilities through dismapi.dll), execute.rs
 │   │                      (the executor of an apply plan with its backup, the start of the executable as
 │   │                      administrator)
 │   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal, token), tools.rs (the
@@ -245,7 +246,14 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - Rules left out of This PC: the installation passes (windowsPE, the xml rules), the first sign-in and the
   sign-in screen (`HKU:\.DEFAULT`). The audit script and the native read produce the same checks in the same
   order, so a report of the script on another PC pairs with the plan (rule by rule, check by check).
-- Features and capabilities are not read natively yet (they need DISM); the audit script reads them.
+- Features and capabilities are read natively through the DISM API (`winweaver_win::dism`: `dismapi.dll` of
+  System32 loaded at the first read, initialized once a process and never shut down, since DISM promises no
+  second start; its log goes to the temp folder). `Machine::components` is asked once a run and only when
+  the process is elevated and the plan has such checks (`Plan::admin_checks`); without the rights the checks
+  are unknown with the note of the audit script, and the window says so. The states take the names of
+  PowerShell, a feature compares as `-like "<state>*"`, a feature absent from the build is as wanted, and a
+  capability pattern matches as `Get-WindowsCapability -Name` (`thispc::wildcard`). The test of DISM runs on
+  the CI runner as administrator.
 - Input languages are read as Windows lists them: it shortens a tag whose region is the main one of its
   language (`uk` for `uk-UA`), so `resources::keyboard_of_read` maps a tag without a region to the
   keyboards of its language and picks the one whose layout is among the input method tips (the values
@@ -461,7 +469,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | MCP server | stdio and HTTP, 33 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
 | Native apply | Plans, the elevated helper, the backup and undo (pull request #2), the default user profile loaded and unloaded by the helper; tested in a test key of HKCU and of the default profile on the runner | 14.10.2026 |
 | Policy templates | ADMX import, catalog files, the settings section (pull request #3), lists and multi-line texts (`reg-list`, list parameters), policies linked to built-in rules; only the checked imports read, the unknown options of a profile in their group with Load catalogs | 16.10.2026 |
-| Not yet | Features and capabilities read natively (they need DISM and administrator rights) | |
+| This PC | Features and capabilities read natively through DISM as administrator (0.8.0) | 18.10.2026 |
+| Not yet | App and capability removals applied natively (the apply script does them) | |
 | Acceptance | Nothing of WinWeaver has been tried in a VM yet: the build of the answer file, the read of a PC and the scripts need the acceptance the predecessor had | |
 
 Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and

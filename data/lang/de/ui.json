@@ -523,5 +523,6 @@
   "Remove the policy": "Richtlinie entfernen",
   "Remove the policy {id} from the catalog? It leaves the file at the next save.": "Die Richtlinie {id} aus dem Katalog entfernen? Sie verlässt die Datei beim nächsten Speichern.",
   "My policies {n}": "Meine Richtlinien {n}",
-  "New catalog": "Neuer Katalog"
+  "New catalog": "Neuer Katalog",
+  "This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator": "Dieser PC: Die Features und Funktionen von Windows werden nur gelesen, wenn WinWeaver als Administrator läuft"
 }

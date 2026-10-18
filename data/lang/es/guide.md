@@ -81,6 +81,9 @@ cambiar nada:
 
 No se leen las reglas que solo actúan durante la instalación o en el primer inicio de sesión de un usuario.
 
+Las características y funcionalidades de Windows se leen mediante DISM cuando WinWeaver se ejecuta como
+administrador, lo que añade unos segundos a la lectura; sin esos permisos no se pueden leer.
+
 ## Comparar perfiles
 
 **Menú, Comparar con un archivo** o **Comparar con un perfil predefinido** abre una pestaña de comparación:
@@ -200,5 +203,5 @@ escribe nada en ningún otro sitio.
 
 ## Todavía no disponible
 
-Leer las características y funcionalidades de Windows directamente desde el programa: mientras tanto las
-lee el script de auditoría.
+Quitar aplicaciones y funcionalidades directamente desde la ventana: mientras tanto lo hace el script de
+aplicación.

@@ -78,6 +78,9 @@ Komut çubuğundaki **Bu bilgisayar**, bu bilgisayarın ayarlarını hiçbir şe
 
 Yalnızca yükleme sırasında veya bir kullanıcının ilk oturum açmasında etkili olan kurallar okunmaz.
 
+Windows özellikleri ve yetenekleri, WinWeaver yönetici olarak çalıştığında DISM üzerinden okunur; bu,
+okumaya birkaç saniye ekler. Bu haklar olmadan okunamazlar.
+
 ## Profilleri karşılaştırma
 
 **Menü, Bir dosyayla karşılaştır** veya **Bir hazır ayarla karşılaştır**, bir karşılaştırma sekmesi
@@ -194,4 +197,4 @@ kaydedilmemiş değişiklikler), `logs/` (programın yaptıkları), `bookmarks.w
 
 ## Henüz yok
 
-Windows özelliklerini ve yeteneklerini doğrudan programdan okuma: o zamana kadar denetim betiği okur.
+Uygulamaları ve yetenekleri doğrudan pencereden kaldırma: o zamana kadar bunu uygulama betiği yapar.

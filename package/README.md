@@ -19,7 +19,8 @@ keeps its settings and files in that folder. The guide opens at the first start 
 - **Check and build**: Check (F7) lists errors and warnings; Build (F9) writes `autounattend.xml` and its scripts into
   `output`.
 - **Compare** two profiles (`.wwdiff`): the differences side by side with a comment on each; apply one or all.
-- **This PC**: read its settings into a profile and see what is in effect; check the selected rules; apply them or
+- **This PC**: read its settings into a profile (the features and capabilities of Windows as administrator) and see
+  what is in effect; check the selected rules; apply them or
   return them to the Windows defaults as administrator with a backup of every value, and undo a change from its backup.
   For other PCs it saves stand-alone scripts that apply, revert, audit and undo; their audit report opens as a profile.
 - **Policy templates**: import the ADMX templates of this Windows, of a folder, of a zip archive (as Chrome, Edge and

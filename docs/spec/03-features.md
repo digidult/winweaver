@@ -66,7 +66,8 @@ NEW). Each item names the user-visible behaviour; the mechanism is in `04-archit
 
 - Read: the audit of every rule the catalog can judge on a running Windows (all but the installation,
   first sign-in and sign-in screen rules) read natively; a rule is in effect when every value matches,
-  partly in effect, not in effect, not readable (needs elevation), or as-default (what a clean Windows
+  partly in effect, not in effect, not readable (needs elevation: the optional features and the
+  capabilities are read through the DISM API of the system only when elevated), or as-default (what a clean Windows
   already has is no evidence, so the rule keeps the state of the open profile); parameters take the
   values read when they fit; the forms take the edition, time zone, locales, input languages and the
   accounts (no passwords), never the computer name. The result is a copy of the open profile in a new

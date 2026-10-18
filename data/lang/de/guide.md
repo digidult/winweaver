@@ -82,6 +82,9 @@ Markdown-Datei; die Seiten der Dokumentation werden genauso geöffnet, jede in e
 Regeln, die nur während der Installation oder bei der ersten Anmeldung eines Benutzers wirken, werden nicht
 eingelesen.
 
+Die Features und Funktionen von Windows werden über DISM gelesen, wenn WinWeaver als Administrator läuft;
+das verlängert das Lesen um einige Sekunden. Ohne diese Rechte bleiben sie nicht lesbar.
+
 ## Profile vergleichen
 
 **Menü, Mit einer Datei vergleichen** oder **Mit einer Vorlage vergleichen** öffnet eine Registerkarte mit
@@ -202,5 +205,4 @@ Meldungen gehen an die Konsole, aus der das Programm gestartet wurde, und nach `
 
 ## Noch nicht verfügbar
 
-Das Lesen der Features und Funktionen von Windows direkt im Programm: Bis dahin liest sie das
-Auditskript.
+Das Entfernen von Apps und Funktionen direkt im Fenster: Bis dahin erledigt das das Anwendungsskript.

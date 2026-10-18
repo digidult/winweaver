@@ -20,7 +20,7 @@ description: Read the settings of the PC that runs WinWeaver and compare them wi
   installation; tell the person which value, never guess more.
 - as on a clean Windows: the values equal the defaults of Windows, so nothing proves the rule; the read keeps its state.
 - not readable, `not_read`: rules that act only during the installation, at the first sign-in or on the sign-in
-  screen, and features or capabilities, are not read.
+  screen are not read; features and capabilities are read only when WinWeaver runs as administrator.
 - Rules of the default user profile are read in the profile of the signed-in user.
 - Windows shows uk-UA as `uk`; the read maps it back.
 
