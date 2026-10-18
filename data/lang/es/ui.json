@@ -524,5 +524,11 @@
   "Remove the policy {id} from the catalog? It leaves the file at the next save.": "¿Quitar la directiva {id} del catálogo? Sale del archivo en el próximo guardado.",
   "My policies {n}": "Mis directivas {n}",
   "New catalog": "Nuevo catálogo",
-  "This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator": "Este equipo: las características y funcionalidades de Windows solo se leen cuando WinWeaver se ejecuta como administrador"
+  "This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator": "Este equipo: las características y funcionalidades de Windows solo se leen cuando WinWeaver se ejecuta como administrador",
+  "This PC is being read": "Se está leyendo este equipo",
+  "This PC is being read; wait until the read ends": "Se está leyendo este equipo; espera a que termine la lectura",
+  "This PC could not be read: {e}": "No se pudo leer este equipo: {e}",
+  "The read of this PC failed; the log names the error": "La lectura de este equipo falló; el registro indica el error",
+  "Read this PC: the tab of the profile was closed": "Leer este equipo: la pestaña del perfil se cerró",
+  "Check on this PC: the tab of the profile was closed": "Comprobación en este equipo: la pestaña del perfil se cerró"
 }

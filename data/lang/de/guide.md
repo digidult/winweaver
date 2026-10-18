@@ -84,6 +84,7 @@ eingelesen.
 
 Die Features und Funktionen von Windows werden über DISM gelesen, wenn WinWeaver als Administrator läuft;
 das verlängert das Lesen um einige Sekunden. Ohne diese Rechte bleiben sie nicht lesbar.
+Das Lesen läuft im Hintergrund: Das Fenster arbeitet weiter, und ein Kreisel in der Statusleiste zeigt es an.
 
 ## Profile vergleichen
 

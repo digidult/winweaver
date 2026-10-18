@@ -1,8 +1,8 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.8.0: features and
-capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.8.1: This PC read in the
+background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
 catalogs from an option and a bookmark, the same policy in the trees of other imports, the policy of a catalog
@@ -253,7 +253,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   are unknown with the note of the audit script, and the window says so. The states take the names of
   PowerShell, a feature compares as `-like "<state>*"`, a feature absent from the build is as wanted, and a
   capability pattern matches as `Get-WindowsCapability -Name` (`thispc::wildcard`). The test of DISM runs on
-  the CI runner as administrator.
+  the CI runner as administrator (more than a minute there). The window reads This PC in a thread of its own
+  named `this-pc` (`App::start_pc_read`, `poll_pc_read`, a `PcJob`; the machine is `App::pc`, one in memory
+  for the tests), one read at a time with a spinner in the status bar; the result goes to the tab the read
+  started from, found by its draft key, and a tab closed meanwhile is only named in the status.
 - Input languages are read as Windows lists them: it shortens a tag whose region is the main one of its
   language (`uk` for `uk-UA`), so `resources::keyboard_of_read` maps a tag without a region to the
   keyboards of its language and picks the one whose layout is among the input method tips (the values

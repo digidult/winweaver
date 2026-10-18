@@ -995,6 +995,9 @@ impl App {
                     );
                 }
                 ui.label(style::muted(ui, self.status.as_str(), 11.0));
+                if self.pc_read.is_some() {
+                    ui.add(egui::Spinner::new().size(style::size(ui, 12.0)));
+                }
             });
         });
     }

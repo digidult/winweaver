@@ -444,6 +444,25 @@ pub enum Act {
     Message(String),
 }
 
+/// What a read of this PC does with its report. A profile tab is named by its draft key, so a tab
+/// moved meanwhile is found and a tab closed meanwhile is missed without harm.
+enum PcJob {
+    /// Every rule read into a new profile, on the profile of a tab as the base.
+    NewProfile { base: Profile },
+    /// The selection read into the profile of a tab.
+    Selection { doc: String, base: Profile },
+    /// The selected rules of the profile of a tab compared with this PC.
+    Check { doc: String },
+}
+
+/// A read of this PC in a thread of its own: the features and capabilities take DISM a few
+/// seconds, and the window goes on drawing meanwhile.
+struct PcRead {
+    job: PcJob,
+    plan: thispc::Plan,
+    report: std::sync::mpsc::Receiver<Report>,
+}
+
 pub struct App {
     catalog: Catalog,
     texts: Vec<CatalogTexts>,
@@ -457,6 +476,11 @@ pub struct App {
     imports_dir: PathBuf,
     /// The registry the registry tab reads and changes: of this PC, or in memory for the tests.
     registry: std::sync::Arc<dyn winweaver_core::registry::Registry>,
+    /// The machine This PC reads: this PC, none where Windows is not, or one in memory for the
+    /// tests.
+    pc: Option<std::sync::Arc<dyn thispc::Machine + Send + Sync>>,
+    /// A read of this PC that runs in a thread of its own.
+    pc_read: Option<PcRead>,
     /// Every catalog file of that folder, loaded or not, for the settings: listed at the start,
     /// when the settings open and after a change of the imports.
     import_list: Vec<ImportEntry>,
@@ -523,6 +547,8 @@ impl App {
             importing: None,
             imports_dir: imports_dir(),
             registry: winweaver_win::this_registry(),
+            pc: winweaver_win::this_pc().map(std::sync::Arc::from),
+            pc_read: None,
             import_list: Vec::new(),
             catalog,
             texts,
@@ -1562,10 +1588,6 @@ impl App {
 
     /// Reads this PC: every rule into a new profile tab, or the selection into the open profile.
     fn read_pc(&mut self, only_selection: bool) {
-        let Some(machine) = winweaver_win::this_pc() else {
-            self.status = tr("This PC can be read on Windows only").to_owned();
-            return;
-        };
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             self.status =
                 tr("Read this PC: open a profile first; its rules and forms are the base")
@@ -1584,15 +1606,105 @@ impl App {
         };
         let base = doc.profile.clone();
         let plan = thispc::plan(&self.catalog, &base, &ids);
-        let report = thispc::run(
-            machine.as_ref(),
-            &plan,
-            !only_selection,
-            &clock::now_utc_iso(),
-        );
-        let readings = thispc::judge(&self.catalog, &plan, &report.results);
+        let job = if only_selection {
+            PcJob::Selection {
+                doc: doc.draft_key.clone(),
+                base,
+            }
+        } else {
+            PcJob::NewProfile { base }
+        };
+        self.start_pc_read(job, plan, !only_selection);
+    }
+
+    /// Compares the selected rules of the profile with this PC.
+    fn check_on_pc(&mut self) {
+        let ids = self.selection_ids();
+        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+            return;
+        };
+        let plan = thispc::plan(&self.catalog, &doc.profile, &ids);
+        let job = PcJob::Check {
+            doc: doc.draft_key.clone(),
+        };
+        self.start_pc_read(job, plan, false);
+    }
+
+    /// Starts a read of this PC in a thread of its own, one at a time; `poll_pc_read` takes its
+    /// report.
+    fn start_pc_read(&mut self, job: PcJob, plan: thispc::Plan, read_system: bool) {
+        if self.pc_read.is_some() {
+            self.status = tr("This PC is being read; wait until the read ends").to_owned();
+            return;
+        }
+        let Some(machine) = self.pc.clone() else {
+            self.status = tr("This PC can be read on Windows only").to_owned();
+            return;
+        };
+        let checks = plan.clone();
+        let (tx, rx) = std::sync::mpsc::channel();
+        let started = std::thread::Builder::new()
+            .name("this-pc".to_owned())
+            .spawn(move || {
+                let time = clock::now_utc_iso();
+                let _ = tx.send(thispc::run(&*machine, &checks, read_system, &time));
+            });
+        if let Err(e) = started {
+            self.status = trf("This PC could not be read: {e}", &[("e", &e)]);
+            return;
+        }
+        self.pc_read = Some(PcRead {
+            job,
+            plan,
+            report: rx,
+        });
+        self.status = tr("This PC is being read").to_owned();
+    }
+
+    /// Takes the report of a finished read of this PC.
+    fn poll_pc_read(&mut self, ctx: &egui::Context) {
+        let Some(read) = &self.pc_read else {
+            return;
+        };
+        match read.report.try_recv() {
+            Ok(report) => {
+                if let Some(read) = self.pc_read.take() {
+                    self.finish_pc_read(read.job, &read.plan, &report);
+                }
+            }
+            Err(std::sync::mpsc::TryRecvError::Empty) => {
+                ctx.request_repaint_after(std::time::Duration::from_millis(100));
+            }
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                self.pc_read = None;
+                self.status = tr("The read of this PC failed; the log names the error").to_owned();
+            }
+        }
+    }
+
+    /// Puts the report of a read of this PC where its job wants it.
+    fn finish_pc_read(&mut self, job: PcJob, plan: &thispc::Plan, report: &Report) {
+        let readings = thispc::judge(&self.catalog, plan, &report.results);
+        match job {
+            PcJob::Check { doc } => self.finish_check(&doc, plan, report, &readings),
+            PcJob::NewProfile { base } => self.finish_capture(None, &base, plan, report, &readings),
+            PcJob::Selection { doc, base } => {
+                self.finish_capture(Some(&doc), &base, plan, report, &readings)
+            }
+        }
+    }
+
+    /// The capture of a read: a new profile tab, or the profile of the tab named by `target`.
+    fn finish_capture(
+        &mut self,
+        target: Option<&str>,
+        base: &Profile,
+        plan: &thispc::Plan,
+        report: &Report,
+        readings: &[thispc::Reading],
+    ) {
         let (mut profile, summary) =
-            thispc::capture(&self.catalog, &base, &readings, report.system.as_ref());
+            thispc::capture(&self.catalog, base, readings, report.system.as_ref());
         let mut issues = capture_issues(&summary);
         if !report.admin && plan.admin_checks() > 0 {
             issues.push(admin_issue());
@@ -1608,12 +1720,14 @@ impl App {
             });
         }
         let catalog = &self.catalog;
-        if only_selection {
-            if let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) {
-                doc.profile = profile;
-                doc.refresh(catalog);
-                doc.issues = issues;
-            }
+        if let Some(key) = target {
+            let Some(doc) = profile_doc(&mut self.docs, key) else {
+                self.status = tr("Read this PC: the tab of the profile was closed").to_owned();
+                return;
+            };
+            doc.profile = profile;
+            doc.refresh(catalog);
+            doc.issues = issues;
             self.status = format!("Read the selection on this PC: {}", summary.line());
         } else {
             let computer = if report.computer.is_empty() {
@@ -1638,26 +1752,24 @@ impl App {
         }
     }
 
-    /// Compares the selected rules of the profile with this PC and lists the result.
-    fn check_on_pc(&mut self) {
-        let Some(machine) = winweaver_win::this_pc() else {
-            self.status = tr("This PC can be read on Windows only").to_owned();
-            return;
-        };
-        let ids = self.selection_ids();
-        let catalog = &self.catalog;
-        let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
-            return;
-        };
-        let plan = thispc::plan(catalog, &doc.profile, &ids);
-        let report = thispc::run(machine.as_ref(), &plan, false, &clock::now_utc_iso());
-        let readings = thispc::judge(catalog, &plan, &report.results);
+    /// The result of a check of the rules of the tab named by `key`, listed in its messages.
+    fn finish_check(
+        &mut self,
+        key: &str,
+        plan: &thispc::Plan,
+        report: &Report,
+        readings: &[thispc::Reading],
+    ) {
         let mut issues = Vec::new();
         if !report.admin && plan.admin_checks() > 0 {
             issues.push(admin_issue());
         }
+        let Some(doc) = profile_doc(&mut self.docs, key) else {
+            self.status = tr("Check on this PC: the tab of the profile was closed").to_owned();
+            return;
+        };
         let mut differ = 0;
-        for r in &readings {
+        for r in readings {
             let on = doc.resolution.in_effect(&r.rule);
             let agrees = match r.verdict {
                 Verdict::InEffect | Verdict::AsDefault => on || r.verdict == Verdict::AsDefault,
@@ -4326,6 +4438,7 @@ impl eframe::App for App {
         self.apply(acts);
         self.poll_running(ui.ctx());
         self.poll_import(ui.ctx());
+        self.poll_pc_read(ui.ctx());
         let closing = self.exit || ui.ctx().input(|i| i.viewport().close_requested());
         self.write_drafts(closing);
         if closing {
@@ -4352,6 +4465,14 @@ fn list_split(ui: &egui::Ui) -> (f32, std::ops::RangeInclusive<f32>) {
     let width = ui.available_width();
     let max = (width - 300.0).max(320.0);
     ((width * 0.55).clamp(320.0, max), 320.0..=max)
+}
+
+/// The profile tab with this draft key.
+fn profile_doc<'a>(docs: &'a mut [Doc], key: &str) -> Option<&'a mut ProfileDoc> {
+    docs.iter_mut().find_map(|d| match d {
+        Doc::Profile(p) if p.draft_key == key => Some(&mut **p),
+        _ => None,
+    })
 }
 
 /// The note of a read of this PC without the rights that the features and capabilities need.
@@ -5723,5 +5844,72 @@ and kept"
         );
         assert!(page.text.contains("`admx.sample.turnoff`"), "{}", page.text);
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// Waits for a read of this PC as the frames do.
+    fn wait_pc_read(app: &mut App) {
+        let ctx = egui::Context::default();
+        let started = std::time::Instant::now();
+        while app.pc_read.is_some() {
+            assert!(started.elapsed() < std::time::Duration::from_secs(60));
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            app.poll_pc_read(&ctx);
+        }
+    }
+
+    /// A read of this PC runs in a thread of its own, one at a time, and its result lands in the
+    /// tab it started from even when another tab came to the front meanwhile.
+    #[test]
+    fn this_pc_is_read_in_the_background() {
+        let catalog = Catalog::embedded().unwrap();
+        let profile = Profile::from_defaults("Office", &catalog);
+        let mut app = App::new(catalog.clone(), Vec::new(), Settings::default());
+        app.docs = vec![
+            Doc::Profile(Box::new(ProfileDoc::new(profile.clone(), None, &catalog))),
+            Doc::Profile(Box::new(ProfileDoc::new(profile, None, &catalog))),
+        ];
+        app.active = 0;
+        app.pc = Some(std::sync::Arc::new(thispc::MemoryMachine::default()));
+        app.apply(vec![Act::CheckOnPc]);
+        assert!(app.pc_read.is_some());
+        app.apply(vec![Act::ReadPc]);
+        assert_eq!(
+            app.status,
+            tr("This PC is being read; wait until the read ends")
+        );
+        app.active = 1;
+        wait_pc_read(&mut app);
+        let issues = |app: &App, i: usize| match app.docs.get(i) {
+            Some(Doc::Profile(d)) => d.issues.clone(),
+            _ => panic!("profile tab {i}"),
+        };
+        // The machine in memory is no administrator: the features and capabilities are not read.
+        let first = issues(&app, 0);
+        assert!(
+            first.iter().any(|i| i.text == admin_issue().text),
+            "{first:?}"
+        );
+        assert!(issues(&app, 1).is_empty());
+
+        app.apply(vec![Act::ReadPc]);
+        wait_pc_read(&mut app);
+        assert_eq!(app.docs.len(), 3);
+        assert_eq!(app.active, 2);
+        let Some(Doc::Profile(read)) = app.docs.get(2) else {
+            panic!("the profile read from this PC");
+        };
+        assert_eq!(read.profile.name, "MEMORY");
+
+        // A tab closed during the read is missed without harm.
+        app.active = 0;
+        app.apply(vec![Act::CheckOnPc]);
+        app.docs.remove(0);
+        app.active = 0;
+        wait_pc_read(&mut app);
+        assert_eq!(
+            app.status,
+            tr("Check on this PC: the tab of the profile was closed")
+        );
+        assert_eq!(app.docs.len(), 2);
     }
 }

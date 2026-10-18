@@ -77,6 +77,7 @@ Rules that act only during installation or at the first sign-in of a user are no
 
 The optional features and the capabilities of Windows are read through DISM when WinWeaver runs as
 administrator, which adds a few seconds to the read; without the rights they stay not readable.
+The read runs in the background: the window goes on working, and a spinner in the status bar shows it.
 
 ## Comparing profiles
 

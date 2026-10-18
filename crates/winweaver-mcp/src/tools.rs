@@ -1433,7 +1433,7 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
             let base = current(state).profile.clone();
             let ids: Vec<String> = catalog.rules().iter().map(|r| r.id.clone()).collect();
             let plan = thispc::plan(catalog, &base, &ids);
-            let report = thispc::run(machine.as_ref(), &plan, true, &clock::now_utc_iso());
+            let report = thispc::run(&*machine, &plan, true, &clock::now_utc_iso());
             let readings = thispc::judge(catalog, &plan, &report.results);
             let (mut profile, summary) =
                 thispc::capture(catalog, &base, &readings, report.system.as_ref());

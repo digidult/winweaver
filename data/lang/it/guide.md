@@ -81,6 +81,8 @@ Le regole che agiscono solo durante l'installazione o al primo accesso di un ute
 
 Le funzionalità e le capacità di Windows vengono lette tramite DISM quando WinWeaver è eseguito come
 amministratore, il che aggiunge qualche secondo alla lettura; senza questi diritti restano non leggibili.
+La lettura avviene in background: la finestra continua a funzionare e un indicatore nella barra di stato la
+mostra.
 
 ## Confronto dei profili
 

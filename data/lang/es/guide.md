@@ -83,6 +83,7 @@ No se leen las reglas que solo actúan durante la instalación o en el primer in
 
 Las características y funcionalidades de Windows se leen mediante DISM cuando WinWeaver se ejecuta como
 administrador, lo que añade unos segundos a la lectura; sin esos permisos no se pueden leer.
+La lectura se hace en segundo plano: la ventana sigue funcionando y un indicador en la barra de estado la muestra.
 
 ## Comparar perfiles
 

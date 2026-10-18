@@ -80,6 +80,7 @@ Yalnızca yükleme sırasında veya bir kullanıcının ilk oturum açmasında e
 
 Windows özellikleri ve yetenekleri, WinWeaver yönetici olarak çalıştığında DISM üzerinden okunur; bu,
 okumaya birkaç saniye ekler. Bu haklar olmadan okunamazlar.
+Okuma arka planda yürür: pencere çalışmaya devam eder ve durum çubuğundaki bir gösterge bunu belirtir.
 
 ## Profilleri karşılaştırma
 

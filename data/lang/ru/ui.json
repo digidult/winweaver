@@ -524,5 +524,11 @@
   "Remove the policy {id} from the catalog? It leaves the file at the next save.": "Удалить политику {id} из каталога? Она исчезнет из файла при следующем сохранении.",
   "My policies {n}": "Мои политики {n}",
   "New catalog": "Новый каталог",
-  "This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator": "Этот ПК: компоненты и возможности Windows читаются, только когда WinWeaver запущен от имени администратора"
+  "This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator": "Этот ПК: компоненты и возможности Windows читаются, только когда WinWeaver запущен от имени администратора",
+  "This PC is being read": "Этот ПК читается",
+  "This PC is being read; wait until the read ends": "Этот ПК читается; дождитесь окончания чтения",
+  "This PC could not be read: {e}": "Не удалось прочитать этот ПК: {e}",
+  "The read of this PC failed; the log names the error": "Чтение этого ПК не удалось; ошибка записана в журнал",
+  "Read this PC: the tab of the profile was closed": "Чтение этого ПК: вкладка профиля была закрыта",
+  "Check on this PC: the tab of the profile was closed": "Проверка на этом ПК: вкладка профиля была закрыта"
 }

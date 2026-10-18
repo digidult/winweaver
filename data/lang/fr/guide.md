@@ -86,6 +86,8 @@ sont pas lues.
 Les fonctionnalités et capacités de Windows sont lues via DISM lorsque WinWeaver s'exécute en tant
 qu'administrateur, ce qui ajoute quelques secondes à la lecture ; sans ces droits, elles restent
 illisibles.
+La lecture se fait en arrière-plan : la fenêtre continue de fonctionner, et un indicateur dans la barre d'état
+la signale.
 
 ## Comparer des profils
 

@@ -33,7 +33,7 @@ pub fn this_registry() -> std::sync::Arc<dyn winweaver_core::registry::Registry>
 }
 
 /// The machine of this PC, or `None` where the Windows API is not available.
-pub fn this_pc() -> Option<Box<dyn Machine>> {
+pub fn this_pc() -> Option<Box<dyn Machine + Send + Sync>> {
     #[cfg(windows)]
     {
         Some(Box::new(NativeMachine))

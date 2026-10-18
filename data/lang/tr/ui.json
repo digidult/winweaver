@@ -524,5 +524,11 @@
   "Remove the policy {id} from the catalog? It leaves the file at the next save.": "{id} ilkesi katalogdan kaldırılsın mı? Bir sonraki kayıtta dosyadan çıkar.",
   "My policies {n}": "İlkelerim {n}",
   "New catalog": "Yeni katalog",
-  "This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator": "Bu bilgisayar: Windows özellikleri ve yetenekleri yalnızca WinWeaver yönetici olarak çalıştığında okunur"
+  "This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator": "Bu bilgisayar: Windows özellikleri ve yetenekleri yalnızca WinWeaver yönetici olarak çalıştığında okunur",
+  "This PC is being read": "Bu bilgisayar okunuyor",
+  "This PC is being read; wait until the read ends": "Bu bilgisayar okunuyor; okuma bitene kadar bekleyin",
+  "This PC could not be read: {e}": "Bu bilgisayar okunamadı: {e}",
+  "The read of this PC failed; the log names the error": "Bu bilgisayarın okunması başarısız oldu; hata günlükte yazılı",
+  "Read this PC: the tab of the profile was closed": "Bu bilgisayarı okuma: profilin sekmesi kapatıldı",
+  "Check on this PC: the tab of the profile was closed": "Bu bilgisayarda denetim: profilin sekmesi kapatıldı"
 }

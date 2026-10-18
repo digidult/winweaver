@@ -524,5 +524,11 @@
   "Remove the policy {id} from the catalog? It leaves the file at the next save.": "Выдаліць палітыку {id} з каталога? Яна знікне з файла пры наступным захаванні.",
   "My policies {n}": "Мае палітыкі {n}",
   "New catalog": "Новы каталог",
-  "This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator": "Гэты ПК: кампаненты і магчымасці Windows чытаюцца, толькі калі WinWeaver запушчаны ад імя адміністратара"
+  "This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator": "Гэты ПК: кампаненты і магчымасці Windows чытаюцца, толькі калі WinWeaver запушчаны ад імя адміністратара",
+  "This PC is being read": "Гэты ПК чытаецца",
+  "This PC is being read; wait until the read ends": "Гэты ПК чытаецца; дачакайцеся заканчэння чытання",
+  "This PC could not be read: {e}": "Не ўдалося прачытаць гэты ПК: {e}",
+  "The read of this PC failed; the log names the error": "Чытанне гэтага ПК не ўдалося; памылка запісана ў журнал",
+  "Read this PC: the tab of the profile was closed": "Чытанне гэтага ПК: укладка профілю была закрыта",
+  "Check on this PC: the tab of the profile was closed": "Праверка на гэтым ПК: укладка профілю была закрыта"
 }

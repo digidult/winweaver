@@ -78,6 +78,7 @@ Aturan yang hanya bekerja selama instalasi atau saat pengguna masuk pertama kali
 
 Fitur dan kemampuan Windows dibaca melalui DISM saat WinWeaver berjalan sebagai administrator, sehingga
 pembacaan bertambah beberapa detik; tanpa hak tersebut keduanya tidak dapat dibaca.
+Pembacaan berjalan di latar belakang: jendela tetap bekerja, dan indikator di bilah status menunjukkannya.
 
 ## Membandingkan profil
 

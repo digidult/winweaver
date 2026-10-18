@@ -524,5 +524,11 @@
   "Remove the policy {id} from the catalog? It leaves the file at the next save.": "Rimuovere il criterio {id} dal catalogo? Lascia il file al prossimo salvataggio.",
   "My policies {n}": "I miei criteri {n}",
   "New catalog": "Nuovo catalogo",
-  "This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator": "Questo PC: le funzionalità e le capacità di Windows vengono lette solo quando WinWeaver è eseguito come amministratore"
+  "This PC: the features and capabilities of Windows are read only when WinWeaver runs as administrator": "Questo PC: le funzionalità e le capacità di Windows vengono lette solo quando WinWeaver è eseguito come amministratore",
+  "This PC is being read": "Lettura di questo PC in corso",
+  "This PC is being read; wait until the read ends": "Lettura di questo PC in corso; attendi che la lettura finisca",
+  "This PC could not be read: {e}": "Impossibile leggere questo PC: {e}",
+  "The read of this PC failed; the log names the error": "La lettura di questo PC non è riuscita; il log indica l'errore",
+  "Read this PC: the tab of the profile was closed": "Lettura di questo PC: la scheda del profilo è stata chiusa",
+  "Check on this PC: the tab of the profile was closed": "Verifica su questo PC: la scheda del profilo è stata chiusa"
 }
