@@ -32,7 +32,7 @@ keeps its settings and files in that folder. The guide opens at the first start 
   their imports. Compare sets two catalogs side by side; Edit opens a catalog in an editor, New catalog starts
   one of your own. An `.admx` or `.wwcatalog` file also opens as a tab without importing.
 - **Registry** of this PC in a tab: keys, values of every type of regedit, edits and deletions that ask
-  first, bookmarks of keys; every list of what a rule writes opens its key there. A registry file (`.reg`) opens
+  first, the permissions of keys, bookmarks of keys; every list of what a rule writes opens its key there. A registry file (`.reg`) opens
   as a tab of its keys, values and comments, with the rules that write each key, and is saved without losing a line.
 - **Links** to everything a view names: the rules a rule needs, the ones that need it or conflict with it, the rules
   named in the messages, the groups above and inside a group, the same policy in other catalogs, the rules that write

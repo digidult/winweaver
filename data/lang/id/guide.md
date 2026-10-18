@@ -144,15 +144,20 @@ pemeriksaan gagal. Simpan (Ctrl+S) menulis file dan memuatnya lagi.
 
 ## Registri
 
-**Menu, Registri** membuka registri PC ini di sebuah tab: kunci di kiri, nilai dari kunci terpilih di kanan
-beserta jenisnya (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY), jalurnya di baris
-atas. Klik ganda menyunting nilai; Kunci baru, Nilai baru, Sunting, dan Hapus ada di bilah, dan penghapusan
-meminta konfirmasi lebih dulu. Kunci mesin (HKEY_LOCAL_MACHINE) hanya berubah bila WinWeaver berjalan sebagai
-administrator. Tombol di samping kunci pada **Yang ditulis** membukanya di sini. **Penanda** menyimpan kunci dan
-nilai dengan komentar, dan penanda itu menampilkan aturan yang menulisnya. **Cari** di bilah mencari di bawah kunci
-terpilih seperti pencarian regedit: di nama kunci, nama nilai, dan data, hanya seluruh string bila diminta.
-Pencarian berjalan di latar belakang, **Hentikan** menghentikannya, dan klik pada tempat yang ditemukan
-menampilkannya. Hak akses kunci menyusul.
+**Menu, Registri** membuka registri PC ini di sebuah tab: kunci di kiri, nilai dari kunci terpilih di
+kanan beserta jenisnya (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY), jalurnya
+di baris atas. Klik ganda menyunting nilai; Kunci baru, Nilai baru, Sunting, dan Hapus ada di bilah, dan
+penghapusan meminta konfirmasi lebih dulu. Kunci mesin (HKEY_LOCAL_MACHINE) hanya berubah bila WinWeaver
+berjalan sebagai administrator. Tombol di samping kunci pada **Yang ditulis** membukanya di sini.
+**Penanda** menyimpan kunci dan nilai dengan komentar, dan penanda itu menampilkan aturan yang
+menulisnya. **Cari** di bilah mencari di bawah kunci terpilih seperti pencarian regedit: di nama kunci,
+nama nilai, dan data, hanya seluruh string bila diminta. Pencarian berjalan di latar belakang,
+**Hentikan** menghentikannya, dan klik pada tempat yang ditemukan menampilkannya.
+
+**Izin** di bilah menampilkan pemilik dan daftar akses kunci terpilih: entri warisan ditampilkan, entri
+milik kunci itu sendiri dapat diubah (izinkan atau tolak, kontrol penuh atau baca, berlaku untuk apa),
+akun atau grup PC ini mendapat entri baru, dan pewarisan dari kunci di atasnya dapat dimatikan. Terapkan
+bertanya terlebih dahulu; kunci komputer hanya berubah bila WinWeaver dijalankan sebagai administrator.
 
 File registri (`.reg`) terbuka di tabnya sendiri sebagai struktur, bukan teks: di kiri kunci dan komentar
 file sesuai urutannya, di kanan kunci terpilih dengan nilainya dalam tipe regedit dan komentar di
@@ -228,4 +233,5 @@ ditulis di tempat lain.
 
 ## Belum tersedia
 
-Izin kunci registri di tab registri.
+Untuk saat ini tidak ada yang tersisa dari rencana: kebutuhan program berikutnya akan muncul dari
+pemakaiannya.

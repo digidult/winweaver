@@ -522,8 +522,9 @@ impl App {
                 if tool(ui, "\u{1F50D}", tr("Find"), "", true) {
                     acts.push(Act::RegistrySearch);
                 }
-                // The rights of keys come later.
-                let _ = tool(ui, "\u{1F512}", tr("Permissions (coming soon)"), "", false);
+                if tool(ui, "\u{1F512}", tr("Permissions"), "", true) {
+                    acts.push(Act::RegistryRights);
+                }
             }
             Some(Doc::Settings) => {}
             None => {

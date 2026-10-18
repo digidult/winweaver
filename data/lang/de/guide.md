@@ -157,17 +157,22 @@ Computer oder das Standardbenutzerprofil und die Registrierungswerte, die sie sc
 
 ## Die Registrierung
 
-**Menü, Registrierung** öffnet die Registrierung dieses PCs in einem Tab: die Schlüssel links, die Werte des
-gewählten Schlüssels rechts mit ihren Typen (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD,
-REG_BINARY), der Pfad in der Zeile darüber. Ein Doppelklick bearbeitet einen Wert; Neuer Schlüssel, Neuer
-Wert, Bearbeiten und Löschen stehen in der Leiste, und ein Löschen fragt zuerst. Schlüssel des Computers
-(HKEY_LOCAL_MACHINE) ändern sich nur, wenn WinWeaver als Administrator läuft. Die Schaltfläche neben einem
-Schlüssel in **Was es schreibt** öffnet ihn hier. **Lesezeichen** hält den Schlüssel und den Wert mit einem
-Kommentar fest, und das Lesezeichen nennt die Regeln, die ihn schreiben. **Suchen** in der
-Leiste sucht unter dem gewählten Schlüssel wie die Suche von regedit: in den Namen von Schlüsseln, den Namen
-von Werten und den Daten, auf Wunsch nur nach der ganzen Zeichenfolge. Die Suche läuft im Hintergrund,
-**Beenden** bricht sie ab, und ein Klick auf eine Fundstelle zeigt sie. Die Rechte von Schlüsseln kommen
-später.
+**Menü, Registrierung** öffnet die Registrierung dieses PCs in einem Tab: die Schlüssel links, die Werte
+des gewählten Schlüssels rechts mit ihren Typen (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD,
+REG_QWORD, REG_BINARY), der Pfad in der Zeile darüber. Ein Doppelklick bearbeitet einen Wert; Neuer
+Schlüssel, Neuer Wert, Bearbeiten und Löschen stehen in der Leiste, und ein Löschen fragt zuerst.
+Schlüssel des Computers (HKEY_LOCAL_MACHINE) ändern sich nur, wenn WinWeaver als Administrator läuft. Die
+Schaltfläche neben einem Schlüssel in **Was es schreibt** öffnet ihn hier. **Lesezeichen** hält den
+Schlüssel und den Wert mit einem Kommentar fest, und das Lesezeichen nennt die Regeln, die ihn schreiben.
+**Suchen** in der Leiste sucht unter dem gewählten Schlüssel wie die Suche von regedit: in den Namen von
+Schlüsseln, den Namen von Werten und den Daten, auf Wunsch nur nach der ganzen Zeichenfolge. Die Suche
+läuft im Hintergrund, **Beenden** bricht sie ab, und ein Klick auf eine Fundstelle zeigt sie.
+
+**Berechtigungen** in der Leiste zeigt den Besitzer und die Zugriffsliste des gewählten Schlüssels:
+geerbte Einträge werden gezeigt, die eigenen Einträge des Schlüssels ändern sich (zulassen oder
+verweigern, Vollzugriff oder Lesen, wofür sie gelten), ein Konto oder eine Gruppe dieses PCs bekommt
+einen neuen Eintrag, und die Vererbung vom übergeordneten Schlüssel lässt sich abschalten. Übernehmen
+fragt zuerst; ein Schlüssel des Computers ändert sich nur, wenn WinWeaver als Administrator läuft.
 
 Eine Registrierungsdatei (`.reg`) öffnet sich in einer eigenen Registerkarte, als Struktur statt als
 Text: links die Schlüssel und Kommentare der Datei in ihrer Reihenfolge, rechts der gewählte Schlüssel
@@ -244,4 +249,4 @@ Meldungen gehen an die Konsole, aus der das Programm gestartet wurde, und nach `
 
 ## Noch nicht verfügbar
 
-Die Berechtigungen von Registrierungsschlüsseln in der Registerkarte der Registrierung.
+Aus dem Plan fehlt derzeit nichts: was das Programm als Nächstes braucht, zeigt die Praxis.

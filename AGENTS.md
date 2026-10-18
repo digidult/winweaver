@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
 the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
@@ -74,7 +74,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      native apply, return or undo, the backup format of the scripts), admx (ADMX and ADML to
 │   │                      rules, catalog files .wwcatalog, their check, merge), registry (keys and values in the types
 │   │                      of regedit, paths of regedit, the rules that write a key, a registry in memory), regfile (`.reg`
-│   │                      files: every line kept, the registry steps of a plan as a file); tests/ on the real data
+│   │                      files: every line kept, the registry steps of a plan as a file), security (the
+│   │                      owner and the access list of a key in SDDL); tests/ on the real data
 │   ├── winweaver-win/     the Windows API: native.rs (thispc::Machine: the registry, the elevation, the locale
 │   │                      names, the language of Windows, the local accounts and their groups), dism.rs
 │   │                      (the features and capabilities through dismapi.dll), apps.rs (the removal of
@@ -353,7 +354,13 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   as the current user), `Data` in the types of regedit (REG_LINK and the resource lists are shown, not
   edited). The registry tab (`Doc::Registry`, `regview.rs`) reads through `App::registry` in the acts after
   the frame (tests put a `MemoryRegistry` there); a change without the rights says that it needs WinWeaver
-  as administrator; the rights of keys are a disabled button. Find searches under the selected key
+  as administrator. Permissions (`Act::RegistryRights`, `regview::RightsEdit`, the window over the tab) reads
+  the owner and the access list of the selected key as SDDL (`Registry::security`, `GetNamedSecurityInfoW` in
+  `NativeRegistry`) into `security::Rights`: inherited entries are shown, the entries of the key itself change
+  (allow or deny, full control or read, where they apply), `Registry::account_sid` adds an account by its name
+  and `account_name` names the entries; Apply asks first and writes only the own entries
+  (`Rights::dacl`, denials first, `set_security` with `SetNamedSecurityInfoW`, protected or not), Windows adds
+  the inherited ones. `MemoryRegistry` keeps rights for the tests (`MEMORY_RIGHTS`). Find searches under the selected key
   (`registry::search`: the names of keys, of values and the data, depth first as regedit, with a limit and a
   stop; `regview::Search`, a thread named `registry-search`, `App::poll_registry_search`). `views::writes` puts a button
   next to every key that opens the tab there (`Act::OpenRegistry`). A bookmark of the registry has the
@@ -527,7 +534,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | This PC | Features and capabilities read natively through DISM as administrator (0.8.0) | 18.10.2026 |
 | Native apply | Capabilities removed through DISM (0.9.0) and apps through the package API (0.10.0), named in the backup, not restored by an undo | 18.10.2026 |
 | Native apply | The script steps of the catalog applied natively (0.15.0): media, services, keys, accounts, the copies of the answer file | 18.10.2026 |
-| Not yet | The rights of registry keys in the registry tab | |
+| Registry | The permissions of keys: owner, access list, own entries changed after a question (0.16.0) | 18.10.2026 |
+| Not yet | Nothing of the plan; what comes next comes from the use | |
 | Acceptance | Earlier versions were accepted by the customer in a VM: the generated answer file works, and a `.wwdiff` read from a real PC came back for bugs. Not accepted yet: the stand-alone scripts (apply, undo, return to defaults, audit) and the versions 0.4.0 to 0.11.0; the scenario of 18.10.2026 lists the steps | 18.10.2026 |
 
 Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and

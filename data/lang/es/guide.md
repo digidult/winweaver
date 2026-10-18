@@ -156,16 +156,22 @@ archivo, y nada cambia si la comprobación falla. Guardar (Ctrl+S) escribe el ar
 
 ## El registro
 
-**Menú, Registro** abre el registro de este equipo en una pestaña: las claves a la izquierda, los valores de
-la clave elegida a la derecha con sus tipos (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD,
-REG_BINARY), la ruta en la fila de arriba. Un doble clic edita un valor; Nueva clave, Nuevo valor, Editar y
-Eliminar están en la barra, y una eliminación pide confirmación antes. Las claves del equipo
-(HKEY_LOCAL_MACHINE) solo cambian cuando WinWeaver se ejecuta como administrador. El botón junto a una clave
-en **Qué escribe** la abre aquí. **Marcador** guarda la clave y el valor con un comentario, y el marcador
-muestra las reglas que la escriben. **Buscar** en la barra busca bajo la clave elegida como la búsqueda
-de regedit: en los nombres de las claves, los nombres de los valores y los datos, solo la cadena completa si
-se pide. La búsqueda se hace en segundo plano, **Detener** la termina y un clic en un lugar encontrado lo
-muestra. Los permisos de las claves llegarán más tarde.
+**Menú, Registro** abre el registro de este equipo en una pestaña: las claves a la izquierda, los valores
+de la clave elegida a la derecha con sus tipos (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD,
+REG_QWORD, REG_BINARY), la ruta en la fila de arriba. Un doble clic edita un valor; Nueva clave, Nuevo
+valor, Editar y Eliminar están en la barra, y una eliminación pide confirmación antes. Las claves del
+equipo (HKEY_LOCAL_MACHINE) solo cambian cuando WinWeaver se ejecuta como administrador. El botón junto a
+una clave en **Qué escribe** la abre aquí. **Marcador** guarda la clave y el valor con un comentario, y
+el marcador muestra las reglas que la escriben. **Buscar** en la barra busca bajo la clave elegida como
+la búsqueda de regedit: en los nombres de las claves, los nombres de los valores y los datos, solo la
+cadena completa si se pide. La búsqueda se hace en segundo plano, **Detener** la termina y un clic en un
+lugar encontrado lo muestra.
+
+**Permisos** en la barra muestra el propietario y la lista de acceso de la clave seleccionada: las
+entradas heredadas se muestran, las entradas propias de la clave cambian (permitir o denegar, control
+total o lectura, a qué se aplican), una cuenta o un grupo de este equipo recibe una entrada nueva y la
+herencia de la clave superior se puede desactivar. Aplicar pregunta antes; una clave del equipo solo
+cambia con WinWeaver ejecutado como administrador.
 
 Un archivo de registro (`.reg`) se abre en una pestaña propia, como una estructura y no como texto: a la
 izquierda las claves y los comentarios del archivo en su orden, a la derecha la clave seleccionada con
@@ -242,4 +248,4 @@ escribe nada en ningún otro sitio.
 
 ## Todavía no disponible
 
-Los permisos de las claves del registro en la pestaña del registro.
+Por ahora no falta nada del plan: lo que el programa necesite después lo mostrará la práctica.

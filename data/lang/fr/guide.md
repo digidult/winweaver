@@ -160,15 +160,21 @@ supprime ; **Appliquer** contrôle tout le fichier, et rien ne change si le cont
 ## Le registre
 
 **Menu, Registre** ouvre le registre de ce PC dans un onglet : les clés à gauche, les valeurs de la clé
-choisie à droite avec leurs types (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY),
-le chemin dans la ligne du dessus. Un double clic modifie une valeur ; Nouvelle clé, Nouvelle valeur,
-Modifier et Supprimer sont dans la barre, et une suppression demande d'abord confirmation. Les clés de la
-machine (HKEY_LOCAL_MACHINE) ne changent que si WinWeaver tourne en administrateur. Le bouton à côté d'une
-clé dans **Ce qu'elle écrit** l'ouvre ici. **Signet** garde la clé et la valeur avec un commentaire, et le
-signet liste les règles qui l'écrivent. **Rechercher** dans la barre cherche sous la clé choisie comme la
-recherche de regedit : dans les noms des clés, les noms des valeurs et les données, la chaîne entière
-uniquement si on le demande. La recherche se fait en arrière-plan, **Arrêter** l'interrompt, et un clic sur
-un endroit trouvé l'affiche. Les droits des clés viendront plus tard.
+choisie à droite avec leurs types (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD,
+REG_BINARY), le chemin dans la ligne du dessus. Un double clic modifie une valeur ; Nouvelle clé,
+Nouvelle valeur, Modifier et Supprimer sont dans la barre, et une suppression demande d'abord
+confirmation. Les clés de la machine (HKEY_LOCAL_MACHINE) ne changent que si WinWeaver tourne en
+administrateur. Le bouton à côté d'une clé dans **Ce qu'elle écrit** l'ouvre ici. **Signet** garde la clé
+et la valeur avec un commentaire, et le signet liste les règles qui l'écrivent. **Rechercher** dans la
+barre cherche sous la clé choisie comme la recherche de regedit : dans les noms des clés, les noms des
+valeurs et les données, la chaîne entière uniquement si on le demande. La recherche se fait en
+arrière-plan, **Arrêter** l'interrompt, et un clic sur un endroit trouvé l'affiche.
+
+**Autorisations** dans la barre montre le propriétaire et la liste d'accès de la clé sélectionnée : les
+entrées héritées sont affichées, les entrées propres de la clé changent (autoriser ou refuser, contrôle
+total ou lecture, ce à quoi elles s'appliquent), un compte ou un groupe de ce PC reçoit une nouvelle
+entrée, et l'héritage de la clé parente peut être désactivé. Appliquer demande d'abord ; une clé de
+l'ordinateur ne change qu'avec WinWeaver lancé en administrateur.
 
 Un fichier de registre (`.reg`) s'ouvre dans un onglet à lui, comme une structure et non comme du texte :
 à gauche les clés et les commentaires du fichier dans leur ordre, à droite la clé sélectionnée avec ses
@@ -245,4 +251,4 @@ restaurées au démarrage suivant), `mcp/` (les configurations du serveur MCP), 
 
 ## Pas encore disponible
 
-Les autorisations des clés de registre dans l'onglet du registre.
+Rien du plan pour l'instant : ce dont le programme a besoin ensuite viendra de son usage.
