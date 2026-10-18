@@ -229,7 +229,11 @@ impl EditorDoc {
 
     /// A new policy in the selected group (or the first one) with the typed title.
     pub fn new_policy(&mut self) {
-        let Some(group) = self.group.clone().or_else(|| self.file.groups.first().map(|g| g.id.clone())) else {
+        let Some(group) = self
+            .group
+            .clone()
+            .or_else(|| self.file.groups.first().map(|g| g.id.clone()))
+        else {
             return;
         };
         let name = self.new_name.trim().to_owned();
@@ -237,13 +241,10 @@ impl EditorDoc {
             self.error = Some(tr("Type the title of the new policy first").to_owned());
             return;
         }
-        let result = self
-            .file
-            .new_policy(&group, &name)
-            .and_then(|rule| {
-                let id = rule.id.clone();
-                self.file.put_rule(rule).map(|()| id)
-            });
+        let result = self.file.new_policy(&group, &name).and_then(|rule| {
+            let id = rule.id.clone();
+            self.file.put_rule(rule).map(|()| id)
+        });
         match result {
             Ok(id) => {
                 self.dirty = true;
@@ -257,7 +258,11 @@ impl EditorDoc {
 
     /// A new group under the selected group (or the root of the file) with the typed title.
     pub fn new_group(&mut self) {
-        let Some(parent) = self.group.clone().or_else(|| self.file.groups.first().map(|g| g.id.clone())) else {
+        let Some(parent) = self
+            .group
+            .clone()
+            .or_else(|| self.file.groups.first().map(|g| g.id.clone()))
+        else {
             return;
         };
         match self.file.new_group(&parent, &self.new_name) {
@@ -334,7 +339,11 @@ pub fn editor_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) 
     egui::Panel::left("catalog-editor-tree")
         .resizable(true)
         .default_size(360.0)
-        .frame(egui::Frame::new().fill(p.card).inner_margin(egui::Margin::symmetric(0, 4)))
+        .frame(
+            egui::Frame::new()
+                .fill(p.card)
+                .inner_margin(egui::Margin::symmetric(0, 4)),
+        )
         .show(ui, |ui| {
             let mut out = Vec::new();
             let roots: Vec<String> = doc
@@ -376,7 +385,11 @@ pub fn editor_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) 
             }
         });
     egui::CentralPanel::default()
-        .frame(egui::Frame::new().fill(p.bg).inner_margin(egui::Margin::same(14)))
+        .frame(
+            egui::Frame::new()
+                .fill(p.bg)
+                .inner_margin(egui::Margin::same(14)),
+        )
         .show(ui, |ui| {
             egui::ScrollArea::vertical()
                 .auto_shrink(false)
@@ -404,7 +417,9 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
         ui.add_space(6.0);
     }
     let Some(form) = &mut doc.form else {
-        ui.weak(tr("Select a policy in the tree to edit it, or a group to add one to it."));
+        ui.weak(tr(
+            "Select a policy in the tree to edit it, or a group to add one to it.",
+        ));
         return;
     };
     let mut apply = false;
@@ -464,7 +479,12 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
                         ui.label("");
                     } else {
                         egui::ComboBox::from_id_salt(("catalog-editor-kind", form.id.as_str(), i))
-                            .selected_text(KINDS.iter().find(|(k, _)| *k == row.kind).map_or("", |(_, n)| *n))
+                            .selected_text(
+                                KINDS
+                                    .iter()
+                                    .find(|(k, _)| *k == row.kind)
+                                    .map_or("", |(_, n)| *n),
+                            )
                             .show_ui(ui, |ui| {
                                 for (k, n) in KINDS {
                                     ui.selectable_value(&mut row.kind, k, n);
@@ -477,7 +497,11 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
                         );
                     }
                 }
-                if ui.small_button("\u{2715}").on_hover_text(tr("Remove the line")).clicked() {
+                if ui
+                    .small_button("\u{2715}")
+                    .on_hover_text(tr("Remove the line"))
+                    .clicked()
+                {
                     gone = Some(i);
                 }
                 ui.end_row();
@@ -500,7 +524,9 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
     ui.horizontal(|ui| {
         if ui
             .button(tr("Apply"))
-            .on_hover_text(tr("Puts the form into the file after a check of the whole file"))
+            .on_hover_text(tr(
+                "Puts the form into the file after a check of the whole file",
+            ))
             .clicked()
         {
             apply = true;
