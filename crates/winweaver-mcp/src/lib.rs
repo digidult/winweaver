@@ -54,8 +54,6 @@ impl Mode {
     }
 }
 
-/// The options of a server; none of them is ever saved.
-#[derive(Debug, Clone)]
 /// What the tools of the registry may do: off by default and at every start, like reading this PC.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum RegistryAccess {
@@ -85,6 +83,8 @@ impl RegistryAccess {
     }
 }
 
+/// The options of a server; none of them is ever saved.
+#[derive(Debug, Clone)]
 pub struct Options {
     pub mode: Mode,
     /// What the tools of the registry may do.
