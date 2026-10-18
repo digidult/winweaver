@@ -137,10 +137,7 @@ click on a place found shows it. The rights of keys come later.
 
 ## The MCP server
 
-**Menu, MCP server** opens the tab of the server through which AI agents read profiles and, when the
-mode allows, change them. The server starts in the mode read; edit lets it change profiles in memory,
-files lets it save them and write the answer file. Reading this PC needs its own permission, which is
-off at every start.
+**Menu, MCP server** opens the tab of the server through which AI agents read profiles and, when the mode allows, change them. The tab edits a configuration file, `mcp/default.wwmcp` next to the program, and saves it at every change: the port and the token, the mode (read only reads, edit changes profiles in memory, files also saves them and writes the answer file), the permissions to read this PC, to read or change the registry and to change the bookmarks and catalogs, the profile the server starts with, and the detailed log. **Open** takes another `.wwmcp` file and **Save as** makes a copy; `winweaver --mcp FILE` serves without the window as the file says. The journal of the running server lists every call; **Show the details** opens a panel at its right with the arguments and the answer of the selected call and buttons to the rules, profiles, catalogs and registry keys it names. The log of the server is `logs/mcp-<date>.jsonl`, one JSON object a line; the detailed log, off by default, keeps every request and answer whole without passwords, keys and tokens.
 
 ## The renderer
 
@@ -168,6 +165,9 @@ names what the window draws with.
 | `--registry NAME` | With `--mcp`: `off` (the default), `read` lets the tools read the registry, `write` change it too |
 | `--edit-library` | With `--mcp`: the tools may change the bookmarks and the catalog files; reading them is always allowed |
 | `--profile NAME` | With `--mcp`: a preset or a profile of `profiles/` becomes the current one |
+| `--mcp FILE` | Serves MCP without the window as a configuration file says: a path to a `.wwmcp` file, or a name of the folder `mcp` next to the program |
+| `--config FILE` | With `--mcp stdio` or `--mcp http`: the settings of a configuration file, the token too; the other options change them for this start |
+| `--detailed-log` | With `--mcp`: the log keeps every request and answer whole, without passwords, keys and tokens |
 | `--version` | Prints the version |
 | `--check-catalog` | Loads the built-in catalog with its translations and prints their problems |
 | `--help` | Prints the list of parameters |
@@ -196,7 +196,7 @@ the console the program was started from and to `logs/`.
 
 `settings.json` (language, theme, recent files, the tabs of the last session), `profiles/` (your
 profiles), `output/` (the answer file and the scripts), `drafts/` (unsaved changes, restored at the
-next start), `logs/` (what the program did), `bookmarks.wwmarks`. Nothing is written anywhere else.
+next start), `mcp/` (the configurations of the MCP server), `logs/` (what the program did), `bookmarks.wwmarks`. Nothing is written anywhere else.
 
 ## Not there yet
 

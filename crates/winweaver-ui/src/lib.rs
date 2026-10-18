@@ -585,19 +585,7 @@ impl App {
             renaming: None,
             running: None,
             running_skipped: Vec::new(),
-            mcp: mcpview::McpPanel {
-                port: 8765,
-                token: String::new(),
-                mode: winweaver_mcp::Mode::Read,
-                read_pc: false,
-                registry: winweaver_mcp::RegistryAccess::Off,
-                edit_library: false,
-                run: None,
-                error: String::new(),
-                journal_sel: None,
-                journal_follow: false,
-                journal_reveal: false,
-            },
+            mcp: mcpview::McpPanel::new(winweaver_mcp::config::Config::default_path(&exe_dir())),
             last_logged: String::new(),
         }
     }
@@ -1415,6 +1403,13 @@ impl App {
         }
         if path.extension().is_some_and(|e| e == themes::EXTENSION) {
             self.open_theme_path(path);
+            return;
+        }
+        if path
+            .extension()
+            .is_some_and(|e| e == winweaver_mcp::config::EXTENSION)
+        {
+            self.open_mcp_config(path);
             return;
         }
         let ext = path
@@ -2789,12 +2784,14 @@ impl App {
                     self.open_settings();
                 }
                 Act::Save => match self.docs.get(self.active) {
+                    Some(Doc::Mcp) => self.persist_mcp(),
                     Some(Doc::Diff(_)) => self.save_diff(),
                     Some(Doc::Theme(_)) => self.save_theme(false),
                     Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
                     _ => self.save_active(false),
                 },
                 Act::SaveAs => match self.docs.get(self.active) {
+                    Some(Doc::Mcp) => self.save_mcp_as(),
                     Some(Doc::Diff(_)) => self.save_active_diff(),
                     Some(Doc::Theme(_)) => self.save_theme(true),
                     Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
@@ -2875,11 +2872,7 @@ impl App {
                     self.status = tr("The MCP server stopped").to_owned();
                 }
                 Act::McpRenewToken => match winweaver_mcp::new_token() {
-                    Ok(t) => {
-                        self.mcp.token = t.clone();
-                        self.settings.mcp_token = t;
-                        self.settings_dirty = true;
-                    }
+                    Ok(t) => self.mcp.token = t,
                     Err(e) => self.mcp.error = e,
                 },
                 Act::McpOpen(name) => {
@@ -4063,14 +4056,100 @@ impl App {
         }
     }
 
-    /// Starts the HTTP server of the window with the port, mode and token of the MCP tab.
+    /// Reads the configuration of the MCP tab at the start: `mcp/default.wwmcp`, made from the port
+    /// and the token an earlier version kept in the settings when it does not exist yet.
+    fn load_mcp_config(&mut self) {
+        let path = self.mcp.path.clone();
+        if path.exists() {
+            match winweaver_mcp::config::Config::load(&path) {
+                Ok(config) => {
+                    self.mcp.take(&config);
+                    self.mcp.saved = Some(config);
+                }
+                Err(e) => {
+                    self.mcp.error = trf("The MCP configuration was not read: {e}", &[("e", &e)]);
+                    // A file that cannot be read is not written over.
+                    self.mcp.saved = Some(self.mcp.config());
+                }
+            }
+            return;
+        }
+        let mut config = winweaver_mcp::config::Config::default();
+        if self.settings.mcp_port >= 1024 {
+            config.port = self.settings.mcp_port;
+        }
+        config.token = self.settings.mcp_token.clone();
+        if config.check().is_err() {
+            config.token.clear();
+        }
+        self.mcp.take(&config);
+        // Written at the next frame by `persist_mcp`.
+        self.mcp.saved = None;
+    }
+
+    /// Writes the configuration of the MCP tab once it changed; a failure is shown once.
+    fn persist_mcp(&mut self) {
+        let config = self.mcp.config();
+        if self.mcp.saved.as_ref() == Some(&config) {
+            return;
+        }
+        if let Err(e) = config.save(&self.mcp.path) {
+            self.mcp.error = trf("The MCP configuration was not saved: {e}", &[("e", &e)]);
+        }
+        self.mcp.saved = Some(config);
+    }
+
+    /// Opens a configuration file in the MCP tab; a running server keeps the one it has.
+    fn open_mcp_config(&mut self, path: PathBuf) {
+        if self.mcp.run.is_some() {
+            self.status =
+                tr("Stop the MCP server before you open another configuration").to_owned();
+            return;
+        }
+        match winweaver_mcp::config::Config::load(&path) {
+            Ok(config) => {
+                self.mcp.take(&config);
+                self.mcp.path = path;
+                self.mcp.saved = Some(config);
+                self.mcp.error.clear();
+                self.apply(vec![Act::OpenMcp]);
+            }
+            Err(e) => self.status = trf("Not opened: {e}", &[("e", &e)]),
+        }
+    }
+
+    /// Saves the configuration of the MCP tab into another file, which the tab edits from then on.
+    fn save_mcp_as(&mut self) {
+        let dir = winweaver_mcp::config::Config::folder(&exe_dir());
+        let _ = std::fs::create_dir_all(&dir);
+        let ext = winweaver_mcp::config::EXTENSION;
+        let Some(mut path) = rfd::FileDialog::new()
+            .set_title(tr("Save the MCP configuration as"))
+            .add_filter(tr("MCP configurations"), &[ext])
+            .set_directory(&dir)
+            .save_file()
+        else {
+            return;
+        };
+        if path.extension().is_none() {
+            path.set_extension(ext);
+        }
+        let config = self.mcp.config();
+        match config.save(&path) {
+            Ok(()) => {
+                self.status = trf("Saved {path}", &[("path", &path.display())]);
+                self.mcp.path = path;
+                self.mcp.saved = Some(config);
+            }
+            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+        }
+    }
+
+    /// Starts the HTTP server of the window with the configuration of the MCP tab.
     fn start_mcp(&mut self) {
         if self.mcp.token.is_empty() {
             match winweaver_mcp::new_token() {
-                Ok(t) => {
-                    self.mcp.token = t.clone();
-                    self.settings.mcp_token = t;
-                }
+                Ok(t) => self.mcp.token = t,
                 Err(e) => {
                     self.mcp.error = e;
                     return;
@@ -4089,8 +4168,18 @@ impl App {
                 read_pc: self.mcp.read_pc,
                 profiles_dir: profiles_dir(),
                 output_dir: output_dir(),
+                detailed_log: self.mcp.detailed_log,
             },
         ));
+        if !self.mcp.profile.is_empty()
+            && let Err(e) = server.select(&self.mcp.profile)
+        {
+            self.mcp.error = trf(
+                "The profile {name}: {e}",
+                &[("name", &self.mcp.profile), ("e", &e)],
+            );
+            return;
+        }
         match winweaver_mcp::http::HttpServer::start(
             server.clone(),
             self.mcp.port,
@@ -4100,8 +4189,6 @@ impl App {
                 self.status = trf("The MCP server runs on {url}", &[("url", &http.url())]);
                 self.mcp.error.clear();
                 self.mcp.run = Some(mcpview::McpRun { server, http });
-                self.settings.mcp_port = self.mcp.port;
-                self.settings_dirty = true;
             }
             Err(e) => {
                 self.mcp.error = trf("The server did not start: {e}", &[("e", &e)]);
@@ -4421,6 +4508,8 @@ impl eframe::App for App {
         } else if kind == 6 {
             let panel = &mut self.mcp;
             let search = &self.mcp_search;
+            let imports: Vec<String> = self.imports.iter().map(|f| f.id.clone()).collect();
+            let catalog = &self.catalog;
             let p = style::palette(ui);
             let settings_frame = egui::Frame::new().fill(p.bg);
             if panel.run.is_some() {
@@ -4435,6 +4524,19 @@ impl eframe::App for App {
                             .auto_shrink(false)
                             .show(ui, |ui| mcpview::mcp_view(ui, panel, &mut acts));
                     });
+                if panel.detail_open {
+                    egui::Panel::right("mcp-detail")
+                        .resizable(true)
+                        .default_size(380.0)
+                        .frame(
+                            egui::Frame::new()
+                                .fill(p.bg)
+                                .inner_margin(egui::Margin::same(12)),
+                        )
+                        .show(ui, |ui| {
+                            mcpview::detail_view(ui, panel, catalog, &imports, &mut acts)
+                        });
+                }
                 egui::CentralPanel::default()
                     .frame(egui::Frame::new().fill(p.card))
                     .show(ui, |ui| mcpview::journal_view(ui, panel, search));
@@ -4549,6 +4651,7 @@ impl eframe::App for App {
             self.remember_tabs();
         }
         self.persist_settings();
+        self.persist_mcp();
         self.log_status();
     }
 }
@@ -4935,6 +5038,7 @@ fn pick_any() -> Option<PathBuf> {
                 bookmarks::EXTENSION,
                 admx::CATALOG_EXTENSION,
                 themes::EXTENSION,
+                winweaver_mcp::config::EXTENSION,
             ],
         )
         .add_filter(tr("Policy templates (opened without importing)"), &["admx"])
@@ -5045,8 +5149,7 @@ pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
                     app.graphics
                 ),
             );
-            app.mcp.port = app.settings.mcp_port;
-            app.mcp.token = app.settings.mcp_token.clone();
+            app.load_mcp_config();
             app.apply_language();
             if let Some(w) = warning {
                 app.status = format!("Settings not read, the defaults are used: {w}");

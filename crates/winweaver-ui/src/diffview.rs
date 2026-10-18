@@ -298,7 +298,7 @@ pub fn diff_view(
 }
 
 /// A side of the difference: a card with the name of its profile and its value, tinted red for
-/// the base and green for the other side, as in the mockups.
+/// the base and green for the other side.
 fn side_card(ui: &mut egui::Ui, name: &str, lines: &[String], new: bool) {
     let p = style::palette(ui);
     let tint = if new { p.ok } else { p.warn };

@@ -1,8 +1,8 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.11.0: the search of the
-registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.12.0: MCP configuration files,
+the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
 catalogs from an option and a bookmark, the same policy in the trees of other imports, the policy of a catalog
@@ -40,7 +40,7 @@ functionality carry over; the file formats are new and no program code is ported
 | Task | Start with |
 |---|---|
 | Understand the scope and the principles | `docs/spec/00-scope.md` |
-| Design or change the interface | `docs/spec/01-ui.md`, then `docs/design/README.md` and the mockups |
+| Design or change the interface | `docs/spec/01-ui.md`, then `crates/winweaver-ui/src/style.rs` (the palette, the painted widgets) |
 | File types, formats, what lives next to the executable | `docs/spec/02-documents.md` |
 | What the program must do (feature inventory) | `docs/spec/03-features.md` |
 | Crates, modules, threads, build | `docs/spec/04-architecture.md` |
@@ -80,7 +80,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      apps through the package API of Windows), execute.rs
 │   │                      (the executor of an apply plan with its backup, the start of the executable as
 │   │                      administrator)
-│   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal, token), tools.rs (the
+│   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal, token), config.rs (the
+│   │                      .wwmcp configuration files), log.rs (the JSON lines log, the crash handlers), tools.rs (the
 │   │                      34 tools and 3 resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and
 │   │                      Origin checks); tests/server.rs (both transports on a free loopback port)
 │   ├── winweaver-ui/      the window on eframe (variant A): lib.rs (tabs, menu, command bar, navigation,
@@ -93,7 +94,7 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      catalogview.rs (the tab of an import or of a catalog file: its tree without check
 │   │                      boxes, a policy), chrome.rs (the tab row, the command bar of the active tab, the
 │   │                      navigation row with the search of the tab, the message bar, the status bar),
-│   │                      style.rs (the palette of the mockups, Segoe UI and Consolas, the painted buttons,
+│   │                      style.rs (the palette of light and dark, Segoe UI and Consolas, the painted buttons,
 │   │                      cards and chips), tree.rs (the painted tree of a profile and of a catalog tab: one
 │   │                      stop of Tab, the keys inside), list.rs (the painted list with columns of the
 │   │                      diff, the bookmarks and the MCP journal: widths by drag, the keys, a mini button),
@@ -124,13 +125,13 @@ functionality carry over; the file formats are new and no program code is ported
 │                          (Belarusian, every text: the example of a language, checked by a test of i18n.rs)
 └── docs/
     ├── releases/          release notes v<version>.md
-    ├── spec/              clean room specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
-    └── design/            UI design variants: README.md (comparison, the decision) and mockups/ (HTML)
+    └── spec/              clean room specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
 ```
 
 Next to the executable at run time (never versioned): `settings.json`, `bookmarks.wwmarks`, `profiles/`,
 `output/` (the answer file, the scripts, plan and backup files of the native apply), `imports/` (catalog files of
-the imported policy templates), `drafts/` (unsaved profiles), `logs/` (winweaver-<date>.log, mcp-<date>.log),
+the imported policy templates), `drafts/` (unsaved profiles), `mcp/` (MCP configurations, `default.wwmcp` of the
+MCP tab), `logs/` (winweaver-<date>.log, mcp-<date>.jsonl),
 `lang/<code>/` (more or overriding translations), `themes/` (more themes, `<id>.wwtheme`, also `<id>.json`
 of the predecessor; the id of an embedded theme replaces it).
 
@@ -276,14 +277,23 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   Base64 (`Set-AccountText`), the profile is embedded as ASCII JSON in `Extensions/Profile`.
 - The language setting `""` follows the language of the Windows interface; it switches the interface and the
   catalog texts together (`i18n::current()`).
-- Logs and crashes (`winweaver_mcp::log`, set up first in `main`): the MCP server writes `logs/mcp-<date>.log`
+- Logs and crashes (`winweaver_mcp::log`, set up first in `main`): the MCP server writes `logs/mcp-<date>.jsonl`
+  (one JSON object a line: `time`, `level`, then `text` or the fields of an event; `log::event`)
   (transport start and stop, every request with its time, refusals and transport errors; ids and switches
   only, never a token, a password, a key or a free text). The panic hook and the filter of unhandled Windows
   exceptions (`winweaver_win::on_fatal_exception`: access violation, stack overflow) write the crash into the
   MCP log for a headless process or a thread named `mcp-*`, else into `winweaver-<date>.log`. A panic inside a
   request is caught (`Server::handle_text`): the request gets the error -32603 and the server goes on; a
   release build has no console, so `eprintln!` of a headless process also goes to the log (`refuse`).
-- MCP: the mode is never saved (read at every start), nor is read_pc; the token is saved in settings.json;
+- MCP: every setting of a server is a configuration file `mcp/<name>.wwmcp` (`config::Config`, strict, saved by the
+  MCP tab at every change through `App::persist_mcp`; `settings.json` keeps no MCP field any more, an old
+  `mcp_token` is read once into `mcp/default.wwmcp`): the transport for a start without the window, port, token,
+  mode, read_pc, registry, edit_library, the first profile and `detailed_log`. `winweaver --mcp FILE` serves as the
+  file says, `--mcp stdio|http --config FILE` too, and the other options change it for that start
+  (`mcp_config` of `main.rs`). The journal keeps every call with its arguments and answer (`redact` leaves out
+  password, product_key, token and authorization; an answer is cut at 16 KB); the detailed log writes them as
+  DETAIL events. The MCP tab shows the selected call in a right panel (`mcpview::detail_view`) with buttons to the
+  places it names (`mcpview::places`: rules, workspace profiles, catalog files, registry keys);
   errors start with not_allowed, not_found, invalid, write_failed or read_failed; passwords and the product
   key are replaced by `***` in every answer.
 - Native apply: the window writes `output/plan-<stamp>.json` (with a random nonce, so no two plans are equal)
@@ -338,13 +348,13 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   stop; `regview::Search`, a thread named `registry-search`, `App::poll_registry_search`). `views::writes` puts a button
   next to every key that opens the tab there (`Act::OpenRegistry`). A bookmark of the registry has the
   document `registry` (`Bookmark::registry`: the key in `path`, the value in `item`) and lists the rules that
-  write it (`registry::writers`). MCP: `Options::registry` (`RegistryAccess` off, read, write; off at every
-  start, `--registry`, the switches of the MCP tab) gates `read_registry_key`, `search_registry` (at most 500 places within 100000 keys), `set_registry_value`,
+  write it (`registry::writers`). MCP: `Options::registry` (`RegistryAccess` off, read, write; off by default,
+  `--registry`, the switches of the MCP tab, saved in its file) gates `read_registry_key`, `search_registry` (at most 500 places within 100000 keys), `set_registry_value`,
   `delete_registry_value`, `create_registry_key`, `delete_registry_key`.
 - MCP, bookmarks and catalogs: `list_bookmarks`, `list_catalogs` (by `CatalogHeader::read`), `get_catalog` (the
   groups, or the policies of a group) and `get_catalog_policy` read always, like profiles; `add_bookmark`,
   `set_bookmark_comment`, `remove_bookmark`, `set_catalog_policy` and `remove_catalog_policy` need
-  `Options::edit_library` (`--edit-library`, the switch of the MCP tab, off at every start). A catalog
+  `Options::edit_library` (`--edit-library`, the switch of the MCP tab, off by default). A catalog
   changes through `CatalogFile::put_rule` (the whole file is checked, a failure changes nothing),
   `remove_rule` (with its `.off` and the conflicts with it), `new_policy`, `new_group`; `admx::catalog_path`
   turns a key of regedit into `HKLM:\` or `DU:\`. The ids of catalogs are file names checked against `..`.
@@ -405,7 +415,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   of a catalog tab, the differences, the blocks of a Markdown page, the bookmarks, the MCP journal. Clearing
   a search opens the groups above the selection and scrolls it into view (`Act::SearchCleared`,
   `reveal`). The message bar folds to one line or opens with a height the user drags.
-- The look comes from `style.rs`: the palette of `docs/design/mockups/common.css` for light and dark (a
+- The look comes from `style.rs`: the palette of light and dark of variant A (the HTML mockups it came from
+  were removed on 18.10.2026, when the design had settled; a
   theme overrides its tokens, `style::COLOR_NAMES`, also with the names of the first version) and the
   fonts of the theme. `install_fonts` (before the first frame) names the families `light`, `light-strong`,
   `light-mono` and the same for `dark`; `style::apply` loads the files of the families of the two themes
@@ -437,7 +448,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   row: arrows, Home, End, Page Up and Down, Left and Right fold and go to the parent or child, Space
   toggles, Enter opens a group. A move with the keys sets `follow`, and the row comes into view at the next
   frame; the detail panel shows the new selection at once.
-- The detail panel has the cards of the mockups: the head with the title, the id with a copy button
+- The detail panel has cards: the head with the title, the id with a copy button
   (`views::id_line`), chips and the switch; Parameters, This PC and the folding Description, whose texts
   are `style::selectable_text` (a menu on the right button: copy, select all, copy all). A `doc` link
   opens the reference page in a Markdown tab at its heading (`Act::OpenDoc`, `mdview::slug`); links to
@@ -471,7 +482,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 
 | Area | State | Date |
 |---|---|---|
-| Specification | Draft 0.1; decisions of 14.10.2026 recorded in `docs/design/README.md` and below | 14.10.2026 |
+| Specification | Draft 0.1; decisions of 14.10.2026 recorded in `docs/spec/01-ui.md` and below | 14.10.2026 |
 | UI design | Variant A with the compact layout and the row switches of C and the secondary tabs of D (decided) | 14.10.2026 |
 | Core | Catalog, profiles, resolver, check, diff, bookmarks, build of the answer file, This PC (plan, judgement, capture, reports), stand-alone scripts, import of answer files and WinKickOff profiles; tests on the real data | 14.10.2026 |
 | Windows API | Reading the registry, the elevation, the locales, the Windows language and the local accounts with their groups; the native read of the whole catalog is tested on the Windows runner | 14.10.2026 |
@@ -482,7 +493,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | This PC | Features and capabilities read natively through DISM as administrator (0.8.0) | 18.10.2026 |
 | Native apply | Capabilities removed through DISM (0.9.0) and apps through the package API (0.10.0), named in the backup, not restored by an undo | 18.10.2026 |
 | Not yet | Script steps of rules and the profiles of other users applied from the window (the apply script does them) | |
-| Acceptance | Nothing of WinWeaver has been tried in a VM yet: the build of the answer file, the read of a PC and the scripts need the acceptance the predecessor had | |
+| Acceptance | Earlier versions were accepted by the customer in a VM: the generated answer file works, and a `.wwdiff` read from a real PC came back for bugs. Not accepted yet: the stand-alone scripts (apply, undo, return to defaults, audit) and the versions 0.4.0 to 0.11.0; the scenario of 18.10.2026 lists the steps | 18.10.2026 |
 
 Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and
 its inline toggles, and the secondary tabs of D; the search field grows into the free width of the navigation

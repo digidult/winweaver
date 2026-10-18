@@ -140,10 +140,7 @@ hakları daha sonra gelecek.
 
 ## MCP sunucusu
 
-**Menü, MCP sunucusu**, yapay zeka aracılarının profilleri okuduğu ve mod izin verdiğinde değiştirdiği
-sunucunun sekmesini açar. Sunucu okuma modunda başlar; düzenleme modu profilleri bellekte değiştirmesine,
-dosyalar modu ise profilleri kaydetmesine ve yanıt dosyasını yazmasına izin verir. Bu bilgisayarı okumak,
-her başlangıçta kapalı olan ayrı bir izin gerektirir.
+**Menü, MCP sunucusu**, yapay zekâ aracılarının profilleri okuduğu ve mod izin verdiğinde değiştirdiği sunucunun sekmesini açar. Sekme, programın yanındaki `mcp/default.wwmcp` yapılandırma dosyasını düzenler ve her değişiklikte kaydeder: bağlantı noktası ve belirteç, mod (read yalnızca okur, edit profilleri bellekte değiştirir, files ayrıca onları kaydeder ve yanıt dosyasını yazar), bu bilgisayarı okuma, kayıt defterini okuma veya değiştirme ve yer imlerini ile katalogları değiştirme izinleri, sunucunun başladığı profil ve ayrıntılı günlük. **Aç** başka bir `.wwmcp` dosyası alır, **Farklı kaydet** bir kopya oluşturur; `winweaver --mcp FILE` pencere olmadan dosyanın söylediği gibi hizmet verir. Çalışan sunucunun günlüğü her çağrıyı listeler; **Ayrıntıları göster** sağında seçili çağrının argümanlarını ve yanıtını, andığı kurallara, profillere, kataloglara ve kayıt defteri anahtarlarına giden düğmelerle gösteren bir panel açar. Sunucunun günlüğü `logs/mcp-<tarih>.jsonl` dosyasıdır, satır başına bir JSON nesnesi; varsayılan olarak kapalı ayrıntılı günlük, her isteği ve yanıtı parolalar, anahtarlar ve belirteçler olmadan eksiksiz tutar.
 
 ## Oluşturucu
 
@@ -171,6 +168,9 @@ yazılır: `--renderer=directx`.
 | `--registry NAME` | `--mcp` ile: `off` (varsayılan), `read` araçların kayıt defterini okumasına, `write` değiştirmesine de izin verir |
 | `--edit-library` | `--mcp` ile: araçlar yer imlerini ve katalog dosyalarını değiştirebilir; okumak her zaman serbesttir |
 | `--profile NAME` | `--mcp` ile: bir hazır ayar veya `profiles/` içindeki bir profil geçerli profil olur |
+| `--mcp FILE` | MCP'yi pencere olmadan bir yapılandırma dosyasının söylediği gibi sunar: bir `.wwmcp` dosyasının yolu veya programın yanındaki `mcp` klasöründen bir ad |
+| `--config FILE` | `--mcp stdio` veya `--mcp http` ile: bir yapılandırma dosyasının ayarları, belirteç de; diğer seçenekler onları bu başlatma için değiştirir |
+| `--detailed-log` | `--mcp` ile: günlük her isteği ve yanıtı parolalar, anahtarlar ve belirteçler olmadan eksiksiz tutar |
 | `--version` | Sürümü yazdırır |
 | `--check-catalog` | Yerleşik kataloğu çevirileriyle yükler ve sorunlarını yazdırır |
 | `--help` | Parametre listesini yazdırır |
@@ -199,7 +199,7 @@ konsola ve `logs/` klasörüne gider.
 
 `settings.json` (dil, tema, son kullanılan dosyalar, son oturumun sekmeleri), `profiles/`
 (profilleriniz), `output/` (yanıt dosyası ve betikler), `drafts/` (bir sonraki başlangıçta geri yüklenen
-kaydedilmemiş değişiklikler), `logs/` (programın yaptıkları), `bookmarks.wwmarks`. Başka hiçbir yere bir
+kaydedilmemiş değişiklikler), `mcp/` (MCP sunucusunun yapılandırmaları), `logs/` (programın yaptıkları), `bookmarks.wwmarks`. Başka hiçbir yere bir
 şey yazılmaz.
 
 ## Henüz yok

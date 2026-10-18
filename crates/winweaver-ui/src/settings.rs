@@ -54,8 +54,11 @@ pub struct Settings {
     /// The files of the tabs open at the last close, and the active one among them.
     pub open_tabs: Vec<PathBuf>,
     pub active_tab: usize,
-    /// The port and the token of the MCP server of the window.
+    /// The port and the token of the MCP server of an earlier version: read once to make
+    /// `mcp/default.wwmcp`, never written again.
+    #[serde(skip_serializing)]
     pub mcp_port: u16,
+    #[serde(skip_serializing)]
     pub mcp_token: String,
     /// The ids of the imports of policy templates that are loaded; the other catalog files of
     /// imports/ are never read. `None` in the settings of an earlier version, whose imports were

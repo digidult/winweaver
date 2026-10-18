@@ -1,5 +1,5 @@
 //! The tree of a profile and of a catalog tab (`docs/spec/01-ui.md` sections 6.1 and 12): rows
-//! painted in the look of the mockups, one stop of the Tab key for the whole tree and the keys
+//! painted in the look of the window, one stop of the Tab key for the whole tree and the keys
 //! inside it: the arrows, Home and End, Page Up and Page Down, Space for the check box, Enter for
 //! a group. A click on a row gives the tree the keyboard focus, so the keys go on from there.
 

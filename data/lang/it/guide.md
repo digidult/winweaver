@@ -144,10 +144,7 @@ delle chiavi arriveranno più avanti.
 
 ## Il server MCP
 
-**Menu, Server MCP** apre la scheda del server tramite il quale gli agenti di IA leggono i profili e,
-quando la modalità lo consente, li modificano. Il server si avvia in modalità lettura; modifica gli
-consente di cambiare i profili in memoria, file gli consente di salvarli e di scrivere il file di
-risposte. La lettura di questo PC richiede un'autorizzazione a parte, disattivata a ogni avvio.
+**Menu, Server MCP** apre la scheda del server attraverso cui gli agenti di IA leggono i profili e, se la modalità lo consente, li cambiano. La scheda modifica un file di configurazione, `mcp/default.wwmcp` accanto al programma, e lo salva a ogni modifica: la porta e il token, la modalità (read legge soltanto, edit cambia i profili in memoria, files li salva anche e scrive il file di risposte), i permessi di leggere questo PC, di leggere o cambiare il registro e di cambiare i segnalibri e i cataloghi, il profilo con cui il server parte e il log dettagliato. **Apri** prende un altro file `.wwmcp` e **Salva come** ne fa una copia; `winweaver --mcp FILE` serve senza la finestra come dice il file. Il registro del server in funzione elenca ogni chiamata; **Mostra i dettagli** apre alla sua destra un pannello con gli argomenti e la risposta della chiamata scelta e pulsanti verso le regole, i profili, i cataloghi e le chiavi del registro che cita. Il log del server è `logs/mcp-<data>.jsonl`, un oggetto JSON per riga; il log dettagliato, spento per impostazione predefinita, conserva ogni richiesta e risposta per intero, senza password, chiavi e token.
 
 ## Il renderer
 
@@ -175,6 +172,9 @@ in `logs/` indica con che cosa disegna la finestra.
 | `--registry NAME` | Con `--mcp`: `off` (predefinito), `read` lascia leggere il registro agli strumenti, `write` anche modificarlo |
 | `--edit-library` | Con `--mcp`: gli strumenti possono modificare segnalibri e file di catalogo; leggerli è sempre consentito |
 | `--profile NAME` | Con `--mcp`: una preimpostazione o un profilo di `profiles/` diventa quello corrente |
+| `--mcp FILE` | Serve MCP senza la finestra come dice un file di configurazione: un percorso a un file `.wwmcp` o un nome della cartella `mcp` accanto al programma |
+| `--config FILE` | Con `--mcp stdio` o `--mcp http`: le impostazioni di un file di configurazione, anche il token; le altre opzioni le cambiano per questo avvio |
+| `--detailed-log` | Con `--mcp`: il log conserva ogni richiesta e risposta per intero, senza password, chiavi e token |
 | `--version` | Stampa la versione |
 | `--check-catalog` | Carica il catalogo integrato con le sue traduzioni e stampa i loro problemi |
 | `--help` | Stampa l'elenco dei parametri |
@@ -203,7 +203,7 @@ vanno nella console da cui è stato avviato il programma e in `logs/`.
 
 `settings.json` (lingua, tema, file recenti, le schede dell'ultima sessione), `profiles/` (i tuoi
 profili), `output/` (il file di risposte e gli script), `drafts/` (le modifiche non salvate, ripristinate
-all'avvio successivo), `logs/` (cosa ha fatto il programma), `bookmarks.wwmarks`. Il programma non
+all'avvio successivo), `mcp/` (le configurazioni del server MCP), `logs/` (cosa ha fatto il programma), `bookmarks.wwmarks`. Il programma non
 scrive nulla altrove.
 
 ## Non ancora disponibile
