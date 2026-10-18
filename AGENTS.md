@@ -482,7 +482,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | This PC | Features and capabilities read natively through DISM as administrator (0.8.0) | 18.10.2026 |
 | Native apply | Capabilities removed through DISM (0.9.0) and apps through the package API (0.10.0), named in the backup, not restored by an undo | 18.10.2026 |
 | Not yet | Script steps of rules and the profiles of other users applied from the window (the apply script does them) | |
-| Acceptance | Nothing of WinWeaver has been tried in a VM yet: the build of the answer file, the read of a PC and the scripts need the acceptance the predecessor had | |
+| Acceptance | Earlier versions were accepted by the customer in a VM: the generated answer file works, and a `.wwdiff` read from a real PC came back for bugs. Not accepted yet: the stand-alone scripts (apply, undo, return to defaults, audit) and the versions 0.4.0 to 0.11.0; the scenario of 18.10.2026 lists the steps | 18.10.2026 |
 
 Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and
 its inline toggles, and the secondary tabs of D; the search field grows into the free width of the navigation
