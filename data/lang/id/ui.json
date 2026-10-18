@@ -531,5 +531,18 @@
   "Read this PC: the tab of the profile was closed": "Baca PC ini: tab profil sudah ditutup",
   "Check on this PC: the tab of the profile was closed": "Pemeriksaan di PC ini: tab profil sudah ditutup",
   "{n} steps are left to the stand-alone script (scripts, the profiles of other users, values without a known Windows default).": "{n} langkah diserahkan ke skrip mandiri (skrip, profil pengguna lain, nilai tanpa default Windows yang diketahui).",
-  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "{n} langkah menghapus aplikasi atau kemampuan Windows; Batalkan perubahan tidak mengembalikannya."
+  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "{n} langkah menghapus aplikasi atau kemampuan Windows; Batalkan perubahan tidak mengembalikannya.",
+  "Find": "Cari",
+  "Keys": "Kunci",
+  "Values": "Nilai",
+  "Match whole string only": "Hanya seluruh string",
+  "Text in the names or the data": "Teks di nama atau data",
+  "Searching under {root}: {n} keys read": "Mencari di bawah {root}: {n} kunci dibaca",
+  "{hits} found under {root} in {keys} keys": "{hits} ditemukan di bawah {root} dalam {keys} kunci",
+  "stopped or at the limit, so there may be more": "dihentikan atau mencapai batas, jadi mungkin masih ada lagi",
+  "{n} keys could not be read": "{n} kunci tidak dapat dibaca",
+  "Searches under the selected key: {root}": "Mencari di bawah kunci terpilih: {root}",
+  "Search the registry: type a text and choose what to look at": "Cari di registri: ketik teks dan pilih tempat mencari",
+  "The search did not start: {e}": "Pencarian tidak dimulai: {e}",
+  "The search of the registry failed; the log names the error": "Pencarian di registri gagal; log menyebutkan kesalahannya"
 }

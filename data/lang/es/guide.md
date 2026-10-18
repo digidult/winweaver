@@ -139,8 +139,10 @@ REG_BINARY), la ruta en la fila de arriba. Un doble clic edita un valor; Nueva c
 Eliminar están en la barra, y una eliminación pide confirmación antes. Las claves del equipo
 (HKEY_LOCAL_MACHINE) solo cambian cuando WinWeaver se ejecuta como administrador. El botón junto a una clave
 en **Qué escribe** la abre aquí. **Marcador** guarda la clave y el valor con un comentario, y el marcador
-muestra las reglas que la escriben. Los permisos de las claves y la búsqueda en el registro llegarán más
-tarde.
+muestra las reglas que la escriben. **Buscar** en la barra busca bajo la clave elegida como la búsqueda
+de regedit: en los nombres de las claves, los nombres de los valores y los datos, solo la cadena completa si
+se pide. La búsqueda se hace en segundo plano, **Detener** la termina y un clic en un lugar encontrado lo
+muestra. Los permisos de las claves llegarán más tarde.
 
 ## El servidor MCP
 

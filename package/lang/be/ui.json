@@ -531,5 +531,18 @@
   "Read this PC: the tab of the profile was closed": "Чытанне гэтага ПК: укладка профілю была закрыта",
   "Check on this PC: the tab of the profile was closed": "Праверка на гэтым ПК: укладка профілю была закрыта",
   "{n} steps are left to the stand-alone script (scripts, the profiles of other users, values without a known Windows default).": "Крокаў для асобнага скрыпту: {n} (скрыпты, профілі іншых карыстальнікаў, значэнні без вядомага прадвызначанага значэння Windows).",
-  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "Крокаў, якія выдаляюць праграмы або магчымасці Windows: {n}; адмена іх не верне."
+  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "Крокаў, якія выдаляюць праграмы або магчымасці Windows: {n}; адмена іх не верне.",
+  "Find": "Знайсці",
+  "Keys": "Ключы",
+  "Values": "Значэнні",
+  "Match whole string only": "Толькі радок цалкам",
+  "Text in the names or the data": "Тэкст у імёнах або даных",
+  "Searching under {root}: {n} keys read": "Пошук пад {root}: прачытана ключоў: {n}",
+  "{hits} found under {root} in {keys} keys": "Знойдзена пад {root}: {hits}, у ключах: {keys}",
+  "stopped or at the limit, so there may be more": "спынена або дасягнута мяжа, таму можа быць больш",
+  "{n} keys could not be read": "Не ўдалося прачытаць ключоў: {n}",
+  "Searches under the selected key: {root}": "Шукае пад выбраным ключом: {root}",
+  "Search the registry: type a text and choose what to look at": "Пошук у рэестры: увядзіце тэкст і выберыце, дзе шукаць",
+  "The search did not start: {e}": "Пошук не запусціўся: {e}",
+  "The search of the registry failed; the log names the error": "Пошук у рэестры не ўдаўся; памылка запісана ў журнал"
 }

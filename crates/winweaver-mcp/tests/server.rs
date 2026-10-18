@@ -50,6 +50,8 @@ fn the_registry_tools_are_off_until_allowed() {
         error_kind(&s, "read_registry_key", json!({ "path": "HKCU" })),
         "not_allowed"
     );
+    let any = json!({ "path": "HKCU", "text": "x" });
+    assert_eq!(error_kind(&s, "search_registry", any), "not_allowed");
     s.set_registry(RegistryAccess::Read);
     ok(&s, "read_registry_key", json!({ "path": "HKCU" }));
     assert_eq!(
@@ -68,6 +70,20 @@ fn the_registry_tools_are_off_until_allowed() {
         read["values"][0]["data"],
         json!({ "type": "REG_DWORD", "data": 16 })
     );
+    let find = json!({ "path": "HKCU\\Software", "text": "winweavertest" });
+    let found = ok(&s, "search_registry", find);
+    assert_eq!(
+        found["hits"][0]["path"],
+        json!("HKEY_CURRENT_USER\\Software\\WinWeaverTest")
+    );
+    assert_eq!(found["complete"], json!(true));
+    let number = json!({ "path": key, "text": "0x10", "keys": false, "whole": true });
+    assert_eq!(
+        ok(&s, "search_registry", number)["hits"][0]["value"],
+        "N"
+    );
+    let empty = json!({ "path": key, "text": " " });
+    assert_eq!(error_kind(&s, "search_registry", empty), "invalid");
     assert_eq!(
         error_kind(
             &s,
@@ -213,7 +229,7 @@ fn the_protocol_answers_and_lists_the_tools() {
         .iter()
         .map(|t| t["name"].as_str().unwrap())
         .collect();
-    assert_eq!(names.len(), 33, "{names:?}");
+    assert_eq!(names.len(), 34, "{names:?}");
     for n in [
         "get_status",
         "set_rule",

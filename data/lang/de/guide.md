@@ -141,8 +141,11 @@ REG_BINARY), der Pfad in der Zeile darüber. Ein Doppelklick bearbeitet einen We
 Wert, Bearbeiten und Löschen stehen in der Leiste, und ein Löschen fragt zuerst. Schlüssel des Computers
 (HKEY_LOCAL_MACHINE) ändern sich nur, wenn WinWeaver als Administrator läuft. Die Schaltfläche neben einem
 Schlüssel in **Was es schreibt** öffnet ihn hier. **Lesezeichen** hält den Schlüssel und den Wert mit einem
-Kommentar fest, und das Lesezeichen nennt die Regeln, die ihn schreiben. Die Rechte von Schlüsseln und eine
-Suche in der Registrierung kommen später.
+Kommentar fest, und das Lesezeichen nennt die Regeln, die ihn schreiben. **Suchen** in der
+Leiste sucht unter dem gewählten Schlüssel wie die Suche von regedit: in den Namen von Schlüsseln, den Namen
+von Werten und den Daten, auf Wunsch nur nach der ganzen Zeichenfolge. Die Suche läuft im Hintergrund,
+**Beenden** bricht sie ab, und ein Klick auf eine Fundstelle zeigt sie. Die Rechte von Schlüsseln kommen
+später.
 
 ## Der MCP-Server
 

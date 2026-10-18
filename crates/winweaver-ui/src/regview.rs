@@ -1,13 +1,79 @@
 //! The registry tab (customer list of 18.10.2026, item 9): the keys of this PC as a tree on the left,
-//! the values of the selected key on the right, an address row on top and an editor of a value in
-//! the types of regedit. The rights of keys and a search of the registry are not there yet; their
-//! buttons say so. Reading and writing go through acts applied after the frame, with the registry
-//! of the window (`App::registry`).
+//! the values of the selected key on the right, an address row on top, an editor of a value in the
+//! types of regedit and a search under the selected key at the bottom, which runs in a thread of
+//! its own. The rights of keys are not there yet; their button says so. Reading and writing go
+//! through acts applied after the frame, with the registry of the window (`App::registry`).
 
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::mpsc::Receiver;
 
 use eframe::egui;
-use winweaver_core::registry::{self, HIVES, Key, NEW_TYPES, Registry};
+use winweaver_core::registry::{self, Found, HIVES, Key, NEW_TYPES, Registry};
+
+/// The most places a search of the tab lists.
+pub const SEARCH_LIMIT: usize = 5000;
+
+/// A search that runs: its stop, the keys read so far and its result when it ends.
+pub struct Running {
+    pub stop: Arc<AtomicBool>,
+    pub read: Arc<AtomicUsize>,
+    pub result: Receiver<Found>,
+}
+
+/// A search nobody waits for any more (its tab closed) stops at the next key.
+impl Drop for Running {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::Relaxed);
+    }
+}
+
+/// The search of the tab, as Find of regedit: what it looks for and at, and the places found.
+pub struct Search {
+    pub open: bool,
+    pub text: String,
+    pub keys: bool,
+    pub values: bool,
+    pub data: bool,
+    pub whole: bool,
+    /// The key the last search went under.
+    pub root: String,
+    pub running: Option<Running>,
+    pub found: Option<Found>,
+    /// The text field takes the focus at the next frame.
+    pub focus: bool,
+}
+
+impl Default for Search {
+    fn default() -> Self {
+        Self {
+            open: false,
+            text: String::new(),
+            keys: true,
+            values: true,
+            data: true,
+            whole: false,
+            root: String::new(),
+            running: None,
+            found: None,
+            focus: false,
+        }
+    }
+}
+
+impl Search {
+    /// What the search looks for, from the fields.
+    pub fn query(&self) -> registry::Query {
+        registry::Query {
+            text: self.text.trim().to_owned(),
+            keys: self.keys,
+            values: self.values,
+            data: self.data,
+            whole: self.whole,
+        }
+    }
+}
 
 use crate::i18n::{tr, trf};
 use crate::{Act, style, tree};
@@ -46,6 +112,7 @@ pub struct RegistryDoc {
     pub edit: Option<Edit>,
     /// The selected key comes into view at the next frame.
     pub reveal: bool,
+    pub search: Search,
 }
 
 /// The name of the default value as regedit shows it.
@@ -69,6 +136,7 @@ impl RegistryDoc {
             value: None,
             edit: None,
             reveal: false,
+            search: Search::default(),
         };
         doc.go(reg, path, value);
         doc
@@ -234,6 +302,17 @@ pub fn registry_view(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Ac
                 }
             });
         });
+    if doc.search.open {
+        egui::Panel::bottom("registry-search")
+            .resizable(true)
+            .default_size(220.0)
+            .frame(
+                egui::Frame::new()
+                    .fill(p.card)
+                    .inner_margin(egui::Margin::symmetric(10, 6)),
+            )
+            .show(ui, |ui| search_panel(ui, doc, acts));
+    }
     egui::Panel::left("registry-tree")
         .resizable(true)
         .default_size(360.0)
@@ -275,6 +354,86 @@ pub fn registry_view(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Ac
         )
         .show(ui, |ui| values(ui, doc, acts));
     editor(ui.ctx(), doc, acts);
+}
+
+/// What a search found, in a line.
+fn found_text(found: &Found, root: &str) -> String {
+    let mut text = trf(
+        "{hits} found under {root} in {keys} keys",
+        &[
+            ("hits", &found.hits.len()),
+            ("root", &root),
+            ("keys", &found.keys),
+        ],
+    );
+    if !found.complete {
+        text.push_str("; ");
+        text.push_str(tr("stopped or at the limit, so there may be more"));
+    }
+    if found.unreadable > 0 {
+        let unread = trf("{n} keys could not be read", &[("n", &found.unreadable)]);
+        text.push_str("; ");
+        text.push_str(&unread);
+    }
+    text
+}
+
+/// The search at the bottom of the tab: the text and what it looks at, then the places found; a
+/// click on one shows it.
+fn search_panel(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
+    let path = doc.path.clone();
+    let s = &mut doc.search;
+    ui.horizontal_wrapped(|ui| {
+        ui.label(tr("Find"));
+        let edit = ui.add(
+            egui::TextEdit::singleline(&mut s.text)
+                .desired_width(260.0)
+                .hint_text(tr("Text in the names or the data")),
+        );
+        if s.focus {
+            edit.request_focus();
+            s.focus = false;
+        }
+        let enter = edit.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+        ui.checkbox(&mut s.keys, tr("Keys"));
+        ui.checkbox(&mut s.values, tr("Values"));
+        ui.checkbox(&mut s.data, tr("Data"));
+        ui.checkbox(&mut s.whole, tr("Match whole string only"));
+        if s.running.is_some() {
+            if ui.button(tr("Stop")).clicked() {
+                acts.push(Act::RegistryFindStop);
+            }
+        } else if ui.button(tr("Find")).clicked() || enter {
+            acts.push(Act::RegistryFind);
+        }
+    });
+    let status = match (&s.running, &s.found) {
+        (Some(r), _) => trf(
+            "Searching under {root}: {n} keys read",
+            &[("root", &s.root), ("n", &r.read.load(Ordering::Relaxed))],
+        ),
+        (None, Some(found)) => found_text(found, &s.root),
+        (None, None) => trf(
+            "Searches under the selected key: {root}",
+            &[("root", &path)],
+        ),
+    };
+    ui.weak(status);
+    let Some(found) = &s.found else {
+        return;
+    };
+    egui::ScrollArea::vertical().auto_shrink(false).show(ui, |ui| {
+        for hit in &found.hits {
+            let text = match &hit.value {
+                Some(v) => format!("{}    {}", hit.path, value_title(v)),
+                None => hit.path.clone(),
+            };
+            let label = egui::RichText::new(text).monospace();
+            if ui.selectable_label(false, label).clicked() {
+                acts.push(Act::RegistryGo(hit.path.clone(), hit.value.clone()));
+            }
+        }
+    });
 }
 
 /// The values of the selected key: a click selects, a double click edits.

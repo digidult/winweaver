@@ -130,8 +130,10 @@ beserta jenisnya (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG
 atas. Klik ganda menyunting nilai; Kunci baru, Nilai baru, Sunting, dan Hapus ada di bilah, dan penghapusan
 meminta konfirmasi lebih dulu. Kunci mesin (HKEY_LOCAL_MACHINE) hanya berubah bila WinWeaver berjalan sebagai
 administrator. Tombol di samping kunci pada **Yang ditulis** membukanya di sini. **Penanda** menyimpan kunci dan
-nilai dengan komentar, dan penanda itu menampilkan aturan yang menulisnya. Hak akses kunci dan pencarian di
-registri menyusul.
+nilai dengan komentar, dan penanda itu menampilkan aturan yang menulisnya. **Cari** di bilah mencari di bawah kunci
+terpilih seperti pencarian regedit: di nama kunci, nama nilai, dan data, hanya seluruh string bila diminta.
+Pencarian berjalan di latar belakang, **Hentikan** menghentikannya, dan klik pada tempat yang ditemukan
+menampilkannya. Hak akses kunci menyusul.
 
 ## Server MCP
 

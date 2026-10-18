@@ -145,8 +145,10 @@ le chemin dans la ligne du dessus. Un double clic modifie une valeur ; Nouvelle 
 Modifier et Supprimer sont dans la barre, et une suppression demande d'abord confirmation. Les clés de la
 machine (HKEY_LOCAL_MACHINE) ne changent que si WinWeaver tourne en administrateur. Le bouton à côté d'une
 clé dans **Ce qu'elle écrit** l'ouvre ici. **Signet** garde la clé et la valeur avec un commentaire, et le
-signet liste les règles qui l'écrivent. Les droits des clés et une recherche dans le registre viendront
-plus tard.
+signet liste les règles qui l'écrivent. **Rechercher** dans la barre cherche sous la clé choisie comme la
+recherche de regedit : dans les noms des clés, les noms des valeurs et les données, la chaîne entière
+uniquement si on le demande. La recherche se fait en arrière-plan, **Arrêter** l'interrompt, et un clic sur
+un endroit trouvé l'affiche. Les droits des clés viendront plus tard.
 
 ## Le serveur MCP
 

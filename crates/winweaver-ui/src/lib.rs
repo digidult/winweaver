@@ -354,6 +354,12 @@ pub enum Act {
     RegistryDelete(String, Option<String>),
     /// Bookmarks the key and the value of the registry tab.
     BookmarkRegistry,
+    /// Shows or hides the search of the registry tab.
+    RegistrySearch,
+    /// Starts the search of the registry tab under its selected key.
+    RegistryFind,
+    /// Stops the search of the registry tab.
+    RegistryFindStop,
     /// Opens the editor of a loaded import or of the file of a catalog tab.
     EditCatalog(CatalogRef),
     /// Makes an empty catalog file among the imports and opens its editor.
@@ -3043,6 +3049,20 @@ impl App {
                     }
                 }
                 Act::RegistrySave => self.registry_save(),
+                Act::RegistrySearch => {
+                    if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+                        d.search.open = !d.search.open;
+                        d.search.focus = d.search.open;
+                    }
+                }
+                Act::RegistryFind => self.registry_find(),
+                Act::RegistryFindStop => {
+                    if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active)
+                        && let Some(running) = &d.search.running
+                    {
+                        running.stop.store(true, std::sync::atomic::Ordering::Relaxed);
+                    }
+                }
                 Act::AskRegistryDelete => self.ask_registry_delete(),
                 Act::RegistryDelete(path, value) => self.registry_delete(&path, value.as_deref()),
                 Act::BookmarkRegistry => self.bookmark_registry(),
@@ -3368,6 +3388,81 @@ impl App {
             }
             self.refresh_import_list();
             self.rebuild_catalog();
+        }
+    }
+
+    /// Starts the search of the registry tab in front under its selected key, in a thread of its
+    /// own; `poll_registry_search` takes the result.
+    fn registry_find(&mut self) {
+        let reg = self.registry.clone();
+        let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        let query = d.search.query();
+        if d.search.running.is_some() {
+            return;
+        }
+        if query.text.is_empty() || !(query.keys || query.values || query.data) {
+            self.status =
+                tr("Search the registry: type a text and choose what to look at").to_owned();
+            return;
+        }
+        let root = d.path.clone();
+        let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let read = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let (tx, rx) = std::sync::mpsc::channel();
+        let (thread_stop, thread_read, thread_root) = (stop.clone(), read.clone(), root.clone());
+        let started = std::thread::Builder::new()
+            .name("registry-search".to_owned())
+            .spawn(move || {
+                let limit = regview::SEARCH_LIMIT;
+                let found = winweaver_core::registry::search(
+                    &*reg,
+                    &thread_root,
+                    &query,
+                    limit,
+                    usize::MAX,
+                    &thread_stop,
+                    &thread_read,
+                );
+                let _ = tx.send(found);
+            });
+        if let Err(e) = started {
+            self.status = trf("The search did not start: {e}", &[("e", &e)]);
+            return;
+        }
+        d.search.root = root;
+        d.search.found = None;
+        d.search.running = Some(regview::Running {
+            stop,
+            read,
+            result: rx,
+        });
+    }
+
+    /// Takes the result of a finished search of a registry tab.
+    fn poll_registry_search(&mut self, ctx: &egui::Context) {
+        for doc in &mut self.docs {
+            let Doc::Registry(d) = doc else {
+                continue;
+            };
+            let Some(running) = &d.search.running else {
+                continue;
+            };
+            match running.result.try_recv() {
+                Ok(found) => {
+                    d.search.running = None;
+                    d.search.found = Some(found);
+                }
+                Err(std::sync::mpsc::TryRecvError::Empty) => {
+                    ctx.request_repaint_after(std::time::Duration::from_millis(200));
+                }
+                Err(std::sync::mpsc::TryRecvError::Disconnected) => {
+                    d.search.running = None;
+                    self.status =
+                        tr("The search of the registry failed; the log names the error").to_owned();
+                }
+            }
         }
     }
 
@@ -4445,6 +4540,7 @@ impl eframe::App for App {
         self.poll_running(ui.ctx());
         self.poll_import(ui.ctx());
         self.poll_pc_read(ui.ctx());
+        self.poll_registry_search(ui.ctx());
         let closing = self.exit || ui.ctx().input(|i| i.viewport().close_requested());
         self.write_drafts(closing);
         if closing {
@@ -5917,5 +6013,54 @@ and kept"
             tr("Check on this PC: the tab of the profile was closed")
         );
         assert_eq!(app.docs.len(), 2);
+    }
+
+    /// The search of the registry tab runs in a thread of its own under the selected key and
+    /// lists what it finds; a click on a place shows it.
+    #[test]
+    fn the_registry_tab_searches_under_its_key() {
+        use winweaver_core::registry::{Data, MemoryRegistry, Registry};
+        fn search(app: &mut App) -> &mut regview::Search {
+            match app.docs.get_mut(app.active) {
+                Some(Doc::Registry(d)) => &mut d.search,
+                _ => panic!("the registry tab"),
+            }
+        }
+        let catalog = Catalog::embedded().unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        let reg = std::sync::Arc::new(MemoryRegistry::default());
+        let key = "HKEY_CURRENT_USER\\Software\\WinWeaverSearch";
+        let inner = format!("{key}\\Inner");
+        let blue = Data::Sz("dark blue".to_owned());
+        reg.create_key(&inner).unwrap();
+        reg.set(&inner, "Colour", &blue).unwrap();
+        app.registry = reg;
+        app.apply(vec![Act::OpenRegistry(key.to_owned(), None)]);
+        app.apply(vec![Act::RegistrySearch]);
+        assert!(search(&mut app).open);
+        // An empty text starts nothing.
+        app.apply(vec![Act::RegistryFind]);
+        assert!(search(&mut app).running.is_none());
+        search(&mut app).text = "BLUE".to_owned();
+        app.apply(vec![Act::RegistryFind]);
+        assert!(search(&mut app).running.is_some());
+        let ctx = egui::Context::default();
+        let started = std::time::Instant::now();
+        while search(&mut app).running.is_some() {
+            assert!(started.elapsed() < std::time::Duration::from_secs(30));
+            std::thread::sleep(std::time::Duration::from_millis(10));
+            app.poll_registry_search(&ctx);
+        }
+        let found = search(&mut app).found.clone().expect("a result");
+        assert!(found.complete);
+        assert_eq!(found.hits.len(), 1);
+        assert_eq!(found.hits[0].path, inner);
+        assert_eq!(found.hits[0].value.as_deref(), Some("Colour"));
+        let hit = found.hits[0].clone();
+        app.apply(vec![Act::RegistryGo(hit.path, hit.value)]);
+        let Some(Doc::Registry(d)) = app.docs.get(app.active) else {
+            panic!("the registry tab");
+        };
+        assert_eq!(d.value.as_deref(), Some("Colour"));
     }
 }

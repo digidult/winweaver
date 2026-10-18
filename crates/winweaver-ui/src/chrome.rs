@@ -481,9 +481,11 @@ impl App {
                 if tool(ui, "\u{2605}", tr("Bookmark"), "", true) {
                     acts.push(Act::BookmarkRegistry);
                 }
-                // The rights of keys and a search of the registry come later.
+                if tool(ui, "\u{1F50D}", tr("Find"), "", true) {
+                    acts.push(Act::RegistrySearch);
+                }
+                // The rights of keys come later.
                 let _ = tool(ui, "\u{1F512}", tr("Permissions (coming soon)"), "", false);
-                let _ = tool(ui, "\u{1F50D}", tr("Search (coming soon)"), "", false);
             }
             Some(Doc::Settings) => {}
             None => {

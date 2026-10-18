@@ -137,8 +137,10 @@ percorso nella riga sopra. Un doppio clic modifica un valore; Nuova chiave, Nuov
 Elimina sono nella barra, e un'eliminazione chiede prima conferma. Le chiavi del computer
 (HKEY_LOCAL_MACHINE) cambiano solo se WinWeaver gira come amministratore. Il pulsante accanto a una chiave
 in **Che cosa scrive** la apre qui. **Segnalibro** conserva la chiave e il valore con un commento, e il
-segnalibro elenca le regole che la scrivono. I permessi delle chiavi e la ricerca nel registro arriveranno
-più avanti.
+segnalibro elenca le regole che la scrivono. **Trova** nella barra cerca sotto la chiave scelta come la ricerca di
+regedit: nei nomi delle chiavi, nei nomi dei valori e nei dati, solo la stringa intera se richiesto. La
+ricerca avviene in background, **Arresta** la interrompe e un clic su un punto trovato lo mostra. I permessi
+delle chiavi arriveranno più avanti.
 
 ## Il server MCP
 

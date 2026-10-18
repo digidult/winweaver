@@ -133,8 +133,10 @@ değerleri türleriyle (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWOR
 satırda. Çift tıklama bir değeri düzenler; Yeni anahtar, Yeni değer, Düzenle ve Sil çubuktadır ve silme önce
 onay ister. Bilgisayarın anahtarları (HKEY_LOCAL_MACHINE) yalnızca WinWeaver yönetici olarak çalıştığında
 değişir. **Ne yazar** içindeki bir anahtarın yanındaki düğme onu burada açar. **Yer imi** anahtarı ve değeri bir
-yorumla saklar, yer imi de onu yazan kuralları listeler. Anahtarların hakları ve kayıt defterinde arama daha
-sonra gelecek.
+yorumla saklar, yer imi de onu yazan kuralları listeler. Çubuktaki **Bul** seçili anahtarın altında regedit'in
+araması gibi arar: anahtar adlarında, değer adlarında ve verilerde, istenirse yalnızca dizenin tamamında.
+Arama arka planda yürür, **Durdur** onu bitirir ve bulunan bir yere tıklamak onu gösterir. Anahtarların
+hakları daha sonra gelecek.
 
 ## MCP sunucusu
 

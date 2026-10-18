@@ -531,5 +531,18 @@
   "Read this PC: the tab of the profile was closed": "Читання цього ПК: вкладку профілю закрито",
   "Check on this PC: the tab of the profile was closed": "Перевірка на цьому ПК: вкладку профілю закрито",
   "{n} steps are left to the stand-alone script (scripts, the profiles of other users, values without a known Windows default).": "Кроків для окремого скрипту: {n} (скрипти, профілі інших користувачів, значення без відомого типового значення Windows).",
-  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "Кроків, що видаляють застосунки або можливості Windows: {n}; скасування їх не поверне."
+  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "Кроків, що видаляють застосунки або можливості Windows: {n}; скасування їх не поверне.",
+  "Find": "Знайти",
+  "Keys": "Ключі",
+  "Values": "Значення",
+  "Match whole string only": "Лише рядок повністю",
+  "Text in the names or the data": "Текст в іменах або даних",
+  "Searching under {root}: {n} keys read": "Пошук під {root}: прочитано ключів: {n}",
+  "{hits} found under {root} in {keys} keys": "Знайдено під {root}: {hits}, у ключах: {keys}",
+  "stopped or at the limit, so there may be more": "зупинено або досягнуто межі, тому може бути більше",
+  "{n} keys could not be read": "Не вдалося прочитати ключів: {n}",
+  "Searches under the selected key: {root}": "Шукає під вибраним ключем: {root}",
+  "Search the registry: type a text and choose what to look at": "Пошук у реєстрі: введіть текст і виберіть, де шукати",
+  "The search did not start: {e}": "Пошук не запустився: {e}",
+  "The search of the registry failed; the log names the error": "Пошук у реєстрі не вдався; помилку записано в журнал"
 }

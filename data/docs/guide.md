@@ -130,8 +130,10 @@ key on the right with their types (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWOR
 the path in the row above. A double click edits a value; New key, New value, Edit and Delete are in the
 bar, and a deletion asks first. Keys of the machine (HKEY_LOCAL_MACHINE) change only when WinWeaver runs
 as administrator. The button next to a key in **What it writes** opens it here. **Bookmark** keeps the key
-and the value with a comment, and the bookmark lists the rules that write it. The rights of keys and a
-search of the registry come later.
+and the value with a comment, and the bookmark lists the rules that write it. **Find** in the
+bar searches under the selected key as Find of regedit does: in the names of keys, the names of values and
+the data, by the whole string only when asked. The search runs in the background, **Stop** ends it, and a
+click on a place found shows it. The rights of keys come later.
 
 ## The MCP server
 

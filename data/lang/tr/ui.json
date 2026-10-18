@@ -531,5 +531,18 @@
   "Read this PC: the tab of the profile was closed": "Bu bilgisayarı okuma: profilin sekmesi kapatıldı",
   "Check on this PC: the tab of the profile was closed": "Bu bilgisayarda denetim: profilin sekmesi kapatıldı",
   "{n} steps are left to the stand-alone script (scripts, the profiles of other users, values without a known Windows default).": "{n} adım bağımsız betiğe bırakılır (betikler, diğer kullanıcıların profilleri, bilinen bir Windows varsayılanı olmayan değerler).",
-  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "{n} adım Windows uygulamalarını veya yeteneklerini kaldırır; Geri al onları geri getirmez."
+  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "{n} adım Windows uygulamalarını veya yeteneklerini kaldırır; Geri al onları geri getirmez.",
+  "Find": "Bul",
+  "Keys": "Anahtarlar",
+  "Values": "Değerler",
+  "Match whole string only": "Yalnızca dizenin tamamı",
+  "Text in the names or the data": "Adlarda veya verilerde metin",
+  "Searching under {root}: {n} keys read": "{root} altında aranıyor: {n} anahtar okundu",
+  "{hits} found under {root} in {keys} keys": "{root} altında {keys} anahtarda {hits} bulundu",
+  "stopped or at the limit, so there may be more": "durduruldu veya sınıra ulaşıldı, bu yüzden daha fazlası olabilir",
+  "{n} keys could not be read": "{n} anahtar okunamadı",
+  "Searches under the selected key: {root}": "Seçili anahtarın altında arar: {root}",
+  "Search the registry: type a text and choose what to look at": "Kayıt defterinde ara: bir metin yazın ve nerede aranacağını seçin",
+  "The search did not start: {e}": "Arama başlamadı: {e}",
+  "The search of the registry failed; the log names the error": "Kayıt defterinde arama başarısız oldu; hata günlükte yazılı"
 }

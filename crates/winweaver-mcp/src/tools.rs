@@ -2,6 +2,7 @@
 //! so that the instructions written for agents carry over.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicUsize};
 
 use serde_json::{Value, json};
 use winweaver_core::admx::{self, CatalogFile, CatalogHeader};
@@ -17,6 +18,9 @@ use crate::{Mode, RegistryAccess, Server, State, WsDoc};
 /// The longest text of one tool result; longer results are cut with a note.
 const TEXT_LIMIT: usize = 60_000;
 const LIST_LIMIT: usize = 200;
+/// The most places and keys a search of the registry gives and reads.
+const SEARCH_LIMIT: usize = 500;
+const SEARCH_KEYS: usize = 100_000;
 const PRESET_IDS: [&str; 4] = ["office", "strict", "laptop", "home"];
 /// The skill for agents, served as a resource.
 const SKILL: &str = include_str!("../../../agents/skills/winweaver/SKILL.md");
@@ -257,6 +261,22 @@ pub(crate) fn definitions() -> Vec<Value> {
             "read_registry_key",
             "Reads a key of the registry of this PC: its subkeys and its values with their types (REG_SZ, REG_EXPAND_SZ, REG_MULTI_SZ, REG_DWORD, REG_QWORD, REG_BINARY, REG_NONE). A path like HKEY_LOCAL_MACHINE\\Software or HKLM\\Software. Needs the option registry read or write.",
             schema(json!({ "path": s("The key") }), &["path"]),
+        ),
+        tool(
+            "search_registry",
+            "Searches a key of the registry of this PC and every key under it, as Find of regedit: the names of keys, the names of values and the data of values (texts and numbers), without regard to case. Gives the keys and values found (at most limit: 100 by default, 500 at most, within 100000 keys read) and whether every key was read. Needs the option registry read or write.",
+            schema(
+                json!({
+                    "path": s("The key to search under"),
+                    "text": s("The text looked for"),
+                    "keys": { "type": "boolean", "description": "Look at the names of keys; true by default" },
+                    "values": { "type": "boolean", "description": "Look at the names of values; true by default" },
+                    "data": { "type": "boolean", "description": "Look at the data of values; true by default" },
+                    "whole": { "type": "boolean", "description": "Match the whole name or data only; false by default" },
+                    "limit": { "type": "integer", "minimum": 1, "maximum": SEARCH_LIMIT }
+                }),
+                &["path", "text"],
+            ),
         ),
         tool(
             "set_registry_value",
@@ -1378,6 +1398,41 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
                 .read(&path)
                 .map_err(|e| fail("read_failed", e))?;
             Ok(json!(key))
+        }
+        "search_registry" => {
+            registry_allowed(state, false)?;
+            let path = text_arg(args, "path")?;
+            if winweaver_core::registry::normalize(&path).is_none() {
+                return Err(fail("invalid", format!("not a key of the registry: {path}")));
+            }
+            let flag = |name: &str, default: bool| {
+                args.get(name).and_then(Value::as_bool).unwrap_or(default)
+            };
+            let query = winweaver_core::registry::Query {
+                text: text_arg(args, "text")?.trim().to_owned(),
+                keys: flag("keys", true),
+                values: flag("values", true),
+                data: flag("data", true),
+                whole: flag("whole", false),
+            };
+            if query.text.is_empty() {
+                return Err(fail("invalid", "the argument text must not be empty"));
+            }
+            let limit = match args.get("limit").and_then(Value::as_u64) {
+                Some(n) => n.clamp(1, SEARCH_LIMIT as u64) as usize,
+                None => 100,
+            };
+            let (stop, read) = (AtomicBool::new(false), AtomicUsize::new(0));
+            let found = winweaver_core::registry::search(
+                &*server.registry,
+                &path,
+                &query,
+                limit,
+                SEARCH_KEYS,
+                &stop,
+                &read,
+            );
+            Ok(json!(found))
         }
         "set_registry_value" => {
             registry_allowed(state, true)?;

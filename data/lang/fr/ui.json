@@ -531,5 +531,18 @@
   "Read this PC: the tab of the profile was closed": "Lecture de ce PC : l'onglet du profil a été fermé",
   "Check on this PC: the tab of the profile was closed": "Vérification sur ce PC : l'onglet du profil a été fermé",
   "{n} steps are left to the stand-alone script (scripts, the profiles of other users, values without a known Windows default).": "Étapes laissées au script autonome : {n} (scripts, profils des autres utilisateurs, valeurs sans valeur par défaut connue de Windows).",
-  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "Étapes qui suppriment des applications ou des capacités de Windows : {n} ; l'annulation ne les rétablit pas."
+  "{n} steps remove apps or capabilities of Windows; Undo does not bring them back.": "Étapes qui suppriment des applications ou des capacités de Windows : {n} ; l'annulation ne les rétablit pas.",
+  "Find": "Rechercher",
+  "Keys": "Clés",
+  "Values": "Valeurs",
+  "Match whole string only": "Chaîne entière uniquement",
+  "Text in the names or the data": "Texte dans les noms ou les données",
+  "Searching under {root}: {n} keys read": "Recherche sous {root} : {n} clés lues",
+  "{hits} found under {root} in {keys} keys": "{hits} trouvés sous {root} dans {keys} clés",
+  "stopped or at the limit, so there may be more": "arrêtée ou à la limite, il peut donc y en avoir davantage",
+  "{n} keys could not be read": "{n} clés n'ont pas pu être lues",
+  "Searches under the selected key: {root}": "Recherche sous la clé choisie : {root}",
+  "Search the registry: type a text and choose what to look at": "Rechercher dans le registre : saisissez un texte et choisissez où chercher",
+  "The search did not start: {e}": "La recherche n'a pas démarré : {e}",
+  "The search of the registry failed; the log names the error": "La recherche dans le registre a échoué ; le journal indique l'erreur"
 }

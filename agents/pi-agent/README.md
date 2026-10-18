@@ -47,7 +47,7 @@ The MCP entry: in the WinWeaver window, MCP tab, "Start", then "Copy the client 
 `~/.pi/agent/mcp.json` unchanged. Keep the name `winweaver` and no other server in this file: codemode scripts can
 call every configured server.
 
-Check: `pi mcp list` shows `winweaver` connected with 33 tools; in pi, `/mcp` shows the state and errors and
+Check: `pi mcp list` shows `winweaver` connected with 34 tools; in pi, `/mcp` shows the state and errors and
 `/mcp reconnect winweaver` reconnects after a new token.
 
 ## 3. Network
