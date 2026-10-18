@@ -982,6 +982,10 @@ impl App {
                                         (tr("Languages").to_owned(), Sel::Form(Form::Languages))
                                     }
                                     Target::Profile => (doc.profile.name.clone(), Sel::None),
+                                    Target::Unknown => (
+                                        tr("Unknown options").to_owned(),
+                                        Sel::Group(crate::UNKNOWN_GROUP.to_owned()),
+                                    ),
                                 };
                                 if ui.link(label).clicked() {
                                     acts.push(Act::Reveal(sel));

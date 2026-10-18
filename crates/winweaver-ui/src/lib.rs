@@ -409,6 +409,8 @@ pub enum Act {
     CatalogExpand(String, bool),
     /// Shows a policy of an import (the import, the rule) in the tree of a profile.
     ShowInProfile(String, String),
+    /// Shows a group in the tree of the first profile tab.
+    ShowGroupInProfile(String),
     CancelRename,
     RenameImport(String, String),
     /// Prepare the native apply (false) or the return to the defaults (true) of the selection.
@@ -3333,6 +3335,15 @@ impl App {
                     }
                 }
                 Act::ShowInProfile(import, rule) => self.show_in_profile(&import, &rule),
+                Act::ShowGroupInProfile(group) => {
+                    match self.docs.iter().position(|d| matches!(d, Doc::Profile(_))) {
+                        Some(index) => {
+                            self.active = index;
+                            self.apply(vec![Act::Reveal(Sel::Group(group))]);
+                        }
+                        None => self.status = tr("Open a profile first").to_owned(),
+                    }
+                }
                 Act::CancelRename => self.renaming = None,
                 Act::RenameImport(id, name) => self.rename_import(&id, &name),
                 Act::PlanNative(revert) => self.plan_native(revert),
@@ -5268,7 +5279,7 @@ fn unknown_issues(profile: &Profile) -> Vec<Issue> {
     }
     vec![Issue {
         severity: Severity::Warning,
-        target: Target::Profile,
+        target: Target::Unknown,
         text: trf(
             "Open: {n} options of catalogs that are not loaded are kept in the profile and left out of the build",
             &[("n", &profile.unknown.len())],
@@ -6146,6 +6157,25 @@ and kept"
         let text = reg.security(key).unwrap();
         assert!(text.contains("(A;CI;KR;;;BU)"), "{text}");
         assert!(!open(&app), "the window closes");
+    }
+
+    #[test]
+    fn a_group_shows_in_the_profile_from_another_tab() {
+        let catalog = Catalog::embedded().unwrap();
+        let group = catalog
+            .groups()
+            .iter()
+            .find(|g| g.parent.is_some())
+            .map(|g| g.id.clone())
+            .unwrap();
+        let mut app = App::new(catalog, Vec::new(), Settings::default());
+        app.apply(vec![Act::OpenMarks, Act::ShowGroupInProfile(group.clone())]);
+        assert_eq!(app.active, 0, "the profile tab comes to the front");
+        let Some(Doc::Profile(doc)) = app.docs.first() else {
+            panic!("a profile");
+        };
+        assert_eq!(doc.sel, Sel::Group(group));
+        assert!(doc.reveal);
     }
 
     const SAMPLE_ADMX: &str = r#"<?xml version="1.0" encoding="utf-8"?>

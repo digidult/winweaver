@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
+Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
 the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
@@ -405,7 +405,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   select every group above, the crumb of a rule of a profile keeps the group it is shown in. The registry
   tab names the rules that write the selected key or value (`regview::Writers`, kept until the selection
   or the count of rules changes), the catalog editor opens a key in the registry tab and its policy in the
-  catalog tab and the profile, the places of an MCP call show the titles of rules.
+  catalog tab and the profile, the places of an MCP call show the titles of rules. The warning of the
+  unknown options has its own target (`validate::Target::Unknown`) and opens their group; the group of a
+  rule in the diff and bookmark tabs shows it in the first profile tab (`Act::ShowGroupInProfile`).
 - Every removal asks first (`App::ask`, Escape says no): an import, a bookmark of the bookmarks tab (the star
   of the navigation row stays a toggle), closing a tab discarding its changes, forgetting the recent files,
   renewing the MCP token.

@@ -24,6 +24,8 @@ pub enum Target {
     Accounts,
     Languages,
     Rule(String),
+    /// The options of catalogs that are not loaded (`Profile::unknown`).
+    Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,7 +56,7 @@ pub fn check(catalog: &Catalog, profile: &Profile, resolution: &Resolution) -> V
         push(
             &mut issues,
             Severity::Warning,
-            Target::Profile,
+            Target::Unknown,
             format!(
                 "{} options of catalogs that are not loaded are kept in the profile and left out of the build",
                 profile.unknown.len()

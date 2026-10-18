@@ -377,8 +377,16 @@ pub fn diff_detail(
                     });
                 }
                 if !item.group.is_empty() {
-                    ui.horizontal_wrapped(|ui| {
-                        style::chip(ui, &item.group, false);
+                    ui.horizontal_wrapped(|ui| match item.rule {
+                        // The group of a rule leads to it in the profile.
+                        Some(rule) => {
+                            if ui.link(item.group.as_str()).clicked() {
+                                acts.push(Act::ShowGroupInProfile(rule.group.clone()));
+                            }
+                        }
+                        None => {
+                            style::chip(ui, &item.group, false);
+                        }
                     });
                 }
             });
