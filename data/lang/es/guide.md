@@ -45,6 +45,26 @@ las páginas de documentación se abren del mismo modo, cada una en su propia pe
    administrador con una copia de seguridad, o guarda scripts independientes que aplican, revierten,
    auditan y deshacen en otros equipos.
 
+## El nombre del equipo
+
+En el formulario **Instalación** el nombre del equipo es aleatorio (como hace Windows de forma
+predeterminada), un nombre fijo o una plantilla que el archivo de respuesta expande en cada PC durante la
+instalación. Una plantilla contiene letras latinas, dígitos y guiones alrededor de estos marcadores:
+
+| Marcador | Qué da |
+|---|---|
+| `{serial}`, `{serial:N}` | El número de serie del equipo según su firmware, sus letras y dígitos en mayúsculas; `:N` conserva sus últimos N caracteres, sin él todos (hasta 15) |
+| `{mac}`, `{mac:N}` | La dirección MAC del primer adaptador de red físico, 12 dígitos hexadecimales en mayúsculas; `:N` conserva sus últimos N dígitos, sin él los 12 |
+| `{random}`, `{random:N}` | Mayúsculas y dígitos aleatorios sin los parecidos I, O, 0 y 1; `:N` da N de ellos, sin él 6 |
+
+N va de 1 a 15. Un número de serie o una dirección que no se pueden leer (no hay, o el fabricante dejó un
+marcador como `Default string`) se convierten en caracteres aleatorios de la misma longitud; uno más
+corto se queda entero. El nombre con la longitud completa de cada marcador cabe en 15 caracteres, así que
+`PC-{serial}` es demasiado largo y `PC-{serial:12}` cabe; deje alguna letra, porque Windows rechaza un
+nombre solo de dígitos. `PC-{random}` da `PC-` y seis caracteres aleatorios, como `PC-K7Q2MX`; con el
+número de serie `5CG1234XYZ` y la dirección `00155D3E5A01`, `WS-{serial:6}` da `WS-234XYZ` y
+`{mac:4}-LAB` da `5A01-LAB`. Debajo del campo el formulario muestra qué da la plantilla.
+
 ## La ventana
 
 - **Pestañas**: cada documento abierto es una pestaña: un perfil, una comparación, esta guía, los

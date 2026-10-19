@@ -43,6 +43,26 @@ della documentazione si aprono allo stesso modo, ognuna nella propria scheda.
 8. Mantenete in regola i PC installati: **Questo PC** applica le regole scelte come amministratore con un
    backup, oppure salva script autonomi che applicano, ripristinano, controllano e annullano su altri PC.
 
+## Il nome del computer
+
+Nel modulo **Installazione** il nome del computer è casuale (come fa Windows per impostazione
+predefinita), fisso o un modello che il file di risposte espande su ogni PC durante l'installazione. Un
+modello contiene lettere latine, cifre e trattini intorno a questi segnaposto:
+
+| Segnaposto | Che cosa dà |
+|---|---|
+| `{serial}`, `{serial:N}` | Il numero di serie del computer dal suo firmware, lettere e cifre in maiuscolo; `:N` tiene gli ultimi N caratteri, senza `:N` tutti (fino a 15) |
+| `{mac}`, `{mac:N}` | L'indirizzo MAC della prima scheda di rete fisica, 12 cifre esadecimali in maiuscolo; `:N` tiene le ultime N cifre, senza `:N` tutte e 12 |
+| `{random}`, `{random:N}` | Maiuscole e cifre casuali senza le somiglianti I, O, 0 e 1; `:N` ne dà N, senza `:N` 6 |
+
+N va da 1 a 15. Un numero di serie o un indirizzo illeggibile (assente, o il produttore ha lasciato un
+segnaposto come `Default string`) diventa caratteri casuali della stessa lunghezza; uno più corto resta
+intero. Il nome con la lunghezza piena di ogni segnaposto rientra in 15 caratteri, quindi `PC-{serial}` è
+troppo lungo e `PC-{serial:12}` rientra; lasciate una lettera, perché Windows rifiuta un nome di sole
+cifre. `PC-{random}` dà `PC-` e sei caratteri casuali, come `PC-K7Q2MX`; con il numero di serie
+`5CG1234XYZ` e l'indirizzo `00155D3E5A01`, `WS-{serial:6}` dà `WS-234XYZ` e `{mac:4}-LAB` dà `5A01-LAB`.
+Sotto il campo il modulo mostra che cosa dà il modello.
+
 ## La finestra
 
 - **Schede**: ogni documento aperto è una scheda: un profilo, un confronto, questa guida, i segnalibri,

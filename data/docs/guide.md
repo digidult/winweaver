@@ -42,6 +42,26 @@ documentation pages open the same way, each in its own tab.
 8. Keep the installed PCs in line: **This PC** applies the selected rules as administrator with a
    backup, or saves stand-alone scripts that apply, revert, audit and undo on other PCs.
 
+## The name of the computer
+
+In the form **Installation** the computer name is random (as Windows does by default), a fixed name or a
+template that the answer file expands on each PC during Setup. A template holds Latin letters, digits and
+hyphens around these placeholders:
+
+| Placeholder | What it gives |
+|---|---|
+| `{serial}`, `{serial:N}` | The serial number of the computer from its firmware, its letters and digits in capitals; `:N` keeps its last N characters, all of them (up to 15) without it |
+| `{mac}`, `{mac:N}` | The MAC address of the first physical network adapter, 12 hexadecimal digits in capitals; `:N` keeps its last N digits, all 12 without it |
+| `{random}`, `{random:N}` | Random capitals and digits without the look-alikes I, O, 0 and 1; `:N` gives N of them, 6 without it |
+
+N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a
+placeholder such as `Default string`) becomes random characters of the same length; a shorter one stays
+whole. The name with the full length of each placeholder fits 15 characters, so `PC-{serial}` is too long
+and `PC-{serial:12}` fits; keep a letter in it, since Windows refuses a name of digits alone.
+`PC-{random}` gives `PC-` and six random characters, such as `PC-K7Q2MX`; with the serial number
+`5CG1234XYZ` and the address `00155D3E5A01`, `WS-{serial:6}` gives `WS-234XYZ` and `{mac:4}-LAB` gives
+`5A01-LAB`. Below the field the form shows what the template gives.
+
 ## The window
 
 - **Tabs**: every open document is a tab: a profile, a diff, this guide, the bookmarks, the MCP

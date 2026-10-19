@@ -194,7 +194,6 @@
   "Disk": "Disco",
   "disk": "disco",
   "partition": "partición",
-  "A template of the computer name may hold {serial}, {mac} and {random}; the expanded name fits 15 characters. The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question.": "Una plantilla del nombre del equipo puede contener {serial}, {mac} y {random}; el nombre expandido cabe en 15 caracteres. El disco no se vuelve a particionar: en el modo partición, Windows se instala sobre la partición elegida sin preguntar.",
   "The starter accounts without passwords are a decision of the customer: passwords and groups are set after installation. Names and passwords are ASCII; a display name outside ASCII is set after OOBE.": "Las cuentas iniciales sin contraseña son una decisión del cliente: las contraseñas y los grupos se establecen después de la instalación. Los nombres y las contraseñas son ASCII; un nombre para mostrar fuera de ASCII se establece después de la OOBE.",
   "Name": "Nombre",
   "Display name": "Nombre para mostrar",
@@ -664,5 +663,15 @@
   "{n} added as dependencies": "{n} añadidas como dependencias",
   "{n} left out": "{n} excluidas",
   "{n} only partly revertible": "{n} solo reversibles en parte",
-  "nothing to do": "nada que hacer"
+  "nothing to do": "nada que hacer",
+  "The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question.": "El disco no se vuelve a particionar: en el modo partición, Windows se instala sobre la partición elegida sin preguntar.",
+  "{template} gives {name}": "{template} da {name}",
+  "This template cannot be expanded: it holds an unknown placeholder, a character other than Latin letters, digits and hyphens, or more than 15 characters.": "Esta plantilla no se puede expandir: contiene un marcador desconocido, un carácter distinto de letras latinas, dígitos y guiones, o más de 15 caracteres.",
+  "The placeholders of the template": "Los marcadores de la plantilla",
+  "The serial number of the computer from its firmware, its letters and digits in capitals; :N keeps its last N characters, all of them (up to 15) without it.": "El número de serie del equipo según su firmware, sus letras y dígitos en mayúsculas; :N conserva sus últimos N caracteres, sin él todos (hasta 15).",
+  "The MAC address of the first physical network adapter, 12 hexadecimal digits in capitals; :N keeps its last N digits, all 12 without it.": "La dirección MAC del primer adaptador de red físico, 12 dígitos hexadecimales en mayúsculas; :N conserva sus últimos N dígitos, sin él los 12.",
+  "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.": "Mayúsculas y dígitos aleatorios sin los parecidos I, O, 0 y 1; :N da N de ellos, sin él 6.",
+  "N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole.": "N va de 1 a 15. Un número de serie o una dirección que no se pueden leer (no hay, o el fabricante dejó un marcador como Default string) se convierten en caracteres aleatorios de la misma longitud; uno más corto se queda entero.",
+  "Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone.": "Alrededor de los marcadores: letras latinas, dígitos y guiones. El nombre con la longitud completa de cada marcador cabe en 15 caracteres, así que PC-{serial} es demasiado largo y PC-{serial:12} cabe. Deje alguna letra: Windows rechaza un nombre solo de dígitos.",
+  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Ejemplos con el número de serie 5CG1234XYZ y la dirección 00155D3E5A01:"
 }

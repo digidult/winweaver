@@ -194,7 +194,6 @@
   "Disk": "Disk",
   "disk": "disk",
   "partition": "partisi",
-  "A template of the computer name may hold {serial}, {mac} and {random}; the expanded name fits 15 characters. The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question.": "Templat nama komputer dapat berisi {serial}, {mac}, dan {random}; nama hasil penguraian muat dalam 15 karakter. Disk tidak dipartisi ulang: dalam mode partisi, Windows diinstal di atas partisi yang dipilih tanpa pertanyaan.",
   "The starter accounts without passwords are a decision of the customer: passwords and groups are set after installation. Names and passwords are ASCII; a display name outside ASCII is set after OOBE.": "Akun awal tanpa kata sandi adalah keputusan pelanggan: kata sandi dan grup diatur setelah instalasi. Nama dan kata sandi hanya ASCII; nama tampilan di luar ASCII diatur setelah OOBE.",
   "Name": "Nama",
   "Display name": "Nama tampilan",
@@ -664,5 +663,15 @@
   "{n} added as dependencies": "{n} ditambahkan sebagai dependensi",
   "{n} left out": "{n} dikecualikan",
   "{n} only partly revertible": "{n} hanya dapat dikembalikan sebagian",
-  "nothing to do": "tidak ada yang perlu dilakukan"
+  "nothing to do": "tidak ada yang perlu dilakukan",
+  "The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question.": "Disk tidak dipartisi ulang: dalam mode partisi, Windows diinstal di atas partisi yang dipilih tanpa pertanyaan.",
+  "{template} gives {name}": "{template} menghasilkan {name}",
+  "This template cannot be expanded: it holds an unknown placeholder, a character other than Latin letters, digits and hyphens, or more than 15 characters.": "Templat ini tidak dapat diuraikan: berisi placeholder yang tidak dikenal, karakter selain huruf Latin, angka, dan tanda hubung, atau lebih dari 15 karakter.",
+  "The placeholders of the template": "Placeholder templat",
+  "The serial number of the computer from its firmware, its letters and digits in capitals; :N keeps its last N characters, all of them (up to 15) without it.": "Nomor seri komputer dari firmware-nya, huruf dan angkanya dalam huruf kapital; :N menyimpan N karakter terakhir, tanpa itu semuanya (hingga 15).",
+  "The MAC address of the first physical network adapter, 12 hexadecimal digits in capitals; :N keeps its last N digits, all 12 without it.": "Alamat MAC adaptor jaringan fisik pertama, 12 digit heksadesimal dalam huruf kapital; :N menyimpan N digit terakhir, tanpa itu semua 12.",
+  "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.": "Huruf kapital dan angka acak tanpa yang mirip I, O, 0, dan 1; :N memberi N karakter, tanpa itu 6.",
+  "N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole.": "N dari 1 hingga 15. Nomor seri atau alamat yang tidak dapat dibaca (tidak ada, atau pabrikan meninggalkan pengganti seperti Default string) menjadi karakter acak dengan panjang yang sama; yang lebih pendek tetap utuh.",
+  "Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone.": "Di sekitar placeholder: huruf Latin, angka, dan tanda hubung. Nama dengan panjang penuh setiap placeholder muat dalam 15 karakter, jadi PC-{serial} terlalu panjang dan PC-{serial:12} muat. Sisakan satu huruf: Windows menolak nama yang hanya berisi angka.",
+  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Contoh dengan nomor seri 5CG1234XYZ dan alamat 00155D3E5A01:"
 }

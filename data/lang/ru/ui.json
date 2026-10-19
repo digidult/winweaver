@@ -194,7 +194,6 @@
   "Disk": "Диск",
   "disk": "диск",
   "partition": "раздел",
-  "A template of the computer name may hold {serial}, {mac} and {random}; the expanded name fits 15 characters. The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question.": "Шаблон имени компьютера может содержать {serial}, {mac} и {random}; развёрнутое имя укладывается в 15 символов. Диск не переразбивается: в режиме раздела Windows устанавливается на выбранный раздел без вопроса.",
   "The starter accounts without passwords are a decision of the customer: passwords and groups are set after installation. Names and passwords are ASCII; a display name outside ASCII is set after OOBE.": "Начальные учётные записи без паролей являются решением заказчика: пароли и группы назначаются после установки. Имена и пароли только ASCII; отображаемое имя вне ASCII задаётся после OOBE.",
   "Name": "Имя",
   "Display name": "Отображаемое имя",
@@ -664,5 +663,15 @@
   "{n} added as dependencies": "добавлено как зависимости: {n}",
   "{n} left out": "пропущено: {n}",
   "{n} only partly revertible": "возвращаются лишь частично: {n}",
-  "nothing to do": "делать нечего"
+  "nothing to do": "делать нечего",
+  "The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question.": "Диск не переразбивается: в режиме раздела Windows устанавливается на выбранный раздел без вопроса.",
+  "{template} gives {name}": "{template} даёт {name}",
+  "This template cannot be expanded: it holds an unknown placeholder, a character other than Latin letters, digits and hyphens, or more than 15 characters.": "Этот шаблон не разворачивается: в нём неизвестная подстановка, символ, кроме латинских букв, цифр и дефисов, или больше 15 символов.",
+  "The placeholders of the template": "Подстановки шаблона",
+  "The serial number of the computer from its firmware, its letters and digits in capitals; :N keeps its last N characters, all of them (up to 15) without it.": "Серийный номер компьютера из его прошивки, буквы и цифры заглавными; :N оставляет последние N символов, без него все (до 15).",
+  "The MAC address of the first physical network adapter, 12 hexadecimal digits in capitals; :N keeps its last N digits, all 12 without it.": "MAC-адрес первого физического сетевого адаптера, 12 шестнадцатеричных цифр заглавными; :N оставляет последние N цифр, без него все 12.",
+  "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.": "Случайные заглавные буквы и цифры без похожих I, O, 0 и 1; :N даёт N символов, без него 6.",
+  "N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole.": "N от 1 до 15. Серийный номер или адрес, которые не удалось прочитать (их нет или производитель оставил заглушку вроде Default string), становятся случайными символами той же длины; более короткий номер остаётся целым.",
+  "Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone.": "Вокруг подстановок: латинские буквы, цифры и дефисы. Имя с полной длиной каждой подстановки укладывается в 15 символов, поэтому PC-{serial} слишком длинное, а PC-{serial:12} укладывается. Оставьте в имени букву: Windows не принимает имя из одних цифр.",
+  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Примеры с серийным номером 5CG1234XYZ и адресом 00155D3E5A01:"
 }

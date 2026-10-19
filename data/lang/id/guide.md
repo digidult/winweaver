@@ -43,6 +43,26 @@ ini adalah file Markdown; halaman dokumentasi terbuka dengan cara yang sama, mas
    cadangan, atau menyimpan skrip mandiri yang menerapkan, mengembalikan, mengaudit, dan membatalkan di PC
    lain.
 
+## Nama komputer
+
+Di formulir **Instalasi**, nama komputer bisa acak (seperti bawaan Windows), nama tetap, atau templat
+yang diuraikan file jawaban di setiap PC selama Setup. Templat berisi huruf Latin, angka, dan tanda
+hubung di sekitar placeholder berikut:
+
+| Placeholder | Hasilnya |
+|---|---|
+| `{serial}`, `{serial:N}` | Nomor seri komputer dari firmware-nya, huruf dan angkanya dalam huruf kapital; `:N` menyimpan N karakter terakhir, tanpa itu semuanya (hingga 15) |
+| `{mac}`, `{mac:N}` | Alamat MAC adaptor jaringan fisik pertama, 12 digit heksadesimal dalam huruf kapital; `:N` menyimpan N digit terakhir, tanpa itu semua 12 |
+| `{random}`, `{random:N}` | Huruf kapital dan angka acak tanpa yang mirip I, O, 0, dan 1; `:N` memberi N karakter, tanpa itu 6 |
+
+N dari 1 hingga 15. Nomor seri atau alamat yang tidak dapat dibaca (tidak ada, atau pabrikan meninggalkan
+pengganti seperti `Default string`) menjadi karakter acak dengan panjang yang sama; yang lebih pendek
+tetap utuh. Nama dengan panjang penuh setiap placeholder muat dalam 15 karakter, jadi `PC-{serial}`
+terlalu panjang dan `PC-{serial:12}` muat; sisakan satu huruf, karena Windows menolak nama yang hanya
+berisi angka. `PC-{random}` menghasilkan `PC-` dan enam karakter acak, misalnya `PC-K7Q2MX`; dengan nomor
+seri `5CG1234XYZ` dan alamat `00155D3E5A01`, `WS-{serial:6}` menghasilkan `WS-234XYZ` dan `{mac:4}-LAB`
+menghasilkan `5A01-LAB`. Di bawah kolom, formulir menunjukkan hasil templat.
+
 ## Jendela
 
 - **Tab**: setiap dokumen yang terbuka adalah tab: profil, perbandingan, panduan ini, penanda, server MCP,

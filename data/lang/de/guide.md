@@ -45,6 +45,27 @@ Markdown-Datei; die Seiten der Dokumentation werden genauso geöffnet, jede in e
    Administrator mit einer Sicherung an oder speichert eigenständige Skripte zum Anwenden, Zurücksetzen,
    Prüfen und Rückgängigmachen auf anderen PCs.
 
+## Der Name des Computers
+
+Im Formular **Installation** ist der Computername zufällig (wie bei Windows standardmäßig), fest oder ein
+Muster, das die Antwortdatei auf jedem PC während des Setups erweitert. Ein Muster enthält lateinische
+Buchstaben, Ziffern und Bindestriche um diese Platzhalter:
+
+| Platzhalter | Was er ergibt |
+|---|---|
+| `{serial}`, `{serial:N}` | Die Seriennummer des Computers aus seiner Firmware, Buchstaben und Ziffern in Großbuchstaben; `:N` behält die letzten N Zeichen, ohne `:N` alle (bis 15) |
+| `{mac}`, `{mac:N}` | Die MAC-Adresse des ersten physischen Netzwerkadapters, 12 hexadezimale Ziffern in Großbuchstaben; `:N` behält die letzten N Ziffern, ohne `:N` alle 12 |
+| `{random}`, `{random:N}` | Zufällige Großbuchstaben und Ziffern ohne die verwechselbaren I, O, 0 und 1; `:N` ergibt N davon, ohne `:N` 6 |
+
+N reicht von 1 bis 15. Eine Seriennummer oder Adresse, die nicht lesbar ist (keine vorhanden, oder der
+Hersteller hat einen Platzhalter wie `Default string` hinterlassen), wird zu zufälligen Zeichen derselben
+Länge; eine kürzere bleibt ganz. Der Name mit der vollen Länge jedes Platzhalters passt in 15 Zeichen,
+daher ist `PC-{serial}` zu lang und `PC-{serial:12}` passt; lassen Sie einen Buchstaben darin, denn
+Windows lehnt einen Namen nur aus Ziffern ab. `PC-{random}` ergibt `PC-` und sechs zufällige Zeichen,
+etwa `PC-K7Q2MX`; mit der Seriennummer `5CG1234XYZ` und der Adresse `00155D3E5A01` ergibt `WS-{serial:6}`
+den Namen `WS-234XYZ` und `{mac:4}-LAB` den Namen `5A01-LAB`. Unter dem Feld zeigt das Formular, was das
+Muster ergibt.
+
 ## Das Fenster
 
 - **Registerkarten**: Jedes geöffnete Dokument ist eine Registerkarte: ein Profil, ein Vergleich, dieses

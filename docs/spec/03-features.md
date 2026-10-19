@@ -31,7 +31,9 @@ NEW). Each item names the user-visible behaviour; the mechanism is in `04-archit
 - Rules on and off with the resolver cascade; parameters edited in the detail panel; groups turned on and
   off as a whole (an imported root never switches its thousands of policies on).
 - Forms: Installation (edition from a list of 14, key mode generic, ask or a key, computer name random,
-  fixed or a template with `{serial}`, `{mac}`, `{random}`; workgroup; disk mode ask or a disk and
+  fixed or a template with `{serial}`, `{mac}`, `{random}`, each with an optional length `:N` from 1 to
+  15 (the last N characters of the serial number or the MAC address, N random characters), the form
+  describing every placeholder and showing what the template gives; workgroup; disk mode ask or a disk and
   partition id; account mode file or ask; options such as no Dynamic Update), Accounts (name, display
   name, group, password; starter accounts without passwords are a customer decision and are not
   "fixed"), Languages (display language, input languages and layouts, region, time zone, switch keys).

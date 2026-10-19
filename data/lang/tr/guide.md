@@ -44,6 +44,26 @@ sayfaları da aynı şekilde, her biri kendi sekmesinde açılır.
    uygular veya başka bilgisayarlarda uygulayan, geri alan, denetleyen ve geri döndüren bağımsız betikler
    kaydeder.
 
+## Bilgisayarın adı
+
+**Yükleme** formunda bilgisayar adı rastgele (Windows'un varsayılanı gibi), sabit ya da yanıt dosyasının
+Kurulum sırasında her bilgisayarda genişlettiği bir şablondur. Şablon, şu yer tutucuların çevresinde
+Latin harfleri, rakamlar ve kısa çizgiler içerir:
+
+| Yer tutucu | Ne verir |
+|---|---|
+| `{serial}`, `{serial:N}` | Bilgisayarın donanım yazılımındaki seri numarası, harfleri ve rakamları büyük harfle; `:N` son N karakteri tutar, `:N` olmadan tümünü (en çok 15) |
+| `{mac}`, `{mac:N}` | İlk fiziksel ağ bağdaştırıcısının MAC adresi, büyük harfle 12 onaltılık rakam; `:N` son N rakamı tutar, `:N` olmadan 12'sini de |
+| `{random}`, `{random:N}` | I, O, 0 ve 1 gibi benzerleri olmadan rastgele büyük harfler ve rakamlar; `:N` bunlardan N tane verir, `:N` olmadan 6 |
+
+N 1 ile 15 arasındadır. Okunamayan bir seri numarası veya adres (yoksa ya da üretici `Default string`
+gibi bir yer tutucu bıraktıysa) aynı uzunlukta rastgele karakterlere dönüşür; daha kısa olan olduğu gibi
+kalır. Her yer tutucunun tam uzunluğuyla ad 15 karaktere sığar; bu yüzden `PC-{serial}` çok uzun,
+`PC-{serial:12}` sığar. Adda bir harf bırakın, çünkü Windows yalnızca rakamlardan oluşan bir adı
+reddeder. `PC-{random}`, `PC-` ve altı rastgele karakter verir, örneğin `PC-K7Q2MX`; seri numarası
+`5CG1234XYZ` ve adres `00155D3E5A01` ile `WS-{serial:6}` şablonu `WS-234XYZ`, `{mac:4}-LAB` şablonu
+`5A01-LAB` verir. Form, alanın altında şablonun ne verdiğini gösterir.
+
 ## Pencere
 
 - **Sekmeler**: her açık belge bir sekmedir: profil, karşılaştırma, bu kılavuz, yer işaretleri, MCP

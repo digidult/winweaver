@@ -4,9 +4,11 @@
 
 use eframe::egui;
 use winweaver_core::profile::{Account, Install, Languages};
+use winweaver_core::render;
 use winweaver_core::resources;
+use winweaver_core::validate;
 
-use crate::i18n::tr;
+use crate::i18n::{tr, trf};
 use crate::{Act, ProfileDoc};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -205,7 +207,64 @@ fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
             ui.end_row();
         });
     ui.add_space(8.0);
-    ui.weak(tr("A template of the computer name may hold {serial}, {mac} and {random}; the expanded name fits 15 characters. The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question."));
+    if i.computer_name_mode == "template" {
+        name_template_help(ui, &i.computer_name);
+        ui.add_space(8.0);
+    }
+    ui.weak(tr("The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question."));
+}
+
+/// The placeholders of a computer name template with their lengths, and what the template gives
+/// with sample values (`render::example_name`, the way the script of Setup expands it).
+fn name_template_help(ui: &mut egui::Ui, template: &str) {
+    if validate::is_name_template(template) {
+        let name = render::example_name(template);
+        let text = trf(
+            "{template} gives {name}",
+            &[("template", &template), ("name", &name)],
+        );
+        ui.strong(text);
+    } else if !template.is_empty() {
+        let warn = ui.visuals().warn_fg_color;
+        ui.colored_label(
+            warn,
+            tr("This template cannot be expanded: it holds an unknown placeholder, a character other than Latin letters, digits and hyphens, or more than 15 characters."),
+        );
+    }
+    ui.add_space(4.0);
+    ui.strong(tr("The placeholders of the template"));
+    let rows = [
+        (
+            "{serial}  {serial:N}",
+            tr("The serial number of the computer from its firmware, its letters and digits in capitals; :N keeps its last N characters, all of them (up to 15) without it."),
+        ),
+        (
+            "{mac}  {mac:N}",
+            tr("The MAC address of the first physical network adapter, 12 hexadecimal digits in capitals; :N keeps its last N digits, all 12 without it."),
+        ),
+        (
+            "{random}  {random:N}",
+            tr("Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it."),
+        ),
+    ];
+    for (code, text) in rows {
+        ui.horizontal_wrapped(|ui| {
+            ui.monospace(code);
+            ui.label(text);
+        });
+    }
+    ui.weak(tr("N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole."));
+    ui.weak(tr("Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone."));
+    ui.add_space(4.0);
+    ui.label(tr("Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:"));
+    for example in ["PC-{random}", "WS-{serial:6}", "{mac:4}-LAB"] {
+        let name = render::example_name(example);
+        let text = trf(
+            "{template} gives {name}",
+            &[("template", &example), ("name", &name)],
+        );
+        ui.monospace(text);
+    }
 }
 
 fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>) {

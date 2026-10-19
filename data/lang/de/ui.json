@@ -194,7 +194,6 @@
   "Disk": "Datenträger",
   "disk": "Datenträger",
   "partition": "Partition",
-  "A template of the computer name may hold {serial}, {mac} and {random}; the expanded name fits 15 characters. The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question.": "Ein Muster für den Computernamen kann {serial}, {mac} und {random} enthalten; der erweiterte Name umfasst höchstens 15 Zeichen. Der Datenträger wird nicht neu partitioniert: Im Modus „Partition“ wird ohne Rückfrage auf die gewählte Partition installiert.",
   "The starter accounts without passwords are a decision of the customer: passwords and groups are set after installation. Names and passwords are ASCII; a display name outside ASCII is set after OOBE.": "Die Anfangskonten ohne Kennwort sind eine Entscheidung des Kunden: Kennwörter und Gruppen werden nach der Installation festgelegt. Namen und Kennwörter bestehen aus ASCII-Zeichen; ein Anzeigename außerhalb von ASCII wird nach OOBE festgelegt.",
   "Name": "Name",
   "Display name": "Anzeigename",
@@ -664,5 +663,15 @@
   "{n} added as dependencies": "{n} als Abhängigkeiten hinzugefügt",
   "{n} left out": "{n} ausgelassen",
   "{n} only partly revertible": "{n} nur teilweise umkehrbar",
-  "nothing to do": "nichts zu tun"
+  "nothing to do": "nichts zu tun",
+  "The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question.": "Der Datenträger wird nicht neu partitioniert: Im Modus „Partition“ wird ohne Rückfrage auf die gewählte Partition installiert.",
+  "{template} gives {name}": "{template} ergibt {name}",
+  "This template cannot be expanded: it holds an unknown placeholder, a character other than Latin letters, digits and hyphens, or more than 15 characters.": "Dieses Muster lässt sich nicht erweitern: Es enthält einen unbekannten Platzhalter, ein Zeichen außer lateinischen Buchstaben, Ziffern und Bindestrichen oder mehr als 15 Zeichen.",
+  "The placeholders of the template": "Die Platzhalter des Musters",
+  "The serial number of the computer from its firmware, its letters and digits in capitals; :N keeps its last N characters, all of them (up to 15) without it.": "Die Seriennummer des Computers aus seiner Firmware, Buchstaben und Ziffern in Großbuchstaben; :N behält die letzten N Zeichen, ohne :N alle (bis 15).",
+  "The MAC address of the first physical network adapter, 12 hexadecimal digits in capitals; :N keeps its last N digits, all 12 without it.": "Die MAC-Adresse des ersten physischen Netzwerkadapters, 12 hexadezimale Ziffern in Großbuchstaben; :N behält die letzten N Ziffern, ohne :N alle 12.",
+  "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.": "Zufällige Großbuchstaben und Ziffern ohne die verwechselbaren I, O, 0 und 1; :N ergibt N davon, ohne :N 6.",
+  "N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole.": "N reicht von 1 bis 15. Eine Seriennummer oder Adresse, die nicht lesbar ist (keine vorhanden, oder der Hersteller hat einen Platzhalter wie Default string hinterlassen), wird zu zufälligen Zeichen derselben Länge; eine kürzere bleibt ganz.",
+  "Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone.": "Um die Platzhalter herum: lateinische Buchstaben, Ziffern und Bindestriche. Der Name mit der vollen Länge jedes Platzhalters passt in 15 Zeichen, daher ist PC-{serial} zu lang und PC-{serial:12} passt. Lassen Sie einen Buchstaben darin: Windows lehnt einen Namen nur aus Ziffern ab.",
+  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Beispiele mit der Seriennummer 5CG1234XYZ und der Adresse 00155D3E5A01:"
 }

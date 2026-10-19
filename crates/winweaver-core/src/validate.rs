@@ -150,7 +150,7 @@ fn check_install(profile: &Profile, issues: &mut Vec<Issue>) {
             if !is_name_template(&i.computer_name) {
                 err(
                     issues,
-                    "A computer name template holds Latin letters, digits, hyphens and the placeholders {serial}, {mac} and {random}, up to 15 characters when expanded"
+                    "A computer name template holds Latin letters, digits, hyphens and the placeholders {serial}, {mac} and {random}, each with an optional length from 1 to 15 such as {serial:6}; the name with the full length of each placeholder fits 15 characters"
                         .into(),
                 );
             }

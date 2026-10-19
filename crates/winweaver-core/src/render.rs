@@ -664,6 +664,33 @@ pub fn computer_name_parts(template: &str) -> Vec<String> {
     parts
 }
 
+/// What a computer name template gives with sample values, the way `section-computer-name.ps1`
+/// expands it: the last characters of the serial number `5CG1234XYZ` and of the MAC address
+/// `00155D3E5A01` (a shorter value stays whole), fixed random characters, the name cut at 15.
+pub fn example_name(template: &str) -> String {
+    const SERIAL: &str = "5CG1234XYZ";
+    const MAC: &str = "00155D3E5A01";
+    const RANDOM: &str = "K7Q2MX9H4TRW3N5";
+    let mut name = String::new();
+    for part in computer_name_parts(template) {
+        let Some((kind, arg)) = part.split_once(':') else {
+            continue;
+        };
+        if kind == "text" {
+            name.push_str(arg);
+            continue;
+        }
+        let length = arg.parse::<usize>().unwrap_or(0).min(RANDOM.len());
+        let value = match kind {
+            "serial" => SERIAL,
+            "mac" => MAC,
+            _ => &RANDOM[..length],
+        };
+        name.push_str(&value[value.len().saturating_sub(length)..]);
+    }
+    name.chars().take(15).collect()
+}
+
 /// The texts of an account the answer file can hold (ASCII only) and the lines of Post-OOBE
 /// that set the rest.
 fn account_xml(a: &Account) -> (String, String) {
@@ -1250,6 +1277,11 @@ mod tests {
             computer_name_parts("{serial:8}-W"),
             vec!["serial:8", "text:-W"]
         );
+        assert_eq!(example_name("PC-{random}"), "PC-K7Q2MX");
+        assert_eq!(example_name("WS-{serial:6}"), "WS-234XYZ");
+        assert_eq!(example_name("WS-{serial}"), "WS-5CG1234XYZ");
+        assert_eq!(example_name("{mac:4}-LAB"), "5A01-LAB");
+        assert_eq!(example_name("{mac}{random:8}"), "00155D3E5A01K7Q");
         assert_eq!(reg_path("DU:\\Software\\X"), "($du + '\\Software\\X')");
         assert_eq!(reg_path("HKLM:\\X"), "'HKLM:\\X'");
     }

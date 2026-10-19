@@ -45,6 +45,26 @@ les pages de documentation s'ouvrent de la même façon, chacune dans son propre
    sauvegarde, ou enregistre des scripts autonomes qui appliquent, annulent, contrôlent et défont sur
    d'autres PC.
 
+## Le nom de l'ordinateur
+
+Dans le formulaire **Installation**, le nom de l'ordinateur est aléatoire (comme Windows le fait par
+défaut), fixe ou un modèle que le fichier de réponses développe sur chaque PC pendant l'installation. Un
+modèle contient des lettres latines, des chiffres et des traits d'union autour de ces espaces réservés :
+
+| Espace réservé | Ce qu'il donne |
+|---|---|
+| `{serial}`, `{serial:N}` | Le numéro de série de l'ordinateur lu dans son firmware, ses lettres et chiffres en majuscules ; `:N` garde ses N derniers caractères, sans lui tous (jusqu'à 15) |
+| `{mac}`, `{mac:N}` | L'adresse MAC de la première carte réseau physique, 12 chiffres hexadécimaux en majuscules ; `:N` garde ses N derniers chiffres, sans lui les 12 |
+| `{random}`, `{random:N}` | Des majuscules et des chiffres au hasard sans les confusions I, O, 0 et 1 ; `:N` en donne N, sans lui 6 |
+
+N va de 1 à 15. Un numéro de série ou une adresse illisible (absent, ou le fabricant a laissé une valeur
+fictive comme `Default string`) devient des caractères aléatoires de même longueur ; un plus court reste
+entier. Le nom avec la longueur complète de chaque espace réservé tient en 15 caractères : `PC-{serial}`
+est trop long, `PC-{serial:12}` tient ; gardez une lettre, car Windows refuse un nom fait uniquement de
+chiffres. `PC-{random}` donne `PC-` et six caractères aléatoires, comme `PC-K7Q2MX` ; avec le numéro de
+série `5CG1234XYZ` et l'adresse `00155D3E5A01`, `WS-{serial:6}` donne `WS-234XYZ` et `{mac:4}-LAB` donne
+`5A01-LAB`. Sous le champ, le formulaire montre ce que donne le modèle.
+
 ## La fenêtre
 
 - **Onglets** : chaque document ouvert est un onglet : un profil, une comparaison, ce guide, les

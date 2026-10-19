@@ -194,7 +194,6 @@
   "Disk": "Дыск",
   "disk": "дыск",
   "partition": "раздзел",
-  "A template of the computer name may hold {serial}, {mac} and {random}; the expanded name fits 15 characters. The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question.": "Шаблон імя камп'ютара можа ўтрымліваць {serial}, {mac} і {random}; разгорнутае імя змяшчаецца ў 15 сімвалаў. Дыск не перадзяляецца: у рэжыме раздзела Windows усталёўваецца на выбраны раздзел без пытання.",
   "The starter accounts without passwords are a decision of the customer: passwords and groups are set after installation. Names and passwords are ASCII; a display name outside ASCII is set after OOBE.": "Пачатковыя ўліковыя запісы без пароляў з'яўляюцца рашэннем заказчыка: паролі і групы прызначаюцца пасля ўсталёўкі. Імёны і паролі толькі ASCII; адлюстраванае імя па-за ASCII задаецца пасля OOBE.",
   "Name": "Імя",
   "Display name": "Адлюстраванае імя",
@@ -664,5 +663,15 @@
   "{n} added as dependencies": "дададзена як залежнасці: {n}",
   "{n} left out": "прапушчана: {n}",
   "{n} only partly revertible": "вяртаюцца толькі часткова: {n}",
-  "nothing to do": "рабіць нічога не трэба"
+  "nothing to do": "рабіць нічога не трэба",
+  "The disk is not repartitioned: in the mode partition the chosen partition is installed over without a question.": "Дыск не перадзяляецца: у рэжыме раздзела Windows усталёўваецца на выбраны раздзел без пытання.",
+  "{template} gives {name}": "{template} дае {name}",
+  "This template cannot be expanded: it holds an unknown placeholder, a character other than Latin letters, digits and hyphens, or more than 15 characters.": "Гэты шаблон не разгортваецца: у ім невядомая падстаноўка, сімвал, акрамя лацінскіх літар, лічбаў і злучкоў, або больш за 15 сімвалаў.",
+  "The placeholders of the template": "Падстаноўкі шаблона",
+  "The serial number of the computer from its firmware, its letters and digits in capitals; :N keeps its last N characters, all of them (up to 15) without it.": "Серыйны нумар камп'ютара з яго мікрапраграмы, літары і лічбы вялікімі; :N пакідае апошнія N сімвалаў, без яго ўсе (да 15).",
+  "The MAC address of the first physical network adapter, 12 hexadecimal digits in capitals; :N keeps its last N digits, all 12 without it.": "MAC-адрас першага фізічнага сеткавага адаптара, 12 шаснаццатковых лічбаў вялікімі; :N пакідае апошнія N лічбаў, без яго ўсе 12.",
+  "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.": "Выпадковыя вялікія літары і лічбы без падобных I, O, 0 і 1; :N дае N сімвалаў, без яго 6.",
+  "N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole.": "N ад 1 да 15. Серыйны нумар або адрас, якія не ўдалося прачытаць (іх няма або вытворца пакінуў заглушку накшталт Default string), становяцца выпадковымі сімваламі той жа даўжыні; карацейшы нумар застаецца цэлым.",
+  "Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone.": "Вакол падстановак: лацінскія літары, лічбы і злучкі. Імя з поўнай даўжынёй кожнай падстаноўкі змяшчаецца ў 15 сімвалаў, таму PC-{serial} задоўгае, а PC-{serial:12} змяшчаецца. Пакіньце ў імені літару: Windows не прымае імя з адных лічбаў.",
+  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Прыклады з серыйным нумарам 5CG1234XYZ і адрасам 00155D3E5A01:"
 }
