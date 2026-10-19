@@ -577,6 +577,8 @@ pub fn texts_for<'a>(texts: &'a [CatalogTexts], code: &str) -> Option<&'a Catalo
 
 impl App {
     pub fn new(catalog: Catalog, texts: Vec<CatalogTexts>, settings: Settings) -> Self {
+        // The input languages and layouts of this Windows, read at the first check of a profile.
+        winweaver_core::resources::set_locale_reader(winweaver_win::locales);
         let profile = Profile::parse(PRESETS[0].1, PRESETS[0].0)
             .unwrap_or_else(|_| Profile::from_defaults(PRESETS[0].0, &catalog));
         let doc = ProfileDoc::new(profile, None, &catalog);

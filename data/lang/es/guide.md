@@ -65,6 +65,18 @@ nombre solo de dígitos. `PC-{random}` da `PC-` y seis caracteres aleatorios, co
 número de serie `5CG1234XYZ` y la dirección `00155D3E5A01`, `WS-{serial:6}` da `WS-234XYZ` y
 `{mac:4}-LAB` da `5A01-LAB`. Debajo del campo el formulario muestra qué da la plantilla.
 
+## Idiomas de entrada
+
+El formulario **Idiomas** muestra los idiomas de entrada en su orden; el primero es el predeterminado.
+Cada idioma muestra su nombre y una lista de distribuciones de teclado: primero la que Windows le da de
+forma predeterminada y después todas las distribuciones de Windows por su nombre. **Agregar** busca un
+idioma por una parte de su nombre o etiqueta entre todos los idiomas que conoce Windows y lo agrega con
+la distribución elegida; el mismo idioma puede aparecer dos veces con dos distribuciones, como Ucraniano
+(extendido) y Ucraniano. Un idioma que Windows numera solo en el primer inicio de sesión, como Ruso
+(Ucrania), recibe la distribución que Windows le da entonces, y hasta ese inicio de sesión el archivo de
+respuesta nombra el idioma al que pertenece. Los idiomas y distribuciones son los del Windows en el que
+se ejecuta WinWeaver, con sus nombres en su idioma.
+
 ## La ventana
 
 - **Pestañas**: cada documento abierto es una pestaña: un perfil, una comparación, esta guía, los

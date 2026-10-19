@@ -2570,7 +2570,7 @@
   },
   "user-logon.input-languages": {
     "title": "Lista de idiomas de entrada del usuario según el perfil (incluido \"Ruso (Ucrania)\")",
-    "summary": "Sustituye la lista de idiomas de entrada del usuario por la lista del nodo \"Idiomas y región\" (de forma predeterminada, en-US, uk-UA, ru-UA). Los idiomas sin código numérico, como \"Ruso (Ucrania)\", no se pueden establecer en XML, por lo que se aplican aquí; si Windows no les ha asignado una distribución de teclado, se aplica una lista alternativa en la que se sustituyen por el idioma base.",
+    "summary": "Sustituye la lista de idiomas de entrada del usuario por la lista del nodo \"Idiomas y región\" (de forma predeterminada, en-US, uk-UA, ru-UA), cada idioma con las distribuciones de teclado que el perfil elige para él. Los idiomas sin código numérico, como \"Ruso (Ucrania)\", no se pueden establecer en XML, por lo que se aplican aquí; si Windows no les ha asignado una distribución de teclado, se aplica una lista alternativa en la que se sustituyen por el idioma base.",
     "effect": "El selector de idioma del usuario muestra el mismo orden que el perfil; la pantalla de inicio de sesión mantiene la lista del XML (con el idioma base en lugar de \"Ruso (Ucrania)\").",
     "versions": "Windows 10 1803+ y 11 admiten ru-UA como idioma de entrada; en la compilación 26200 recibe el código temporal 2000:00000419. Windows puede acortar las etiquetas (uk-UA se muestra como uk).",
     "verify": "Get-WinUserLanguageList | Select-Object LanguageTag, InputMethodTips",

@@ -673,5 +673,12 @@
   "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.": "Выпадковыя вялікія літары і лічбы без падобных I, O, 0 і 1; :N дае N сімвалаў, без яго 6.",
   "N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole.": "N ад 1 да 15. Серыйны нумар або адрас, якія не ўдалося прачытаць (іх няма або вытворца пакінуў заглушку накшталт Default string), становяцца выпадковымі сімваламі той жа даўжыні; карацейшы нумар застаецца цэлым.",
   "Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone.": "Вакол падстановак: лацінскія літары, лічбы і злучкі. Імя з поўнай даўжынёй кожнай падстаноўкі змяшчаецца ў 15 сімвалаў, таму PC-{serial} задоўгае, а PC-{serial:12} змяшчаецца. Пакіньце ў імені літару: Windows не прымае імя з адных лічбаў.",
-  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Прыклады з серыйным нумарам 5CG1234XYZ і адрасам 00155D3E5A01:"
+  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Прыклады з серыйным нумарам 5CG1234XYZ і адрасам 00155D3E5A01:",
+  "The languages and layouts of Windows were not read: the list keeps its items, and new ones cannot be chosen.": "Мовы і раскладкі Windows не прачытаны: спіс захоўвае свае пункты, але новыя выбраць нельга.",
+  "the layout Windows gives it at the first sign-in": "раскладка, якую Windows дае пры першым уваходзе",
+  "{item}: Windows does not know this input language": "{item}: Windows не ведае гэтай мовы ўводу",
+  "{layout} (the default)": "{layout} (прадвызначаная)",
+  "Find a language": "Знайсці мову",
+  "a language": "выберыце мову",
+  "Add the language": "Дадаць мову"
 }

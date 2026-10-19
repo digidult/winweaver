@@ -1,13 +1,13 @@
-//! Reference data embedded from `data/resources/`: time zones, keyboards and the editions.
+//! Reference data: the time zones embedded from `data/resources/`, the editions, and the input
+//! languages and keyboard layouts that Windows lists (`Locales`, read by `winweaver_win`).
 
 use std::sync::OnceLock;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::jsonfile;
 
 const TIMEZONES: &str = include_str!("../../../data/resources/timezones.json");
-const KEYBOARDS: &str = include_str!("../../../data/resources/keyboards.json");
 
 /// The editions a profile can name with their generic installation keys (Pro and Education) or
 /// KMS client keys (the rest), as Microsoft publishes them; a key selects the edition and does not
@@ -81,78 +81,166 @@ impl TimeZone {
     }
 }
 
-/// An input language with its keyboard layout.
-#[derive(Debug, Clone, Deserialize)]
-pub struct Keyboard {
-    /// The language tag, such as `uk-UA`.
+/// A language Windows offers for input, as `winweaver_win::locales` reads it from this Windows.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct InputLanguage {
+    /// The tag, such as `uk-UA`, or `uk` for a language without a region.
     pub tag: String,
-    /// The locale id in hex, `None` for a language without one (`ru-UA`).
-    #[serde(default)]
-    pub lcid: Option<String>,
-    /// The keyboard layout id in hex.
+    /// The locale id in hex (`0422`); empty for a language Windows numbers only at the first
+    /// sign-in, such as `ru-UA`.
+    pub lcid: String,
+    /// The name in the language of Windows.
+    pub name: String,
+    /// The language it belongs to (`ru` for `ru-UA`), the fallback of one without a locale id.
+    pub parent: String,
+    /// The input profile Windows gives it first (`0422:00020422`), empty when it has none.
+    pub default: String,
+}
+
+/// A keyboard layout of Windows.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct KeyboardLayout {
+    /// The id in hex, such as `00020422`.
     pub klid: String,
-    #[serde(default)]
-    pub title: String,
-    /// Windows assigns the id at the first sign-in; the answer file gets the fallback.
-    #[serde(default)]
-    pub transient: bool,
-    #[serde(default)]
-    pub fallback: Option<String>,
+    /// The name in the language of Windows.
+    pub name: String,
+}
+
+/// The input languages and the keyboard layouts of Windows, read from the system and never
+/// embedded. An item of the input languages of a profile is a tag (the language with the layout
+/// Windows gives it first) or a layout id such as `0422:00000422` (that language, that layout).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Locales {
+    pub languages: Vec<InputLanguage>,
+    pub layouts: Vec<KeyboardLayout>,
+}
+
+static READER: OnceLock<fn() -> Locales> = OnceLock::new();
+static LOCALES: OnceLock<Locales> = OnceLock::new();
+
+/// Names the function that reads the languages and layouts of Windows; the first one named is
+/// called at the first use. The window and the MCP server name `winweaver_win::locales`, the
+/// tests a list of their own.
+pub fn set_locale_reader(read: fn() -> Locales) {
+    let _ = READER.set(read);
+}
+
+/// The input languages and keyboard layouts, read once; empty when no reader was named.
+pub fn locales() -> &'static Locales {
+    LOCALES.get_or_init(|| READER.get().map_or_else(Locales::default, |read| read()))
+}
+
+/// Whether a locale id is one Windows hands at the first sign-in to a language without its own
+/// (0x2000 to 0x4C00 by steps of 0x400, as in `2000:00000419` of `ru-UA`).
+fn transient(lcid: &str) -> bool {
+    let id = u32::from_str_radix(lcid, 16).unwrap_or(0);
+    (0x2000..=0x4C00).contains(&id) && id.is_multiple_of(0x400)
+}
+
+impl Locales {
+    /// The list of a JSON text, the form tests write it in.
+    pub fn parse(text: &str) -> Self {
+        jsonfile::parse(text, "locales.json").unwrap_or_default()
+    }
+
+    /// The language of a tag, without regard to case.
+    pub fn language(&self, tag: &str) -> Option<&InputLanguage> {
+        self.languages
+            .iter()
+            .find(|l| l.tag.eq_ignore_ascii_case(tag))
+    }
+
+    /// The language of a locale id in hex.
+    pub fn language_of(&self, lcid: &str) -> Option<&InputLanguage> {
+        let id = u32::from_str_radix(lcid, 16).ok()?;
+        self.languages
+            .iter()
+            .find(|l| u32::from_str_radix(&l.lcid, 16) == Ok(id))
+    }
+
+    /// The keyboard layout of an id in hex.
+    pub fn layout(&self, klid: &str) -> Option<&KeyboardLayout> {
+        self.layouts
+            .iter()
+            .find(|l| l.klid.eq_ignore_ascii_case(klid))
+    }
+
+    /// The name of the layout of an input profile such as `0422:00020422`, the profile itself
+    /// when the layout is not known.
+    pub fn layout_name(&self, profile: &str) -> String {
+        let klid = profile.split_once(':').map_or(profile, |(_, k)| k);
+        match self.layout(klid) {
+            Some(layout) => layout.name.clone(),
+            None => profile.to_owned(),
+        }
+    }
+
+    /// The language and the input profile an item of the input languages of a profile names: a
+    /// tag gives the profile Windows gives the language first (empty for one without a locale
+    /// id, which Windows numbers at the first sign-in), a layout id gives itself.
+    pub fn input(&self, item: &str) -> Option<(&InputLanguage, String)> {
+        if crate::validate::is_layout(item) {
+            let (lcid, _) = item.split_once(':')?;
+            return Some((self.language_of(lcid)?, item.to_owned()));
+        }
+        let language = self.language(item)?;
+        Some((language, language.default.clone()))
+    }
+
+    /// The items of a profile for an input language as Windows lists it: a tag it may shorten
+    /// (`uk` for `uk-UA`) and its input profiles. The profile Windows gives the language first is
+    /// its tag, another one a layout id, a profile of a locale id handed at the first sign-in
+    /// the tag as read; `None` when Windows does not know the language.
+    pub fn read_items(&self, tag: &str, tips: &[String]) -> Option<Vec<String>> {
+        let own = self.language(tag);
+        let mut items = Vec::new();
+        for tip in tips {
+            let lcid = tip.split_once(':').map_or("", |(l, _)| l);
+            let item = if transient(lcid) {
+                own.map(|l| l.tag.clone())
+            } else if crate::validate::is_layout(tip) {
+                self.language_of(lcid).map(|l| self.layout_item(l, tip))
+            } else {
+                own.map(|l| self.specific(l))
+            };
+            items.push(item?);
+        }
+        if items.is_empty() {
+            items.push(self.specific(own?));
+        }
+        Some(items)
+    }
+
+    /// The item of a language with one of its input profiles: its tag for the profile Windows
+    /// gives it first, else the profile.
+    fn layout_item(&self, language: &InputLanguage, tip: &str) -> String {
+        if language.default.eq_ignore_ascii_case(tip) {
+            self.specific(language)
+        } else {
+            tip.to_uppercase()
+        }
+    }
+
+    /// The tag of a language with its region: a tag without one names the language of the
+    /// profile Windows gives it first (`uk` gives `uk-UA`).
+    fn specific(&self, language: &InputLanguage) -> String {
+        if language.tag.contains('-') {
+            return language.tag.clone();
+        }
+        let lcid = language.default.split_once(':').map_or("", |(l, _)| l);
+        match self.language_of(lcid) {
+            Some(l) => l.tag.clone(),
+            None => language.tag.clone(),
+        }
+    }
 }
 
 pub fn time_zones() -> &'static [TimeZone] {
     static ZONES: OnceLock<Vec<TimeZone>> = OnceLock::new();
     ZONES.get_or_init(|| jsonfile::parse(TIMEZONES, "timezones.json").unwrap_or_default())
-}
-
-pub fn keyboards() -> &'static [Keyboard] {
-    static KEYBOARDS_PARSED: OnceLock<Vec<Keyboard>> = OnceLock::new();
-    KEYBOARDS_PARSED
-        .get_or_init(|| jsonfile::parse(KEYBOARDS, "keyboards.json").unwrap_or_default())
-}
-
-/// The keyboard of a language tag.
-pub fn keyboard(tag: &str) -> Option<&'static Keyboard> {
-    keyboards().iter().find(|k| k.tag == tag)
-}
-
-/// The keyboard of an input language as Windows reports it. Windows shortens the tag of a
-/// language whose region is its only or main one (`uk` for `uk-UA`), so a tag without a region
-/// finds the keyboards of its language; of several keyboards the one whose layout is among the
-/// input method tips (`0422:00020422`) wins.
-pub fn keyboard_of_read(tag: &str, tips: &[String]) -> Option<&'static Keyboard> {
-    let layouts: Vec<&str> = tips
-        .iter()
-        .filter_map(|t| t.split_once(':').map(|(_, klid)| klid.trim()))
-        .collect();
-    let pick = |found: Vec<&'static Keyboard>| {
-        found
-            .iter()
-            .copied()
-            .find(|k| layouts.iter().any(|l| l.eq_ignore_ascii_case(&k.klid)))
-            .or_else(|| found.first().copied())
-    };
-    let exact: Vec<&'static Keyboard> = keyboards()
-        .iter()
-        .filter(|k| k.tag.eq_ignore_ascii_case(tag))
-        .collect();
-    if !exact.is_empty() {
-        return pick(exact);
-    }
-    if tag.contains('-') {
-        return None;
-    }
-    let language: Vec<&'static Keyboard> = keyboards()
-        .iter()
-        .filter(|k| {
-            !k.transient
-                && k.tag
-                    .split('-')
-                    .next()
-                    .is_some_and(|l| l.eq_ignore_ascii_case(tag))
-        })
-        .collect();
-    pick(language)
 }
 
 #[cfg(test)]
@@ -185,32 +273,41 @@ mod tests {
                 );
             }
         }
-        assert!(keyboard("en-US").is_some_and(|k| k.klid == "00000409"));
-        assert!(keyboard("ru-UA").is_some_and(|k| k.transient && k.lcid.is_none()));
-        let tips = |t: &str| vec![t.to_owned()];
-        let read = |tag: &str, tips: &[String]| {
-            keyboard_of_read(tag, tips).map(|k| (k.tag.as_str(), k.klid.as_str()))
-        };
-        assert_eq!(
-            read("uk", &tips("0422:00020422")),
-            Some(("uk-UA", "00020422"))
-        );
-        assert_eq!(
-            read("uk", &tips("0422:00000422")),
-            Some(("uk-UA", "00000422"))
-        );
-        assert_eq!(read("uk", &[]), Some(("uk-UA", "00020422")));
-        assert_eq!(read("UK-ua", &[]), Some(("uk-UA", "00020422")));
-        assert_eq!(
-            read("ru-UA", &tips("2000:00000419")),
-            Some(("ru-UA", "00000419"))
-        );
-        assert_eq!(read("ru", &[]), Some(("ru", "00000419")));
-        assert_eq!(read("en-US", &[]), Some(("en-US", "00000409")));
-        assert_eq!(read("xx", &[]), None);
-        assert_eq!(read("uk-XX", &[]), None);
         assert_eq!(generic_key("Pro"), Some("VK7JG-NPHTM-C97JM-9MPGT-3V66T"));
         assert!(generic_key("Home").is_none());
         assert_eq!(editions().count(), 14);
+    }
+
+    #[test]
+    fn input_languages_are_items_as_windows_lists_them() {
+        let l = Locales::parse(include_str!("../tests/data/locales.json"));
+        assert_eq!(l.language("UK-ua").unwrap().lcid, "0422");
+        assert_eq!(l.language_of("422").unwrap().tag, "uk-UA");
+        assert!(l.language_of("").is_none());
+        assert_eq!(l.layout_name("0422:00000422"), "Ukrainian");
+        let input = |item: &str| l.input(item).map(|(x, p)| (x.tag.clone(), p));
+        let uk = ("uk-UA".to_owned(), "0422:00020422".to_owned());
+        assert_eq!(input("uk-UA"), Some(uk));
+        let standard = ("uk-UA".to_owned(), "0422:00000422".to_owned());
+        assert_eq!(input("0422:00000422"), Some(standard));
+        let ru = ("ru-UA".to_owned(), String::new());
+        assert_eq!(input("ru-UA"), Some(ru));
+        assert!(input("xx-XX").is_none());
+        assert!(input("0999:00000409").is_none());
+        let tips = |t: &str| vec![t.to_owned()];
+        let read = |tag: &str, tips: &[String]| l.read_items(tag, tips);
+        let one = |item: &str| Some(vec![item.to_owned()]);
+        assert_eq!(read("uk", &tips("0422:00020422")), one("uk-UA"));
+        assert_eq!(read("uk", &tips("0422:00000422")), one("0422:00000422"));
+        assert_eq!(read("uk", &[]), one("uk-UA"));
+        assert_eq!(read("UK-ua", &[]), one("uk-UA"));
+        assert_eq!(read("ru-UA", &tips("2000:00000419")), one("ru-UA"));
+        assert_eq!(read("ru", &[]), one("ru-RU"));
+        assert_eq!(read("en-US", &[]), one("en-US"));
+        assert_eq!(read("xx", &[]), None);
+        assert_eq!(read("uk-XX", &[]), None);
+        let two = vec!["0422:00020422".to_owned(), "0422:00000422".to_owned()];
+        let both = Some(vec!["uk-UA".to_owned(), "0422:00000422".to_owned()]);
+        assert_eq!(read("uk", &two), both);
     }
 }

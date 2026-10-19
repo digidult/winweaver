@@ -673,5 +673,12 @@
   "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.": "Випадкові великі літери й цифри без схожих I, O, 0 і 1; :N дає N символів, без нього 6.",
   "N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole.": "N від 1 до 15. Серійний номер чи адреса, які не вдалося прочитати (їх немає або виробник залишив заглушку на кшталт Default string), стають випадковими символами тієї ж довжини; коротший номер залишається цілим.",
   "Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone.": "Навколо підстановок: латинські літери, цифри й дефіси. Ім'я з повною довжиною кожної підстановки вміщується в 15 символів, тому PC-{serial} задовге, а PC-{serial:12} вміщується. Залиште в імені літеру: Windows не приймає ім'я лише з цифр.",
-  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Приклади із серійним номером 5CG1234XYZ та адресою 00155D3E5A01:"
+  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Приклади із серійним номером 5CG1234XYZ та адресою 00155D3E5A01:",
+  "The languages and layouts of Windows were not read: the list keeps its items, and new ones cannot be chosen.": "Мови й розкладки Windows не прочитано: список зберігає свої пункти, але нові вибрати не можна.",
+  "the layout Windows gives it at the first sign-in": "розкладка, яку Windows дає під час першого входу",
+  "{item}: Windows does not know this input language": "{item}: Windows не знає цієї мови введення",
+  "{layout} (the default)": "{layout} (за замовчуванням)",
+  "Find a language": "Знайти мову",
+  "a language": "виберіть мову",
+  "Add the language": "Додати мову"
 }

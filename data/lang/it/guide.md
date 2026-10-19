@@ -63,6 +63,17 @@ cifre. `PC-{random}` dà `PC-` e sei caratteri casuali, come `PC-K7Q2MX`; con il
 `5CG1234XYZ` e l'indirizzo `00155D3E5A01`, `WS-{serial:6}` dà `WS-234XYZ` e `{mac:4}-LAB` dà `5A01-LAB`.
 Sotto il campo il modulo mostra che cosa dà il modello.
 
+## Lingue di input
+
+Il modulo **Lingue** elenca le lingue di input nel loro ordine; la prima è quella predefinita. Ogni
+lingua mostra il suo nome e un elenco di layout di tastiera: prima il layout che Windows le assegna per
+impostazione predefinita, poi tutti i layout di Windows per nome. **Aggiungi** trova una lingua da una
+parte del nome o del tag fra tutte le lingue che Windows conosce e la aggiunge con il layout scelto; la
+stessa lingua può comparire due volte con due layout, come Ucraino (avanzato) e Ucraino. Una lingua che
+Windows numera solo al primo accesso, come Russo (Ucraina), riceve il layout che Windows le assegna
+allora, e fino a quell'accesso il file di risposte nomina la lingua a cui appartiene. Le lingue e i
+layout sono quelli del Windows su cui gira WinWeaver, con i nomi nella sua lingua.
+
 ## La finestra
 
 - **Schede**: ogni documento aperto è una scheda: un profilo, un confronto, questa guida, i segnalibri,

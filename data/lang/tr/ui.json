@@ -673,5 +673,12 @@
   "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.": "I, O, 0 ve 1 gibi benzerleri olmadan rastgele büyük harfler ve rakamlar; :N bunlardan N tane verir, :N olmadan 6.",
   "N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole.": "N 1 ile 15 arasındadır. Okunamayan bir seri numarası veya adres (yoksa ya da üretici Default string gibi bir yer tutucu bıraktıysa) aynı uzunlukta rastgele karakterlere dönüşür; daha kısa olan olduğu gibi kalır.",
   "Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone.": "Yer tutucuların çevresinde: Latin harfleri, rakamlar ve kısa çizgiler. Her yer tutucunun tam uzunluğuyla ad 15 karaktere sığar; bu yüzden PC-{serial} çok uzun, PC-{serial:12} sığar. Adda bir harf bırakın: Windows yalnızca rakamlardan oluşan bir adı reddeder.",
-  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Seri numarası 5CG1234XYZ ve adres 00155D3E5A01 ile örnekler:"
+  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Seri numarası 5CG1234XYZ ve adres 00155D3E5A01 ile örnekler:",
+  "The languages and layouts of Windows were not read: the list keeps its items, and new ones cannot be chosen.": "Windows'un dilleri ve düzenleri okunamadı: liste öğelerini korur, ancak yenileri seçilemez.",
+  "the layout Windows gives it at the first sign-in": "Windows'un ilk oturum açmada verdiği düzen",
+  "{item}: Windows does not know this input language": "{item}: Windows bu giriş dilini tanımıyor",
+  "{layout} (the default)": "{layout} (varsayılan)",
+  "Find a language": "Dil ara",
+  "a language": "bir dil",
+  "Add the language": "Dili ekle"
 }

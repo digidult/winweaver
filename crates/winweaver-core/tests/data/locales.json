@@ -1,0 +1,24 @@
+{
+  "languages": [
+    { "tag": "de-DE", "lcid": "0407", "name": "German (Germany)", "parent": "de", "default": "0407:00000407" },
+    { "tag": "en", "lcid": "0009", "name": "English", "parent": "", "default": "0409:00000409" },
+    { "tag": "en-GB", "lcid": "0809", "name": "English (United Kingdom)", "parent": "en", "default": "0809:00000809" },
+    { "tag": "en-US", "lcid": "0409", "name": "English (United States)", "parent": "en", "default": "0409:00000409" },
+    { "tag": "ja-JP", "lcid": "0411", "name": "Japanese (Japan)", "parent": "ja", "default": "0411:{03B5835F-F03C-411B-9CE2-AA23E1171E36}{A76C93D9-5523-4E90-AAFA-4DB112F9AC76}" },
+    { "tag": "pl-PL", "lcid": "0415", "name": "Polish (Poland)", "parent": "pl", "default": "0415:00000415" },
+    { "tag": "ru", "lcid": "0019", "name": "Russian", "parent": "", "default": "0419:00000419" },
+    { "tag": "ru-RU", "lcid": "0419", "name": "Russian (Russia)", "parent": "ru", "default": "0419:00000419" },
+    { "tag": "ru-UA", "lcid": "", "name": "Russian (Ukraine)", "parent": "ru", "default": "0419:00000419" },
+    { "tag": "uk", "lcid": "0022", "name": "Ukrainian", "parent": "", "default": "0422:00020422" },
+    { "tag": "uk-UA", "lcid": "0422", "name": "Ukrainian (Ukraine)", "parent": "uk", "default": "0422:00020422" }
+  ],
+  "layouts": [
+    { "klid": "00000407", "name": "German" },
+    { "klid": "00000409", "name": "US" },
+    { "klid": "00000415", "name": "Polish (Programmers)" },
+    { "klid": "00000419", "name": "Russian" },
+    { "klid": "00000422", "name": "Ukrainian" },
+    { "klid": "00000809", "name": "United Kingdom" },
+    { "klid": "00020422", "name": "Ukrainian (Enhanced)" }
+  ]
+}

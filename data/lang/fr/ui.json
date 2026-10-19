@@ -673,5 +673,12 @@
   "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.": "Des majuscules et des chiffres au hasard sans les confusions I, O, 0 et 1 ; :N en donne N, sans lui 6.",
   "N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole.": "N va de 1 à 15. Un numéro de série ou une adresse illisible (absent, ou le fabricant a laissé une valeur fictive comme Default string) devient des caractères aléatoires de même longueur ; un plus court reste entier.",
   "Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone.": "Autour des espaces réservés : lettres latines, chiffres et traits d'union. Le nom avec la longueur complète de chaque espace réservé tient en 15 caractères : PC-{serial} est trop long, PC-{serial:12} tient. Gardez une lettre : Windows refuse un nom fait uniquement de chiffres.",
-  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Exemples avec le numéro de série 5CG1234XYZ et l'adresse 00155D3E5A01 :"
+  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Exemples avec le numéro de série 5CG1234XYZ et l'adresse 00155D3E5A01 :",
+  "The languages and layouts of Windows were not read: the list keeps its items, and new ones cannot be chosen.": "Les langues et dispositions de Windows n'ont pas été lues : la liste garde ses éléments, mais aucun nouveau ne peut être choisi.",
+  "the layout Windows gives it at the first sign-in": "la disposition que Windows lui donne à la première connexion",
+  "{item}: Windows does not know this input language": "{item} : Windows ne connaît pas cette langue de saisie",
+  "{layout} (the default)": "{layout} (par défaut)",
+  "Find a language": "Rechercher une langue",
+  "a language": "une langue",
+  "Add the language": "Ajouter la langue"
 }

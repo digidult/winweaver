@@ -5,8 +5,16 @@ use std::path::Path;
 use winweaver_core::catalog::{Catalog, Phase};
 use winweaver_core::profile::{Account, Profile};
 use winweaver_core::render::{self, ASK_KEY, Build, MAX_COMMAND, TEMP_COMPUTER_NAME};
+use winweaver_core::resources::{self, Locales};
+
+/// The input languages and layouts of Windows 11 the tests know (the program reads them from
+/// Windows).
+fn locales() -> Locales {
+    Locales::parse(include_str!("data/locales.json"))
+}
 
 fn preset(name: &str) -> Profile {
+    resources::set_locale_reader(locales);
     let path =
         Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("../../data/presets/{name}.wwprofile"));
     Profile::load(&path).unwrap()
@@ -215,7 +223,35 @@ fn an_unknown_edition_or_language_is_an_error() {
     p.languages.input.push("xx-XX".into());
     assert!(render::build(&catalog, &p, "t").is_err());
     let mut p = preset("office");
+    p.languages.input.push("0999:00000409".into());
+    assert!(render::build(&catalog, &p, "t").is_err());
+    let mut p = preset("office");
     p.name = "Назва".into();
     let err = render::build(&catalog, &p, "t").unwrap_err().to_string();
     assert!(err.contains("ASCII"), "{err}");
+}
+
+/// A layout chosen for a language goes into the answer file and, with the layout Windows gives
+/// the language first when it is named by its tag too, into the script of the first sign-in.
+#[test]
+fn a_chosen_layout_goes_with_its_language() {
+    let mut p = preset("office");
+    p.languages.input = vec![
+        "en-US".into(),
+        "0422:00000422".into(),
+        "uk-UA".into(),
+        "ru-UA".into(),
+    ];
+    let b = build(&p);
+    let locale = "0409:00000409;0422:00000422;0422:00020422;0419:00000419";
+    let want = format!("<InputLocale>{locale}</InputLocale>");
+    assert!(b.xml.contains(&want));
+    let user = &b.scripts[1].1;
+    assert_eq!(b.scripts[1].0, "Setup-User.ps1");
+    let tags = "$InputLanguages = @('en-US','uk-UA','uk-UA','ru-UA')";
+    let tips = "$InputTips = @('','0422:00000422','0422:00020422','')";
+    let fallback = "$InputFallback = @('en-US','uk-UA','uk-UA','ru')";
+    for line in [tags, tips, fallback] {
+        assert!(user.contains(line), "{line}");
+    }
 }

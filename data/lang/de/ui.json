@@ -673,5 +673,12 @@
   "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.": "Zufällige Großbuchstaben und Ziffern ohne die verwechselbaren I, O, 0 und 1; :N ergibt N davon, ohne :N 6.",
   "N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole.": "N reicht von 1 bis 15. Eine Seriennummer oder Adresse, die nicht lesbar ist (keine vorhanden, oder der Hersteller hat einen Platzhalter wie Default string hinterlassen), wird zu zufälligen Zeichen derselben Länge; eine kürzere bleibt ganz.",
   "Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone.": "Um die Platzhalter herum: lateinische Buchstaben, Ziffern und Bindestriche. Der Name mit der vollen Länge jedes Platzhalters passt in 15 Zeichen, daher ist PC-{serial} zu lang und PC-{serial:12} passt. Lassen Sie einen Buchstaben darin: Windows lehnt einen Namen nur aus Ziffern ab.",
-  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Beispiele mit der Seriennummer 5CG1234XYZ und der Adresse 00155D3E5A01:"
+  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Beispiele mit der Seriennummer 5CG1234XYZ und der Adresse 00155D3E5A01:",
+  "The languages and layouts of Windows were not read: the list keeps its items, and new ones cannot be chosen.": "Die Sprachen und Layouts von Windows wurden nicht gelesen: Die Liste behält ihre Einträge, neue lassen sich nicht wählen.",
+  "the layout Windows gives it at the first sign-in": "das Layout, das Windows bei der ersten Anmeldung vergibt",
+  "{item}: Windows does not know this input language": "{item}: Windows kennt diese Eingabesprache nicht",
+  "{layout} (the default)": "{layout} (Standard)",
+  "Find a language": "Sprache suchen",
+  "a language": "eine Sprache",
+  "Add the language": "Sprache hinzufügen"
 }

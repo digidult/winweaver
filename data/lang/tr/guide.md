@@ -64,6 +64,17 @@ reddeder. `PC-{random}`, `PC-` ve altı rastgele karakter verir, örneğin `PC-K
 `5CG1234XYZ` ve adres `00155D3E5A01` ile `WS-{serial:6}` şablonu `WS-234XYZ`, `{mac:4}-LAB` şablonu
 `5A01-LAB` verir. Form, alanın altında şablonun ne verdiğini gösterir.
 
+## Giriş dilleri
+
+**Diller** formu giriş dillerini sırasıyla listeler; ilki varsayılandır. Her dil adını ve bir klavye
+düzeni listesini gösterir: önce Windows'un dile varsayılan olarak verdiği düzen, sonra Windows'un tüm
+düzenleri adlarına göre. **Ekle**, Windows'un tanıdığı tüm diller arasında adının veya etiketinin bir
+parçasıyla bir dil bulur ve seçilen düzenle ekler; aynı dil iki düzenle iki kez yer alabilir, örneğin
+Ukraynaca (Genişletilmiş) ve Ukraynaca. Windows'un yalnızca ilk oturum açmada numaralandırdığı bir dil,
+örneğin Rusça (Ukrayna), Windows'un o zaman verdiği düzeni alır; o oturum açmaya kadar yanıt dosyası
+dilin ait olduğu dili adlandırır. Diller ve düzenler, WinWeaver'ın çalıştığı Windows'tan, onun dilindeki
+adlarıyla gelir.
+
 ## Pencere
 
 - **Sekmeler**: her açık belge bir sekmedir: profil, karşılaştırma, bu kılavuz, yer işaretleri, MCP

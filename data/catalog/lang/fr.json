@@ -2555,7 +2555,7 @@
   },
   "user-logon.input-languages": {
     "title": "Liste des langues de saisie de l'utilisateur issue du profil (y compris « Russe (Ukraine) »)",
-    "summary": "Remplace la liste des langues de saisie de l'utilisateur par celle du nœud « Langues et région » (par défaut en-US, uk-UA, ru-UA). Les langues sans code numérique, comme « Russe (Ukraine) », ne peuvent pas être définies en XML : elles sont donc appliquées ici ; si Windows ne leur a pas attribué de disposition de clavier, une liste de secours est appliquée, dans laquelle elles sont remplacées par la langue de base.",
+    "summary": "Remplace la liste des langues de saisie de l'utilisateur par celle du nœud « Langues et région » (par défaut en-US, uk-UA, ru-UA), chaque langue avec les dispositions de clavier que le profil choisit pour elle. Les langues sans code numérique, comme « Russe (Ukraine) », ne peuvent pas être définies en XML : elles sont donc appliquées ici ; si Windows ne leur a pas attribué de disposition de clavier, une liste de secours est appliquée, dans laquelle elles sont remplacées par la langue de base.",
     "effect": "Le sélecteur de langue de l'utilisateur affiche le même ordre que le profil ; l'écran de connexion conserve la liste du XML (avec la langue de base au lieu de « Russe (Ukraine) »).",
     "versions": "ru-UA comme langue de saisie est pris en charge par Windows 10 1803+ et 11 ; sur la build 26200, il reçoit le code temporaire 2000:00000419. Windows peut raccourcir les balises (uk-UA s'affiche uk).",
     "verify": "Get-WinUserLanguageList | Select-Object LanguageTag, InputMethodTips",

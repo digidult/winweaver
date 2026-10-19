@@ -65,6 +65,18 @@ chiffres. `PC-{random}` donne `PC-` et six caractères aléatoires, comme `PC-K7
 série `5CG1234XYZ` et l'adresse `00155D3E5A01`, `WS-{serial:6}` donne `WS-234XYZ` et `{mac:4}-LAB` donne
 `5A01-LAB`. Sous le champ, le formulaire montre ce que donne le modèle.
 
+## Langues de saisie
+
+Le formulaire **Langues** liste les langues de saisie dans leur ordre ; la première est celle par défaut.
+Chaque langue montre son nom et une liste de dispositions de clavier : d'abord celle que Windows donne à
+la langue par défaut, puis toutes les dispositions de Windows par leur nom. **Ajouter** trouve une langue
+par une partie de son nom ou de sa balise parmi toutes les langues que Windows connaît et l'ajoute avec
+la disposition choisie ; la même langue peut venir deux fois avec deux dispositions, comme Ukrainien
+(étendu) et Ukrainien. Une langue que Windows ne numérote qu'à la première connexion, comme Russe
+(Ukraine), reçoit la disposition que Windows lui donne alors, et jusqu'à cette connexion le fichier de
+réponses nomme la langue à laquelle elle appartient. Les langues et dispositions sont celles du Windows
+sur lequel WinWeaver s'exécute, avec leurs noms dans sa langue.
+
 ## La fenêtre
 
 - **Onglets** : chaque document ouvert est un onglet : un profil, une comparaison, ce guide, les

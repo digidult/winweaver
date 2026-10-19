@@ -194,6 +194,8 @@ pub struct Server {
 impl Server {
     /// A server whose workspace starts with a copy of the first preset.
     pub fn new(catalog: Catalog, presets: &[(&str, &str)], options: Options) -> Self {
+        // The input languages and layouts of this Windows, read at the first build or check.
+        winweaver_core::resources::set_locale_reader(winweaver_win::locales);
         let presets: Vec<(String, Profile)> = presets
             .iter()
             .filter_map(|(name, text)| {

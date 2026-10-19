@@ -66,6 +66,18 @@ etwa `PC-K7Q2MX`; mit der Seriennummer `5CG1234XYZ` und der Adresse `00155D3E5A0
 den Namen `WS-234XYZ` und `{mac:4}-LAB` den Namen `5A01-LAB`. Unter dem Feld zeigt das Formular, was das
 Muster ergibt.
 
+## Eingabesprachen
+
+Das Formular **Sprachen** listet die Eingabesprachen in ihrer Reihenfolge; die erste ist die
+Standardsprache. Jede Sprache zeigt ihren Namen und eine Liste der Tastaturlayouts: zuerst das Layout,
+das Windows der Sprache standardmäßig gibt, dann alle Layouts von Windows nach ihren Namen.
+**Hinzufügen** findet eine Sprache über einen Teil ihres Namens oder Tags unter allen Sprachen, die
+Windows kennt, und fügt sie mit dem gewählten Layout hinzu; dieselbe Sprache kann zweimal mit zwei
+Layouts vorkommen, etwa Ukrainisch (erweitert) und Ukrainisch. Eine Sprache, die Windows erst bei der
+ersten Anmeldung nummeriert, etwa Russisch (Ukraine), erhält das Layout, das Windows ihr dann gibt, und
+bis zu dieser Anmeldung nennt die Antwortdatei die Sprache, zu der sie gehört. Die Sprachen und Layouts
+stammen aus dem Windows, auf dem WinWeaver läuft, mit ihren Namen in seiner Sprache.
+
 ## Das Fenster
 
 - **Registerkarten**: Jedes geöffnete Dokument ist eine Registerkarte: ein Profil, ein Vergleich, dieses

@@ -341,6 +341,7 @@ fn check_languages(profile: &Profile, issues: &mut Vec<Issue>) {
             "No input language: at least one is needed",
         );
     }
+    let table = crate::resources::locales();
     for item in &l.input {
         if !is_culture(item) && !is_layout(item) {
             push(
@@ -350,6 +351,13 @@ fn check_languages(profile: &Profile, issues: &mut Vec<Issue>) {
                 format!(
                     "The input language {item} is not a language tag or a layout id such as 0409:00000409"
                 ),
+            );
+        } else if !table.languages.is_empty() && table.input(item).is_none() {
+            push(
+                issues,
+                Severity::Error,
+                Target::Languages,
+                format!("Windows does not know the input language {item}"),
             );
         }
     }

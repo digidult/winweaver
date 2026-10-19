@@ -356,13 +356,39 @@ fn languages_form(ui: &mut egui::Ui, l: &mut Languages) {
     ui.weak(tr("The display language is never changed later: the installed Windows keeps the language of the answer file."));
     ui.add_space(8.0);
     ui.strong(tr("Input languages (the first is the default)"));
+    let table = resources::locales();
+    if table.languages.is_empty() {
+        ui.weak(tr("The languages and layouts of Windows were not read: the list keeps its items, and new ones cannot be chosen."));
+    }
     let mut remove: Option<usize> = None;
     let mut up: Option<usize> = None;
-    for (n, tag) in l.input.iter().enumerate() {
-        ui.horizontal(|ui| {
-            let title = resources::keyboard(tag).map_or("", |k| k.title.as_str());
-            ui.label(format!("{}. {tag}", n + 1));
-            ui.weak(title);
+    let mut change: Option<(usize, String)> = None;
+    for (n, item) in l.input.iter().enumerate() {
+        ui.horizontal_wrapped(|ui| {
+            ui.label(format!("{}.", n + 1));
+            match table.input(item) {
+                Some((language, _)) => {
+                    ui.label(language.name.as_str());
+                    ui.weak(item.as_str());
+                    if language.lcid.is_empty() {
+                        ui.weak(tr("the layout Windows gives it at the first sign-in"));
+                    } else {
+                        let id = ("input-layout", n);
+                        let own = own_layout(item);
+                        if let Some(layout) = layout_list(ui, id, table, language, own) {
+                            change = Some((n, input_item(language, layout.as_deref())));
+                        }
+                    }
+                }
+                None => {
+                    let warn = ui.visuals().warn_fg_color;
+                    let text = trf(
+                        "{item}: Windows does not know this input language",
+                        &[("item", item)],
+                    );
+                    ui.colored_label(warn, text);
+                }
+            }
             if n > 0 && ui.small_button(tr("up")).clicked() {
                 up = Some(n);
             }
@@ -371,27 +397,135 @@ fn languages_form(ui: &mut egui::Ui, l: &mut Languages) {
             }
         });
     }
+    if let Some((n, item)) = change {
+        l.input[n] = item;
+    }
     if let Some(n) = up {
         l.input.swap(n, n - 1);
     }
     if let Some(n) = remove {
         l.input.remove(n);
     }
-    ui.horizontal(|ui| {
+    add_input_row(ui, l, table);
+}
+
+/// The layout of its own an item names (`00000422` of `0422:00000422`), `None` for a tag.
+fn own_layout(item: &str) -> Option<&str> {
+    if validate::is_layout(item) {
+        item.split_once(':').map(|(_, klid)| klid)
+    } else {
+        None
+    }
+}
+
+/// The item of a language with a layout: its tag for the layout Windows gives it first, else
+/// the layout id of the two.
+fn input_item(language: &resources::InputLanguage, klid: Option<&str>) -> String {
+    let first = own_layout(&language.default);
+    match klid {
+        Some(klid) if !first.is_some_and(|f| f.eq_ignore_ascii_case(klid)) => {
+            format!("{}:{}", language.lcid, klid)
+        }
+        _ => language.tag.clone(),
+    }
+}
+
+/// A list of the keyboard layouts of Windows for an input language: the one Windows gives it
+/// first, then every layout by its name. `Some` with the choice when another one is chosen:
+/// `None` inside for the first one, else the id of the layout.
+fn layout_list(
+    ui: &mut egui::Ui,
+    id: impl std::hash::Hash,
+    table: &resources::Locales,
+    language: &resources::InputLanguage,
+    own: Option<&str>,
+) -> Option<Option<String>> {
+    let name = table.layout_name(&language.default);
+    let first = trf("{layout} (the default)", &[("layout", &name)]);
+    let shown = match own {
+        Some(klid) => table.layout_name(klid),
+        None => first.clone(),
+    };
+    let mut chosen = None;
+    egui::ComboBox::from_id_salt(id)
+        .selected_text(shown)
+        .width(240.0)
+        .height(360.0)
+        .show_ui(ui, |ui| {
+            if ui.selectable_label(own.is_none(), first).clicked() && own.is_some() {
+                chosen = Some(None);
+            }
+            for layout in &table.layouts {
+                let on = own.is_some_and(|klid| klid.eq_ignore_ascii_case(&layout.klid));
+                if ui.selectable_label(on, layout.name.as_str()).clicked() && !on {
+                    chosen = Some(Some(layout.klid.clone()));
+                }
+            }
+        });
+    chosen
+}
+
+/// What the row that adds an input language holds from frame to frame.
+#[derive(Clone, Default)]
+struct AddInput {
+    filter: String,
+    tag: String,
+    /// The layout chosen for it, `None` for the one Windows gives it first.
+    klid: Option<String>,
+}
+
+/// The row that adds an input language: a search, the languages of Windows that match it, a
+/// layout and the button.
+fn add_input_row(ui: &mut egui::Ui, l: &mut Languages, table: &resources::Locales) {
+    if table.languages.is_empty() {
+        return;
+    }
+    let id = egui::Id::new("languages-add-input");
+    let mut add: AddInput = ui.data_mut(|d| d.get_temp(id)).unwrap_or_default();
+    ui.horizontal_wrapped(|ui| {
         ui.label(tr("Add"));
-        egui::ComboBox::from_id_salt("add-input")
-            .selected_text("an input language")
-            .width(300.0)
+        let search = egui::TextEdit::singleline(&mut add.filter)
+            .hint_text(tr("Find a language"))
+            .desired_width(140.0);
+        ui.add(search);
+        let needle = add.filter.to_lowercase();
+        let chosen = table.language(&add.tag);
+        let shown = chosen.map_or_else(|| tr("a language").to_owned(), |c| c.name.clone());
+        egui::ComboBox::from_id_salt("add-input-language")
+            .selected_text(shown)
+            .width(240.0)
+            .height(360.0)
             .show_ui(ui, |ui| {
-                for keyboard in resources::keyboards() {
-                    if l.input.contains(&keyboard.tag) {
+                for language in &table.languages {
+                    let usable = !language.default.is_empty() || !language.lcid.is_empty();
+                    let text = format!("{} {}", language.name, language.tag).to_lowercase();
+                    if !usable || !text.contains(&needle) {
                         continue;
                     }
-                    let label = format!("{} ({}, {})", keyboard.title, keyboard.tag, keyboard.klid);
-                    if ui.selectable_label(false, label).clicked() {
-                        l.input.push(keyboard.tag.clone());
+                    let label = format!("{} ({})", language.name, language.tag);
+                    if ui.selectable_label(add.tag == language.tag, label).clicked() {
+                        add.tag = language.tag.clone();
+                        add.klid = None;
                     }
                 }
             });
+        let Some(language) = table.language(&add.tag) else {
+            return;
+        };
+        let own = add.klid.as_deref();
+        if !language.lcid.is_empty()
+            && let Some(choice) = layout_list(ui, "add-input-layout", table, language, own)
+        {
+            add.klid = choice;
+        }
+        let item = input_item(language, add.klid.as_deref());
+        let fresh = !l.input.iter().any(|i| i.eq_ignore_ascii_case(&item));
+        if ui
+            .add_enabled(fresh, egui::Button::new(tr("Add the language")))
+            .clicked()
+        {
+            l.input.push(item);
+        }
     });
+    ui.data_mut(|d| d.insert_temp(id, add));
 }

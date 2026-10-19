@@ -673,5 +673,12 @@
   "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.": "Maiuscole e cifre casuali senza le somiglianti I, O, 0 e 1; :N ne dà N, senza :N 6.",
   "N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole.": "N va da 1 a 15. Un numero di serie o un indirizzo illeggibile (assente, o il produttore ha lasciato un segnaposto come Default string) diventa caratteri casuali della stessa lunghezza; uno più corto resta intero.",
   "Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone.": "Intorno ai segnaposto: lettere latine, cifre e trattini. Il nome con la lunghezza piena di ogni segnaposto rientra in 15 caratteri, quindi PC-{serial} è troppo lungo e PC-{serial:12} rientra. Lasciate una lettera: Windows rifiuta un nome di sole cifre.",
-  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Esempi con il numero di serie 5CG1234XYZ e l'indirizzo 00155D3E5A01:"
+  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Esempi con il numero di serie 5CG1234XYZ e l'indirizzo 00155D3E5A01:",
+  "The languages and layouts of Windows were not read: the list keeps its items, and new ones cannot be chosen.": "Le lingue e i layout di Windows non sono stati letti: l'elenco conserva le sue voci, ma non se ne possono scegliere di nuove.",
+  "the layout Windows gives it at the first sign-in": "il layout che Windows le assegna al primo accesso",
+  "{item}: Windows does not know this input language": "{item}: Windows non conosce questa lingua di input",
+  "{layout} (the default)": "{layout} (predefinito)",
+  "Find a language": "Cerca una lingua",
+  "a language": "una lingua",
+  "Add the language": "Aggiungi la lingua"
 }

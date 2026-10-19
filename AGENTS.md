@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 19.10.2026 (0.19.1: the placeholders of the computer name template described in the form and the guide; 0.19.0: files inside the program folder kept relative to it in the settings, bookmarks, drafts and diffs; 0.18.3: the answer of the question that closes a tab no longer reads as Cancel in uk, ru and be, the release notes of 0.18.3; 0.18.2: the acceptance of 0.18.1 recorded, the release notes of 0.18.2; 0.18.1: the acceptance of 0.16.1 recorded, the messages of the status bar translated, Open the folder after every save, the release notes of 0.18.1; 0.18.0: Open the folder of a built or saved file and of the folders of the program; 0.17.0: the MCP tools of the permissions of registry keys; 0.16.2: the acceptance of 0.11.0 recorded, the release notes of 0.16.2; 0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
+Updated with every change of structure, commands or task status. Last update: 19.10.2026 (0.20.0: every input language and keyboard layout of Windows in the form Languages, no embedded list; 0.19.1: the placeholders of the computer name template described in the form and the guide; 0.19.0: files inside the program folder kept relative to it in the settings, bookmarks, drafts and diffs; 0.18.3: the answer of the question that closes a tab no longer reads as Cancel in uk, ru and be, the release notes of 0.18.3; 0.18.2: the acceptance of 0.18.1 recorded, the release notes of 0.18.2; 0.18.1: the acceptance of 0.16.1 recorded, the messages of the status bar translated, Open the folder after every save, the release notes of 0.18.1; 0.18.0: Open the folder of a built or saved file and of the folders of the program; 0.17.0: the MCP tools of the permissions of registry keys; 0.16.2: the acceptance of 0.11.0 recorded, the release notes of 0.16.2; 0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
 the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
@@ -66,8 +66,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   ├── winweaver-core/    pure Rust, compiles everywhere: catalog (model, embedded data, checks), jsonfile
 │   │                      (strict reading), i18n (catalog translations), paths (a file inside the program
 │   │                      folder kept relative to it), profile (.wwprofile), resolver,
-│   │                      validate (the check of a profile), resources (time zones, keyboards, editions with
-│   │                      their keys), diff (.wwdiff), bookmarks (.wwmarks), clock, render (autounattend.xml
+│   │                      validate (the check of a profile), resources (time zones, editions with their keys,
+│   │                      the input languages and layouts Windows lists), diff (.wwdiff), bookmarks (.wwmarks), clock, render (autounattend.xml
 │   │                      from the templates), thispc (the plan of checks of a running Windows, the judgement
 │   │                      of the rules, the capture into a profile, the report of the audit script, an
 │   │                      in-memory machine), scripts (stand-alone Apply, Revert, Audit and Undo scripts),
@@ -114,7 +114,7 @@ functionality carry over; the file formats are new and no program code is ported
 │   ├── catalog/           groups.json, 00-17 rules files, lang/<code>.json for uk, ru, de, es, fr, id, it, tr (catalog 0.11 of the
 │   │                      predecessor)
 │   ├── presets/           office, strict, laptop, home .wwprofile (converted once from the predecessor)
-│   ├── resources/         timezones.json, keyboards.json
+│   ├── resources/         timezones.json
 │   ├── templates/         the runtime templates of the predecessor carried over as data: the answer file
 │   │                      skeleton and the scripts with {{slot}}s (they name WinWeaver now), VERSION 0.11
 │   ├── lang/<code>/       ui.json: the translations of the interface (uk, ru, de, es, fr, id, it, tr); guide.md: the guide translated
@@ -147,7 +147,8 @@ of the predecessor; the id of an embedded theme replaces it).
 2. No em dash (U+2014) and no en dash (U+2013) in any text we create, in any language: documents, code,
    data, comments, interface strings, translations, commit messages. Number ranges use a hyphen.
 3. Clean room: no program code of WinKickOff is copied or translated into this repository. Its data is
-   carried over: the rule catalog, the translations, the presets, the time zones and keyboards, and, by the
+   carried over: the rule catalog, the translations, the presets, the time zones (the keyboards were
+   replaced by the lists of Windows on 19.10.2026), and, by the
    customer's decision of 14.10.2026, the runtime templates (PowerShell of the answer file and of the
    stand-alone scripts). Behaviour is written from the specification and from the output of the predecessor.
 4. Dependencies: popular, well known, open source Rust crates that need no extra DLL next to the executable.
@@ -265,10 +266,24 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   named `this-pc` (`App::start_pc_read`, `poll_pc_read`, a `PcJob`; the machine is `App::pc`, one in memory
   for the tests), one read at a time with a spinner in the status bar; the result goes to the tab the read
   started from, found by its draft key, and a tab closed meanwhile is only named in the status.
-- Input languages are read as Windows lists them: it shortens a tag whose region is the main one of its
-  language (`uk` for `uk-UA`), so `resources::keyboard_of_read` maps a tag without a region to the
-  keyboards of its language and picks the one whose layout is among the input method tips (the values
-  named like `0422:00020422` of `User Profile\<tag>`, the `InputMethodTips` of the audit script).
+- Input languages and keyboard layouts (the user's rule of 19.10.2026: from the system, no list of the
+  program): `resources::Locales` holds what Windows lists, read once at the first use by the reader the
+  window and the MCP server name (`set_locale_reader(winweaver_win::locales)` in `App::new` and
+  `Server::new`): every locale of `EnumSystemLocalesEx` with its locale id (empty for one Windows numbers
+  at the first sign-in, such as `ru-UA`), its localized name, its parent and the first input profile of
+  `LOCALE_SKEYBOARDSTOINSTALL`, and every layout of `Keyboard Layouts` in the registry with the name of
+  `Layout Display Name` (`RegLoadMUIStringW`), input methods (`E...`) left out. The core tests read
+  `crates/winweaver-core/tests/data/locales.json` (set in the helpers `preset` and `office`, before the
+  first use, since the list is read once a process). An item of `languages.input` is a tag (the layout
+  Windows gives the language first) or a layout id `LLLL:KKKKKKKK`; `Locales::input` gives the language
+  and the profile of an item. The answer file gets the profile of each item (a language without a locale
+  id gets the one of its parent, as `ru-UA` gets `0419:00000419`), `Setup-User.ps1` the tags, the chosen
+  layouts (`$InputTips`, empty for the default; a language named by its tag and with a layout of its own
+  keeps the default of its tag too) and the fallback, and the rule `user-logon.input-languages` sets the
+  tips of every language it adds. Windows shortens a tag whose region is the main one (`uk` for `uk-UA`):
+  `Locales::read_items` turns a read language and its input method tips into items (the default tip is
+  the tag of the language, another one a layout id, a tip of a locale id handed at the first sign-in,
+  `2000:00000419`, the tag as read). The check of a profile names an item Windows does not know.
 - Of the actions of one rule on one value (a removal for a clean start, then the value) only the last is
   checked (`thispc::plan`). A rule partly in effect is read as off, and the read names what differs
   (`Reading::differing`, `CaptureSummary::partly`, a warning on the rule in the message bar).

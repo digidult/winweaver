@@ -5,13 +5,21 @@ use std::path::Path;
 use serde_json::Value;
 use winweaver_core::catalog::{Action, Catalog, Param, Phase, Rule};
 use winweaver_core::profile::Profile;
+use winweaver_core::resources::{self, Locales};
 use winweaver_core::thispc::{
     self, FIRST_SIGN_IN, InputLanguage, MemoryMachine, NOTE_ADMIN, NOTE_CURRENT_USER,
     NOTE_NOT_ON_BUILD, ONLY_DURING_INSTALL, Probe, ReadAccount, RegData, Report, SIGN_IN_SCREEN,
     Status, SystemInfo, Verdict,
 };
 
+/// The input languages and layouts of Windows 11 the tests know (the program reads them from
+/// Windows).
+fn locales() -> Locales {
+    Locales::parse(include_str!("data/locales.json"))
+}
+
 fn office() -> Profile {
+    resources::set_locale_reader(locales);
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/presets/office.wwprofile");
     Profile::load(&path).unwrap()
 }

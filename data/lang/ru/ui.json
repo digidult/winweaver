@@ -673,5 +673,12 @@
   "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.": "Случайные заглавные буквы и цифры без похожих I, O, 0 и 1; :N даёт N символов, без него 6.",
   "N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole.": "N от 1 до 15. Серийный номер или адрес, которые не удалось прочитать (их нет или производитель оставил заглушку вроде Default string), становятся случайными символами той же длины; более короткий номер остаётся целым.",
   "Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone.": "Вокруг подстановок: латинские буквы, цифры и дефисы. Имя с полной длиной каждой подстановки укладывается в 15 символов, поэтому PC-{serial} слишком длинное, а PC-{serial:12} укладывается. Оставьте в имени букву: Windows не принимает имя из одних цифр.",
-  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Примеры с серийным номером 5CG1234XYZ и адресом 00155D3E5A01:"
+  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Примеры с серийным номером 5CG1234XYZ и адресом 00155D3E5A01:",
+  "The languages and layouts of Windows were not read: the list keeps its items, and new ones cannot be chosen.": "Языки и раскладки Windows не прочитаны: список хранит свои пункты, но новые выбрать нельзя.",
+  "the layout Windows gives it at the first sign-in": "раскладка, которую Windows даёт при первом входе",
+  "{item}: Windows does not know this input language": "{item}: Windows не знает этого языка ввода",
+  "{layout} (the default)": "{layout} (по умолчанию)",
+  "Find a language": "Найти язык",
+  "a language": "выберите язык",
+  "Add the language": "Добавить язык"
 }

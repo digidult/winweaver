@@ -36,7 +36,9 @@ NEW). Each item names the user-visible behaviour; the mechanism is in `04-archit
   describing every placeholder and showing what the template gives; workgroup; disk mode ask or a disk and
   partition id; account mode file or ask; options such as no Dynamic Update), Accounts (name, display
   name, group, password; starter accounts without passwords are a customer decision and are not
-  "fixed"), Languages (display language, input languages and layouts, region, time zone, switch keys).
+  "fixed"), Languages (display language, input languages and layouts, region, time zone, switch keys;
+  every input language and keyboard layout Windows lists, by their names in the language of Windows,
+  each item of the list with a layout of its choice).
 - Drafts of unsaved changes; recent files; a new profile from a preset.
 
 ## 3. Check and build

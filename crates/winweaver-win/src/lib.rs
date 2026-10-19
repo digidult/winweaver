@@ -13,6 +13,8 @@ mod dism;
 #[cfg(windows)]
 mod execute;
 #[cfg(windows)]
+mod locales;
+#[cfg(windows)]
 mod native;
 
 #[cfg(windows)]
@@ -45,6 +47,20 @@ pub fn this_pc() -> Option<Box<dyn Machine + Send + Sync>> {
     #[cfg(not(windows))]
     {
         None
+    }
+}
+
+/// The input languages and keyboard layouts of this Windows, the reader the window and the MCP
+/// server name for `winweaver_core::resources::set_locale_reader`; none where the Windows API is
+/// not available.
+pub fn locales() -> winweaver_core::resources::Locales {
+    #[cfg(windows)]
+    {
+        locales::read()
+    }
+    #[cfg(not(windows))]
+    {
+        winweaver_core::resources::Locales::default()
     }
 }
 

@@ -2811,7 +2811,7 @@
   },
   "user-logon.input-languages": {
     "title": "Eingabesprachen des Benutzers aus dem Profil (einschließlich „Russisch (Ukraine)“)",
-    "summary": "Ersetzt die Liste der Eingabesprachen des Benutzers durch die Liste aus dem Knoten „Sprachen und Region“ (standardmäßig en-US, uk-UA, ru-UA). Sprachen ohne numerischen Code wie „Russisch (Ukraine)“ lassen sich nicht in XML festlegen, daher werden sie hier angewendet; hat Windows ihnen kein Tastaturlayout zugewiesen, wird eine Ersatzliste angewendet, in der sie durch die Basissprache ersetzt sind.",
+    "summary": "Ersetzt die Liste der Eingabesprachen des Benutzers durch die Liste aus dem Knoten „Sprachen und Region“ (standardmäßig en-US, uk-UA, ru-UA), jede Sprache mit den Tastaturlayouts, die das Profil für sie wählt. Sprachen ohne numerischen Code wie „Russisch (Ukraine)“ lassen sich nicht in XML festlegen, daher werden sie hier angewendet; hat Windows ihnen kein Tastaturlayout zugewiesen, wird eine Ersatzliste angewendet, in der sie durch die Basissprache ersetzt sind.",
     "effect": "Der Sprachumschalter des Benutzers zeigt dieselbe Reihenfolge wie das Profil; der Anmeldebildschirm behält die Liste aus dem XML (mit der Basissprache statt „Russisch (Ukraine)“).",
     "versions": "ru-UA als Eingabesprache unterstützen Windows 10 1803+ und 11; in Build 26200 erhält es den vorläufigen Code 2000:00000419. Windows kann Tags kürzen (uk-UA wird als uk angezeigt).",
     "verify": "Get-WinUserLanguageList | Select-Object LanguageTag, InputMethodTips",

@@ -673,5 +673,12 @@
   "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.": "Huruf kapital dan angka acak tanpa yang mirip I, O, 0, dan 1; :N memberi N karakter, tanpa itu 6.",
   "N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole.": "N dari 1 hingga 15. Nomor seri atau alamat yang tidak dapat dibaca (tidak ada, atau pabrikan meninggalkan pengganti seperti Default string) menjadi karakter acak dengan panjang yang sama; yang lebih pendek tetap utuh.",
   "Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone.": "Di sekitar placeholder: huruf Latin, angka, dan tanda hubung. Nama dengan panjang penuh setiap placeholder muat dalam 15 karakter, jadi PC-{serial} terlalu panjang dan PC-{serial:12} muat. Sisakan satu huruf: Windows menolak nama yang hanya berisi angka.",
-  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Contoh dengan nomor seri 5CG1234XYZ dan alamat 00155D3E5A01:"
+  "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:": "Contoh dengan nomor seri 5CG1234XYZ dan alamat 00155D3E5A01:",
+  "The languages and layouts of Windows were not read: the list keeps its items, and new ones cannot be chosen.": "Bahasa dan tata letak Windows tidak dibaca: daftar menyimpan itemnya, tetapi yang baru tidak dapat dipilih.",
+  "the layout Windows gives it at the first sign-in": "tata letak yang diberikan Windows saat masuk pertama kali",
+  "{item}: Windows does not know this input language": "{item}: Windows tidak mengenal bahasa input ini",
+  "{layout} (the default)": "{layout} (default)",
+  "Find a language": "Cari bahasa",
+  "a language": "pilih bahasa",
+  "Add the language": "Tambahkan bahasa"
 }

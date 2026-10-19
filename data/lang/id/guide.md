@@ -63,6 +63,18 @@ berisi angka. `PC-{random}` menghasilkan `PC-` dan enam karakter acak, misalnya 
 seri `5CG1234XYZ` dan alamat `00155D3E5A01`, `WS-{serial:6}` menghasilkan `WS-234XYZ` dan `{mac:4}-LAB`
 menghasilkan `5A01-LAB`. Di bawah kolom, formulir menunjukkan hasil templat.
 
+## Bahasa input
+
+Formulir **Bahasa** mencantumkan bahasa input sesuai urutannya; yang pertama adalah default. Setiap
+bahasa menampilkan namanya dan daftar tata letak keyboard: lebih dulu tata letak yang diberikan Windows
+secara default, lalu semua tata letak Windows menurut namanya. **Tambah** mencari bahasa berdasarkan
+sebagian nama atau tagnya di antara semua bahasa yang dikenal Windows dan menambahkannya dengan tata
+letak yang dipilih; bahasa yang sama boleh muncul dua kali dengan dua tata letak, misalnya Ukraina
+(Diperluas) dan Ukraina. Bahasa yang baru diberi nomor oleh Windows saat masuk pertama kali, seperti
+Rusia (Ukraina), mendapat tata letak yang diberikan Windows saat itu, dan sampai masuk itu file jawaban
+menyebut bahasa induknya. Bahasa dan tata letak berasal dari Windows tempat WinWeaver berjalan, dengan
+nama dalam bahasanya.
+
 ## Jendela
 
 - **Tab**: setiap dokumen yang terbuka adalah tab: profil, perbandingan, panduan ini, penanda, server MCP,

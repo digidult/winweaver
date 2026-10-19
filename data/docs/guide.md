@@ -62,6 +62,17 @@ and `PC-{serial:12}` fits; keep a letter in it, since Windows refuses a name of 
 `5CG1234XYZ` and the address `00155D3E5A01`, `WS-{serial:6}` gives `WS-234XYZ` and `{mac:4}-LAB` gives
 `5A01-LAB`. Below the field the form shows what the template gives.
 
+## Input languages
+
+The form **Languages** lists the input languages in their order; the first one is the default. Each
+language shows its name and a list of keyboard layouts: the layout Windows gives the language first, then
+every layout of Windows by its name. **Add** finds a language by a part of its name or tag among all the
+languages Windows knows and adds it with the chosen layout; the same language may come twice with two
+layouts, such as Ukrainian (Enhanced) and Ukrainian. A language Windows numbers only at the first
+sign-in, such as Russian (Ukraine), gets the layout Windows gives it then, and the answer file names the
+language it belongs to until that sign-in. The languages and layouts are the ones of the Windows
+WinWeaver runs on, by their names in its language.
+
 ## The window
 
 - **Tabs**: every open document is a tab: a profile, a diff, this guide, the bookmarks, the MCP

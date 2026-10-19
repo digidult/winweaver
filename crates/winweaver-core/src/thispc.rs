@@ -1174,16 +1174,22 @@ fn capture_forms(profile: &mut Profile, info: &SystemInfo, summary: &mut Capture
     }
     let mut known: Vec<String> = Vec::new();
     let mut unknown: Vec<&str> = Vec::new();
+    let table = resources::locales();
     for language in &info.input {
-        match resources::keyboard_of_read(&language.tag, &language.tips) {
-            Some(k) if !known.contains(&k.tag) => known.push(k.tag.clone()),
-            Some(_) => {}
+        match table.read_items(&language.tag, &language.tips) {
+            Some(items) => {
+                for item in items {
+                    if !known.iter().any(|k| k.eq_ignore_ascii_case(&item)) {
+                        known.push(item);
+                    }
+                }
+            }
             None => unknown.push(language.tag.as_str()),
         }
     }
     if !unknown.is_empty() {
         summary.notes.push(format!(
-            "input languages the catalog has no layout for were left out: {}",
+            "input languages Windows does not list were left out: {}",
             unknown.join(", ")
         ));
     }

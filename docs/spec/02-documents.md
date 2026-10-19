@@ -63,6 +63,9 @@ unknown extension, by its content.
 }
 ```
 
+- An item of `languages.input` is a language tag (`uk-UA`: the language with the layout Windows gives it
+  first) or a layout id (`0422:00000422`: the language of that locale id with that layout); the first item
+  is the default. The languages and layouts are the ones Windows lists, never a list of the program.
 - `rules` holds only the rules whose state differs from "off with default parameters"; a rule not listed
   is off. Parameters are written only when they differ from the defaults.
 - `source` of an imported policy records the most trusted kind of import the choice was made in

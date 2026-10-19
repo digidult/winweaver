@@ -2572,7 +2572,7 @@
   },
   "user-logon.input-languages": {
     "title": "Profildeki kullanıcı giriş dilleri listesi (\"Rusça (Ukrayna)\" dahil)",
-    "summary": "Kullanıcının giriş dilleri listesini \"Diller ve bölge\" düğümündeki listeyle değiştirir (varsayılan olarak en-US, uk-UA, ru-UA). \"Rusça (Ukrayna)\" gibi sayısal kodu olmayan diller XML'de ayarlanamaz, bu nedenle burada uygulanır; Windows bunlara bir klavye düzeni atamamışsa, bu dillerin temel dille değiştirildiği bir yedek liste uygulanır.",
+    "summary": "Kullanıcının giriş dilleri listesini \"Diller ve bölge\" düğümündeki listeyle değiştirir (varsayılan olarak en-US, uk-UA, ru-UA), her dil profilin onun için seçtiği klavye düzenleriyle. \"Rusça (Ukrayna)\" gibi sayısal kodu olmayan diller XML'de ayarlanamaz, bu nedenle burada uygulanır; Windows bunlara bir klavye düzeni atamamışsa, bu dillerin temel dille değiştirildiği bir yedek liste uygulanır.",
     "effect": "Kullanıcının dil değiştiricisi profildeki sırayı gösterir; oturum açma ekranı XML'deki listeyi korur (\"Rusça (Ukrayna)\" yerine temel dille).",
     "versions": "Giriş dili olarak ru-UA, Windows 10 1803+ ve 11 tarafından desteklenir; 26200 derlemesinde geçici 2000:00000419 kodunu alır. Windows etiketleri kısaltabilir (uk-UA, uk olarak görüntülenir).",
     "verify": "Get-WinUserLanguageList | Select-Object LanguageTag, InputMethodTips",

@@ -2577,7 +2577,7 @@
   },
   "user-logon.input-languages": {
     "title": "Daftar bahasa input pengguna dari profil (termasuk \"Rusia (Ukraina)\")",
-    "summary": "Mengganti daftar bahasa input pengguna dengan daftar dari simpul \"Bahasa dan wilayah\" (secara default en-US, uk-UA, ru-UA). Bahasa tanpa kode numerik, seperti \"Rusia (Ukraina)\", tidak dapat diatur di XML, sehingga diterapkan di sini; jika Windows belum menetapkan tata letak keyboard untuknya, daftar cadangan diterapkan dengan bahasa tersebut diganti oleh bahasa dasarnya.",
+    "summary": "Mengganti daftar bahasa input pengguna dengan daftar dari simpul \"Bahasa dan wilayah\" (secara default en-US, uk-UA, ru-UA), setiap bahasa dengan tata letak keyboard yang dipilih profil untuknya. Bahasa tanpa kode numerik, seperti \"Rusia (Ukraina)\", tidak dapat diatur di XML, sehingga diterapkan di sini; jika Windows belum menetapkan tata letak keyboard untuknya, daftar cadangan diterapkan dengan bahasa tersebut diganti oleh bahasa dasarnya.",
     "effect": "Pengalih bahasa pengguna menampilkan urutan yang sama dengan profil; layar masuk mempertahankan daftar dari XML (dengan bahasa dasar sebagai ganti \"Rusia (Ukraina)\").",
     "versions": "ru-UA sebagai bahasa input didukung oleh Windows 10 1803+ dan 11; pada build 26200 bahasa ini mendapat kode sementara 2000:00000419. Windows dapat memperpendek tag (uk-UA ditampilkan sebagai uk).",
     "verify": "Get-WinUserLanguageList | Select-Object LanguageTag, InputMethodTips",

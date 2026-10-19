@@ -40,8 +40,11 @@ function Remove-Reg {
 }
 
 # Input languages of the profile, in order. Transient languages (no numeric locale id, such as ru-UA)
-# must get a keyboard layout from Windows; otherwise the fallback list is applied.
+# must get a keyboard layout from Windows; otherwise the fallback list is applied. $InputTips holds,
+# item by item, the input profile chosen in the profile (such as 0422:00000422), empty for the one
+# Windows gives the language first.
 $InputLanguages = @({{input_languages}})
+$InputTips = @({{input_tips}})
 $InputFallback = @({{input_fallback}})
 $TransientLanguages = @({{transient_languages}})
 

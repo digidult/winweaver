@@ -13,6 +13,7 @@ use crate::catalog::{Action, Catalog, ListNames, Phase, RegKind, Rule};
 use crate::profile::{Account, Profile};
 use crate::resolver;
 use crate::resources;
+use crate::validate;
 
 const TEMPLATE_XML: &str = include_str!("../../../data/templates/autounattend.template.xml");
 const SETUP_SYSTEM: &str = include_str!("../../../data/templates/Setup-System.runtime.ps1");
@@ -581,40 +582,69 @@ fn component(name: &str, arch: &str, body: &[String]) -> Vec<String> {
     out
 }
 
-/// The input languages of the profile as Windows wants them.
+/// The input languages of the profile as Windows wants them: the input profiles of the answer
+/// file, and for the script of the first sign-in the tag of each item, its layout when it names
+/// one (empty for the one Windows gives the language first) and its tag with a language without
+/// a locale id replaced by the language it belongs to.
 struct InputLanguages {
     input_locale: String,
     tags: Vec<String>,
+    tips: Vec<String>,
     fallback: Vec<String>,
     transient: Vec<String>,
 }
 
 fn input_languages(profile: &Profile) -> Result<InputLanguages, RenderError> {
+    let table = resources::locales();
     let mut locales = Vec::new();
+    let mut tags = Vec::new();
+    let mut tips = Vec::new();
     let mut fallback = Vec::new();
     let mut transient = Vec::new();
-    for tag in &profile.languages.input {
-        let kb = resources::keyboard(tag)
-            .ok_or_else(|| RenderError::Profile(format!("unknown input language {tag}")))?;
-        let effective = if kb.transient {
-            transient.push(tag.clone());
-            let fb = kb.fallback.clone().unwrap_or_else(|| tag.clone());
-            resources::keyboard(&fb).ok_or_else(|| {
-                RenderError::Profile(format!("the fallback {fb} of {tag} is unknown"))
-            })?
-        } else {
-            kb
+    for item in &profile.languages.input {
+        let no_layout = || RenderError::Profile(format!("no layout for the input language {item}"));
+        let Some((language, input)) = table.input(item) else {
+            let why = format!("Windows does not know the input language {item}");
+            return Err(RenderError::Profile(why));
         };
-        let lcid = effective
-            .lcid
-            .clone()
-            .ok_or_else(|| RenderError::Profile(format!("no locale id for {tag}")))?;
-        locales.push(format!("{lcid}:{}", effective.klid));
-        fallback.push(effective.tag.clone());
+        if language.lcid.is_empty() {
+            // Windows numbers it at the first sign-in: the answer file names the language it
+            // belongs to, and the script of the first sign-in the language itself.
+            let parent = table
+                .language(&language.parent)
+                .filter(|p| !p.default.is_empty())
+                .ok_or_else(no_layout)?;
+            transient.push(language.tag.clone());
+            locales.push(parent.default.clone());
+            tips.push(String::new());
+            fallback.push(parent.tag.clone());
+        } else {
+            if input.is_empty() {
+                return Err(no_layout());
+            }
+            let own = validate::is_layout(item);
+            locales.push(input.clone());
+            tips.push(if own { input } else { String::new() });
+            fallback.push(language.tag.clone());
+        }
+        tags.push(language.tag.clone());
+    }
+    // A language named with a layout of its own and also by its tag keeps the layout of its tag.
+    let own: Vec<&String> = tags
+        .iter()
+        .zip(&tips)
+        .filter(|(_, tip)| !tip.is_empty())
+        .map(|(tag, _)| tag)
+        .collect();
+    for ((tag, tip), input) in tags.iter().zip(tips.iter_mut()).zip(&locales) {
+        if tip.is_empty() && own.contains(&tag) {
+            *tip = input.clone();
+        }
     }
     Ok(InputLanguages {
         input_locale: locales.join(";"),
-        tags: profile.languages.input.clone(),
+        tags,
+        tips,
         fallback,
         transient,
     })
@@ -880,6 +910,7 @@ pub fn build(
             SETUP_USER,
             &[
                 ("input_languages", &ps_list(&languages.tags)),
+                ("input_tips", &ps_list(&languages.tips)),
                 ("input_fallback", &ps_list(&languages.fallback)),
                 ("transient_languages", &ps_list(&languages.transient)),
                 ("blocks", &join_blocks(&user_blocks, 0)),
