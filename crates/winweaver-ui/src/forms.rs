@@ -236,15 +236,21 @@ fn name_template_help(ui: &mut egui::Ui, template: &str) {
     let rows = [
         (
             "{serial}  {serial:N}",
-            tr("The serial number of the computer from its firmware, its letters and digits in capitals; :N keeps its last N characters, all of them (up to 15) without it."),
+            tr(
+                "The serial number of the computer from its firmware, its letters and digits in capitals; :N keeps its last N characters, all of them (up to 15) without it.",
+            ),
         ),
         (
             "{mac}  {mac:N}",
-            tr("The MAC address of the first physical network adapter, 12 hexadecimal digits in capitals; :N keeps its last N digits, all 12 without it."),
+            tr(
+                "The MAC address of the first physical network adapter, 12 hexadecimal digits in capitals; :N keeps its last N digits, all 12 without it.",
+            ),
         ),
         (
             "{random}  {random:N}",
-            tr("Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it."),
+            tr(
+                "Random capitals and digits without the look-alikes I, O, 0 and 1; :N gives N of them, 6 without it.",
+            ),
         ),
     ];
     for (code, text) in rows {
@@ -256,7 +262,9 @@ fn name_template_help(ui: &mut egui::Ui, template: &str) {
     ui.weak(tr("N is from 1 to 15. A serial number or an address that cannot be read (there is none, or the maker left a placeholder such as Default string) becomes random characters of the same length; a shorter one stays whole."));
     ui.weak(tr("Around the placeholders: Latin letters, digits and hyphens. The name with the full length of each placeholder fits 15 characters, so PC-{serial} is too long and PC-{serial:12} fits. Keep a letter in it: Windows refuses a name of digits alone."));
     ui.add_space(4.0);
-    ui.label(tr("Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:"));
+    ui.label(tr(
+        "Examples with the serial number 5CG1234XYZ and the address 00155D3E5A01:",
+    ));
     for example in ["PC-{random}", "WS-{serial:6}", "{mac:4}-LAB"] {
         let name = render::example_name(example);
         let text = trf(
