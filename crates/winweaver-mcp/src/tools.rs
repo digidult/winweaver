@@ -586,9 +586,8 @@ fn rights_json(reg: &dyn Registry, path: &str, rights: &Rights) -> Value {
 fn entry_arg(reg: &dyn Registry, item: &Value) -> Result<Entry, ToolError> {
     let field = |name: &str| item.get(name).and_then(Value::as_str).unwrap_or_default();
     let account = field("account").trim();
-    let digits = |rest: &str| {
-        !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit() || c == '-')
-    };
+    let digits =
+        |rest: &str| !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit() || c == '-');
     let alias = account.len() == 2 && account.chars().all(|c| c.is_ascii_uppercase());
     let sid = match account.strip_prefix("S-1-") {
         Some(rest) if digits(rest) => account.to_owned(),
