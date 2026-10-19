@@ -640,5 +640,7 @@
   "This key only": "Solo questa chiave",
   "inherited": "ereditata",
   "kept as it is": "resta com'è",
-  "Change the rights of {path}? A wrong access list can shut Windows or a program out of the key.": "Modificare le autorizzazioni di {path}? Un elenco di accesso errato può escludere Windows o un programma dalla chiave."
+  "Change the rights of {path}? A wrong access list can shut Windows or a program out of the key.": "Modificare le autorizzazioni di {path}? Un elenco di accesso errato può escludere Windows o un programma dalla chiave.",
+  "Open the folder": "Apri la cartella",
+  "The folder was not opened: {e}": "La cartella non è stata aperta: {e}"
 }

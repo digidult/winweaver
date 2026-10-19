@@ -68,6 +68,9 @@ Markdown-Datei; die Seiten der Dokumentation werden genauso geöffnet, jede in e
   dessen Baum bis zum Element; aus einer anderen Registerkarte zeigt er die Regel in der ersten
   Profilregisterkarte.
 - **Statusleiste**: der Zustand des Dokuments, die Katalogversion, der MCP-Server und die letzte Meldung.
+- **Ordner öffnen**: nach einem Erstellen, einem gespeicherten Skript, einer Registrierungsdatei oder
+  einem Profil zeigt eine Schaltfläche am Ende der Statusleiste die Datei in ihrem Ordner im Explorer;
+  Einstellungen, Dateien öffnet die Ordner des Programms.
 
 ## Dieser PC
 

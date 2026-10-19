@@ -640,5 +640,7 @@
   "This key only": "Только этот ключ",
   "inherited": "унаследовано",
   "kept as it is": "остаётся как есть",
-  "Change the rights of {path}? A wrong access list can shut Windows or a program out of the key.": "Изменить права {path}? Неверный список доступа может закрыть Windows или программе доступ к ключу."
+  "Change the rights of {path}? A wrong access list can shut Windows or a program out of the key.": "Изменить права {path}? Неверный список доступа может закрыть Windows или программе доступ к ключу.",
+  "Open the folder": "Открыть папку",
+  "The folder was not opened: {e}": "Папка не открыта: {e}"
 }

@@ -1012,7 +1012,7 @@ impl App {
     }
 
     /// The status bar: the state of the document, the catalog, the MCP server, the last message.
-    pub(crate) fn status_bar(&self, ui: &mut egui::Ui) {
+    pub(crate) fn status_bar(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         let p = Self::palette_now(ui);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 18.0;
@@ -1049,6 +1049,15 @@ impl App {
                         .size(style::size(ui, 11.0))
                         .color(p.ok),
                     );
+                }
+                // A file the message names, shown in its folder.
+                if let Some((text, path)) = &self.shown_file
+                    && text == &self.status
+                {
+                    let open = ui.small_button(tr("Open the folder"));
+                    if open.on_hover_text(path.display().to_string()).clicked() {
+                        acts.push(Act::ShowInFolder(path.clone()));
+                    }
                 }
                 ui.label(style::muted(ui, self.status.as_str(), 11.0));
                 if self.pc_read.is_some() {

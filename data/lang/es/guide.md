@@ -68,6 +68,9 @@ las páginas de documentación se abren del mismo modo, cada una en su propia pe
   registro y en un archivo de registro. Un enlace en un perfil abre su árbol hasta el elemento; desde
   otra pestaña muestra la regla en la primera pestaña de perfil.
 - **Barra de estado**: el estado del documento, la versión del catálogo, el servidor MCP y el último mensaje.
+- **Abrir la carpeta**: tras una compilación o al guardar un script, un archivo de registro o un perfil,
+  un botón al final de la barra de estado muestra el archivo en su carpeta en el Explorador;
+  Configuración, Archivos abre las carpetas del programa.
 
 ## Este equipo
 

@@ -118,6 +118,31 @@ pub fn color_title_bar(hwnd: isize, dark: bool, caption: [u8; 3], text: [u8; 3],
     }
 }
 
+/// Shows a file in its folder in Explorer, selected, or opens a folder; Explorer is started at the
+/// request of the user and not waited for.
+pub fn show_in_folder(path: &std::path::Path) -> Result<(), String> {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        let root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_owned());
+        let explorer = std::path::Path::new(&root).join("explorer.exe");
+        let mut command = std::process::Command::new(explorer);
+        if path.is_file() {
+            command.raw_arg(format!("/select,\"{}\"", path.display()));
+        } else if path.is_dir() {
+            command.raw_arg(format!("\"{}\"", path.display()));
+        } else {
+            return Err(format!("{} does not exist", path.display()));
+        }
+        command.spawn().map(|_| ()).map_err(|e| e.to_string())
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = path;
+        Err("folders open in Explorer on Windows only".to_owned())
+    }
+}
+
 /// Starts the executable as administrator with the arguments and waits for it.
 pub fn run_elevated(exe: &std::path::Path, args: &[String]) -> Result<u32, String> {
     #[cfg(windows)]

@@ -62,6 +62,9 @@ documentation pages open the same way, each in its own tab.
   a registry key, in the registry tab and in a registry file. A link in a profile opens its tree down to
   the item; from another tab it shows the rule in the first profile tab.
 - **Status bar**: the state of the document, the catalog version, the MCP server and the last message.
+- **Open the folder**: after a build, a saved script, registry file or profile, a button at the end of
+  the status bar shows the file in its folder in Explorer; Settings, Files opens the folders of the
+  program.
 
 ## This PC
 

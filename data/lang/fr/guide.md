@@ -68,6 +68,9 @@ les pages de documentation s'ouvrent de la même façon, chacune dans son propre
   l'onglet du registre et dans un fichier de registre. Un lien dans un profil ouvre son arbre jusqu'à
   l'élément ; depuis un autre onglet, il montre la règle dans le premier onglet de profil.
 - **Barre d'état** : l'état du document, la version du catalogue, le serveur MCP et le dernier message.
+- **Ouvrir le dossier** : après une génération ou l'enregistrement d'un script, d'un fichier de registre
+  ou d'un profil, un bouton au bout de la barre d'état montre le fichier dans son dossier dans
+  l'Explorateur ; Paramètres, Fichiers ouvre les dossiers du programme.
 
 ## Ce PC
 

@@ -65,6 +65,9 @@ della documentazione si aprono allo stesso modo, ognuna nella propria scheda.
   file di registro. Un collegamento in un profilo apre il suo albero fino all'elemento; da un'altra
   scheda mostra la regola nella prima scheda di profilo.
 - **Barra di stato**: lo stato del documento, la versione del catalogo, il server MCP e l'ultimo messaggio.
+- **Apri la cartella**: dopo una compilazione o il salvataggio di uno script, di un file di registro o di
+  un profilo, un pulsante alla fine della barra di stato mostra il file nella sua cartella in Esplora
+  file; Impostazioni, File apre le cartelle del programma.
 
 ## Questo PC
 

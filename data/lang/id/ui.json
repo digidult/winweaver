@@ -640,5 +640,7 @@
   "This key only": "Hanya kunci ini",
   "inherited": "diwarisi",
   "kept as it is": "tetap apa adanya",
-  "Change the rights of {path}? A wrong access list can shut Windows or a program out of the key.": "Ubah izin {path}? Daftar akses yang salah dapat membuat Windows atau program tidak bisa mengakses kunci."
+  "Change the rights of {path}? A wrong access list can shut Windows or a program out of the key.": "Ubah izin {path}? Daftar akses yang salah dapat membuat Windows atau program tidak bisa mengakses kunci.",
+  "Open the folder": "Buka folder",
+  "The folder was not opened: {e}": "Folder tidak dibuka: {e}"
 }

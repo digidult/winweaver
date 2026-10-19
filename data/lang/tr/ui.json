@@ -640,5 +640,7 @@
   "This key only": "Yalnızca bu anahtar",
   "inherited": "devralındı",
   "kept as it is": "olduğu gibi korunur",
-  "Change the rights of {path}? A wrong access list can shut Windows or a program out of the key.": "{path} izinleri değiştirilsin mi? Yanlış bir erişim listesi Windows'u veya bir programı anahtarın dışında bırakabilir."
+  "Change the rights of {path}? A wrong access list can shut Windows or a program out of the key.": "{path} izinleri değiştirilsin mi? Yanlış bir erişim listesi Windows'u veya bir programı anahtarın dışında bırakabilir.",
+  "Open the folder": "Klasörü aç",
+  "The folder was not opened: {e}": "Klasör açılmadı: {e}"
 }

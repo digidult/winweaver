@@ -640,5 +640,7 @@
   "This key only": "Толькі гэты ключ",
   "inherited": "успадкавана",
   "kept as it is": "застаецца як ёсць",
-  "Change the rights of {path}? A wrong access list can shut Windows or a program out of the key.": "Змяніць правы {path}? Няправільны спіс доступу можа закрыць Windows або праграме доступ да ключа."
+  "Change the rights of {path}? A wrong access list can shut Windows or a program out of the key.": "Змяніць правы {path}? Няправільны спіс доступу можа закрыць Windows або праграме доступ да ключа.",
+  "Open the folder": "Адкрыць папку",
+  "The folder was not opened: {e}": "Папка не адкрыта: {e}"
 }

@@ -63,6 +63,8 @@ ini adalah file Markdown; halaman dokumentasi terbuka dengan cara yang sama, mas
   di katalog lain; aturan yang menulis kunci registri, di tab registri dan di file registri. Tautan di
   profil membuka pohonnya hingga ke item; dari tab lain, tautan menampilkan aturan di tab profil pertama.
 - **Bilah status**: status dokumen, versi katalog, server MCP, dan pesan terakhir.
+- **Buka folder**: setelah build atau menyimpan skrip, file registri, atau profil, tombol di ujung bilah
+  status menampilkan file di foldernya di Explorer; Pengaturan, File membuka folder program.
 
 ## PC Ini
 

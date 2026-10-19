@@ -466,6 +466,8 @@ pub enum Act {
     Follow,
     /// Opens a page of the documentation, `name.md#heading`.
     OpenDoc(String),
+    /// Shows a file in its folder in Explorer, or opens a folder of the program, made first.
+    ShowInFolder(PathBuf),
     /// Opens the settings at a section (0 general, 1 policy templates, 2 files).
     OpenSettingsSection(usize),
     /// Imports the catalog file of the active tab.
@@ -563,6 +565,9 @@ pub struct App {
     running: Option<std::sync::mpsc::Receiver<Result<winweaver_core::apply::Report, String>>>,
     running_skipped: Vec<(String, String)>,
     last_logged: String,
+    /// The file the message of the status bar names, which its button shows in its folder while
+    /// the message stays.
+    shown_file: Option<(String, PathBuf)>,
 }
 
 /// The translation for a language code, `None` for English.
@@ -617,6 +622,7 @@ impl App {
             running_skipped: Vec::new(),
             mcp: mcpview::McpPanel::new(winweaver_mcp::config::Config::default_path(&exe_dir())),
             last_logged: String::new(),
+            shown_file: None,
         }
     }
 
@@ -912,6 +918,7 @@ impl App {
             Ok(()) => {
                 d.dirty = false;
                 self.status = trf("Saved {path}", &[("path", &path.display())]);
+                self.shown_file = Some((self.status.clone(), path.clone()));
             }
             Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
         }
@@ -1179,18 +1186,37 @@ impl App {
             "Settings file: {path}",
             &[("path", &Settings::path().display())],
         ));
-        ui.label(trf(
-            "Profiles folder: {path}",
-            &[("path", &profiles_dir().display())],
-        ));
-        ui.label(trf(
-            "Output folder: {path}",
-            &[("path", &output_dir().display())],
-        ));
-        ui.label(trf(
-            "Policy templates folder: {path}",
-            &[("path", &self.imports_dir.display())],
-        ));
+        let folders = [
+            (
+                trf(
+                    "Profiles folder: {path}",
+                    &[("path", &profiles_dir().display())],
+                ),
+                profiles_dir(),
+            ),
+            (
+                trf(
+                    "Output folder: {path}",
+                    &[("path", &output_dir().display())],
+                ),
+                output_dir(),
+            ),
+            (
+                trf(
+                    "Policy templates folder: {path}",
+                    &[("path", &self.imports_dir.display())],
+                ),
+                self.imports_dir.clone(),
+            ),
+        ];
+        for (text, path) in folders {
+            ui.horizontal_wrapped(|ui| {
+                ui.label(text);
+                if ui.small_button(tr("Open")).clicked() {
+                    self.pending_acts.push(Act::ShowInFolder(path));
+                }
+            });
+        }
         ui.add_space(8.0);
         if !self.settings.recent.is_empty() && ui.button(tr("Forget recent files")).clicked() {
             self.pending_acts.push(Act::AskForgetRecent);
@@ -1373,6 +1399,7 @@ impl App {
                 Ok(()) => {
                     self.themes = themes::themes(&themes_dir());
                     self.status = trf("Saved {path}", &[("path", &path.display())]);
+                    self.shown_file = Some((self.status.clone(), path.clone()));
                 }
                 Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
             }
@@ -1533,6 +1560,7 @@ impl App {
                 doc.dirty = false;
                 doc.changed = None;
                 self.status = trf("Saved {path}", &[("path", &path.display())]);
+                self.shown_file = Some((self.status.clone(), path.clone()));
                 self.remember_recent(&path);
             }
             Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
@@ -1610,6 +1638,7 @@ impl App {
             build.scripts.len(),
             build.warnings.len()
         );
+        self.shown_file = Some((self.status.clone(), xml_path.clone()));
     }
 
     /// The rule ids of the selection of the active profile: a rule, the rules of a group, or every
@@ -1916,6 +1945,7 @@ impl App {
             "Saved {} ({summary}); run it as administrator, first on a test PC",
             path.display()
         );
+        self.shown_file = Some((self.status.clone(), path));
     }
 
     /// Saves the registry steps of the apply or the return of the selection as a registry file, as
@@ -1974,6 +2004,7 @@ impl App {
             "Saved {path} ({n} values); import it as administrator, first on a test PC",
             &[("path", &path.display()), ("n", &values)],
         );
+        self.shown_file = Some((self.status.clone(), path));
     }
 
     /// Opens a registry file in a tab of its own, or brings its tab to the front.
@@ -2028,6 +2059,7 @@ impl App {
                 d.path = path.clone();
                 d.dirty = false;
                 self.status = trf("Saved {path}", &[("path", &path.display())]);
+                self.shown_file = Some((self.status.clone(), path.clone()));
                 self.remember_recent(&path);
             }
             Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
@@ -3094,6 +3126,15 @@ impl App {
                 }
                 Act::RemoveMarkAsk(i) => self.ask_remove_mark(i),
                 Act::MarkSelect(i) => self.marks_tab.sel = Some(i),
+                Act::ShowInFolder(path) => {
+                    // A folder of the program that is not there yet is made first.
+                    if !path.exists() && path.extension().is_none() {
+                        let _ = std::fs::create_dir_all(&path);
+                    }
+                    if let Err(e) = winweaver_win::show_in_folder(&path) {
+                        self.status = trf("The folder was not opened: {e}", &[("e", &e)]);
+                    }
+                }
                 Act::AskYes => {
                     if let Some(ask) = self.ask.take() {
                         self.apply(vec![ask.act]);
@@ -4465,6 +4506,7 @@ impl App {
         match config.save(&path) {
             Ok(()) => {
                 self.status = trf("Saved {path}", &[("path", &path.display())]);
+                self.shown_file = Some((self.status.clone(), path.clone()));
                 self.mcp.path = path;
                 self.mcp.saved = Some(config);
             }
@@ -4653,6 +4695,7 @@ impl App {
                 d.theme.path = Some(path.clone());
                 d.dirty = false;
                 self.status = trf("Saved {path}", &[("path", &path.display())]);
+                self.shown_file = Some((self.status.clone(), path.clone()));
                 self.themes = themes::themes(&dir);
                 self.remember_recent(&path);
             }
@@ -4748,7 +4791,7 @@ impl eframe::App for App {
         self.messages_panel(ui, &mut acts);
         egui::Panel::bottom("status")
             .frame(status_frame)
-            .show(ui, |ui| self.status_bar(ui));
+            .show(ui, |ui| self.status_bar(ui, &mut acts));
         let kind = match self.docs.get(self.active) {
             Some(Doc::Profile(_)) => 0,
             Some(Doc::Settings) => 1,

@@ -65,6 +65,9 @@ sayfaları da aynı şekilde, her biri kendi sekmesinde açılır.
   kayıt dosyasında. Profildeki bir bağlantı ağacını öğeye kadar açar; başka bir sekmeden kuralı ilk
   profil sekmesinde gösterir.
 - **Durum çubuğu**: belgenin durumu, katalog sürümü, MCP sunucusu ve son ileti.
+- **Klasörü aç**: bir derlemeden ya da bir betik, kayıt dosyası veya profil kaydedildikten sonra durum
+  çubuğunun sonundaki düğme dosyayı Gezgin'de klasöründe gösterir; Ayarlar, Dosyalar programın
+  klasörlerini açar.
 
 ## Bu bilgisayar
 

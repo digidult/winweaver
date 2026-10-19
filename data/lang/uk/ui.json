@@ -640,5 +640,7 @@
   "This key only": "Лише цей ключ",
   "inherited": "успадковано",
   "kept as it is": "лишається як є",
-  "Change the rights of {path}? A wrong access list can shut Windows or a program out of the key.": "Змінити права {path}? Хибний список доступу може закрити Windows або програмі доступ до ключа."
+  "Change the rights of {path}? A wrong access list can shut Windows or a program out of the key.": "Змінити права {path}? Хибний список доступу може закрити Windows або програмі доступ до ключа.",
+  "Open the folder": "Відкрити папку",
+  "The folder was not opened: {e}": "Папку не відкрито: {e}"
 }
