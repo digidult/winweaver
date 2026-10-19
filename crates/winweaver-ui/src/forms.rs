@@ -435,7 +435,7 @@ fn input_item(language: &resources::InputLanguage, klid: Option<&str>) -> String
 /// `None` inside for the first one, else the id of the layout.
 fn layout_list(
     ui: &mut egui::Ui,
-    id: impl std::hash::Hash,
+    id: impl std::hash::Hash + std::fmt::Debug,
     table: &resources::Locales,
     language: &resources::InputLanguage,
     own: Option<&str>,
