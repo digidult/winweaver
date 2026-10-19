@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 18.10.2026 (0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
+Updated with every change of structure, commands or task status. Last update: 19.10.2026 (0.16.2: the acceptance of 0.11.0 recorded, the release notes of 0.16.2; 0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
 the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
@@ -538,7 +538,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Native apply | The script steps of the catalog applied natively (0.15.0): media, services, keys, accounts, the copies of the answer file | 18.10.2026 |
 | Registry | The permissions of keys: owner, access list, own entries changed after a question (0.16.0) | 18.10.2026 |
 | Not yet | Nothing of the plan; what comes next comes from the use | |
-| Acceptance | Earlier versions were accepted by the customer in a VM: the generated answer file works, and a `.wwdiff` read from a real PC came back for bugs. Not accepted yet: the stand-alone scripts (apply, undo, return to defaults, audit) and the versions 0.4.0 to 0.11.0; the scenario of 18.10.2026 lists the steps | 18.10.2026 |
+| Acceptance | Build 0.11.0 accepted by the customer in a VM on 18.10.2026: all 31 steps of the scenario passed, the four stand-alone scripts (apply, undo, return to defaults, audit) checked for the first time, with the native apply and undo, This PC, the registry search and the catalog editor; earlier the answer file and a `.wwdiff` of a real PC. The steps of 0.16.1 (parts G, E and F of the same page) wait | 19.10.2026 |
 
 Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and
 its inline toggles, and the secondary tabs of D; the search field grows into the free width of the navigation
