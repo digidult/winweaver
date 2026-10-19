@@ -297,4 +297,37 @@ mod tests {
             }
         }
     }
+
+    /// A dialog shows its answer beside Cancel, so no translation of an answer may read as
+    /// Cancel: the Ukrainian Discard once said Cancel too. The answers of `App::ask`, of the
+    /// confirmation of an apply, of the editors and of the permissions.
+    #[test]
+    fn the_answers_of_a_dialog_do_not_read_as_cancel() {
+        let answers = [
+            "Remove",
+            "Discard",
+            "Forget",
+            "Renew",
+            "Change",
+            "Delete",
+            "Change this PC",
+            "OK",
+            "Add",
+            "Apply",
+        ];
+        let start = |t: &str| t.to_lowercase().chars().take(4).collect::<String>();
+        let path =
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../package/lang/be/ui.json");
+        let be = std::fs::read_to_string(&path).unwrap();
+        let mut files: Vec<(&str, &str)> = EMBEDDED.to_vec();
+        files.push(("be", be.as_str()));
+        for (code, text) in files {
+            let (_, table) = parse(text, code).unwrap();
+            let cancel = start(&table["Cancel"]);
+            for key in answers {
+                let answer = start(&table[key]);
+                assert_ne!(answer, cancel, "{code}: {key:?} reads as Cancel");
+            }
+        }
+    }
 }
