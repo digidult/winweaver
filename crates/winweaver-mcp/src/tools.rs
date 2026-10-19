@@ -10,7 +10,9 @@ use winweaver_core::bookmarks::{Bookmark, Bookmarks};
 use winweaver_core::catalog::{Action, Catalog, Param, Rule, check};
 use winweaver_core::diff::{Diff, Side};
 use winweaver_core::profile::{self, Profile};
+use winweaver_core::registry::Registry;
 use winweaver_core::resolver::{self, State as RuleState};
+use winweaver_core::security::{self, Entry, Rights, Scope};
 use winweaver_core::{clock, render, thispc, validate};
 
 use crate::{Mode, RegistryAccess, Server, State, WsDoc};
@@ -310,6 +312,38 @@ pub(crate) fn definitions() -> Vec<Value> {
             schema(json!({ "path": s("The key") }), &["path"]),
         ),
         tool(
+            "read_registry_rights",
+            "Reads the permissions of a key: its owner, whether it inherits the entries of the key above, and every entry of its access list (the account with its name, allow or deny, full, read or special access with its mask, what it applies to, inherited or its own). Needs the option registry read or write.",
+            schema(json!({ "path": s("The key") }), &["path"]),
+        ),
+        tool(
+            "set_registry_rights",
+            "Replaces the entries of a key itself with the given ones; the inherited entries stay, and Windows adds them again. A key of the machine changes only when WinWeaver runs as administrator. Gives the permissions after the change. Needs the option registry write.",
+            schema(
+                json!({
+                    "path": s("The key"),
+                    "entries": {
+                        "type": "array",
+                        "maxItems": 64,
+                        "description": "The entries of the key itself",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "account": s("An account or a group of this PC by its name, a security identifier (S-1-...) or an alias of SDDL (BA, BU, SY)"),
+                                "type": s("allow (by default) or deny"),
+                                "access": s("read (by default) or full"),
+                                "applies_to": s("key_and_subkeys (by default), key or subkeys")
+                            },
+                            "required": ["account"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "inherits": { "type": "boolean", "description": "Whether the key takes the entries of the key above; unchanged when left out" }
+                }),
+                &["path", "entries"],
+            ),
+        ),
+        tool(
             "read_this_pc",
             "Reads the settings of this PC into a new workspace profile (on the base of the current one). Needs the option read_pc and mode edit; reads only.",
             schema(json!({}), &[]),
@@ -496,6 +530,104 @@ fn optional_text(args: &Value, name: &str) -> String {
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned()
+}
+
+/// The owner and the access list of a key.
+fn read_rights(reg: &dyn Registry, path: &str) -> Result<Rights, ToolError> {
+    let sddl = reg.security(path).map_err(|e| fail("read_failed", e))?;
+    Rights::parse(&sddl).map_err(|e| fail("read_failed", e))
+}
+
+/// The permissions of a key as the tools give them, the name of each account beside it.
+fn rights_json(reg: &dyn Registry, path: &str, rights: &Rights) -> Value {
+    let name = |sid: &str| {
+        reg.account_name(sid)
+            .or_else(|| security::alias_title(sid).map(str::to_owned))
+            .unwrap_or_default()
+    };
+    let entries: Vec<Value> = rights
+        .entries
+        .iter()
+        .map(|e| {
+            let access = if e.full() {
+                "full"
+            } else if e.read() {
+                "read"
+            } else {
+                "special"
+            };
+            let applies_to = match e.scope {
+                Scope::Key => "key",
+                Scope::KeyAndSubkeys => "key_and_subkeys",
+                Scope::Subkeys => "subkeys",
+            };
+            json!({
+                "account": e.sid,
+                "name": name(&e.sid),
+                "type": if e.deny { "deny" } else { "allow" },
+                "access": access,
+                "mask": format!("0x{:x}", e.mask),
+                "applies_to": applies_to,
+                "inherited": e.inherited,
+            })
+        })
+        .collect();
+    json!({
+        "path": path,
+        "owner": rights.owner,
+        "owner_name": name(&rights.owner),
+        "inherits": !rights.protected,
+        "entries": entries,
+    })
+}
+
+/// An entry of `set_registry_rights`. The account is a name Windows knows, or an identifier whose
+/// characters are checked, so no text of the caller reaches the access list unchecked.
+fn entry_arg(reg: &dyn Registry, item: &Value) -> Result<Entry, ToolError> {
+    let field = |name: &str| item.get(name).and_then(Value::as_str).unwrap_or_default();
+    let account = field("account").trim();
+    let digits = |rest: &str| {
+        !rest.is_empty() && rest.chars().all(|c| c.is_ascii_digit() || c == '-')
+    };
+    let alias = account.len() == 2 && account.chars().all(|c| c.is_ascii_uppercase());
+    let sid = match account.strip_prefix("S-1-") {
+        Some(rest) if digits(rest) => account.to_owned(),
+        _ if alias => account.to_owned(),
+        _ => match reg.account_sid(account) {
+            Some(sid) => sid,
+            None => {
+                let why = format!("no account of this PC: {account}");
+                return Err(fail("invalid", why));
+            }
+        },
+    };
+    let (kind, access, scope) = (field("type"), field("access"), field("applies_to"));
+    let deny = match kind {
+        "" | "allow" => false,
+        "deny" => true,
+        other => {
+            let why = format!("type is allow or deny, not {other}");
+            return Err(fail("invalid", why));
+        }
+    };
+    let full = match access {
+        "" | "read" => false,
+        "full" => true,
+        other => {
+            let why = format!("access is read or full, not {other}");
+            return Err(fail("invalid", why));
+        }
+    };
+    let scope = match scope {
+        "" | "key_and_subkeys" => Scope::KeyAndSubkeys,
+        "key" => Scope::Key,
+        "subkeys" => Scope::Subkeys,
+        other => {
+            let why = format!("applies_to is key_and_subkeys, key or subkeys, not {other}");
+            return Err(fail("invalid", why));
+        }
+    };
+    Ok(Entry::new(&sid, deny, full, scope))
 }
 
 /// The tools of the registry: off unless the user allows them, writing only when allowed too.
@@ -1477,6 +1609,40 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
                 .delete_key(&path)
                 .map_err(|e| fail("write_failed", e))?;
             Ok(json!({ "deleted": path }))
+        }
+        "read_registry_rights" => {
+            registry_allowed(state, false)?;
+            let path = text_arg(args, "path")?;
+            let rights = read_rights(&*server.registry, &path)?;
+            Ok(rights_json(&*server.registry, &path, &rights))
+        }
+        "set_registry_rights" => {
+            registry_allowed(state, true)?;
+            let path = text_arg(args, "path")?;
+            let mut rights = read_rights(&*server.registry, &path)?;
+            if let Some(inherit) = args.get("inherits").and_then(Value::as_bool) {
+                rights.protected = !inherit;
+            }
+            let list = args
+                .get("entries")
+                .and_then(Value::as_array)
+                .ok_or_else(|| fail("invalid", "the argument entries is a list"))?;
+            let mut own = Vec::new();
+            for item in list.iter().take(64) {
+                own.push(entry_arg(&*server.registry, item)?);
+            }
+            if rights.protected && own.is_empty() {
+                let why = "a key that does not inherit needs at least one entry of its own";
+                return Err(fail("invalid", why));
+            }
+            rights.entries.retain(|e| e.inherited);
+            rights.entries.extend(own);
+            server
+                .registry
+                .set_security(&path, &rights.dacl(), rights.protected)
+                .map_err(|e| fail("write_failed", e))?;
+            let after = read_rights(&*server.registry, &path)?;
+            Ok(rights_json(&*server.registry, &path, &after))
         }
         "read_this_pc" => {
             if !state.options.read_pc {

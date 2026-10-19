@@ -90,6 +90,25 @@ fn the_registry_tools_are_off_until_allowed() {
         ),
         "invalid"
     );
+    // The permissions: read with the names of the accounts, the own entries replaced.
+    let rights = ok(&s, "read_registry_rights", json!({ "path": key }));
+    assert_eq!(rights["owner_name"], json!("Administrators"));
+    let users = json!({ "path": key, "entries": [{ "account": "Users" }] });
+    let after = ok(&s, "set_registry_rights", users);
+    let own: Vec<&Value> = after["entries"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| e["inherited"] == json!(false))
+        .collect();
+    assert_eq!(own.len(), 1, "{after}");
+    assert_eq!(own[0]["account"], json!("BU"));
+    assert_eq!(own[0]["access"], json!("read"));
+    // An identifier is checked, so no text reaches the access list.
+    let forged = json!({ "path": key, "entries": [{ "account": "S-1-5-32-544)(A;;KA;;;WD" }] });
+    assert_eq!(error_kind(&s, "set_registry_rights", forged), "invalid");
+    let nobody = json!({ "path": key, "entries": [], "inherits": false });
+    assert_eq!(error_kind(&s, "set_registry_rights", nobody), "invalid");
     ok(&s, "delete_registry_key", json!({ "path": key }));
     assert_eq!(
         error_kind(&s, "read_registry_key", json!({ "path": key })),
@@ -227,7 +246,7 @@ fn the_protocol_answers_and_lists_the_tools() {
         .iter()
         .map(|t| t["name"].as_str().unwrap())
         .collect();
-    assert_eq!(names.len(), 34, "{names:?}");
+    assert_eq!(names.len(), 36, "{names:?}");
     for n in [
         "get_status",
         "set_rule",
