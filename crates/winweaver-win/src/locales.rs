@@ -27,7 +27,7 @@ pub fn read() -> Locales {
 
 /// The names of the locales Windows ships.
 fn names() -> Vec<String> {
-    unsafe extern "system" fn each(name: *mut u16, _flags: u32, data: isize) -> i32 {
+    unsafe extern "system" fn each(name: *const u16, _flags: u32, data: isize) -> i32 {
         // SAFETY: `data` is the address of the vector `names` passes, alive during the whole
         // enumeration, and `name` a null-terminated string Windows hands to the callback.
         unsafe {
