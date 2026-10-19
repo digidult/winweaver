@@ -64,7 +64,10 @@ fn inside(path: &Path, base: &Path) -> Option<PathBuf> {
         }
     }
     let rest = parts.as_path().to_path_buf();
-    if rest.components().any(|c| !matches!(c, Component::Normal(_))) {
+    if rest
+        .components()
+        .any(|c| !matches!(c, Component::Normal(_)))
+    {
         return None;
     }
     Some(rest)
