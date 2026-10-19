@@ -503,7 +503,10 @@ fn add_input_row(ui: &mut egui::Ui, l: &mut Languages, table: &resources::Locale
                         continue;
                     }
                     let label = format!("{} ({})", language.name, language.tag);
-                    if ui.selectable_label(add.tag == language.tag, label).clicked() {
+                    if ui
+                        .selectable_label(add.tag == language.tag, label)
+                        .clicked()
+                    {
                         add.tag = language.tag.clone();
                         add.klid = None;
                     }

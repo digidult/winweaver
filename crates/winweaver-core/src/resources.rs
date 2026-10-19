@@ -187,6 +187,9 @@ impl Locales {
             return Some((self.language_of(lcid)?, item.to_owned()));
         }
         let language = self.language(item)?;
+        if language.lcid.is_empty() {
+            return Some((language, String::new()));
+        }
         Some((language, language.default.clone()))
     }
 
