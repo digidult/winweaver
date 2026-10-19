@@ -243,6 +243,10 @@ profili), `output/` (il file di risposte e gli script), `drafts/` (le modifiche 
 all'avvio successivo), `mcp/` (le configurazioni del server MCP), `logs/` (cosa ha fatto il programma), `bookmarks.wwmarks`. Il programma non
 scrive nulla altrove.
 
+Le impostazioni, i segnalibri, le bozze e i file di differenze conservano il percorso di un file di
+questa cartella relativo a essa, così l'intera cartella si può spostare o copiare su un altro PC; un file
+altrove mantiene il percorso completo.
+
 ## Non ancora disponibile
 
 Per ora nulla del piano: ciò che serve dopo al programma verrà dall'uso.

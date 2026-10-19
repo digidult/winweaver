@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 19.10.2026 (0.18.3: the answer of the question that closes a tab no longer reads as Cancel in uk, ru and be, the release notes of 0.18.3; 0.18.2: the acceptance of 0.18.1 recorded, the release notes of 0.18.2; 0.18.1: the acceptance of 0.16.1 recorded, the messages of the status bar translated, Open the folder after every save, the release notes of 0.18.1; 0.18.0: Open the folder of a built or saved file and of the folders of the program; 0.17.0: the MCP tools of the permissions of registry keys; 0.16.2: the acceptance of 0.11.0 recorded, the release notes of 0.16.2; 0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
+Updated with every change of structure, commands or task status. Last update: 19.10.2026 (0.19.0: files inside the program folder kept relative to it in the settings, bookmarks, drafts and diffs; 0.18.3: the answer of the question that closes a tab no longer reads as Cancel in uk, ru and be, the release notes of 0.18.3; 0.18.2: the acceptance of 0.18.1 recorded, the release notes of 0.18.2; 0.18.1: the acceptance of 0.16.1 recorded, the messages of the status bar translated, Open the folder after every save, the release notes of 0.18.1; 0.18.0: Open the folder of a built or saved file and of the folders of the program; 0.17.0: the MCP tools of the permissions of registry keys; 0.16.2: the acceptance of 0.11.0 recorded, the release notes of 0.16.2; 0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
 the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
@@ -64,7 +64,8 @@ functionality carry over; the file formats are new and no program code is ported
 │                          publishes a release with docs/releases/v<version>.md
 ├── crates/
 │   ├── winweaver-core/    pure Rust, compiles everywhere: catalog (model, embedded data, checks), jsonfile
-│   │                      (strict reading), i18n (catalog translations), profile (.wwprofile), resolver,
+│   │                      (strict reading), i18n (catalog translations), paths (a file inside the program
+│   │                      folder kept relative to it), profile (.wwprofile), resolver,
 │   │                      validate (the check of a profile), resources (time zones, keyboards, editions with
 │   │                      their keys), diff (.wwdiff), bookmarks (.wwmarks), clock, render (autounattend.xml
 │   │                      from the templates), thispc (the plan of checks of a running Windows, the judgement
@@ -528,8 +529,17 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   `package/lang/` and `agents/` into `dist/WinWeaver` and uploads `dist/`, so the artifact is the one archive; a
   tag zips the same folder for the release. Agent texts stay short (local models with small contexts) and name no
   model: the person chooses it.
-- Drafts: `drafts/<key>.json`, key `p-<fnv of the path>` or `n-<time>-<n>`; written 2 s after the last change
-  and at the close; a save or a discard deletes them.
+- Drafts: `drafts/<key>.json`, key `p-<fnv of the path as it is kept>` or `n-<time>-<n>`; written 2 s after
+  the last change and at the close; a save or a discard deletes them.
+- Paths in the files of the program (`winweaver_core::paths`, the user's rule of 19.10.2026): a file inside
+  the program folder is kept relative to it and starts with `.` (`.\profiles\Office.wwprofile`), any other
+  file keeps its absolute path, and in memory every path is absolute. `Settings::load_from` and `save_to`
+  (recent, open_tabs; relative to the folder of the settings), `Bookmarks::load` and `save` (the path of
+  every bookmark but the registry ones), `Diff::load` and `save` (both sides) and the drafts (their path
+  and `key_for_path`) convert at the file; `stored_text` changes only an absolute path, so a title of a
+  preset or a key of the registry stays, and `resolved_text` only a text that starts with `.` and a
+  separator. The ids of imports made of a folder, an archive or an ADMX file hash the kept form too
+  (`kept_name` of the window). A new file that keeps a path converts the same way.
 
 ## 7. Work status
 

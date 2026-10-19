@@ -250,6 +250,10 @@ Meldungen gehen an die Konsole, aus der das Programm gestartet wurde, und nach `
 Änderungen, die beim nächsten Start wiederhergestellt werden), `mcp/` (die Konfigurationen des MCP-Servers), `logs/` (was das Programm getan hat),
 `bookmarks.wwmarks`. An anderer Stelle wird nichts geschrieben.
 
+Einstellungen, Lesezeichen, Entwürfe und Unterschiedsdateien speichern den Pfad einer Datei in diesem
+Ordner relativ zu ihm, sodass der ganze Ordner verschoben oder auf einen anderen PC kopiert werden kann;
+eine Datei an anderer Stelle behält ihren vollständigen Pfad.
+
 ## Noch nicht verfügbar
 
 Aus dem Plan fehlt derzeit nichts: was das Programm als Nächstes braucht, zeigt die Praxis.

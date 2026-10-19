@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::jsonfile::{self, JsonError};
+use crate::paths;
 use crate::profile::{Choice, Profile};
 
 pub const FORMAT: &str = "winweaver-diff";
@@ -253,10 +254,29 @@ impl Diff {
         }
     }
 
+    /// The file with the profiles inside the program folder named by absolute paths again.
     pub fn load(path: &Path) -> Result<Self, DiffError> {
         let name = jsonfile::display_name(path);
         let text = jsonfile::read_text(path, jsonfile::MAX_BYTES)?;
-        Self::parse(&text, &name)
+        let mut diff = Self::parse(&text, &name)?;
+        diff.resolve_in(&paths::program_dir());
+        Ok(diff)
+    }
+
+    /// The diff as a file keeps it: a profile inside `base` relative to it.
+    pub fn stored_in(&self, base: &Path) -> Self {
+        let mut diff = self.clone();
+        for side in [&mut diff.base, &mut diff.other] {
+            side.path = paths::stored_text(&side.path, base);
+        }
+        diff
+    }
+
+    /// The diff of a file with the profiles kept relative to `base` made absolute.
+    pub fn resolve_in(&mut self, base: &Path) {
+        for side in [&mut self.base, &mut self.other] {
+            side.path = paths::resolved_text(&side.path, base);
+        }
     }
 
     pub fn parse(text: &str, name: &str) -> Result<Self, DiffError> {
@@ -289,7 +309,8 @@ impl Diff {
             source,
         };
         let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, self.to_json()).map_err(io)?;
+        let text = self.stored_in(&paths::program_dir()).to_json();
+        std::fs::write(&tmp, text).map_err(io)?;
         std::fs::rename(&tmp, path).map_err(io)
     }
 }

@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use eframe::egui;
 use serde::{Deserialize, Serialize};
-use winweaver_core::jsonfile;
+use winweaver_core::{jsonfile, paths};
 
 pub const FORMAT: &str = "winweaver-settings";
 pub const VERSION: u32 = 1;
@@ -130,10 +130,7 @@ impl Default for DescSections {
 
 /// The folder of the executable, or the current folder when it cannot be found.
 pub fn exe_dir() -> PathBuf {
-    std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(Path::to_path_buf))
-        .unwrap_or_else(|| PathBuf::from("."))
+    paths::program_dir()
 }
 
 impl Settings {
@@ -141,24 +138,35 @@ impl Settings {
         exe_dir().join("settings.json")
     }
 
-    /// The settings of a file; the defaults when the file does not exist.
+    /// The settings of a file; the defaults when the file does not exist. The files the settings
+    /// keep relative to their folder (the program folder) are absolute in memory.
     pub fn load_from(path: &Path) -> Result<Self, String> {
         if !path.exists() {
             return Ok(Self::default());
         }
-        let settings: Self = jsonfile::read(path, MAX_BYTES).map_err(|e| e.to_string())?;
+        let mut settings: Self = jsonfile::read(path, MAX_BYTES).map_err(|e| e.to_string())?;
         if settings.format != FORMAT {
             return Err(format!(
                 "{}: not a WinWeaver settings file",
                 jsonfile::display_name(path)
             ));
         }
+        let base = folder_of(path);
+        for file in settings.recent.iter_mut().chain(&mut settings.open_tabs) {
+            *file = paths::resolved(file, &base);
+        }
         Ok(settings)
     }
 
-    /// Writes the settings through a temporary file that replaces the target.
+    /// Writes the settings through a temporary file that replaces the target; a file inside the
+    /// folder of the settings is kept relative to it, so the program folder can move.
     pub fn save_to(&self, path: &Path) -> Result<(), String> {
-        let mut text = serde_json::to_string_pretty(self).map_err(|e| e.to_string())?;
+        let base = folder_of(path);
+        let mut kept = self.clone();
+        for file in kept.recent.iter_mut().chain(&mut kept.open_tabs) {
+            *file = paths::stored(file, &base);
+        }
+        let mut text = serde_json::to_string_pretty(&kept).map_err(|e| e.to_string())?;
         text.push('\n');
         let tmp = path.with_extension("tmp");
         std::fs::write(&tmp, text).map_err(|e| e.to_string())?;
@@ -171,6 +179,12 @@ impl Settings {
         self.recent.insert(0, path.to_path_buf());
         self.recent.truncate(RECENT);
     }
+}
+
+/// The folder of a file, absolute; the current folder for a bare name.
+fn folder_of(path: &Path) -> PathBuf {
+    let folder = path.parent().unwrap_or(Path::new(""));
+    std::path::absolute(folder).unwrap_or_else(|_| folder.to_path_buf())
 }
 
 #[cfg(test)]
@@ -201,5 +215,34 @@ mod tests {
         std::fs::write(&path, "{\"format\": \"other\"}").unwrap();
         assert!(Settings::load_from(&path).is_err());
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn files_inside_the_program_folder_are_kept_relative() {
+        let dir = std::env::temp_dir().join(format!("winweaver-relative-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("settings.json");
+        let inside = dir.join("profiles").join("Office.wwprofile");
+        let outside = std::env::temp_dir().join("Elsewhere.wwprofile");
+        let mut settings = Settings::default();
+        settings.remember(&outside);
+        settings.remember(&inside);
+        settings.open_tabs = vec![inside.clone()];
+        settings.save_to(&path).unwrap();
+        let text = std::fs::read_to_string(&path).unwrap();
+        let kept = Path::new(".").join("profiles").join("Office.wwprofile");
+        let quoted = serde_json::to_string(&kept).unwrap();
+        assert!(text.contains(&quoted), "{text}");
+        assert!(!text.contains(&serde_json::to_string(&inside).unwrap()));
+        assert!(text.contains(&serde_json::to_string(&outside).unwrap()));
+        let moved = std::env::temp_dir().join(format!("winweaver-moved-{}", std::process::id()));
+        std::fs::create_dir_all(&moved).unwrap();
+        std::fs::copy(&path, moved.join("settings.json")).unwrap();
+        let loaded = Settings::load_from(&moved.join("settings.json")).unwrap();
+        let there = moved.join("profiles").join("Office.wwprofile");
+        assert_eq!(loaded.recent, vec![there.clone(), outside]);
+        assert_eq!(loaded.open_tabs, vec![there]);
+        std::fs::remove_dir_all(&dir).unwrap();
+        std::fs::remove_dir_all(&moved).unwrap();
     }
 }

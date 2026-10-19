@@ -232,6 +232,9 @@ the console the program was started from and to `logs/`.
 profiles), `output/` (the answer file and the scripts), `drafts/` (unsaved changes, restored at the
 next start), `mcp/` (the configurations of the MCP server), `logs/` (what the program did), `bookmarks.wwmarks`. Nothing is written anywhere else.
 
+The settings, bookmarks, drafts and diffs name a file inside this folder relative to it, so the whole
+folder can move or go to another PC; a file elsewhere keeps its full path.
+
 ## Not there yet
 
 Nothing of the plan for now: what the program needs next comes from its use.

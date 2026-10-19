@@ -31,6 +31,12 @@ unknown extension, by its content.
   (forward compatibility between minor versions).
 - Writing goes to a temporary file next to the target that is renamed over it, so a failed save leaves the
   old file whole.
+- A path to a file inside the program folder (the folder of the executable) is kept relative to it and
+  starts with `.`, such as `.\profiles\Office.wwprofile`, so the folder can move or go to another PC with
+  its settings, bookmarks, drafts and diffs; a file elsewhere keeps its absolute path. The recent files and
+  the open tabs of the settings, the profiles of bookmarks and of diffs, the file of a draft and its key
+  follow this rule, and so do the ids of imports made of a folder or a file; in memory every path is
+  absolute (`winweaver_core::paths`).
 
 ## 3. Profile
 
@@ -126,7 +132,7 @@ a headless MCP process never writes it. When the folder is read-only the setting
 
 ## 8. Draft
 
-The unsaved state of every modified document is written to `drafts/<hash of the path>.json` every 30 s and
+The unsaved state of every modified document is written to `drafts/<hash of the path as it is kept>.json` every 30 s and
 on close; at the next start the program offers to restore the drafts it finds. A save or a discard deletes
 the draft.
 

@@ -131,3 +131,18 @@ fn items_apply_one_by_one_and_comments_stay_in_the_file() {
     );
     assert_eq!(back, diff);
 }
+
+#[test]
+fn a_profile_inside_the_program_folder_is_kept_relative() {
+    let base = std::env::temp_dir().join("ww-diff").join("WinWeaver");
+    let file = base.join("profiles").join("Office.wwprofile");
+    let (mut a, b) = sides();
+    a.path = file.display().to_string();
+    let diff = Diff::between(&preset("office"), &preset("home"), a, b);
+    let kept = diff.stored_in(&base);
+    assert!(kept.base.path.starts_with('.'), "{}", kept.base.path);
+    assert_eq!(kept.other, diff.other);
+    let mut read = kept.clone();
+    read.resolve_in(&base);
+    assert_eq!(read, diff);
+}

@@ -860,10 +860,7 @@ impl App {
             .file_stem()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "Templates".to_owned());
-        let id = format!(
-            "file-{:08x}",
-            session::fnv(&path.display().to_string().to_lowercase()) as u32
-        );
+        let id = format!("file-{:08x}", session::fnv(&kept_name(&path)) as u32);
         let file = admx::to_catalog_file(&templates, &id, &name, "", &clock::now_utc_iso());
         let doc = catalogview::CatalogDoc::from_file(file, path.clone());
         self.docs.push(Doc::Catalog(Box::new(doc)));
@@ -2581,10 +2578,7 @@ impl App {
                         .file_name()
                         .map(|n| n.to_string_lossy().into_owned())
                         .unwrap_or_else(|| "Templates".to_owned());
-                    let id = format!(
-                        "folder-{:08x}",
-                        session::fnv(&dir.display().to_string().to_lowercase()) as u32
-                    );
+                    let id = format!("folder-{:08x}", session::fnv(&kept_name(&dir)) as u32);
                     Ok(admx::to_catalog_file(&t, &id, &name, "", &now))
                 }
                 (ImportSource::CatalogFile, Some(file)) => CatalogFile::load(&file).map(|mut f| {
@@ -2599,10 +2593,7 @@ impl App {
                             .file_stem()
                             .map(|n| n.to_string_lossy().into_owned())
                             .unwrap_or_else(|| "Templates".to_owned());
-                        let id = format!(
-                            "archive-{:08x}",
-                            session::fnv(&file.display().to_string().to_lowercase()) as u32
-                        );
+                        let id = format!("archive-{:08x}", session::fnv(&kept_name(&file)) as u32);
                         Ok(admx::to_catalog_file(&t, &id, &name, "", &now))
                     }
                     Ok(admx::Archive::Catalog(f)) => {
@@ -5391,6 +5382,13 @@ fn summary_of(plan: &scripts::ScriptPlan) -> String {
     } else {
         parts.join(", ")
     }
+}
+
+/// A path as the files of the program keep it, in lower case: the name of an import made of a
+/// file or a folder inside the program folder stays when the folder moves.
+fn kept_name(path: &Path) -> String {
+    let kept = winweaver_core::paths::stored(path, &exe_dir());
+    kept.display().to_string().to_lowercase()
 }
 
 /// A file name stem made of a profile name.

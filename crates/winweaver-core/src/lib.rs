@@ -12,6 +12,7 @@ pub mod diff;
 pub mod i18n;
 pub mod import;
 pub mod jsonfile;
+pub mod paths;
 pub mod profile;
 pub mod regfile;
 pub mod registry;

@@ -93,6 +93,9 @@ generic key selects the edition during the installation; it does not activate Wi
 | `themes/` | Your themes (`<name>.wwtheme`) |
 | `drafts/`, `logs/` | Unsaved changes; the logs of each day: `winweaver-<date>.log` of the window, `mcp-<date>.jsonl` of the MCP server (one JSON object a line), with the reason when the program fails |
 
+The settings, bookmarks, drafts and diffs name a file inside this folder relative to it, so the whole folder can
+move or go to another PC; a file elsewhere keeps its full path.
+
 ## Keys
 
 F1 guide, F7 check, F9 build, Ctrl+N new profile, Ctrl+O open, Ctrl+S save, Ctrl+Shift+S save as, Ctrl+, settings,

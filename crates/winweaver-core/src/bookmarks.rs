@@ -6,6 +6,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::jsonfile::{self, JsonError};
+use crate::paths;
 
 pub const FORMAT: &str = "winweaver-bookmarks";
 pub const VERSION: u32 = 1;
@@ -140,10 +141,29 @@ impl Bookmarks {
         Self::load(path)
     }
 
+    /// The file with the documents inside the program folder named by absolute paths again.
     pub fn load(path: &Path) -> Result<Self, BookmarksError> {
         let name = jsonfile::display_name(path);
         let text = jsonfile::read_text(path, MAX_BYTES)?;
-        Self::parse(&text, &name)
+        let mut marks = Self::parse(&text, &name)?;
+        marks.resolve_in(&paths::program_dir());
+        Ok(marks)
+    }
+
+    /// The bookmarks as a file keeps them: a document inside `base` relative to it.
+    pub fn stored_in(&self, base: &Path) -> Self {
+        let mut marks = self.clone();
+        for b in marks.items.iter_mut().filter(|b| !b.is_registry()) {
+            b.path = paths::stored_text(&b.path, base);
+        }
+        marks
+    }
+
+    /// The bookmarks of a file with the documents kept relative to `base` made absolute.
+    pub fn resolve_in(&mut self, base: &Path) {
+        for b in self.items.iter_mut().filter(|b| !b.is_registry()) {
+            b.path = paths::resolved_text(&b.path, base);
+        }
     }
 
     pub fn parse(text: &str, name: &str) -> Result<Self, BookmarksError> {
@@ -176,7 +196,8 @@ impl Bookmarks {
             source,
         };
         let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, self.to_json()).map_err(io)?;
+        let text = self.stored_in(&paths::program_dir()).to_json();
+        std::fs::write(&tmp, text).map_err(io)?;
         std::fs::rename(&tmp, path).map_err(io)
     }
 }
@@ -239,5 +260,23 @@ mod tests {
         assert_eq!(Bookmarks::load(&path).unwrap(), marks);
         std::fs::remove_dir_all(&dir).unwrap();
         assert!(Bookmarks::parse(r#"{"format": "x", "version": 1}"#, "x").is_err());
+    }
+
+    #[test]
+    fn a_profile_inside_the_program_folder_is_kept_relative() {
+        let base = std::env::temp_dir().join("ww-marks").join("WinWeaver");
+        let file = base.join("profiles").join("Office.wwprofile");
+        let path = file.display().to_string();
+        let mut marks = Bookmarks::default();
+        marks.toggle(Bookmark::option("defender.pua", &path));
+        marks.toggle(Bookmark::option("asr", "Strict"));
+        marks.toggle(Bookmark::registry("HKEY_CURRENT_USER\\Software", ""));
+        let kept = marks.stored_in(&base);
+        let first = &kept.items[0].path;
+        assert!(first.starts_with('.'), "{first}");
+        assert_eq!(kept.items[1..], marks.items[1..]);
+        let mut read = kept.clone();
+        read.resolve_in(&base);
+        assert_eq!(read, marks);
     }
 }

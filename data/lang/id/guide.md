@@ -233,6 +233,10 @@ Anda), `output/` (file jawaban dan skrip), `drafts/` (perubahan yang belum disim
 program dimulai berikutnya), `mcp/` (konfigurasi server MCP), `logs/` (apa yang dilakukan program), `bookmarks.wwmarks`. Tidak ada yang
 ditulis di tempat lain.
 
+Pengaturan, penanda, draf, dan file perbedaan menyimpan jalur file di dalam folder ini secara relatif
+terhadapnya, sehingga seluruh folder dapat dipindahkan atau disalin ke PC lain; file di tempat lain
+menyimpan jalur lengkapnya.
+
 ## Belum tersedia
 
 Untuk saat ini tidak ada yang tersisa dari rencana: kebutuhan program berikutnya akan muncul dari

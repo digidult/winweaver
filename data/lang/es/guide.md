@@ -249,6 +249,10 @@ perfiles), `output/` (el archivo de respuesta y los scripts), `drafts/` (cambios
 restauran en el siguiente inicio), `mcp/` (las configuraciones del servidor MCP), `logs/` (lo que ha hecho el programa), `bookmarks.wwmarks`. No se
 escribe nada en ningún otro sitio.
 
+La configuración, los marcadores, los borradores y los archivos de diferencias guardan la ruta de un
+archivo de esta carpeta de forma relativa a ella, así que la carpeta entera puede moverse o copiarse a
+otro PC; un archivo en otro lugar conserva su ruta completa.
+
 ## Todavía no disponible
 
 Por ahora no falta nada del plan: lo que el programa necesite después lo mostrará la práctica.

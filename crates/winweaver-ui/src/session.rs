@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use serde::{Deserialize, Serialize};
 use winweaver_core::clock;
 use winweaver_core::jsonfile;
+use winweaver_core::paths;
 use winweaver_core::profile::Profile;
 
 pub const DRAFT_FORMAT: &str = "winweaver-draft";
@@ -20,7 +21,8 @@ const DRAFT_MAX_BYTES: u64 = 16 * 1024 * 1024;
 pub struct Draft {
     pub format: String,
     pub version: u32,
-    /// The file the profile belongs to, empty for a profile never saved.
+    /// The file the profile belongs to, empty for a profile never saved; kept relative to the
+    /// program folder when it lies inside it, absolute in memory.
     #[serde(default)]
     pub path: String,
     #[serde(default)]
@@ -38,9 +40,11 @@ pub fn fnv(text: &str) -> u64 {
     hash
 }
 
-/// The draft key of a profile file.
+/// The draft key of a profile file: of its stored form, so it stays when the program folder
+/// moves.
 pub fn key_for_path(path: &Path) -> String {
-    format!("p-{:016x}", fnv(&path.to_string_lossy().to_lowercase()))
+    let kept = paths::stored(path, &paths::program_dir());
+    format!("p-{:016x}", fnv(&kept.to_string_lossy().to_lowercase()))
 }
 
 /// A draft key for a profile that has no file yet, unique in this session.
@@ -66,10 +70,11 @@ pub fn write_draft(
     profile: &Profile,
 ) -> Result<(), String> {
     std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
+    let kept = path.map(|p| paths::stored(p, &paths::program_dir()));
     let draft = Draft {
         format: DRAFT_FORMAT.to_owned(),
         version: DRAFT_VERSION,
-        path: path.map(|p| p.display().to_string()).unwrap_or_default(),
+        path: kept.map(|p| p.display().to_string()).unwrap_or_default(),
         saved: clock::now_utc_iso(),
         profile: profile.clone(),
     };
@@ -112,7 +117,8 @@ pub fn read_drafts(dir: &Path) -> (Vec<(String, Draft)>, Vec<String>) {
                 }
             });
         match read {
-            Ok(draft) => {
+            Ok(mut draft) => {
+                draft.path = paths::resolved_text(&draft.path, &paths::program_dir());
                 let key = file
                     .file_stem()
                     .map(|s| s.to_string_lossy().into_owned())

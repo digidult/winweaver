@@ -239,6 +239,10 @@ konsola ve `logs/` klasörüne gider.
 kaydedilmemiş değişiklikler), `mcp/` (MCP sunucusunun yapılandırmaları), `logs/` (programın yaptıkları), `bookmarks.wwmarks`. Başka hiçbir yere bir
 şey yazılmaz.
 
+Ayarlar, yer işaretleri, taslaklar ve fark dosyaları bu klasördeki bir dosyanın yolunu klasöre göre
+saklar; böylece klasörün tamamı taşınabilir veya başka bir bilgisayara kopyalanabilir. Başka yerdeki bir
+dosya tam yolunu korur.
+
 ## Henüz yok
 
 Şimdilik plandan eksik bir şey yok: programın bundan sonra neye ihtiyacı olduğunu kullanım gösterecek.

@@ -252,6 +252,10 @@ profils), `output/` (le fichier de réponses et les scripts), `drafts/` (modific
 restaurées au démarrage suivant), `mcp/` (les configurations du serveur MCP), `logs/` (ce qu'a fait le programme), `bookmarks.wwmarks`. Rien n'est
 écrit ailleurs.
 
+Les paramètres, les signets, les brouillons et les fichiers de différences gardent le chemin d'un fichier
+de ce dossier relatif à celui-ci : le dossier entier peut être déplacé ou copié sur un autre PC ; un
+fichier situé ailleurs garde son chemin complet.
+
 ## Pas encore disponible
 
 Rien du plan pour l'instant : ce dont le programme a besoin ensuite viendra de son usage.
