@@ -175,7 +175,7 @@ fn respond(mut stream: TcpStream, status: u16, body: &str, error: &str) -> io::R
         body.to_owned()
     };
     let mut head = format!(
-        "HTTP/1.1 {status} {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\nCache-Control: no-store\r\n",
+        "HTTP/1.1 {status} {}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\nCache-Control: no-store\r\n",
         reason(status),
         body.len()
     );
