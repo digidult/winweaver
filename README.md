@@ -20,12 +20,14 @@ Alpha (October 2026): the window builds in CI (`WinWeaver-<version>.zip` in the 
 tag `v<version>` publishes a release). Profiles, the check, the forms, the build of `autounattend.xml`,
 comparison and diff files, the native read of this PC and its native apply, return to defaults and undo
 (with a backup the stand-alone scripts understand, the default user profile included), the stand-alone
-apply, revert and audit scripts, the import of policy templates (lists included) and catalog files,
+apply, revert and audit scripts, the registry tab with the permissions of keys, registry files, the
+import of policy templates (lists included) and catalog files with their editor,
 bookmarks of options, diff files with comments, the guide and the reference, themes with their fonts and
 an editor, the MCP server (stdio and loopback HTTP) and the interface in English, Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish
-work; the window has the layout of variant A and is used with the keyboard as well. Earlier versions were accepted in a virtual
-machine (the answer file works); the stand-alone scripts and the versions since 0.4.0 are being accepted now. The specification is the
-plan; `AGENTS.md` keeps the state.
+work; the window has the layout of variant A and is used with the keyboard as well. Builds 0.11.0 and 0.16.1
+were accepted in a virtual machine (the answer file, the stand-alone scripts, the native apply and undo,
+This PC, the registry, registry files, the catalog editor); later versions wait for their scenario. The
+specification is the plan; `AGENTS.md` keeps the state.
 
 | What | Where |
 |---|---|
