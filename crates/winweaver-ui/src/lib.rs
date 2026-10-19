@@ -1513,7 +1513,7 @@ impl App {
                 self.docs.push(Doc::Profile(Box::new(doc)));
                 self.active = self.docs.len() - 1;
                 self.status = if unknown.is_empty() {
-                    format!("Opened {}", path.display())
+                    trf("Opened {path}", &[("path", &path.display())])
                 } else {
                     trf(
                         "Opened {path}: {n} options of catalogs that are not loaded are left out of the build",
@@ -1585,11 +1585,9 @@ impl App {
         let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
             return;
         };
-        if validate::errors(&doc.issues) > 0 {
-            self.status = format!(
-                "{}: fix the errors before the build",
-                validate::summary(&doc.issues)
-            );
+        let errors = validate::errors(&doc.issues);
+        if errors > 0 {
+            self.status = trf("Fix the errors before the build: {n}", &[("n", &errors)]);
             return;
         }
         let build = match render::build(catalog, &doc.profile, winweaver_core::BUILD) {
@@ -1616,7 +1614,10 @@ impl App {
         }
         let dir = output_dir();
         if let Err(e) = std::fs::create_dir_all(&dir) {
-            self.status = format!("Build: cannot create {}: {e}", dir.display());
+            self.status = trf(
+                "Build: cannot create {path}: {e}",
+                &[("path", &dir.display()), ("e", &e)],
+            );
             return;
         }
         let xml_path = dir.join("autounattend.xml");
@@ -1631,12 +1632,14 @@ impl App {
                 return;
             }
         }
-        self.status = format!(
-            "Built {} ({} rules, {} scripts, {} warnings)",
-            xml_path.display(),
-            build.rule_ids.len(),
-            build.scripts.len(),
-            build.warnings.len()
+        self.status = trf(
+            "Built {path} ({rules} rules, {scripts} scripts, {warnings} warnings)",
+            &[
+                ("path", &xml_path.display()),
+                ("rules", &build.rule_ids.len()),
+                ("scripts", &build.scripts.len()),
+                ("warnings", &build.warnings.len()),
+            ],
         );
         self.shown_file = Some((self.status.clone(), xml_path.clone()));
     }
@@ -1869,9 +1872,9 @@ impl App {
         }
         issues.sort_by_key(|i| i.severity);
         doc.issues = issues;
-        self.status = format!(
-            "Checked {} rules on this PC: {differ} differ from the profile",
-            readings.len()
+        self.status = trf(
+            "Checked {n} rules on this PC: {differ} differ from the profile",
+            &[("n", &readings.len()), ("differ", &differ)],
         );
     }
 
@@ -1887,16 +1890,16 @@ impl App {
         let stem = file_stem(&doc.profile.name);
         let made = match kind {
             ScriptKind::Apply => scripts::apply_script(&self.catalog, &doc.profile, &ids, version)
-                .map(|(t, p)| (t, p.summary(), format!("Apply-{stem}.ps1"), true)),
+                .map(|(t, p)| (t, summary_of(&p), format!("Apply-{stem}.ps1"), true)),
             ScriptKind::Revert => {
                 scripts::revert_script(&self.catalog, &doc.profile, &ids, version)
-                    .map(|(t, p)| (t, p.summary(), format!("Revert-{stem}.ps1"), true))
+                    .map(|(t, p)| (t, summary_of(&p), format!("Revert-{stem}.ps1"), true))
             }
             ScriptKind::Audit => scripts::audit_script(&self.catalog, &doc.profile, &ids, version)
                 .map(|(t, p)| {
                     (
                         t,
-                        format!("{} rules checked", p.rules.len()),
+                        trf("{n} rules checked", &[("n", &p.rules.len())]),
                         format!("Audit-{stem}.ps1"),
                         false,
                     )
@@ -1941,9 +1944,9 @@ impl App {
             self.status = trf("Undo script not saved: {e}", &[("e", &e)]);
             return;
         }
-        self.status = format!(
-            "Saved {} ({summary}); run it as administrator, first on a test PC",
-            path.display()
+        self.status = trf(
+            "Saved {path} ({summary}); run it as administrator, first on a test PC",
+            &[("path", &path.display()), ("summary", &summary)],
         );
         self.shown_file = Some((self.status.clone(), path));
     }
@@ -2761,10 +2764,13 @@ impl App {
         else {
             return;
         };
-        self.status = match file.save(&path) {
-            Ok(()) => trf("Saved {path}", &[("path", &path.display())]),
-            Err(e) => trf("Save failed: {e}", &[("e", &e)]),
-        };
+        match file.save(&path) {
+            Ok(()) => {
+                self.status = trf("Saved {path}", &[("path", &path.display())]);
+                self.shown_file = Some((self.status.clone(), path));
+            }
+            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+        }
     }
 
     /// The section of the settings that lists the imports of policy templates.
@@ -3055,16 +3061,14 @@ impl App {
                         mark.created = clock::now_utc_iso();
                         let added = self.marks.toggle(mark);
                         if self.save_marks() {
-                            self.status = format!(
-                                "{} ({} bookmarks in {})",
-                                if added {
-                                    "Bookmark added"
-                                } else {
-                                    "Bookmark removed"
-                                },
-                                self.marks.items.len(),
-                                self.marks_path.display()
-                            );
+                            let text = if added {
+                                tr("Bookmark added ({n} bookmarks in {path})")
+                            } else {
+                                tr("Bookmark removed ({n} bookmarks in {path})")
+                            };
+                            self.status = text
+                                .replace("{n}", &self.marks.items.len().to_string())
+                                .replace("{path}", &self.marks_path.display().to_string());
                         }
                     }
                 }
@@ -3506,7 +3510,10 @@ impl App {
             Ok(marks) => {
                 self.marks = marks;
                 self.marks_path = path.clone();
-                self.status = format!("Opened {}: the star now writes there", path.display());
+                self.status = trf(
+                    "Opened {path}: the star now writes there",
+                    &[("path", &path.display())],
+                );
                 self.remember_recent(&path);
                 self.apply(vec![Act::OpenMarks]);
             }
@@ -3550,7 +3557,10 @@ impl App {
                 }
             }
         } else {
-            self.status = format!("The document of the bookmark is not open: {}", mark.path);
+            self.status = trf(
+                "The document of the bookmark is not open: {path}",
+                &[("path", &mark.path)],
+            );
             return;
         }
         if mark.is_option() {
@@ -3653,9 +3663,10 @@ impl App {
             return;
         }
         d.dirty = false;
-        let shown = d.path.display().to_string();
+        let path = d.path.clone();
         let reload = d.import.then(|| d.file.clone());
-        self.status = trf("Saved {path}", &[("path", &shown)]);
+        self.status = trf("Saved {path}", &[("path", &path.display())]);
+        self.shown_file = Some((self.status.clone(), path));
         if let Some(file) = reload {
             if let Some(slot) = self.imports.iter_mut().find(|f| f.id == file.id) {
                 *slot = file;
@@ -4044,7 +4055,7 @@ impl App {
                     text,
                 ))));
                 self.active = self.docs.len() - 1;
-                self.status = format!("Opened {}", path.display());
+                self.status = trf("Opened {path}", &[("path", &path.display())]);
                 self.remember_recent(&path);
             }
             Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
@@ -4085,9 +4096,9 @@ impl App {
                 }));
                 self.docs.push(Doc::Profile(Box::new(doc)));
                 self.active = self.docs.len() - 1;
-                self.status = format!(
-                    "Opened the profile of {}; save it as a .wwprofile file",
-                    path.display()
+                self.status = trf(
+                    "Opened the profile of {path}; save it as a .wwprofile file",
+                    &[("path", &path.display())],
                 );
                 self.remember_recent(&path);
             }
@@ -4101,7 +4112,7 @@ impl App {
                 self.docs
                     .push(Doc::Diff(Box::new(DiffDoc::new(diff, Some(path.clone())))));
                 self.active = self.docs.len() - 1;
-                self.status = format!("Opened {}", path.display());
+                self.status = trf("Opened {path}", &[("path", &path.display())]);
                 self.remember_recent(&path);
             }
             Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
@@ -4116,7 +4127,7 @@ impl App {
         let base_side = diff::Side::of(&doc.profile, doc.path.as_deref());
         let other_side = diff::Side::of(&other, other_path);
         let diff = Diff::between(&doc.profile, &other, base_side, other_side);
-        self.status = format!("{} differences", diff.count());
+        self.status = trf("{n} differences", &[("n", &diff.count())]);
         self.docs
             .push(Doc::Diff(Box::new(DiffDoc::new(diff, None))));
         self.active = self.docs.len() - 1;
@@ -4150,7 +4161,10 @@ impl App {
         if let Some(Doc::Profile(p)) = self.docs.get_mut(i) {
             diff.apply_to(&mut p.profile);
             p.refresh(catalog);
-            self.status = format!("Applied {} differences to {}", diff.count(), p.title());
+            self.status = trf(
+                "Applied {n} differences to {profile}",
+                &[("n", &diff.count()), ("profile", &p.title())],
+            );
         }
         self.active = i;
     }
@@ -4259,7 +4273,8 @@ impl App {
             Ok(()) => {
                 d.path = Some(path.clone());
                 d.dirty = false;
-                self.status = format!("Saved {}", path.display());
+                self.status = trf("Saved {path}", &[("path", &path.display())]);
+                self.shown_file = Some((self.status.clone(), path.clone()));
                 self.remember_recent(&path);
             }
             Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
@@ -5357,6 +5372,27 @@ pub fn profiles_dir() -> PathBuf {
     exe_dir().join("profiles")
 }
 
+/// What a stand-alone script does with the selection, in the language of the interface.
+fn summary_of(plan: &scripts::ScriptPlan) -> String {
+    let counts = [
+        (plan.applied.len(), tr("{n} rules applied")),
+        (plan.reverted.len(), tr("{n} returned to the defaults")),
+        (plan.added.len(), tr("{n} added as dependencies")),
+        (plan.excluded.len(), tr("{n} left out")),
+        (plan.partial.len(), tr("{n} only partly revertible")),
+    ];
+    let parts: Vec<String> = counts
+        .iter()
+        .filter(|(n, _)| *n > 0)
+        .map(|(n, text)| text.replace("{n}", &n.to_string()))
+        .collect();
+    if parts.is_empty() {
+        tr("nothing to do").to_owned()
+    } else {
+        parts.join(", ")
+    }
+}
+
 /// A file name stem made of a profile name.
 pub fn file_stem(name: &str) -> String {
     let stem: String = name
@@ -5541,11 +5577,14 @@ pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
             app.load_mcp_config();
             app.apply_language();
             if let Some(w) = warning {
-                app.status = format!("Settings not read, the defaults are used: {w}");
+                app.status = trf(
+                    "Settings not read, the defaults are used: {w}",
+                    &[("w", &w)],
+                );
             }
             match Bookmarks::load_or_default(&app.marks_path) {
                 Ok(marks) => app.marks = marks,
-                Err(e) => app.status = format!("Bookmarks not read: {e}"),
+                Err(e) => app.status = trf("Bookmarks not read: {e}", &[("e", &e)]),
             }
             app.load_imports();
             app.restore_session();

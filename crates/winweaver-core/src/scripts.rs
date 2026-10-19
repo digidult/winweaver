@@ -36,38 +36,6 @@ pub struct ScriptPlan {
     pub partial: Vec<(String, usize)>,
 }
 
-impl ScriptPlan {
-    pub fn summary(&self) -> String {
-        let mut parts = Vec::new();
-        if !self.applied.is_empty() {
-            parts.push(format!("{} rules applied", self.applied.len()));
-        }
-        if !self.reverted.is_empty() {
-            parts.push(format!(
-                "{} returned to Windows defaults",
-                self.reverted.len()
-            ));
-        }
-        if !self.added.is_empty() {
-            parts.push(format!("{} added as dependencies", self.added.len()));
-        }
-        if !self.excluded.is_empty() {
-            parts.push(format!("{} left out", self.excluded.len()));
-        }
-        if !self.partial.is_empty() {
-            parts.push(format!(
-                "{} with steps that cannot be returned automatically",
-                self.partial.len()
-            ));
-        }
-        if parts.is_empty() {
-            "nothing to do".to_owned()
-        } else {
-            parts.join(", ")
-        }
-    }
-}
-
 /// The first comment line of a script: the program, the profile and what the script does.
 fn label(profile: &Profile, app_version: &str, what: &str) -> String {
     let name: String = profile

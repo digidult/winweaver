@@ -295,11 +295,13 @@ impl App {
             ui,
             tr("About"),
             "",
-            Act::Message(format!(
-                "WinWeaver {}, catalog {}, settings {}",
-                winweaver_core::BUILD,
-                self.catalog.version(),
-                Settings::path().display()
+            Act::Message(trf(
+                "WinWeaver {build}, catalog {catalog}, settings {path}",
+                &[
+                    ("build", &winweaver_core::BUILD),
+                    ("catalog", &self.catalog.version()),
+                    ("path", &Settings::path().display()),
+                ],
             )),
         );
         item(ui, tr("Exit"), "", Act::Exit);
