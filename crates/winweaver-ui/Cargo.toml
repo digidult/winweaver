@@ -19,6 +19,8 @@ wgpu = ["eframe/wgpu_no_default_features", "dep:wgpu"]
 winweaver-core = { path = "../winweaver-core" }
 winweaver-win = { path = "../winweaver-win" }
 winweaver-mcp = { path = "../winweaver-mcp" }
+# The master password of a users file is wiped when the tab locks or closes.
+zeroize = "1"
 eframe = { version = "0.36", default-features = false, features = ["accesskit", "default_fonts", "links"] }
 # The DirectX 12 backend of wgpu alone: no Vulkan, no OpenGL through wgpu (glow draws OpenGL).
 wgpu = { version = "30", default-features = false, features = ["dx12"], optional = true }

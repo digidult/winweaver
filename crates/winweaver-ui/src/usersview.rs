@@ -653,13 +653,13 @@ pub fn import_window(ctx: &egui::Context, import: &mut UsersImport) -> ImportDon
 }
 
 pub fn users_view(ui: &mut egui::Ui, doc: &mut UsersDoc, acts: &mut Vec<Act>) {
-    egui::SidePanel::left("users-side")
+    egui::Panel::left("users-side")
         .resizable(true)
-        .default_width(440.0)
-        .show_inside(ui, |ui| {
+        .default_size(440.0)
+        .show(ui, |ui| {
             list_panel(ui, doc, acts);
         });
-    egui::CentralPanel::default().show_inside(ui, |ui| {
+    egui::CentralPanel::default().show(ui, |ui| {
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
                 ui.label(tr("Name of the file"));
