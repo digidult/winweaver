@@ -180,11 +180,7 @@ fn tag(key: &[u8], salt: &[u8], iv: &[u8], data: &[u8]) -> Hmac<Sha256> {
 }
 
 /// Encrypts the passwords under a master password with a fresh salt and vector.
-pub fn encrypt(
-    passwords: &Passwords,
-    master: &[u8],
-    iterations: u32,
-) -> Result<Container, String> {
+pub fn encrypt(passwords: &Passwords, master: &[u8], iterations: u32) -> Result<Container, String> {
     let mut salt = [0u8; SALT_SIZE];
     let mut iv = [0u8; IV_SIZE];
     getrandom::fill(&mut salt).map_err(|e| e.to_string())?;
@@ -212,7 +208,9 @@ pub fn encrypt_with(
     let cipher = cbc::Encryptor::<aes::Aes256>::new_from_slices(enc_key.as_ref(), iv)
         .map_err(|e| e.to_string())?;
     let data = cipher.encrypt_padded_vec_mut::<Pkcs7>(&plain);
-    let mac = tag(mac_key.as_ref(), salt, iv, &data).finalize().into_bytes();
+    let mac = tag(mac_key.as_ref(), salt, iv, &data)
+        .finalize()
+        .into_bytes();
     Ok(Container {
         kdf: KDF.to_owned(),
         iterations,
@@ -230,7 +228,9 @@ pub fn check(container: &Container) -> Result<(), String> {
     }
     if container.iterations < MIN_ITERATIONS {
         let n = container.iterations;
-        return Err(format!("too few iterations: {n} (at least {MIN_ITERATIONS})"));
+        return Err(format!(
+            "too few iterations: {n} (at least {MIN_ITERATIONS})"
+        ));
     }
     let field = |name: &str, text: &str, size: Option<usize>| -> Result<Vec<u8>, String> {
         let bytes = BASE64

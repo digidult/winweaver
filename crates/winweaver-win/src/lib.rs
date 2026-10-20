@@ -19,6 +19,8 @@ mod native;
 
 #[cfg(windows)]
 mod registry;
+#[cfg(windows)]
+mod users;
 
 #[cfg(windows)]
 pub use native::NativeMachine;
@@ -61,6 +63,42 @@ pub fn locales() -> winweaver_core::resources::Locales {
     #[cfg(not(windows))]
     {
         winweaver_core::resources::Locales::default()
+    }
+}
+
+/// The local accounts of this PC as a users file lists them (no password); an error where the
+/// Windows API is not available.
+pub fn users_of_this_pc() -> Result<Vec<winweaver_core::users::User>, String> {
+    #[cfg(windows)]
+    {
+        users::read_this_pc()
+    }
+    #[cfg(not(windows))]
+    {
+        Err("the accounts of this PC are read on Windows only".to_owned())
+    }
+}
+
+/// Runs a plan of a users file on this PC as administrator: one outcome an account.
+pub fn run_users_plan(
+    plan: &winweaver_core::users::Plan,
+    passwords: &winweaver_core::userstore::Passwords,
+) -> Vec<winweaver_core::users::Outcome> {
+    #[cfg(windows)]
+    {
+        users::run(plan, passwords)
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = passwords;
+        plan.users
+            .iter()
+            .map(|u| winweaver_core::users::Outcome {
+                name: u.name.clone(),
+                status: winweaver_core::users::Status::Error,
+                message: "the accounts of this PC change on Windows only".to_owned(),
+            })
+            .collect()
     }
 }
 

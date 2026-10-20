@@ -166,7 +166,9 @@ fn wide(text: &str) -> Vec<u16> {
 
 /// The name of a built-in group in the language of this Windows, such as `Administratoren` on a
 /// German Windows.
-fn builtin_group(kind: windows_sys::Win32::Security::WELL_KNOWN_SID_TYPE) -> Option<String> {
+pub(crate) fn builtin_group(
+    kind: windows_sys::Win32::Security::WELL_KNOWN_SID_TYPE,
+) -> Option<String> {
     use windows_sys::Win32::Security::{
         CreateWellKnownSid, LookupAccountSidW, SECURITY_MAX_SID_SIZE, SID_NAME_USE,
     };
@@ -210,7 +212,7 @@ fn builtin_group(kind: windows_sys::Win32::Security::WELL_KNOWN_SID_TYPE) -> Opt
 }
 
 /// The local groups an account belongs to directly, in lower case; none when they cannot be read.
-fn groups_of(user: &str) -> Vec<String> {
+pub(crate) fn groups_of(user: &str) -> Vec<String> {
     use windows_sys::Win32::NetworkManagement::NetManagement::{
         LOCALGROUP_USERS_INFO_0, MAX_PREFERRED_LENGTH, NERR_Success, NetApiBufferFree,
         NetUserGetLocalGroups,

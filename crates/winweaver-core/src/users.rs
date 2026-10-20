@@ -83,7 +83,11 @@ pub struct User {
 
 impl User {
     pub fn group(&self) -> &'static str {
-        if self.admin { "Administrators" } else { "Users" }
+        if self.admin {
+            "Administrators"
+        } else {
+            "Users"
+        }
     }
 
     /// Whether the row asks for changes to an account that already exists.
@@ -273,15 +277,26 @@ pub fn check(users: &[User]) -> Vec<Issue> {
             continue;
         }
         if !is_profile_path(&u.profile_path) {
-            let why = format!("The profile path {} is not an absolute path", u.profile_path);
+            let why = format!(
+                "The profile path {} is not an absolute path",
+                u.profile_path
+            );
             issues.push(issue(true, &u.name, why));
         }
         if seen.iter().any(|s| s.eq_ignore_ascii_case(&u.name)) {
-            issues.push(issue(true, &u.name, format!("The name {} is used twice", u.name)));
+            issues.push(issue(
+                true,
+                &u.name,
+                format!("The name {} is used twice", u.name),
+            ));
         } else {
             seen.push(&u.name);
         }
-        let folder = u.profile_path.trim().trim_end_matches(['\\', '/']).to_lowercase();
+        let folder = u
+            .profile_path
+            .trim()
+            .trim_end_matches(['\\', '/'])
+            .to_lowercase();
         if !folder.is_empty() {
             match folders.iter().find(|(f, _)| *f == folder) {
                 Some((_, owner)) if !owner.eq_ignore_ascii_case(&u.name) => {
@@ -301,7 +316,11 @@ pub fn check_passwords(users: &[User], passwords: &Passwords) -> Vec<Issue> {
     let mut issues = Vec::new();
     for u in users {
         if !passwords.has(&u.name) {
-            issues.push(issue(true, &u.name, "No password for this account".to_owned()));
+            issues.push(issue(
+                true,
+                &u.name,
+                "No password for this account".to_owned(),
+            ));
         }
     }
     for name in passwords.names() {
@@ -384,8 +403,7 @@ impl Plan {
         let chosen: Vec<User> = users
             .iter()
             .filter(|u| {
-                selected.is_empty()
-                    || selected.iter().any(|s| s.eq_ignore_ascii_case(&u.name))
+                selected.is_empty() || selected.iter().any(|s| s.eq_ignore_ascii_case(&u.name))
             })
             .cloned()
             .collect();
@@ -396,7 +414,11 @@ impl Plan {
         }
         for u in &chosen {
             if !passwords.has(&u.name) {
-                issues.push(issue(true, &u.name, "No password for this account".to_owned()));
+                issues.push(issue(
+                    true,
+                    &u.name,
+                    "No password for this account".to_owned(),
+                ));
             }
         }
         if !issues.is_empty() {
@@ -498,7 +520,12 @@ mod tests {
         let selected = vec!["user1".to_owned()];
         let plan = Plan::new(Operation::Passwords, &back.users, &selected, &passwords);
         assert!(plan.is_err());
-        let plan = Plan::new(Operation::Passwords, &back.users, &["ADMIN1".into()], &passwords);
+        let plan = Plan::new(
+            Operation::Passwords,
+            &back.users,
+            &["ADMIN1".into()],
+            &passwords,
+        );
         assert_eq!(plan.unwrap().users.len(), 1);
     }
 

@@ -22,7 +22,7 @@ fn wide(text: &str) -> Vec<u16> {
     text.encode_utf16().chain([0]).collect()
 }
 
-fn free(buffer: *mut u8) {
+pub(crate) fn free(buffer: *mut u8) {
     if !buffer.is_null() {
         // SAFETY: the buffer came from a network management call and is freed once.
         unsafe { NetApiBufferFree(buffer.cast_const().cast()) };
@@ -30,7 +30,7 @@ fn free(buffer: *mut u8) {
 }
 
 /// The flags of an account; `None` when it does not exist.
-fn flags(name: &str) -> Result<Option<u32>, String> {
+pub(crate) fn flags(name: &str) -> Result<Option<u32>, String> {
     let name_w = wide(name);
     let mut buffer: *mut u8 = std::ptr::null_mut();
     // SAFETY: the name is null-terminated; the call allocates the buffer of level 1.
