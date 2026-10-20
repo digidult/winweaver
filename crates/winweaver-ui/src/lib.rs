@@ -16,6 +16,7 @@ mod marksview;
 mod mcpview;
 mod mdview;
 mod regfileview;
+mod usersview;
 mod regview;
 mod renderer;
 mod session;
@@ -45,6 +46,7 @@ use winweaver_core::render;
 use winweaver_core::resolver::{self, Resolution};
 use winweaver_core::scripts;
 use winweaver_core::thispc::{self, Report, Verdict};
+use winweaver_core::users::{self, UsersFile};
 use winweaver_core::validate::{self, Issue, Severity, Target};
 
 pub use diffview::DiffDoc;
@@ -209,6 +211,8 @@ pub enum Doc {
     CatalogEdit(Box<cataledit::EditorDoc>),
     /// A registry file (`.reg`).
     RegFile(Box<regfileview::RegFileDoc>),
+    /// A users file (`.wwusers`).
+    Users(Box<usersview::UsersDoc>),
 }
 
 impl Doc {
@@ -225,6 +229,7 @@ impl Doc {
             Doc::Registry(d) => d.title(),
             Doc::CatalogEdit(d) => d.title(),
             Doc::RegFile(d) => d.title(),
+            Doc::Users(d) => d.title(),
         }
     }
 
@@ -234,6 +239,7 @@ impl Doc {
             || matches!(self, Doc::Theme(d) if d.dirty)
             || matches!(self, Doc::CatalogEdit(d) if d.dirty)
             || matches!(self, Doc::RegFile(d) if d.dirty)
+            || matches!(self, Doc::Users(d) if d.dirty)
     }
 }
 
@@ -335,6 +341,28 @@ pub enum Act {
     /// Asks before lines leave the registry file in front, then removes them.
     AskRegFileRemove,
     RegFileRemove(Vec<usize>),
+    /// A new users file, empty or of the accounts of this PC.
+    NewUsersFile,
+    UsersOfThisPc,
+    UsersAdd,
+    UsersDuplicate,
+    AskUsersRemove,
+    UsersRemove(usize),
+    /// Moves the selected account down (`true`) or up.
+    UsersMove(bool),
+    UsersUnlock,
+    UsersLock,
+    UsersSetMaster,
+    UsersSetPassword,
+    UsersCheck,
+    /// Adds the accounts of this PC the file lacks.
+    UsersReadPc,
+    /// Asks before an operation on this PC: of every account (`true`) or the selected one.
+    AskUsersRun(users::Operation, bool),
+    UsersRun(users::Operation, Vec<String>),
+    UsersScript,
+    /// The accounts of a users file into the profile in front.
+    UsersIntoProfile,
     /// Import the templates of this Windows (None), of a folder or a catalog file.
     ImportTemplates(ImportSource),
     /// Loads an import that is not loaded, or forgets one that is.
@@ -568,6 +596,8 @@ pub struct App {
     /// The file the message of the status bar names, which its button shows in its folder while
     /// the message stays.
     shown_file: Option<(String, PathBuf)>,
+    /// The accounts of a users file on their way into a profile, with their master password asked.
+    users_import: Option<usersview::UsersImport>,
 }
 
 /// The translation for a language code, `None` for English.
@@ -625,6 +655,7 @@ impl App {
             mcp: mcpview::McpPanel::new(winweaver_mcp::config::Config::default_path(&exe_dir())),
             last_logged: String::new(),
             shown_file: None,
+            users_import: None,
         }
     }
 
@@ -645,6 +676,7 @@ impl App {
             Doc::Bookmarks => Some(&mut self.marks_search),
             Doc::Mcp => Some(&mut self.mcp_search),
             Doc::RegFile(d) => Some(&mut d.search),
+            Doc::Users(d) => Some(&mut d.search),
             Doc::Settings | Doc::Theme(_) | Doc::Registry(_) | Doc::CatalogEdit(_) => None,
         }
     }
@@ -698,6 +730,7 @@ impl App {
             Some(Doc::Bookmarks) => self.marks_tab.reveal = true,
             Some(Doc::Mcp) => self.mcp.journal_reveal = true,
             Some(Doc::RegFile(d)) => d.follow = true,
+            Some(Doc::Users(d)) => d.follow = true,
             _ => {}
         }
     }
@@ -1464,6 +1497,10 @@ impl App {
             self.open_admx_path(path);
             return;
         }
+        if path.extension().is_some_and(|e| e == users::EXTENSION) {
+            self.open_users_path(path);
+            return;
+        }
         if path.extension().is_some_and(|e| e == themes::EXTENSION) {
             self.open_theme_path(path);
             return;
@@ -2028,6 +2065,244 @@ impl App {
                 self.remember_recent(&path);
             }
             Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+        }
+    }
+
+    /// Unlocks the passwords of the users file in front, sets or changes their master password
+    /// (`set`), or sets the password of the selected account (`password`) once unlocked.
+    fn users_unlock(&mut self, set: bool, password: bool) {
+        let Some(d) = self.active_users() else {
+            return;
+        };
+        if password && d.unlocked() {
+            d.start_password();
+        } else if d.file.passwords.is_none() || (set && d.unlocked()) {
+            d.ask.open(usersview::Purpose::Set);
+        } else {
+            d.ask.open(usersview::Purpose::Unlock);
+        }
+    }
+
+    fn active_users(&mut self) -> Option<&mut usersview::UsersDoc> {
+        match self.docs.get_mut(self.active) {
+            Some(Doc::Users(d)) => Some(d),
+            _ => None,
+        }
+    }
+
+    /// A new users file in a tab of its own, empty or of the accounts of this PC.
+    fn new_users_doc(&mut self, read: Vec<users::User>) {
+        let mut file = UsersFile::new(tr("Users"));
+        file.users = read;
+        let mut doc = usersview::UsersDoc::new(file, None);
+        doc.dirty = !doc.file.users.is_empty();
+        doc.check();
+        self.docs.push(Doc::Users(Box::new(doc)));
+        self.active = self.docs.len() - 1;
+    }
+
+    /// Opens a users file in a tab of its own, or brings its tab to the front.
+    fn open_users_path(&mut self, path: PathBuf) {
+        let same = |d: &Doc| matches!(d, Doc::Users(u) if u.path.as_ref() == Some(&path));
+        if let Some(i) = self.docs.iter().position(same) {
+            self.active = i;
+            return;
+        }
+        match UsersFile::load(&path) {
+            Ok(file) => {
+                let mut doc = usersview::UsersDoc::new(file, Some(path.clone()));
+                doc.check();
+                self.docs.push(Doc::Users(Box::new(doc)));
+                self.active = self.docs.len() - 1;
+                self.status = trf("Opened {path}", &[("path", &path.display())]);
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+        }
+    }
+
+    /// Saves the users file in front, with its passwords encrypted again, at its place or at
+    /// one the user picks.
+    fn save_users_doc(&mut self, ask: bool) {
+        let Some(Doc::Users(d)) = self.docs.get(self.active) else {
+            return;
+        };
+        let path = match (&d.path, ask) {
+            (Some(p), false) => p.clone(),
+            _ => {
+                let name = format!("{}.{}", file_stem(&d.file.name), users::EXTENSION);
+                let dialog = file_dialog(tr("Users files"), users::EXTENSION)
+                    .set_title(tr("Save the users file as"))
+                    .set_file_name(name);
+                match dialog.save_file() {
+                    Some(p) if p.extension().is_some() => p,
+                    Some(p) => p.with_extension(users::EXTENSION),
+                    None => return,
+                }
+            }
+        };
+        let Some(Doc::Users(d)) = self.docs.get_mut(self.active) else {
+            return;
+        };
+        if let Err(e) = d.seal() {
+            self.status = trf("Save failed: {e}", &[("e", &e)]);
+            return;
+        }
+        match d.file.save(&path) {
+            Ok(()) => {
+                d.path = Some(path.clone());
+                d.dirty = false;
+                self.status = trf("Saved {path}", &[("path", &path.display())]);
+                self.shown_file = Some((self.status.clone(), path.clone()));
+                self.remember_recent(&path);
+            }
+            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+        }
+    }
+
+    /// Asks before an operation of the users file in front on this PC, once its plan is sound.
+    fn ask_users_run(&mut self, operation: users::Operation, all: bool) {
+        if !winweaver_win::elevated() {
+            self.status = tr("Run WinWeaver as administrator to change the accounts of this PC")
+                .to_owned();
+            return;
+        }
+        let Some(d) = self.active_users() else {
+            return;
+        };
+        let Some(passwords) = &d.passwords else {
+            self.status = tr("Unlock the passwords first").to_owned();
+            return;
+        };
+        let names = d.chosen(all);
+        match users::Plan::new(operation, &d.file.users, &names, passwords) {
+            Ok(plan) => {
+                if plan.users.is_empty() {
+                    self.status = tr("The file holds no accounts").to_owned();
+                    return;
+                }
+                let text = d.question(operation, &names);
+                self.ask = Some(Ask {
+                    title: tr("Change this PC").to_owned(),
+                    text,
+                    yes: tr("Change this PC").to_owned(),
+                    act: Act::UsersRun(operation, names),
+                });
+            }
+            Err(issues) => {
+                d.issues = issues;
+                self.status = tr("The operation was not started: see the messages").to_owned();
+            }
+        }
+    }
+
+    /// Runs a confirmed operation on this PC and shows its outcomes in the tab.
+    fn run_users(&mut self, operation: users::Operation, names: &[String]) {
+        let Some(d) = self.active_users() else {
+            return;
+        };
+        let Some(passwords) = &d.passwords else {
+            return;
+        };
+        let plan = match users::Plan::new(operation, &d.file.users, names, passwords) {
+            Ok(plan) => plan,
+            Err(issues) => {
+                d.issues = issues;
+                return;
+            }
+        };
+        let outcomes = winweaver_win::run_users_plan(&plan, passwords);
+        let failed = outcomes.iter().filter(|o| o.status.failed()).count();
+        let n = outcomes.len();
+        d.outcomes = outcomes;
+        self.status = trf("This PC changed: {n} accounts, {failed} failed", &[("n", &n), ("failed", &failed)]);
+    }
+
+    /// Saves the stand-alone script of the users file in front next to the file it reads.
+    fn save_users_script(&mut self) {
+        let Some(Doc::Users(d)) = self.docs.get(self.active) else {
+            return;
+        };
+        let Some(path) = d.path.clone() else {
+            self.status = tr("Save the users file first: the script reads it next to itself").to_owned();
+            return;
+        };
+        let file_name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
+        let text = match users::script(&file_name, winweaver_core::BUILD) {
+            Ok(text) => text.replace("\r\n", "\n").replace('\n', "\r\n"),
+            Err(e) => {
+                self.status = trf("Script not made: {e}", &[("e", &e)]);
+                return;
+            }
+        };
+        let stem = file_stem(&d.file.name);
+        let mut dialog = rfd::FileDialog::new()
+            .set_title(tr("Save the script as"))
+            .add_filter("PowerShell", &["ps1"])
+            .set_file_name(format!("Create-{stem}.ps1"));
+        if let Some(dir) = path.parent().filter(|p| p.is_dir()) {
+            dialog = dialog.set_directory(dir);
+        }
+        let Some(target) = dialog.save_file() else {
+            return;
+        };
+        match write_file(&target, text.as_bytes()) {
+            Ok(()) => {
+                self.status = trf(
+                    "Saved {path}; keep {file} next to it and run it as administrator",
+                    &[("path", &target.display()), ("file", &file_name)],
+                );
+                self.shown_file = Some((self.status.clone(), target));
+            }
+            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+        }
+    }
+
+    /// Loads the accounts of a users file into the profile in front, asking the master password
+    /// for their passwords when the file holds some.
+    fn users_into_profile(&mut self) {
+        if self.active_profile().is_none() {
+            return;
+        }
+        let dialog = file_dialog(tr("Users files"), users::EXTENSION)
+            .set_title(tr("Accounts from a users file"));
+        let Some(path) = dialog.pick_file() else {
+            return;
+        };
+        match UsersFile::load(&path) {
+            Ok(file) if file.passwords.is_some() => {
+                let mut ask = usersview::MasterAsk::default();
+                ask.open(usersview::Purpose::Unlock);
+                self.users_import = Some(usersview::UsersImport { file, ask });
+            }
+            Ok(file) => {
+                let n = file.users.len();
+                self.apply(vec![Act::SetAccounts(file.accounts(None))]);
+                self.status = trf("{n} accounts loaded without passwords", &[("n", &n)]);
+            }
+            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+        }
+    }
+
+    /// The window of the master password of a users file loaded into a profile.
+    fn users_import_view(&mut self, ctx: &egui::Context, acts: &mut Vec<Act>) {
+        let Some(import) = &mut self.users_import else {
+            return;
+        };
+        match usersview::import_window(ctx, import) {
+            usersview::ImportDone::Open => {}
+            usersview::ImportDone::Cancel => self.users_import = None,
+            usersview::ImportDone::Without => {
+                acts.push(Act::SetAccounts(import.file.accounts(None)));
+                self.users_import = None;
+            }
+            usersview::ImportDone::With(passwords) => {
+                acts.push(Act::SetAccounts(import.file.accounts(Some(&passwords))));
+                self.users_import = None;
+            }
         }
     }
 
@@ -2995,6 +3270,7 @@ impl App {
                     Some(Doc::Theme(_)) => self.save_theme(false),
                     Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
                     Some(Doc::RegFile(_)) => self.save_reg_doc(false),
+                    Some(Doc::Users(_)) => self.save_users_doc(false),
                     _ => self.save_active(false),
                 },
                 Act::SaveAs => match self.docs.get(self.active) {
@@ -3003,6 +3279,7 @@ impl App {
                     Some(Doc::Theme(_)) => self.save_theme(true),
                     Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
                     Some(Doc::RegFile(_)) => self.save_reg_doc(true),
+                    Some(Doc::Users(_)) => self.save_users_doc(true),
                     _ => self.save_active(true),
                 },
                 Act::EditTheme(id) => {
@@ -3181,6 +3458,79 @@ impl App {
                     }
                 }
                 Act::OpenReport => self.open_report(),
+                Act::NewUsersFile => self.new_users_doc(Vec::new()),
+                Act::UsersOfThisPc => match winweaver_win::users_of_this_pc() {
+                    Ok(read) => self.new_users_doc(read),
+                    Err(e) => self.status = trf("This PC was not read: {e}", &[("e", &e)]),
+                },
+                Act::UsersAdd => {
+                    if let Some(d) = self.active_users() {
+                        let n = d.file.users.len() + 1;
+                        d.add(users::User {
+                            name: format!("User{n}"),
+                            ..users::User::default()
+                        });
+                    }
+                }
+                Act::UsersDuplicate => {
+                    if let Some(d) = self.active_users() {
+                        d.duplicate();
+                    }
+                }
+                Act::AskUsersRemove => {
+                    let found = self
+                        .active_users()
+                        .and_then(|d| d.selected.zip(d.selected_user().map(|u| u.name.clone())));
+                    if let Some((i, name)) = found {
+                        self.ask = Some(Ask {
+                            title: tr("Remove the account from the file").to_owned(),
+                            text: trf(
+                                "Remove {name} from the file? An account of a PC stays.",
+                                &[("name", &name)],
+                            ),
+                            yes: tr("Remove").to_owned(),
+                            act: Act::UsersRemove(i),
+                        });
+                    }
+                }
+                Act::UsersRemove(i) => {
+                    if let Some(d) = self.active_users() {
+                        d.remove(i);
+                    }
+                }
+                Act::UsersMove(down) => {
+                    if let Some(d) = self.active_users() {
+                        d.move_selected(down);
+                    }
+                }
+                Act::UsersUnlock => self.users_unlock(false, false),
+                Act::UsersSetMaster => self.users_unlock(true, false),
+                Act::UsersSetPassword => self.users_unlock(false, true),
+                Act::UsersLock => {
+                    if let Some(d) = self.active_users() {
+                        d.lock();
+                    }
+                }
+                Act::UsersCheck => {
+                    if let Some(d) = self.active_users() {
+                        d.check();
+                        let errors = d.issues.iter().filter(|i| i.error).count();
+                        self.status = trf("Checked {n} accounts: {errors} errors", &[("n", &d.file.users.len()), ("errors", &errors)]);
+                    }
+                }
+                Act::UsersReadPc => match winweaver_win::users_of_this_pc() {
+                    Ok(read) => {
+                        if let Some(d) = self.active_users() {
+                            let n = d.merge(read);
+                            self.status = trf("{n} accounts of this PC added", &[("n", &n)]);
+                        }
+                    }
+                    Err(e) => self.status = trf("This PC was not read: {e}", &[("e", &e)]),
+                },
+                Act::AskUsersRun(operation, all) => self.ask_users_run(operation, all),
+                Act::UsersRun(operation, names) => self.run_users(operation, &names),
+                Act::UsersScript => self.save_users_script(),
+                Act::UsersIntoProfile => self.users_into_profile(),
                 Act::ImportTemplates(source) => self.start_import(source),
                 Act::ToggleImport(id) => {
                     if self.imports.iter().any(|f| f.id == id) {
@@ -4327,6 +4677,7 @@ impl App {
                 | Doc::Registry(_)
                 | Doc::CatalogEdit(_) => None,
                 Doc::RegFile(d) => Some(d.path.clone()),
+                Doc::Users(d) => d.path.clone(),
             };
             if let Some(p) = path {
                 if i == self.active {
@@ -4812,6 +5163,7 @@ impl eframe::App for App {
             Some(Doc::Registry(_)) => 9,
             Some(Doc::CatalogEdit(_)) => 10,
             Some(Doc::RegFile(_)) => 11,
+            Some(Doc::Users(_)) => 12,
             None => 2,
         };
         if kind == 0 {
@@ -4997,6 +5349,10 @@ impl eframe::App for App {
             if let Some(Doc::RegFile(doc)) = self.docs.get_mut(self.active) {
                 regfileview::regfile_view(ui, doc, &self.catalog, texts, &self.imports, &mut acts);
             }
+        } else if kind == 12 {
+            if let Some(Doc::Users(doc)) = self.docs.get_mut(self.active) {
+                usersview::users_view(ui, doc, &mut acts);
+            }
         } else if kind == 9 {
             let texts = texts_for(&self.texts, &i18n::current());
             if let Some(Doc::Registry(doc)) = self.docs.get_mut(self.active) {
@@ -5014,6 +5370,7 @@ impl eframe::App for App {
         }
         self.confirm_view(ui.ctx(), &mut acts);
         self.ask_view(ui.ctx(), &mut acts);
+        self.users_import_view(ui.ctx(), &mut acts);
         let links: Vec<String> = ui.ctx().output_mut(|o| {
             let mut found = Vec::new();
             o.commands.retain(|c| match c {
@@ -5463,6 +5820,7 @@ fn pick_any() -> Option<PathBuf> {
                 admx::CATALOG_EXTENSION,
                 themes::EXTENSION,
                 winweaver_mcp::config::EXTENSION,
+                users::EXTENSION,
             ],
         )
         .add_filter(tr("Registry files"), &[regfile::EXTENSION])

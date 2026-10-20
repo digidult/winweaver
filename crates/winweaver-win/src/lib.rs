@@ -66,6 +66,18 @@ pub fn locales() -> winweaver_core::resources::Locales {
     }
 }
 
+/// Whether this process runs as administrator; `false` where the Windows API is not available.
+pub fn elevated() -> bool {
+    #[cfg(windows)]
+    {
+        native::elevated()
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
+
 /// The local accounts of this PC as a users file lists them (no password); an error where the
 /// Windows API is not available.
 pub fn users_of_this_pc() -> Result<Vec<winweaver_core::users::User>, String> {

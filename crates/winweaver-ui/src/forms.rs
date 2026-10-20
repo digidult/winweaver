@@ -55,7 +55,7 @@ pub fn form_view(
         }
         Form::Accounts => {
             let mut accounts = doc.profile.accounts.clone();
-            accounts_form(ui, &mut accounts);
+            accounts_form(ui, &mut accounts, acts);
             if accounts != doc.profile.accounts {
                 acts.push(Act::SetAccounts(accounts));
             }
@@ -275,7 +275,7 @@ fn name_template_help(ui: &mut egui::Ui, template: &str) {
     }
 }
 
-fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>) {
+fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>, acts: &mut Vec<Act>) {
     ui.heading(tr("Accounts"));
     ui.weak(tr("The starter accounts without passwords are a decision of the customer: passwords and groups are set after installation. Names and passwords are ASCII; a display name outside ASCII is set after OOBE."));
     ui.add_space(6.0);
@@ -325,15 +325,24 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>) {
     if let Some(n) = remove {
         accounts.remove(n);
     }
-    if ui.button(tr("Add an account")).clicked() {
-        accounts.push(Account {
-            name: format!("User{}", accounts.len() + 1),
-            display_name: String::new(),
-            group: "Users".to_owned(),
-            description: String::new(),
-            password: String::new(),
-        });
-    }
+    ui.horizontal(|ui| {
+        if ui.button(tr("Add an account")).clicked() {
+            accounts.push(Account {
+                name: format!("User{}", accounts.len() + 1),
+                display_name: String::new(),
+                group: "Users".to_owned(),
+                description: String::new(),
+                password: String::new(),
+            });
+        }
+        if ui
+            .button(tr("From a users file..."))
+            .on_hover_text(tr("Replaces the accounts with the ones of a .wwusers file, with their passwords when its master password is given"))
+            .clicked()
+        {
+            acts.push(Act::UsersIntoProfile);
+        }
+    });
 }
 
 fn languages_form(ui: &mut egui::Ui, l: &mut Languages) {

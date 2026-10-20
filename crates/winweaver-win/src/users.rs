@@ -15,8 +15,8 @@ use windows_sys::Win32::Security::{PSID, WinBuiltinAdministratorsSid, WinBuiltin
 use winreg::RegKey;
 use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_READ, RegType};
 use winweaver_core::registry::Registry;
-use winweaver_core::userstore::Passwords;
 use winweaver_core::users::{Operation, Outcome, Plan, State, Status, User};
+use winweaver_core::userstore::Passwords;
 use zeroize::Zeroize;
 
 use crate::accounts::{self, DISABLED, NEVER_EXPIRES};
@@ -49,8 +49,8 @@ fn explain(status: u32) -> String {
 fn group_names() -> Result<(String, String), String> {
     let admins = builtin_group(WinBuiltinAdministratorsSid)
         .ok_or("the name of the group Administrators could not be read")?;
-    let users = builtin_group(WinBuiltinUsersSid)
-        .ok_or("the name of the group Users could not be read")?;
+    let users =
+        builtin_group(WinBuiltinUsersSid).ok_or("the name of the group Users could not be read")?;
     Ok((admins, users))
 }
 
@@ -107,7 +107,11 @@ pub fn read_this_pc() -> Result<Vec<User>, String> {
                     admin: in_group(&admins),
                     password_never_expires: entry.usri20_flags & UF_DONT_EXPIRE_PASSWD != 0,
                     apply_password: false,
-                    state: if disabled { State::Disabled } else { State::Enabled },
+                    state: if disabled {
+                        State::Disabled
+                    } else {
+                        State::Enabled
+                    },
                     force_group: !in_group(&admins) && !in_group(&users),
                 });
             }
@@ -117,7 +121,10 @@ pub fn read_this_pc() -> Result<Vec<User>, String> {
             return Ok(found);
         }
         if !more || read == 0 {
-            return Err(format!("the local accounts were not read ({})", explain(status)));
+            return Err(format!(
+                "the local accounts were not read ({})",
+                explain(status)
+            ));
         }
     }
 }
@@ -145,7 +152,10 @@ fn info(name: &str) -> Result<Option<(u32, String, String)>, String> {
     }
     if status != NERR_Success || buffer.is_null() {
         accounts::free(buffer);
-        return Err(format!("the account {name} was not read ({})", explain(status)));
+        return Err(format!(
+            "the account {name} was not read ({})",
+            explain(status)
+        ));
     }
     // SAFETY: on success the buffer holds one entry of level 20 with null-terminated texts.
     let found = unsafe {
@@ -272,7 +282,10 @@ fn membership(group: &str, sid: &Sid, add: bool) -> Result<(), String> {
         return Ok(());
     }
     let what = if add { "added to" } else { "removed from" };
-    Err(format!("not {what} the group {group} ({})", explain(status)))
+    Err(format!(
+        "not {what} the group {group} ({})",
+        explain(status)
+    ))
 }
 
 /// The identifier of the account this process runs as, which is never removed from
@@ -362,7 +375,9 @@ fn set_folder_access(folder: &str, dacl: &str) -> Result<(), String> {
     unsafe { LocalFree(sd) };
     match status {
         Some(0) => Ok(()),
-        Some(code) => Err(format!("the access list of the folder was not set (error {code})")),
+        Some(code) => Err(format!(
+            "the access list of the folder was not set (error {code})"
+        )),
         None => Err("the access list of the folder is empty".to_owned()),
     }
 }
@@ -386,7 +401,11 @@ fn set_folder_owner(folder: &str, sid: &str) -> Result<(), String> {
             std::ptr::null(),
         )
     };
-    if status == 0 { Ok(()) } else { Err(format!("error {status}")) }
+    if status == 0 {
+        Ok(())
+    } else {
+        Err(format!("error {status}"))
+    }
 }
 
 /// Whether the identifier has a profile registered in another folder.
@@ -524,17 +543,17 @@ fn one(plan: &Plan, user: &User, password: &str) -> Outcome {
         Operation::Passwords => {
             set_password(&user.name, password).map(|()| (Status::PasswordSet, String::new()))
         }
-        Operation::Create { update_existing } if exists => {
-            update(user, password, update_existing).map(|changes| {
+        Operation::Create { update_existing } if exists => update(user, password, update_existing)
+            .map(|changes| {
                 if changes.is_empty() {
                     (Status::AlreadyExists, "left as it is".to_owned())
                 } else {
                     (Status::Updated, changes.join(", "))
                 }
-            })
+            }),
+        Operation::Create { .. } => {
+            create_and_configure(user, password).map(|notes| (Status::Created, notes.join(", ")))
         }
-        Operation::Create { .. } => create_and_configure(user, password)
-            .map(|notes| (Status::Created, notes.join(", "))),
     };
     match done {
         Ok((status, message)) => outcome(status, message),
@@ -614,7 +633,10 @@ mod tests {
         };
         let updated = run(&changed, &passwords);
         assert_eq!(updated[0].status, Status::Updated, "{updated:?}");
-        assert!(updated[0].message.contains("+Administrators"), "{updated:?}");
+        assert!(
+            updated[0].message.contains("+Administrators"),
+            "{updated:?}"
+        );
         assert!(updated[0].message.contains("Enabled"));
         let only = Plan {
             operation: Operation::Passwords,
@@ -623,7 +645,10 @@ mod tests {
         assert_eq!(run(&only, &passwords)[0].status, Status::PasswordSet);
         let name_w = wide(name);
         // SAFETY: the name is null-terminated.
-        assert_eq!(unsafe { NetUserDel(std::ptr::null(), name_w.as_ptr()) }, NERR_Success);
+        assert_eq!(
+            unsafe { NetUserDel(std::ptr::null(), name_w.as_ptr()) },
+            NERR_Success
+        );
         assert_eq!(run(&only, &passwords)[0].status, Status::NotFound);
     }
 }

@@ -24,6 +24,7 @@ fn doc_icon(doc: &Doc) -> &'static str {
         Doc::Registry(_) => "\u{1F5C2}",
         Doc::CatalogEdit(_) => "\u{270F}",
         Doc::RegFile(_) => "\u{1F4C3}",
+        Doc::Users(_) => "\u{1F465}",
     }
 }
 
@@ -37,6 +38,7 @@ fn search_hint(doc: &Doc) -> &'static str {
         Doc::Mcp => "Filter the journal (Ctrl+F)",
         Doc::Catalog(_) => "Search policies (Ctrl+F)",
         Doc::RegFile(_) => "Search the keys, values and comments (Ctrl+F)",
+        Doc::Users(_) => "Search the accounts (Ctrl+F)",
         Doc::Settings | Doc::Theme(_) | Doc::Registry(_) | Doc::CatalogEdit(_) => "",
     }
 }
@@ -250,6 +252,9 @@ impl App {
                     Act::NewProfile(Some(name)),
                 );
             }
+            ui.separator();
+            item(ui, tr("Users file"), "", Act::NewUsersFile);
+            item(ui, tr("Users file of the accounts of this PC"), "", Act::UsersOfThisPc);
         });
         item(ui, tr("Open..."), "Ctrl+O", Act::Open);
         ui.add_enabled_ui(!self.settings.recent.is_empty(), |ui| {
@@ -495,6 +500,65 @@ impl App {
                 ) && let Some((_, path)) = key
                 {
                     acts.push(Act::OpenRegistry(path, d.selected_value()));
+                }
+            }
+            Some(Doc::Users(d)) => {
+                use winweaver_core::users::Operation;
+                if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
+                    acts.push(Act::Save);
+                }
+                if tool(ui, "\u{1F4BE}", tr("Save as"), "Ctrl+Shift+S", true) {
+                    acts.push(Act::SaveAs);
+                }
+                sep(ui);
+                let one = d.selected_user().is_some();
+                if tool(ui, "\u{2795}", tr("Add"), "", true) {
+                    acts.push(Act::UsersAdd);
+                }
+                if tool(ui, "\u{29C9}", tr("Duplicate"), "", one) {
+                    acts.push(Act::UsersDuplicate);
+                }
+                if tool(ui, "\u{1F5D1}", tr("Remove"), "", one) {
+                    acts.push(Act::AskUsersRemove);
+                }
+                if tool(ui, "\u{2191}", tr("Up"), "", one) {
+                    acts.push(Act::UsersMove(false));
+                }
+                if tool(ui, "\u{2193}", tr("Down"), "", one) {
+                    acts.push(Act::UsersMove(true));
+                }
+                sep(ui);
+                if d.unlocked() {
+                    if tool(ui, "\u{1F513}", tr("Lock"), "", true) {
+                        acts.push(Act::UsersLock);
+                    }
+                    if tool(ui, "\u{1F511}", tr("Password"), "", one) {
+                        acts.push(Act::UsersSetPassword);
+                    }
+                    if tool(ui, "\u{1F510}", tr("Master password"), "", true) {
+                        acts.push(Act::UsersSetMaster);
+                    }
+                } else if tool(ui, "\u{1F512}", tr("Unlock"), "", true) {
+                    acts.push(Act::UsersUnlock);
+                }
+                sep(ui);
+                if tool(ui, "\u{2714}", tr("Check"), "", true) {
+                    acts.push(Act::UsersCheck);
+                }
+                if tool(ui, "\u{1F5A5}", tr("Read this PC"), "", true) {
+                    acts.push(Act::UsersReadPc);
+                }
+                let create = Operation::Create {
+                    update_existing: false,
+                };
+                if tool(ui, "\u{25B6}", tr("Create on this PC"), "", d.unlocked()) {
+                    acts.push(Act::AskUsersRun(create, true));
+                }
+                if tool(ui, "\u{1F511}", tr("Apply passwords"), "", d.unlocked()) {
+                    acts.push(Act::AskUsersRun(Operation::Passwords, true));
+                }
+                if tool(ui, "\u{1F4DC}", tr("Script"), "", true) {
+                    acts.push(Act::UsersScript);
                 }
             }
             Some(Doc::Registry(d)) => {
