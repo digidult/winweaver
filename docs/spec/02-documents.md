@@ -217,7 +217,8 @@ to no machine: its only secret is the master password of the operator.
   ALREADY_EXISTS, PASSWORD_SET, NOT_FOUND, ERROR. The operation runs in the process of the window, so the
   master password crosses no process boundary; without the rights the window says to run as administrator.
 - The stand-alone script `Create-<name>.ps1` (`data/templates/Create-Users.runtime.ps1`) reads the users
-  file of the same name next to it, asks the master password itself and does the same with the cmdlets of
+  file it was made for next to it (the name in Base64 of its UTF-8, so any name works and the script stays
+  ASCII), asks the master password itself and does the same with the cmdlets of
   Windows PowerShell 5.1; `-PasswordsOnly` sets the passwords only, `-UpdateExisting` and `-UserName` as in
   the window.
 - The accounts of a users file go into the form Accounts of a profile, with their passwords when the master

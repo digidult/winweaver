@@ -1,11 +1,12 @@
-# Create-Users: the local accounts of a WinWeaver users file ({{users_file}}).
+# Create-Users: the local accounts of a WinWeaver users file ({{users_label}}).
 # Made by WinWeaver {{build}}.
 #
 # Run from a command prompt opened as administrator:
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File "C:\path\to\this script.ps1"
 #
-# The users file of the same name lies next to the script; -UsersFile names another one. The
+# The users file it was made for lies next to the script (its name is kept in Base64, so the
+# script stays ASCII whatever the name); -UsersFile names another one. The
 # master password of its passwords is asked for here, never taken from a parameter, a variable
 # or a file. Switches:
 #
@@ -36,10 +37,14 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
-if (-not $UsersFile) { $UsersFile = Join-Path $PSScriptRoot '{{users_file}}' }
+if (-not $UsersFile) {
+    $fileName = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{{users_file_b64}}'))
+    $UsersFile = Join-Path $PSScriptRoot $fileName
+}
 if (-not $LogFile) {
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $LogFile = Join-Path $PSScriptRoot ('{{log_stem}}-create-users-' + $stamp + '.log')
+    $stem = [IO.Path]::GetFileNameWithoutExtension($UsersFile)
+    $LogFile = Join-Path $PSScriptRoot ($stem + '-create-users-' + $stamp + '.log')
 }
 
 $ADMINISTRATORS_SID = 'S-1-5-32-544'

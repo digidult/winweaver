@@ -455,22 +455,15 @@ impl Plan {
 
 /// The stand-alone script of a users file: it reads the file of `file_name` next to it, asks the
 /// master password itself and creates the accounts, or sets the passwords only with a switch.
+/// The name goes in as Base64 of its UTF-8, so the script stays ASCII whatever the name.
 pub fn script(file_name: &str, app_version: &str) -> Result<String, RenderError> {
-    let stem = file_name.rsplit_once('.').map_or(file_name, |(s, _)| s);
-    let ascii = |text: &str| -> Result<(), RenderError> {
-        if text.is_ascii() && !text.contains('\'') {
-            Ok(())
-        } else {
-            let why = format!("the script needs an ASCII file name without quotes: {text}");
-            Err(RenderError::Profile(why))
-        }
-    };
-    ascii(file_name)?;
+    let label = render::ascii_text(file_name);
+    let encoded = render::base64(file_name);
     render::fill(
         SCRIPT,
         &[
-            ("users_file", file_name),
-            ("log_stem", stem),
+            ("users_label", label.as_str()),
+            ("users_file_b64", encoded.as_str()),
             ("build", app_version),
         ],
     )
@@ -559,10 +552,14 @@ mod tests {
     #[test]
     fn the_script_names_the_file_and_fills_every_slot() {
         let text = script("Office.wwusers", "1.0").unwrap();
-        assert!(text.contains("'Office.wwusers'"));
-        assert!(text.contains("Office-create-users-"));
+        assert!(text.contains("(Office.wwusers)"));
+        assert!(text.contains(&render::base64("Office.wwusers")));
         assert!(!text.contains("{{"));
         assert!(text.is_ascii());
-        assert!(script("Офис.wwusers", "1.0").is_err());
+        let text = script("Пользователи 'A'.wwusers", "1.0").unwrap();
+        assert!(text.is_ascii());
+        assert!(text.contains("(???????????? 'A'.wwusers)"));
+        let name = render::base64("Пользователи 'A'.wwusers");
+        assert!(text.contains(&format!("FromBase64String('{name}')")));
     }
 }
