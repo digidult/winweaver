@@ -642,7 +642,8 @@ mod tests {
             operation: Operation::Passwords,
             users: changed.users.clone(),
         };
-        assert_eq!(run(&only, &passwords)[0].status, Status::PasswordSet);
+        let set = run(&only, &passwords);
+        assert_eq!(set[0].status, Status::PasswordSet, "{set:?}");
         let name_w = wide(name);
         // SAFETY: the name is null-terminated.
         assert_eq!(
