@@ -39,7 +39,10 @@ fn explain(status: u32) -> String {
         5 => "access denied: WinWeaver needs to run as administrator".to_owned(),
         2224 => "the name is taken by an account".to_owned(),
         2223 => "the name is taken by a group".to_owned(),
-        2245 => "the password does not meet the password policy of this PC".to_owned(),
+        2245 => {
+            "the password does not meet the password policy of this PC (its length, its complexity or a password used before)"
+                .to_owned()
+        }
         2221 => "the account does not exist".to_owned(),
         other => format!("error {other}"),
     }
@@ -638,6 +641,8 @@ mod tests {
             "{updated:?}"
         );
         assert!(updated[0].message.contains("Enabled"));
+        // The policy of the PC may refuse a password used before.
+        passwords.set(name, "Ww-Test-Pass-2!");
         let only = Plan {
             operation: Operation::Passwords,
             users: changed.users.clone(),
