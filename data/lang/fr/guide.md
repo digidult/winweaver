@@ -77,6 +77,27 @@ la disposition choisie ; la même langue peut venir deux fois avec deux disposit
 réponses nomme la langue à laquelle elle appartient. Les langues et dispositions sont celles du Windows
 sur lequel WinWeaver s'exécute, avec leurs noms dans sa langue.
 
+## Fichiers d'utilisateurs
+
+Un fichier d'utilisateurs (`.wwusers`) liste les comptes locaux à créer sur un PC avec leurs mots de
+passe, chiffrés sous un mot de passe principal dans le même fichier. **Menu, Nouveau, Fichier
+d'utilisateurs** en commence un vide, **Fichier d'utilisateurs des comptes de ce PC** un avec tous les
+comptes normaux de ce PC (groupe, état, expiration du mot de passe, dossier du profil ; sans mot de
+passe). L'onglet montre les comptes dans une liste et le compte sélectionné dans un formulaire : nom, nom
+complet, description, groupe, dossier du profil et les consignes pour un compte qui existe déjà sur un PC
+(définir le mot de passe du fichier, l'activer ou le désactiver, exactement ce groupe) ; sans elles, un
+compte existant reste tel quel. **Déverrouiller** demande le mot de passe principal ou le définit quand
+le fichier n'en a pas ; **Mot de passe** définit celui du compte sélectionné ; **Verrouiller** les
+oublie. Sans le mot de passe principal, les mots de passe ne peuvent plus être lus. **Vérifier** liste
+les problèmes, **Lire ce PC** ajoute les comptes de ce PC absents du fichier. **Créer sur ce PC** et
+**Appliquer les mots de passe** modifient ce PC après une question et demandent WinWeaver exécuté en
+administrateur ; le résultat s'affiche sous le formulaire, une ligne par compte. **Script** enregistre
+`Create-<nom>.ps1` à côté du fichier d'utilisateurs : il demande lui-même le mot de passe principal et
+fait la même chose sur un autre PC depuis une invite de commandes ouverte en administrateur
+(`-PasswordsOnly` ne définit que les mots de passe). Dans le formulaire **Comptes** d'un profil, **D'un
+fichier d'utilisateurs** charge ses comptes, avec leurs mots de passe si vous donnez le mot de passe
+principal.
+
 ## La fenêtre
 
 - **Onglets** : chaque document ouvert est un onglet : un profil, une comparaison, ce guide, les

@@ -74,6 +74,25 @@ Windows numera solo al primo accesso, come Russo (Ucraina), riceve il layout che
 allora, e fino a quell'accesso il file di risposte nomina la lingua a cui appartiene. Le lingue e i
 layout sono quelli del Windows su cui gira WinWeaver, con i nomi nella sua lingua.
 
+## File utenti
+
+Un file utenti (`.wwusers`) elenca gli account locali da creare su un PC con le loro password, cifrate
+con una password principale nello stesso file. **Menu, Nuovo, File utenti** ne inizia uno vuoto, **File
+utenti con gli account di questo PC** uno con tutti gli account normali di questo PC (gruppo, stato,
+scadenza della password, cartella del profilo; senza password). La scheda mostra gli account in un elenco
+e quello selezionato in un modulo: nome, nome completo, descrizione, gruppo, cartella del profilo e le
+istruzioni per un account che esiste già su un PC (impostare la password del file, abilitarlo o
+disabilitarlo, esattamente questo gruppo); senza di esse un account esistente resta com'è. **Sblocca**
+chiede la password principale, o la imposta quando il file non ne ha; **Password** imposta quella
+dell'account selezionato; **Blocca** le dimentica. Senza la password principale le password non si
+possono più leggere. **Verifica** elenca i problemi, **Leggi questo PC** aggiunge gli account di questo
+PC che mancano al file. **Crea su questo PC** e **Applica le password** cambiano questo PC dopo una
+domanda e richiedono WinWeaver eseguito come amministratore; il risultato sta sotto il modulo, una riga
+per account. **Script** salva `Create-<nome>.ps1` accanto al file utenti: chiede da sé la password
+principale e fa lo stesso su un altro PC da un prompt dei comandi aperto come amministratore
+(`-PasswordsOnly` imposta solo le password). Nel modulo **Account** di un profilo, **Da un file utenti**
+carica i suoi account, con le loro password se date la password principale.
+
 ## La finestra
 
 - **Schede**: ogni documento aperto è una scheda: un profilo, un confronto, questa guida, i segnalibri,

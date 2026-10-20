@@ -78,6 +78,26 @@ ersten Anmeldung nummeriert, etwa Russisch (Ukraine), erhält das Layout, das Wi
 bis zu dieser Anmeldung nennt die Antwortdatei die Sprache, zu der sie gehört. Die Sprachen und Layouts
 stammen aus dem Windows, auf dem WinWeaver läuft, mit ihren Namen in seiner Sprache.
 
+## Benutzerdateien
+
+Eine Benutzerdatei (`.wwusers`) listet die lokalen Konten, die auf einem PC anzulegen sind, mit ihren
+Kennwörtern, die unter einem Masterkennwort in derselben Datei verschlüsselt sind. **Menü, Neu,
+Benutzerdatei** beginnt eine leere, **Benutzerdatei mit den Konten dieses PCs** eine mit allen normalen
+Konten dieses PCs (Gruppe, Zustand, Kennwortablauf, Profilordner; kein Kennwort). Die Registerkarte zeigt
+die Konten in einer Liste und das gewählte in einem Formular: Name, vollständiger Name, Beschreibung,
+Gruppe, Profilordner und die Anweisungen für ein Konto, das auf einem PC bereits besteht (Kennwort aus
+der Datei setzen, aktivieren oder deaktivieren, genau diese Gruppe); ohne sie bleibt ein bestehendes
+Konto, wie es ist. **Entsperren** fragt das Masterkennwort oder legt es fest, wenn die Datei keines hat;
+**Kennwort** setzt das Kennwort des gewählten Kontos; **Sperren** vergisst sie. Ohne das Masterkennwort
+lassen sich die Kennwörter nicht mehr lesen. **Prüfen** listet die Probleme, **Diesen PC lesen** fügt die
+Konten dieses PCs hinzu, die der Datei fehlen. **Auf diesem PC anlegen** und **Kennwörter anwenden**
+ändern diesen PC nach einer Rückfrage und brauchen WinWeaver als Administrator; das Ergebnis steht unter
+dem Formular, eine Zeile je Konto. **Skript** speichert `Create-<Name>.ps1` neben der Benutzerdatei: es
+fragt das Masterkennwort selbst und tut dasselbe auf einem anderen PC aus einer als Administrator
+geöffneten Eingabeaufforderung (`-PasswordsOnly` setzt nur die Kennwörter). Im Formular **Konten** eines
+Profils lädt **Aus einer Benutzerdatei** deren Konten, mit ihren Kennwörtern, wenn Sie das Masterkennwort
+eingeben.
+
 ## Das Fenster
 
 - **Registerkarten**: Jedes geöffnete Dokument ist eine Registerkarte: ein Profil, ein Vergleich, dieses

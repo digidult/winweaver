@@ -75,6 +75,25 @@ Rusia (Ukraina), mendapat tata letak yang diberikan Windows saat itu, dan sampai
 menyebut bahasa induknya. Bahasa dan tata letak berasal dari Windows tempat WinWeaver berjalan, dengan
 nama dalam bahasanya.
 
+## File pengguna
+
+File pengguna (`.wwusers`) mencantumkan akun lokal yang akan dibuat di PC beserta kata sandinya,
+dienkripsi dengan kata sandi utama di file yang sama. **Menu, Baru, File pengguna** memulai file kosong,
+**File pengguna berisi akun PC ini** file dengan semua akun normal PC ini (grup, status, kedaluwarsa kata
+sandi, folder profil; tanpa kata sandi). Tab menampilkan akun dalam daftar dan akun yang dipilih dalam
+formulir: nama, nama lengkap, deskripsi, grup, folder profil, dan perintah untuk akun yang sudah ada di
+PC (atur kata sandi dari file, aktifkan atau nonaktifkan, tepat grup ini); tanpa perintah itu akun yang
+ada dibiarkan apa adanya. **Buka kunci** meminta kata sandi utama, atau mengaturnya jika file belum
+memilikinya; **Kata sandi** mengatur kata sandi akun yang dipilih; **Kunci** melupakannya. Tanpa kata
+sandi utama, kata sandi tidak dapat dibaca lagi. **Periksa** mencantumkan masalah, **Baca PC ini**
+menambahkan akun PC ini yang belum ada di file. **Buat di PC ini** dan **Terapkan kata sandi** mengubah
+PC ini setelah pertanyaan dan memerlukan WinWeaver yang dijalankan sebagai administrator; hasilnya tampil
+di bawah formulir, satu baris per akun. **Skrip** menyimpan `Create-<nama>.ps1` di sebelah file pengguna:
+skrip itu meminta kata sandi utama sendiri dan melakukan hal yang sama di PC lain dari prompt perintah
+yang dibuka sebagai administrator (`-PasswordsOnly` hanya mengatur kata sandi). Di formulir **Akun**
+sebuah profil, **Dari file pengguna** memuat akunnya, beserta kata sandinya jika Anda memberikan kata
+sandi utama.
+
 ## Jendela
 
 - **Tab**: setiap dokumen yang terbuka adalah tab: profil, perbandingan, panduan ini, penanda, server MCP,

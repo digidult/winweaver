@@ -5,8 +5,8 @@
 use std::path::PathBuf;
 
 use eframe::egui;
-use winweaver_core::userstore::{self, Passwords};
 use winweaver_core::users::{self, Issue, Operation, Outcome, State, User, UsersFile};
+use winweaver_core::userstore::{self, Passwords};
 use zeroize::Zeroizing;
 
 use crate::i18n::{tr, trf};
@@ -328,7 +328,11 @@ fn list_panel(ui: &mut egui::Ui, doc: &mut UsersDoc, acts: &mut Vec<Act>) {
     let selected = doc
         .selected
         .and_then(|i| rows.iter().position(|r| r.key == i));
-    let scroll = if doc.follow { Scroll::Near } else { Scroll::None };
+    let scroll = if doc.follow {
+        Scroll::Near
+    } else {
+        Scroll::None
+    };
     doc.follow = false;
     let out = list::show(
         ui,
@@ -386,12 +390,17 @@ fn user_form(ui: &mut egui::Ui, doc: &mut UsersDoc) {
             );
             ui.end_row();
             ui.label("");
-            ui.checkbox(&mut u.password_never_expires, tr("The password never expires"));
+            ui.checkbox(
+                &mut u.password_never_expires,
+                tr("The password never expires"),
+            );
             ui.end_row();
         });
     ui.add_space(8.0);
     style::section_title(ui, tr("When the account already exists on the PC"));
-    ui.weak(tr("Without these orders an account that exists is left as it is."));
+    ui.weak(tr(
+        "Without these orders an account that exists is left as it is.",
+    ));
     ui.checkbox(&mut u.apply_password, tr("Set the password of the file"));
     ui.horizontal(|ui| {
         ui.label(tr("State"));
@@ -399,7 +408,10 @@ fn user_form(ui: &mut egui::Ui, doc: &mut UsersDoc) {
             ui.radio_value(&mut u.state, state, state_text(state));
         }
     });
-    ui.checkbox(&mut u.force_group, tr("Exactly this group: remove the other membership"));
+    ui.checkbox(
+        &mut u.force_group,
+        tr("Exactly this group: remove the other membership"),
+    );
     if u != before {
         if u.name != before.name
             && let Some(p) = &mut doc.passwords
@@ -603,7 +615,10 @@ pub fn import_window(ctx: &egui::Context, import: &mut UsersImport) -> ImportDon
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .show(ctx, |ui| {
             let n = import.file.users.len();
-            ui.label(trf("{n} accounts of {name}", &[("n", &n), ("name", &import.file.name)]));
+            ui.label(trf(
+                "{n} accounts of {name}",
+                &[("n", &n), ("name", &import.file.name)],
+            ));
             ui.label(tr("Master password, for the passwords of the accounts"));
             let field = egui::TextEdit::singleline(&mut import.ask.text)
                 .password(true)

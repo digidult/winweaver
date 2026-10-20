@@ -75,6 +75,25 @@ Ukraynaca (Genişletilmiş) ve Ukraynaca. Windows'un yalnızca ilk oturum açmad
 dilin ait olduğu dili adlandırır. Diller ve düzenler, WinWeaver'ın çalıştığı Windows'tan, onun dilindeki
 adlarıyla gelir.
 
+## Kullanıcı dosyaları
+
+Bir kullanıcı dosyası (`.wwusers`), bir bilgisayarda oluşturulacak yerel hesapları, aynı dosyada bir ana
+parolayla şifrelenmiş parolalarıyla birlikte listeler. **Menü, Yeni, Kullanıcı dosyası** boş bir dosya
+başlatır; **Bu bilgisayarın hesaplarından kullanıcı dosyası** ise bu bilgisayarın tüm normal hesaplarıyla
+(grup, durum, parola süresi, profil klasörü; parola yok) bir dosya başlatır. Sekme hesapları bir listede,
+seçileni ise bir formda gösterir: ad, tam ad, açıklama, grup, profil klasörü ve bilgisayarda zaten var
+olan bir hesap için talimatlar (dosyadaki parolayı ayarla, etkinleştir veya devre dışı bırak, tam olarak
+bu grup); bunlar olmadan var olan hesap olduğu gibi bırakılır. **Kilidi aç** ana parolayı sorar ya da
+dosyada yoksa belirler; **Parola** seçili hesabın parolasını ayarlar; **Kilitle** onları unutur. Ana
+parola olmadan parolalar bir daha okunamaz. **Denetle** sorunları listeler, **Bu bilgisayarı oku**
+dosyada eksik olan bu bilgisayarın hesaplarını ekler. **Bu bilgisayarda oluştur** ve **Parolaları
+uygula** bir sorudan sonra bu bilgisayarı değiştirir ve WinWeaver'ın yönetici olarak çalıştırılmasını
+gerektirir; sonuç formun altında, hesap başına bir satır olarak durur. **Betik**, kullanıcı dosyasının
+yanına `Create-<ad>.ps1` kaydeder: ana parolayı kendisi sorar ve yönetici olarak açılmış bir komut
+isteminden başka bir bilgisayarda aynısını yapar (`-PasswordsOnly` yalnızca parolaları ayarlar). Bir
+profilin **Hesaplar** formunda **Kullanıcı dosyasından**, ana parolayı verirseniz parolalarıyla birlikte
+hesaplarını yükler.
+
 ## Pencere
 
 - **Sekmeler**: her açık belge bir sekmedir: profil, karşılaştırma, bu kılavuz, yer işaretleri, MCP

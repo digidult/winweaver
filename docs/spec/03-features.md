@@ -157,6 +157,19 @@ NEW). Each item names the user-visible behaviour; the mechanism is in `04-archit
 `logs/winweaver-<date>.log` with the level of the settings; the MCP processes log into their own files;
 every message of the message bar is logged; passwords and keys never are.
 
+## 12. Users files (NEW)
+
+A users file (`.wwusers`, `02-documents.md` section 11) lists the local accounts to make on a PC with their
+passwords encrypted under a master password. Its tab: the accounts in a list (name, group, state, whether a
+password is set, profile folder) and the selected one in a form with the orders for an account that exists;
+the command bar adds, duplicates, removes and moves accounts, unlocks and locks the passwords (the master
+password window), sets the password of an account, checks the list, reads the accounts of this PC into it,
+creates the accounts on this PC or sets their passwords (as administrator, after a question that names the
+accounts that exist and will change), and saves the stand-alone script. The menu New makes an empty users
+file or one of the accounts of this PC (every normal account with its group, flags and profile folder; no
+password). The form Accounts of a profile loads the accounts of a users file, with their passwords when the
+master password is given.
+
 ## Open questions
 
 1. The 37 checks of the answer file checker: port them all into the Rust build check, or keep a separate

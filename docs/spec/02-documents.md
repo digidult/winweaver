@@ -13,6 +13,7 @@ Draft 0.1, 14.10.2026.
 | MCP configuration | `.wwmcp` | The transport, port, token, mode and switches of an MCP server, its first profile, the detailed log | The MCP tab |
 | Markdown page | `.md` | Documentation, the guide, any Markdown file | Rendered page |
 | Registry file | `.reg` | The format of regedit (version 5 in UTF-16 with its mark, or REGEDIT4): keys, values and their deletions, comments; every line is kept, the ones the program does not read too. Also saved from This PC for the apply or the return of a selection | Outline of keys and comments, the values of the selected key |
+| Users file | `.wwusers` | The local accounts to make on a PC with their passwords encrypted under a master password in the same file | List of accounts and the form of the selected one |
 | Answer file | `autounattend.xml` | The build; opened as a profile when it embeds one, imported by its actions otherwise | Opens as a profile |
 
 The extensions are registered nowhere (portability); the program opens a file by its extension and, for an
@@ -166,6 +167,61 @@ WinWeaver/
 
 Everything embedded (the catalog, English texts, presets, the four themes, the guide) is in the
 executable, so a bare `winweaver.exe` runs; the folders add languages, themes, catalogs and persistence.
+
+## 11. Users file
+
+`.wwusers`: the local accounts to make on a PC, as the predecessor project WindowsUserManager kept them in
+`users.csv` and `passwords.enc`, in one file of the common format (section 2). The file is portable and bound
+to no machine: its only secret is the master password of the operator.
+
+```json
+{
+  "format": "winweaver-users",
+  "version": 1,
+  "name": "Office users",
+  "comment": "",
+  "created": "2026-10-20T10:00:00Z",
+  "modified": "2026-10-20T10:00:00Z",
+  "users": [
+    { "name": "admin1", "full_name": "", "description": "", "admin": true, "password_never_expires": true,
+      "profile_path": "", "apply_password": false, "state": "keep", "force_group": false }
+  ],
+  "passwords": { "kdf": "pbkdf2-sha256", "iterations": 600000, "salt": "<base64>", "iv": "<base64>",
+                 "mac": "<base64>", "data": "<base64>" }
+}
+```
+
+- An account: `name` (a name of a local account: up to 20 characters, none of `" / \ [ ] : ; | = , + * ? < > @`,
+  not ending with a dot), `full_name`, `description`, `admin` (the group Administrators, else Users),
+  `password_never_expires`, `profile_path` (empty, or an absolute path `D:\Profiles\x` or `\\server\share\x`),
+  and the orders for an account that already exists on the PC, without which it is left as it is:
+  `apply_password` (set the password of the file), `state` (`keep`, `enabled`, `disabled`; a new account is
+  made enabled or disabled) and `force_group` (exactly the group of `admin`, the other membership removed).
+  Names compare without case. The checks: a name twice, a profile folder of two accounts, and, when the
+  passwords are unlocked, an account without a password (an error) and a password without an account (a
+  warning).
+- `passwords` is absent until a master password is set. The passwords are a JSON object of name to password
+  (names in the order of their code points, no spaces, UTF-8 as it is), padded with PKCS#7 and encrypted
+  with AES-256-CBC under the first 32 bytes of PBKDF2-HMAC-SHA256(master password in UTF-8, `salt` of 32
+  bytes, `iterations`, 64 bytes); `mac` is HMAC-SHA256 under the last 32 bytes of `salt`, `iv` (16 bytes) and
+  the ciphertext `data`, verified before anything is decrypted. A wrong master password and a changed byte give
+  one message. A new salt and vector come at every save; `iterations` is at least 100000, 600000 by default.
+  The master password is never kept on disk, and no password reaches the status bar, the logs or a script.
+- The operations on this PC (`users::Plan`, run natively as administrator, no PowerShell): create the
+  accounts that are missing with the password, the flags, the description and the full name, the group of
+  `admin` only, and the profile folder with an access list of SYSTEM, Administrators and the account itself,
+  registered in `ProfileList`; change the existing ones by their orders only (update existing also by the
+  rest of the row, never the password); or set the passwords of the accounts that exist and nothing else. An
+  account is never deleted, a profile registered elsewhere is never moved, and the account of the process is
+  never removed from Administrators. One status an account: CREATED, UPDATED (with the changes),
+  ALREADY_EXISTS, PASSWORD_SET, NOT_FOUND, ERROR. The operation runs in the process of the window, so the
+  master password crosses no process boundary; without the rights the window says to run as administrator.
+- The stand-alone script `Create-<name>.ps1` (`data/templates/Create-Users.runtime.ps1`) reads the users
+  file of the same name next to it, asks the master password itself and does the same with the cmdlets of
+  Windows PowerShell 5.1; `-PasswordsOnly` sets the passwords only, `-UpdateExisting` and `-UserName` as in
+  the window.
+- The accounts of a users file go into the form Accounts of a profile, with their passwords when the master
+  password is given, else without.
 
 ## Open questions
 

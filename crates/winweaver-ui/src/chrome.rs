@@ -254,7 +254,12 @@ impl App {
             }
             ui.separator();
             item(ui, tr("Users file"), "", Act::NewUsersFile);
-            item(ui, tr("Users file of the accounts of this PC"), "", Act::UsersOfThisPc);
+            item(
+                ui,
+                tr("Users file of the accounts of this PC"),
+                "",
+                Act::UsersOfThisPc,
+            );
         });
         item(ui, tr("Open..."), "Ctrl+O", Act::Open);
         ui.add_enabled_ui(!self.settings.recent.is_empty(), |ui| {

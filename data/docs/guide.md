@@ -73,6 +73,24 @@ sign-in, such as Russian (Ukraine), gets the layout Windows gives it then, and t
 language it belongs to until that sign-in. The languages and layouts are the ones of the Windows
 WinWeaver runs on, by their names in its language.
 
+## Users files
+
+A users file (`.wwusers`) lists the local accounts to make on a PC with their passwords, encrypted under
+a master password in the same file. **Menu, New, Users file** starts an empty one, **Users file of the
+accounts of this PC** one with every normal account of this PC (its group, state, password expiry and
+profile folder; no password). The tab shows the accounts in a list and the selected one in a form: the
+name, the full name, the description, the group, the profile folder, and the orders for an account that
+already exists on a PC (set the password of the file, enable or disable it, exactly this group); without
+them an account that exists is left as it is. **Unlock** asks the master password, or sets it when the
+file has none; **Password** sets the password of the selected account; **Lock** forgets them. Without the
+master password the passwords cannot be read again. **Check** lists the problems, **Read this PC** adds
+the accounts of this PC the file lacks. **Create on this PC** and **Apply passwords** change this PC
+after a question and need WinWeaver run as administrator; the result stands under the form, one line an
+account. **Script** saves `Create-<name>.ps1` next to the users file: it asks the master password itself
+and does the same on another PC from a command prompt opened as administrator (`-PasswordsOnly` sets the
+passwords only). In the form **Accounts** of a profile, **From a users file** loads its accounts, with
+their passwords when you give the master password.
+
 ## The window
 
 - **Tabs**: every open document is a tab: a profile, a diff, this guide, the bookmarks, the MCP

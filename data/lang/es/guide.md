@@ -77,6 +77,26 @@ la distribución elegida; el mismo idioma puede aparecer dos veces con dos distr
 respuesta nombra el idioma al que pertenece. Los idiomas y distribuciones son los del Windows en el que
 se ejecuta WinWeaver, con sus nombres en su idioma.
 
+## Archivos de usuarios
+
+Un archivo de usuarios (`.wwusers`) enumera las cuentas locales que hay que crear en un PC con sus
+contraseñas, cifradas con una contraseña maestra en el mismo archivo. **Menú, Nuevo, Archivo de
+usuarios** empieza uno vacío; **Archivo de usuarios con las cuentas de este PC**, uno con todas las
+cuentas normales de este PC (grupo, estado, caducidad de la contraseña, carpeta del perfil; sin
+contraseñas). La pestaña muestra las cuentas en una lista y la seleccionada en un formulario: nombre,
+nombre completo, descripción, grupo, carpeta del perfil y las órdenes para una cuenta que ya existe en un
+PC (establecer la contraseña del archivo, habilitarla o deshabilitarla, exactamente este grupo); sin
+ellas una cuenta existente se deja como está. **Desbloquear** pide la contraseña maestra o la establece
+cuando el archivo no tiene; **Contraseña** establece la de la cuenta seleccionada; **Bloquear** las
+olvida. Sin la contraseña maestra las contraseñas no se pueden volver a leer. **Comprobar** enumera los
+problemas, **Leer este PC** agrega las cuentas de este PC que faltan en el archivo. **Crear en este PC**
+y **Aplicar contraseñas** cambian este PC tras una pregunta y necesitan WinWeaver ejecutado como
+administrador; el resultado queda bajo el formulario, una línea por cuenta. **Script** guarda
+`Create-<nombre>.ps1` junto al archivo de usuarios: pide la contraseña maestra por sí mismo y hace lo
+mismo en otro PC desde un símbolo del sistema abierto como administrador (`-PasswordsOnly` solo establece
+las contraseñas). En el formulario **Cuentas** de un perfil, **De un archivo de usuarios** carga sus
+cuentas, con sus contraseñas si da la contraseña maestra.
+
 ## La ventana
 
 - **Pestañas**: cada documento abierto es una pestaña: un perfil, una comparación, esta guía, los

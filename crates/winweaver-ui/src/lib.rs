@@ -16,7 +16,6 @@ mod marksview;
 mod mcpview;
 mod mdview;
 mod regfileview;
-mod usersview;
 mod regview;
 mod renderer;
 mod session;
@@ -25,6 +24,7 @@ mod style;
 mod themes;
 mod themeview;
 mod tree;
+mod usersview;
 mod views;
 
 use std::collections::HashSet;
@@ -2163,8 +2163,8 @@ impl App {
     /// Asks before an operation of the users file in front on this PC, once its plan is sound.
     fn ask_users_run(&mut self, operation: users::Operation, all: bool) {
         if !winweaver_win::elevated() {
-            self.status = tr("Run WinWeaver as administrator to change the accounts of this PC")
-                .to_owned();
+            self.status =
+                tr("Run WinWeaver as administrator to change the accounts of this PC").to_owned();
             return;
         }
         let Some(d) = self.active_users() else {
@@ -2215,7 +2215,10 @@ impl App {
         let failed = outcomes.iter().filter(|o| o.status.failed()).count();
         let n = outcomes.len();
         d.outcomes = outcomes;
-        self.status = trf("This PC changed: {n} accounts, {failed} failed", &[("n", &n), ("failed", &failed)]);
+        self.status = trf(
+            "This PC changed: {n} accounts, {failed} failed",
+            &[("n", &n), ("failed", &failed)],
+        );
     }
 
     /// Saves the stand-alone script of the users file in front next to the file it reads.
@@ -2224,7 +2227,8 @@ impl App {
             return;
         };
         let Some(path) = d.path.clone() else {
-            self.status = tr("Save the users file first: the script reads it next to itself").to_owned();
+            self.status =
+                tr("Save the users file first: the script reads it next to itself").to_owned();
             return;
         };
         let file_name = path
@@ -3515,7 +3519,10 @@ impl App {
                     if let Some(d) = self.active_users() {
                         d.check();
                         let errors = d.issues.iter().filter(|i| i.error).count();
-                        self.status = trf("Checked {n} accounts: {errors} errors", &[("n", &d.file.users.len()), ("errors", &errors)]);
+                        self.status = trf(
+                            "Checked {n} accounts: {errors} errors",
+                            &[("n", &d.file.users.len()), ("errors", &errors)],
+                        );
                     }
                 }
                 Act::UsersReadPc => match winweaver_win::users_of_this_pc() {

@@ -42,6 +42,10 @@ keeps its settings and files in that folder. The guide opens at the first start 
   Belarusian as a file, more as files (below); "Follow Windows" takes the language of Windows when it is one of them.
 - **MCP server** for AI agents: they read and, when you allow it, change profiles. Its settings are a file of
   `mcp/` (`default.wwmcp`); the journal shows every call with its details. See `agents/README.md`.
+- **Users files** (`.wwusers`): the local accounts to make on a PC (name, group, state, profile folder, what to do
+  with an account that exists) with their passwords encrypted under a master password in the same file. Read
+  the accounts of this PC into one, create the accounts on this PC or set their passwords as administrator,
+  save a stand-alone script that does the same on another PC, or load the accounts into a profile.
 
 Every new answer file goes to a virtual machine first, never straight to working computers.
 

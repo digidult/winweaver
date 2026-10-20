@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 19.10.2026 (0.20.0: every input language and keyboard layout of Windows in the form Languages, no embedded list; 0.19.1: the placeholders of the computer name template described in the form and the guide; 0.19.0: files inside the program folder kept relative to it in the settings, bookmarks, drafts and diffs; 0.18.3: the answer of the question that closes a tab no longer reads as Cancel in uk, ru and be, the release notes of 0.18.3; 0.18.2: the acceptance of 0.18.1 recorded, the release notes of 0.18.2; 0.18.1: the acceptance of 0.16.1 recorded, the messages of the status bar translated, Open the folder after every save, the release notes of 0.18.1; 0.18.0: Open the folder of a built or saved file and of the folders of the program; 0.17.0: the MCP tools of the permissions of registry keys; 0.16.2: the acceptance of 0.11.0 recorded, the release notes of 0.16.2; 0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
+Updated with every change of structure, commands or task status. Last update: 20.10.2026 (0.21.0: users files (.wwusers) with their passwords encrypted, read from this PC, made natively, as a script and into a profile; 0.20.0: every input language and keyboard layout of Windows in the form Languages, no embedded list; 0.19.1: the placeholders of the computer name template described in the form and the guide; 0.19.0: files inside the program folder kept relative to it in the settings, bookmarks, drafts and diffs; 0.18.3: the answer of the question that closes a tab no longer reads as Cancel in uk, ru and be, the release notes of 0.18.3; 0.18.2: the acceptance of 0.18.1 recorded, the release notes of 0.18.2; 0.18.1: the acceptance of 0.16.1 recorded, the messages of the status bar translated, Open the folder after every save, the release notes of 0.18.1; 0.18.0: Open the folder of a built or saved file and of the folders of the program; 0.17.0: the MCP tools of the permissions of registry keys; 0.16.2: the acceptance of 0.11.0 recorded, the release notes of 0.16.2; 0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
 the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
@@ -76,13 +76,16 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      rules, catalog files .wwcatalog, their check, merge), registry (keys and values in the types
 │   │                      of regedit, paths of regedit, the rules that write a key, a registry in memory), regfile (`.reg`
 │   │                      files: every line kept, the registry steps of a plan as a file), security (the
-│   │                      owner and the access list of a key in SDDL); tests/ on the real data
+│   │                      owner and the access list of a key in SDDL), users (.wwusers files: the accounts, the
+│   │                      checks, the plan of an operation, the script), userstore (their passwords encrypted);
+│   │                      tests/ on the real data
 │   ├── winweaver-win/     the Windows API: native.rs (thispc::Machine: the registry, the elevation, the locale
 │   │                      names, the language of Windows, the local accounts and their groups), dism.rs
 │   │                      (the features and capabilities through dismapi.dll), apps.rs (the removal of
 │   │                      apps through the package API of Windows), execute.rs
 │   │                      (the executor of an apply plan with its backup, the start of the executable as
-│   │                      administrator)
+│   │                      administrator), locales.rs (the input languages and layouts of Windows), users.rs
+│   │                      (the accounts of this PC read, created and changed for a users file)
 │   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal, token), config.rs (the
 │   │                      .wwmcp configuration files), log.rs (the JSON lines log, the crash handlers), tools.rs (the
 │   │                      36 tools and 3 resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and
@@ -104,7 +107,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      renderer.rs (the renderers built in, the order Automatic tries, the start of a window),
 │   │                      regview.rs (the registry tab: the tree of keys, the values, the editor of a value),
 │   │                      cataledit.rs (the editor of a catalog file: its tree, the form of a policy),
-│   │                      regfileview.rs (the tab of a `.reg` file: the outline, the values of a key)
+│   │                      regfileview.rs (the tab of a `.reg` file: the outline, the values of a key),
+│   │                      usersview.rs (the tab of a users file: the list, the form, the master password)
 │   └── winweaver/         the executable: the window, --renderer, --mcp stdio, --mcp http, --elevated-apply
 │                          <plan> <digest> (the helper: only a plan-*.json of output/ with that SHA-256),
 │                          --version, --check-catalog, --smoke-window (CI)
@@ -116,7 +120,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   ├── presets/           office, strict, laptop, home .wwprofile (converted once from the predecessor)
 │   ├── resources/         timezones.json
 │   ├── templates/         the runtime templates of the predecessor carried over as data: the answer file
-│   │                      skeleton and the scripts with {{slot}}s (they name WinWeaver now), VERSION 0.11
+│   │                      skeleton and the scripts with {{slot}}s (they name WinWeaver now), VERSION 0.11;
+│   │                      Create-Users.runtime.ps1, the stand-alone script of a users file
 │   ├── lang/<code>/       ui.json: the translations of the interface (uk, ru, de, es, fr, id, it, tr); guide.md: the guide translated
 │   ├── themes/            light, dark, latte, matrix .wwtheme: the embedded themes (a base, the colours it
 │   │                      changes, the fonts); Latte and Matrix are the colours of the predecessor
@@ -553,6 +558,19 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   model: the person chooses it.
 - Drafts: `drafts/<key>.json`, key `p-<fnv of the path as it is kept>` or `n-<time>-<n>`; written 2 s after
   the last change and at the close; a save or a discard deletes them.
+- Users files (`winweaver_core::users` and `userstore`, `winweaver_win::users`, `usersview.rs`; the
+  user's list of 20.10.2026, after the project WindowsUserManager, with a format of its own): one `.wwusers`
+  file holds the accounts and their passwords encrypted (PBKDF2-SHA256, AES-256-CBC, HMAC-SHA256 over salt,
+  iv and data, checked first; the reference vector of `userstore::tests` came from Python). The passwords
+  live in `Passwords` (wiped on drop) only while the tab is unlocked, with the master password for the
+  save (`UsersDoc::seal` encrypts them with a new salt and vector); nothing of them reaches the status bar,
+  the logs or a plan file. The operations run in the process (`winweaver_win::run_users_plan`) and need
+  the window to be elevated (`winweaver_win::elevated`), so the master password crosses no process: no
+  helper and no plan file for them. The semantics of the predecessor hold: an account that exists changes
+  only by its orders, no account is deleted, a profile elsewhere is kept, the account of the process stays
+  in Administrators; a change of them changes `winweaver_win::users` and
+  `data/templates/Create-Users.runtime.ps1` together. The test of the Windows runner makes and deletes
+  the account `WwUsersTest`.
 - Paths in the files of the program (`winweaver_core::paths`, the user's rule of 19.10.2026): a file inside
   the program folder is kept relative to it and starts with `.` (`.\profiles\Office.wwprofile`), any other
   file keeps its absolute path, and in memory every path is absolute. `Settings::load_from` and `save_to`
@@ -579,6 +597,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Native apply | Capabilities removed through DISM (0.9.0) and apps through the package API (0.10.0), named in the backup, not restored by an undo | 18.10.2026 |
 | Native apply | The script steps of the catalog applied natively (0.15.0): media, services, keys, accounts, the copies of the answer file | 18.10.2026 |
 | Registry | The permissions of keys: owner, access list, own entries changed after a question (0.16.0) | 18.10.2026 |
+| Users files | `.wwusers`: the accounts of a PC with their passwords encrypted, the tab, read from this PC, created natively, the stand-alone script, into a profile (0.21.0) | 20.10.2026 |
 | Not yet | Nothing of the plan; what comes next comes from the use | |
 | Acceptance | Build 0.11.0 accepted by the customer in a VM on 18.10.2026: all 31 steps of the scenario passed, the four stand-alone scripts (apply, undo, return to defaults, audit) checked for the first time, with the native apply and undo, This PC, the registry search and the catalog editor; earlier the answer file and a `.wwdiff` of a real PC. Build 0.16.1 accepted on 19.10.2026: all 16 steps of parts G, E and F of the same page (the links, registry files and their save from This PC, the script steps applied natively, the permissions of keys). Build 0.18.1 accepted on 19.10.2026: all 19 steps of parts H, I and J (the build, Open the folder, the permissions of a key through MCP from PowerShell 5.1 with a refused SDDL text, the translated messages of the status bar); every step of the page passed. Nothing waits | 19.10.2026 |
 
