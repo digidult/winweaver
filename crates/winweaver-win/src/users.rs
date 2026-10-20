@@ -432,7 +432,7 @@ fn make_profile(sid: &str, folder: &str) -> Result<Option<String>, String> {
         bytes.extend_from_slice(&unit.to_le_bytes());
     }
     let path = winreg::RegValue {
-        bytes,
+        bytes: bytes.into(),
         vtype: RegType::REG_EXPAND_SZ,
     };
     key.set_raw_value("ProfileImagePath", &path)

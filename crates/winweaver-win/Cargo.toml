@@ -14,6 +14,8 @@ serde_json.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56"
+# The password buffers of the accounts of a users file are wiped after each call.
+zeroize = "1"
 # The package API of Windows (WinRT) for the removal of apps; the same version wgpu already uses.
 windows = { version = "0.62.2", features = [
     "ApplicationModel",
