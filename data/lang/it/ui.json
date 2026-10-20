@@ -756,5 +756,6 @@
   "To a users file...": "In un file utenti...",
   "Unsaved changes": "Modifiche non salvate",
   "none": "nessuna",
-  "{name} users": "Utenti di {name}"
+  "{name} users": "Utenti di {name}",
+  "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.": "L'esempio usa il numero di serie {serial} e l'indirizzo MAC {mac}; ogni computer dà i propri."
 }

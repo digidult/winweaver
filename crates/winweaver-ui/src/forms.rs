@@ -224,6 +224,14 @@ fn name_template_help(ui: &mut egui::Ui, template: &str) {
             &[("template", &template), ("name", &name)],
         );
         ui.strong(text);
+        let sample = trf(
+            "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.",
+            &[
+                ("serial", &render::EXAMPLE_SERIAL),
+                ("mac", &render::EXAMPLE_MAC),
+            ],
+        );
+        ui.weak(sample);
     } else if !template.is_empty() {
         let warn = ui.visuals().warn_fg_color;
         ui.colored_label(

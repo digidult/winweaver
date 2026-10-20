@@ -756,5 +756,6 @@
   "To a users file...": "Ke file pengguna...",
   "Unsaved changes": "Perubahan belum disimpan",
   "none": "tidak ada",
-  "{name} users": "Pengguna {name}"
+  "{name} users": "Pengguna {name}",
+  "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.": "Contoh ini memakai nomor seri {serial} dan alamat MAC {mac}; setiap komputer memberi miliknya sendiri."
 }

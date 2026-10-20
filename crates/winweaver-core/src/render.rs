@@ -718,12 +718,16 @@ pub fn computer_name_parts(template: &str) -> Vec<String> {
     parts
 }
 
+/// The serial number the example of a computer name template takes.
+pub const EXAMPLE_SERIAL: &str = "5CG1234XYZ";
+
+/// The MAC address the example of a computer name template takes.
+pub const EXAMPLE_MAC: &str = "00155D3E5A01";
+
 /// What a computer name template gives with sample values, the way `section-computer-name.ps1`
 /// expands it: the last characters of the serial number `5CG1234XYZ` and of the MAC address
 /// `00155D3E5A01` (a shorter value stays whole), fixed random characters, the name cut at 15.
 pub fn example_name(template: &str) -> String {
-    const SERIAL: &str = "5CG1234XYZ";
-    const MAC: &str = "00155D3E5A01";
     const RANDOM: &str = "K7Q2MX9H4TRW3N5";
     let mut name = String::new();
     for part in computer_name_parts(template) {
@@ -736,8 +740,8 @@ pub fn example_name(template: &str) -> String {
         }
         let length = arg.parse::<usize>().unwrap_or(0).min(RANDOM.len());
         let value = match kind {
-            "serial" => SERIAL,
-            "mac" => MAC,
+            "serial" => EXAMPLE_SERIAL,
+            "mac" => EXAMPLE_MAC,
             _ => &RANDOM[..length],
         };
         name.push_str(&value[value.len().saturating_sub(length)..]);
