@@ -125,6 +125,30 @@ pub fn ascii_json(text: &str) -> String {
     out
 }
 
+/// A text for a comment of the answer file or of a script: a character outside ASCII or a control
+/// character becomes `?`, so the file stays ASCII; the profile embedded in the answer file keeps the
+/// text whole.
+pub fn ascii_text(text: &str) -> String {
+    text.chars()
+        .map(|c| {
+            if c.is_ascii() && !c.is_ascii_control() {
+                c
+            } else {
+                '?'
+            }
+        })
+        .collect()
+}
+
+/// A text for an XML comment: ASCII, and no two hyphens in a row.
+fn comment_text(text: &str) -> String {
+    let mut text = ascii_text(text);
+    while text.contains("--") {
+        text = text.replace("--", "- -");
+    }
+    text
+}
+
 /// Base64 of the UTF-8 bytes of a text (standard alphabet with padding).
 pub fn base64(text: &str) -> String {
     const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -1221,8 +1245,8 @@ pub fn build(
         ),
         format!(
             "    Profile: {}; modified {}.",
-            profile.name.replace("--", "- -"),
-            profile.modified
+            comment_text(&profile.name),
+            comment_text(&profile.modified)
         ),
         format!(
             "    Enabled rules: {} of {}. Disabled rules are absent from this file.",

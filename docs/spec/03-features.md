@@ -50,7 +50,8 @@ NEW). Each item names the user-visible behaviour; the mechanism is in `04-archit
 - Build (`F9`): `autounattend.xml` for x64 and arm64 architectures, the passes with their components,
   the embedded scripts (Setup-System, Setup-User, Post-OOBE with the scheduled task), the commands with
   Path up to 259 characters, exit 0 everywhere, no comments inside components, everything ASCII (texts
-  outside ASCII go through Base64 into the scripts), the profile embedded in `Extensions/Profile`.
+  outside ASCII go through Base64 into the scripts, the name of the profile shows in the header comment
+  with `?` for each other character), the profile embedded in `Extensions/Profile` with its name whole.
 - Native answer file settings (`xml-setting` actions) are merged into the components by pass; a path that
   is both a value and a parent is a build error shown as a message.
 - The built file is checked by the program's own answer file checker (the port of the 37 checks of the

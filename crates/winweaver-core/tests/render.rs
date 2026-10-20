@@ -3,6 +3,7 @@
 use std::path::Path;
 
 use winweaver_core::catalog::{Catalog, Phase};
+use winweaver_core::import;
 use winweaver_core::profile::{Account, Profile};
 use winweaver_core::render::{self, ASK_KEY, Build, MAX_COMMAND, TEMP_COMPUTER_NAME};
 use winweaver_core::resources::{self, Locales};
@@ -225,10 +226,21 @@ fn an_unknown_edition_or_language_is_an_error() {
     let mut p = preset("office");
     p.languages.input.push("0999:00000409".into());
     assert!(render::build(&catalog, &p, "t").is_err());
+}
+
+/// A profile named outside ASCII (as one imported from WinKickOff) builds: the header comment
+/// shows `?` for each other character, the file stays ASCII and the embedded profile keeps the
+/// name whole.
+#[test]
+fn a_profile_name_outside_ascii_builds() {
     let mut p = preset("office");
-    p.name = "Назва".into();
-    let err = render::build(&catalog, &p, "t").unwrap_err().to_string();
-    assert!(err.contains("ASCII"), "{err}");
+    p.name = "Офіс --- Київ".into();
+    let built = build(&p);
+    assert!(built.xml.is_ascii());
+    well_formed(&built.xml);
+    assert!(built.xml.contains("Profile: ???? - - - ????;"));
+    let back = import::profile_from_answer_file(&built.xml, "a");
+    assert_eq!(back.unwrap().0.name, p.name);
 }
 
 /// A layout chosen for a language goes into the answer file and, with the layout Windows gives

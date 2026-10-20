@@ -38,17 +38,7 @@ pub struct ScriptPlan {
 
 /// The first comment line of a script: the program, the profile and what the script does.
 fn label(profile: &Profile, app_version: &str, what: &str) -> String {
-    let name: String = profile
-        .name
-        .chars()
-        .map(|c| {
-            if c.is_ascii() && !c.is_ascii_control() {
-                c
-            } else {
-                '?'
-            }
-        })
-        .collect();
+    let name = render::ascii_text(&profile.name);
     format!("# WinWeaver {app_version}, profile: {name}{what}")
 }
 
