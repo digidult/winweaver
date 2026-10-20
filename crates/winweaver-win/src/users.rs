@@ -40,7 +40,7 @@ fn explain(status: u32) -> String {
         2224 => "the name is taken by an account".to_owned(),
         2223 => "the name is taken by a group".to_owned(),
         2245 => {
-            "the password does not meet the password policy of this PC (its length, its complexity or a password used before)"
+            "the password does not meet the password policy of this PC (its length, its complexity, a part of the name of the account in it, or a password used before)"
                 .to_owned()
         }
         2221 => "the account does not exist".to_owned(),
@@ -595,7 +595,7 @@ mod tests {
         }
         let name = "WwUsersTest";
         let mut passwords = Passwords::default();
-        passwords.set(name, "Ww-Test-Pass-1!");
+        passwords.set(name, "Kx7!Secret-Pass1");
         let user = User {
             name: name.to_owned(),
             full_name: "WinWeaver test".to_owned(),
@@ -641,8 +641,9 @@ mod tests {
             "{updated:?}"
         );
         assert!(updated[0].message.contains("Enabled"));
-        // The policy of the PC may refuse a password used before.
-        passwords.set(name, "Ww-Test-Pass-2!");
+        // The policy of the PC may refuse a password used before, and one that holds a part of
+        // the full name of the account.
+        passwords.set(name, "Kx7!Secret-Pass2");
         let only = Plan {
             operation: Operation::Passwords,
             users: changed.users.clone(),
