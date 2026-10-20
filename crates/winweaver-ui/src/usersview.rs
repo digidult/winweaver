@@ -454,7 +454,11 @@ fn password_row(ui: &mut egui::Ui, doc: &mut UsersDoc, name: &str) {
         } else {
             ui.monospace("\u{2022}".repeat(8));
         }
-        let eye = if doc.show_password { tr("Hide") } else { tr("Show") };
+        let eye = if doc.show_password {
+            tr("Hide")
+        } else {
+            tr("Show")
+        };
         if ui.small_button(eye).clicked() {
             doc.show_password = !doc.show_password;
         }
