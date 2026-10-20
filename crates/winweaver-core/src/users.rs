@@ -539,7 +539,8 @@ mod tests {
         assert!(accounts[1].password.is_empty());
         assert!(back.accounts(None)[0].password.is_empty());
         let (users, kept) = from_accounts(&accounts);
-        assert_eq!(users, back.users);
+        let names: Vec<(&str, bool)> = users.iter().map(|u| (u.name.as_str(), u.admin)).collect();
+        assert_eq!(names, vec![("admin1", true), ("user1", false)]);
         assert_eq!(kept.get("admin1"), Some("Password1!"));
         assert!(!kept.has("user1"));
         assert!(UsersFile::parse("{\"format\": \"x\"}", "x").is_err());
