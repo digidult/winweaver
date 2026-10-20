@@ -22,6 +22,8 @@ pub mod resources;
 pub mod scripts;
 pub mod security;
 pub mod thispc;
+pub mod users;
+pub mod userstore;
 pub mod validate;
 
 /// The version of the program, taken from the workspace: the second number grows with a feature,

@@ -19,3 +19,12 @@ quick-xml = "0.42"
 zip = { version = "9.0.3", default-features = false, features = ["deflate-flate2"] }
 flate2 = "1"
 sha2 = "0.10"
+# The passwords of a users file (userstore): PBKDF2-SHA256, AES-256-CBC and HMAC-SHA256 of the
+# pure Rust RustCrypto crates, which Windows PowerShell 5.1 can read too.
+pbkdf2 = "0.12"
+hmac = "0.12"
+aes = "0.8"
+cbc = { version = "0.1", features = ["alloc"] }
+base64 = "0.22"
+zeroize = "1"
+getrandom = "0.4"
