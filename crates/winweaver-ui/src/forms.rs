@@ -342,6 +342,13 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>, acts: &mut Vec<
         {
             acts.push(Act::UsersIntoProfile);
         }
+        if ui
+            .button(tr("To a users file..."))
+            .on_hover_text(tr("Makes a users file of these accounts; their passwords wait for a master password"))
+            .clicked()
+        {
+            acts.push(Act::UsersFromProfile);
+        }
     });
 }
 

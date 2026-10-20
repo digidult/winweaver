@@ -93,6 +93,11 @@ principale e fa lo stesso su un altro PC da un prompt dei comandi aperto come am
 (`-PasswordsOnly` imposta solo le password). Nel modulo **Account** di un profilo, **Da un file utenti**
 carica i suoi account, con le loro password se date la password principale.
 
+Finché il file è sbloccato, il modulo mostra la password dell'account selezionato come punti, con
+**Mostra** e **Copia** (la cronologia degli appunti di Windows conserva ciò che viene copiato). Nel
+modulo **Account** di un profilo, **In un file utenti** crea un file utenti dai suoi account; le loro
+password attendono una password principale prima del primo salvataggio.
+
 ## La finestra
 
 - **Schede**: ogni documento aperto è una scheda: un profilo, un confronto, questa guida, i segnalibri,
@@ -165,6 +170,9 @@ la conferma dice quanti passaggi di questo tipo ha un piano.
 ogni differenza tra il profilo attivo e l'altro, su tre colonne. "Applica il lato destro" imposta quei
 valori nel profilo da cui è stato creato il confronto; "Salva come file di differenze" conserva le
 differenze in un file `.wwdiff` applicabile in seguito a qualsiasi profilo.
+
+**Confronta, Modifiche non salvate** apre una scheda delle differenze del profilo dal suo file, o dalla
+preimpostazione da cui viene: a sinistra il profilo com'è ora, a destra com'è stato salvato.
 
 ## Apertura di altri file
 

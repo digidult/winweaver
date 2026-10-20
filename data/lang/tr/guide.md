@@ -94,6 +94,11 @@ isteminden başka bir bilgisayarda aynısını yapar (`-PasswordsOnly` yalnızca
 profilin **Hesaplar** formunda **Kullanıcı dosyasından**, ana parolayı verirseniz parolalarıyla birlikte
 hesaplarını yükler.
 
+Dosyanın kilidi açıkken form, seçili hesabın parolasını nokta olarak gösterir; **Göster** ve **Kopyala**
+düğmeleri vardır (Windows pano geçmişi kopyalananı saklar). Bir profilin **Hesaplar** formunda
+**Kullanıcı dosyasına**, hesaplarından bir kullanıcı dosyası oluşturur; parolaları ilk kayıttan önce bir
+ana parola bekler.
+
 ## Pencere
 
 - **Sekmeler**: her açık belge bir sekmedir: profil, karşılaştırma, bu kılavuz, yer işaretleri, MCP
@@ -163,6 +168,9 @@ olduğunu söyler.
 açar: etkin profil ile diğeri arasındaki her fark üç sütunda gösterilir. "Sağ tarafı uygula", bu
 değerleri karşılaştırmanın yapıldığı profilde ayarlar; "Fark dosyası olarak kaydet", farkları daha sonra
 herhangi bir profile uygulanabilen bir `.wwdiff` dosyası olarak saklar.
+
+**Karşılaştır, Kaydedilmemiş değişiklikler**, profilin dosyasıyla ya da geldiği hazır ayarla farklarını
+bir sekmede açar: solda profilin şimdiki hali, sağda kaydedildiği hali.
 
 ## Diğer dosyaları açma
 

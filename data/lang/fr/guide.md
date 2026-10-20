@@ -98,6 +98,12 @@ fait la même chose sur un autre PC depuis une invite de commandes ouverte en ad
 fichier d'utilisateurs** charge ses comptes, avec leurs mots de passe si vous donnez le mot de passe
 principal.
 
+Tant que le fichier est déverrouillé, le formulaire montre le mot de passe du compte sélectionné sous
+forme de points, avec **Afficher** et **Copier** (l'historique du presse-papiers de Windows conserve ce
+qui est copié). Dans le formulaire **Comptes** d'un profil, **Vers un fichier d'utilisateurs** crée un
+fichier d'utilisateurs de ses comptes ; leurs mots de passe attendent un mot de passe principal avant le
+premier enregistrement.
+
 ## La fenêtre
 
 - **Onglets** : chaque document ouvert est un onglet : un profil, une comparaison, ce guide, les
@@ -174,6 +180,10 @@ chaque différence entre le profil actif et l'autre, sur trois colonnes. « Appl
 définit ces valeurs dans le profil à partir duquel la comparaison a été faite ; « Enregistrer en tant
 que fichier de différences » conserve les différences dans un fichier `.wwdiff` qui peut ensuite
 s'appliquer à n'importe quel profil.
+
+**Comparer, Modifications non enregistrées** ouvre un onglet des différences du profil avec son fichier,
+ou avec le préréglage dont il vient : à gauche le profil tel qu'il est maintenant, à droite tel qu'il a
+été enregistré.
 
 ## Ouvrir d'autres fichiers
 

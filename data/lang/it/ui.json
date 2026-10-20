@@ -748,5 +748,13 @@
   "Without it the passwords cannot be read again: there is no way to recover them.": "Senza di essa le password non si possono più leggere: non c'è modo di recuperarle.",
   "Remove {name} from the file? An account of a PC stays.": "Rimuovere {name} dal file? L'account di un PC resta.",
   "Saved {path}; keep {file} next to it and run it as administrator": "Salvato {path}; tenere {file} accanto ed eseguirlo come amministratore",
-  "Accounts that exist are changed by their orders: {names}": "Gli account esistenti cambiano secondo le loro istruzioni: {names}"
+  "Accounts that exist are changed by their orders: {names}": "Gli account esistenti cambiano secondo le loro istruzioni: {names}",
+  "Makes a users file of these accounts; their passwords wait for a master password": "Crea un file utenti da questi account; le loro password attendono una password principale",
+  "Set a master password first": "Impostare prima una password principale",
+  "The clipboard history of Windows keeps what is copied.": "La cronologia degli appunti di Windows conserva ciò che viene copiato.",
+  "The profile has no file and no preset to compare with": "Il profilo non ha né un file né una preimpostazione con cui confrontarsi",
+  "To a users file...": "In un file utenti...",
+  "Unsaved changes": "Modifiche non salvate",
+  "none": "nessuna",
+  "{name} users": "Utenti di {name}"
 }

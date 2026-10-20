@@ -61,6 +61,8 @@ pub struct UsersDoc {
     pub outcomes: Vec<Outcome>,
     pub ask: MasterAsk,
     pub password_edit: Option<PasswordEdit>,
+    /// The password of the selected account is shown instead of dots.
+    pub show_password: bool,
     pub error: String,
 }
 
@@ -79,6 +81,7 @@ impl UsersDoc {
             outcomes: Vec::new(),
             ask: MasterAsk::default(),
             password_edit: None,
+            show_password: false,
             error: String::new(),
         }
     }
@@ -123,12 +126,16 @@ impl UsersDoc {
         self.passwords = None;
         self.master = None;
         self.password_edit = None;
+        self.show_password = false;
         self.check();
     }
 
     /// Encrypts the passwords into the file before a save; `false` when the file is unlocked
     /// without a master password, which cannot happen.
     pub fn seal(&mut self) -> Result<(), String> {
+        if self.passwords.is_some() && self.master.is_none() {
+            return Err(tr("Set a master password first").to_owned());
+        }
         if let (Some(passwords), Some(master)) = (&self.passwords, &self.master) {
             let iterations = self
                 .file
@@ -412,6 +419,9 @@ fn user_form(ui: &mut egui::Ui, doc: &mut UsersDoc) {
         &mut u.force_group,
         tr("Exactly this group: remove the other membership"),
     );
+    if doc.unlocked() {
+        password_row(ui, doc, &before.name);
+    }
     if u != before {
         if u.name != before.name
             && let Some(p) = &mut doc.passwords
@@ -421,6 +431,39 @@ fn user_form(ui: &mut egui::Ui, doc: &mut UsersDoc) {
         doc.file.users[i] = u;
         doc.dirty = true;
         doc.check();
+    }
+}
+
+/// The password of the selected account while the file is unlocked: dots, or the text with
+/// Show, and a copy to the clipboard.
+fn password_row(ui: &mut egui::Ui, doc: &mut UsersDoc, name: &str) {
+    let password: Option<Zeroizing<String>> = doc
+        .passwords
+        .as_ref()
+        .and_then(|p| p.get(name))
+        .map(|p| Zeroizing::new(p.to_owned()));
+    ui.add_space(8.0);
+    ui.horizontal_wrapped(|ui| {
+        ui.label(tr("Password"));
+        let Some(password) = &password else {
+            ui.weak(tr("none"));
+            return;
+        };
+        if doc.show_password {
+            ui.monospace(password.as_str());
+        } else {
+            ui.monospace("\u{2022}".repeat(8));
+        }
+        let eye = if doc.show_password { tr("Hide") } else { tr("Show") };
+        if ui.small_button(eye).clicked() {
+            doc.show_password = !doc.show_password;
+        }
+        if ui.small_button(tr("Copy")).clicked() {
+            ui.ctx().copy_text(password.to_string());
+        }
+    });
+    if password.is_some() {
+        ui.weak(tr("The clipboard history of Windows keeps what is copied."));
     }
 }
 

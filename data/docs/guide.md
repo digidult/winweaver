@@ -91,6 +91,11 @@ and does the same on another PC from a command prompt opened as administrator (`
 passwords only). In the form **Accounts** of a profile, **From a users file** loads its accounts, with
 their passwords when you give the master password.
 
+While the file is unlocked, the form shows the password of the selected account as dots, with **Show**
+and **Copy** (the clipboard history of Windows keeps what is copied). In the form **Accounts** of a
+profile, **To a users file** makes a users file of its accounts; their passwords wait for a master
+password before the first save.
+
 ## The window
 
 - **Tabs**: every open document is a tab: a profile, a diff, this guide, the bookmarks, the MCP
@@ -157,6 +162,9 @@ a plan are such.
 the active profile and the other one, in three columns. "Apply the right side" sets those values in
 the profile the diff was made from; "Save as a diff file" keeps the differences as a `.wwdiff`
 file that applies later to any profile.
+
+**Compare, Unsaved changes** opens a diff tab of the profile against its file, or against the preset it
+came from: the left side is the profile as it is now, the right side as it was saved.
 
 ## Opening other files
 

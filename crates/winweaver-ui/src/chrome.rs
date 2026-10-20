@@ -381,6 +381,13 @@ impl App {
                             ui.close();
                         }
                     }
+                    ui.separator();
+                    let dirty = self.docs.get(self.active).is_some_and(Doc::dirty);
+                    let unsaved = egui::Button::new(tr("Unsaved changes"));
+                    if ui.add_enabled(dirty, unsaved).clicked() {
+                        acts.push(Act::DiffUnsaved);
+                        ui.close();
+                    }
                 });
                 sep(ui);
                 let catalogs = split(ui, "\u{1F4E6}", tr("Catalogs"));

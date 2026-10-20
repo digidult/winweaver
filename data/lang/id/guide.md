@@ -94,6 +94,11 @@ yang dibuka sebagai administrator (`-PasswordsOnly` hanya mengatur kata sandi). 
 sebuah profil, **Dari file pengguna** memuat akunnya, beserta kata sandinya jika Anda memberikan kata
 sandi utama.
 
+Selama file terbuka, formulir menampilkan kata sandi akun yang dipilih sebagai titik, dengan
+**Tampilkan** dan **Salin** (riwayat papan klip Windows menyimpan apa yang disalin). Di formulir **Akun**
+sebuah profil, **Ke file pengguna** membuat file pengguna dari akun-akunnya; kata sandinya menunggu kata
+sandi utama sebelum penyimpanan pertama.
+
 ## Jendela
 
 - **Tab**: setiap dokumen yang terbuka adalah tab: profil, perbandingan, panduan ini, penanda, server MCP,
@@ -160,6 +165,9 @@ itu dalam rencana.
 antara profil aktif dan profil lainnya, dalam tiga kolom. "Terapkan sisi kanan" mengatur nilai-nilai tersebut
 di profil tempat perbandingan dibuat; "Simpan sebagai file perbedaan" menyimpan perbedaan sebagai file
 `.wwdiff` yang nanti dapat diterapkan ke profil mana pun.
+
+**Bandingkan, Perubahan belum disimpan** membuka tab perbedaan profil dengan filenya, atau dengan preset
+asalnya: di kiri profil seperti sekarang, di kanan seperti yang disimpan.
 
 ## Membuka file lain
 

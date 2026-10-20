@@ -748,5 +748,13 @@
   "Without it the passwords cannot be read again: there is no way to recover them.": "Без него пароли больше не прочитать: восстановить их невозможно.",
   "Remove {name} from the file? An account of a PC stays.": "Удалить {name} из файла? Учётная запись на ПК остаётся.",
   "Saved {path}; keep {file} next to it and run it as administrator": "Сохранено {path}; держите {file} рядом и запускайте от имени администратора",
-  "Accounts that exist are changed by their orders: {names}": "Существующие учётные записи меняются по их указаниям: {names}"
+  "Accounts that exist are changed by their orders: {names}": "Существующие учётные записи меняются по их указаниям: {names}",
+  "Makes a users file of these accounts; their passwords wait for a master password": "Создаёт файл пользователей из этих учётных записей; их пароли ждут мастер-пароля",
+  "Set a master password first": "Сначала задайте мастер-пароль",
+  "The clipboard history of Windows keeps what is copied.": "История буфера обмена Windows хранит скопированное.",
+  "The profile has no file and no preset to compare with": "У профиля нет ни файла, ни шаблона для сравнения",
+  "To a users file...": "В файл пользователей...",
+  "Unsaved changes": "Несохранённые изменения",
+  "none": "нет",
+  "{name} users": "Пользователи {name}"
 }

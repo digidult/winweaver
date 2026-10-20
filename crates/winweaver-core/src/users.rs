@@ -200,6 +200,28 @@ impl UsersFile {
     }
 }
 
+/// The users of the accounts of a profile, with the passwords the profile holds: the display
+/// name is the full name, the group gives `admin`.
+pub fn from_accounts(accounts: &[Account]) -> (Vec<User>, Passwords) {
+    let mut passwords = Passwords::default();
+    let users = accounts
+        .iter()
+        .map(|a| {
+            if !a.password.is_empty() {
+                passwords.set(&a.name, &a.password);
+            }
+            User {
+                name: a.name.trim().to_owned(),
+                full_name: a.display_name.clone(),
+                description: a.description.clone(),
+                admin: a.group.eq_ignore_ascii_case("Administrators"),
+                ..User::default()
+            }
+        })
+        .collect();
+    (users, passwords)
+}
+
 /// A finding of a check: an error stops an operation, a warning does not.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Issue {
@@ -516,6 +538,10 @@ mod tests {
         assert_eq!(accounts[1].group, "Users");
         assert!(accounts[1].password.is_empty());
         assert!(back.accounts(None)[0].password.is_empty());
+        let (users, kept) = from_accounts(&accounts);
+        assert_eq!(users, back.users);
+        assert_eq!(kept.get("admin1"), Some("Password1!"));
+        assert!(!kept.has("user1"));
         assert!(UsersFile::parse("{\"format\": \"x\"}", "x").is_err());
         let selected = vec!["user1".to_owned()];
         let plan = Plan::new(Operation::Passwords, &back.users, &selected, &passwords);

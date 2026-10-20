@@ -748,5 +748,13 @@
   "Without it the passwords cannot be read again: there is no way to recover them.": "Tanpanya kata sandi tidak dapat dibaca lagi: tidak ada cara memulihkannya.",
   "Remove {name} from the file? An account of a PC stays.": "Hapus {name} dari file? Akun di PC tetap ada.",
   "Saved {path}; keep {file} next to it and run it as administrator": "{path} disimpan; simpan {file} di sebelahnya dan jalankan sebagai administrator",
-  "Accounts that exist are changed by their orders: {names}": "Akun yang ada diubah sesuai perintahnya: {names}"
+  "Accounts that exist are changed by their orders: {names}": "Akun yang ada diubah sesuai perintahnya: {names}",
+  "Makes a users file of these accounts; their passwords wait for a master password": "Membuat file pengguna dari akun-akun ini; kata sandinya menunggu kata sandi utama",
+  "Set a master password first": "Atur kata sandi utama dulu",
+  "The clipboard history of Windows keeps what is copied.": "Riwayat papan klip Windows menyimpan apa yang disalin.",
+  "The profile has no file and no preset to compare with": "Profil tidak memiliki file maupun preset untuk dibandingkan",
+  "To a users file...": "Ke file pengguna...",
+  "Unsaved changes": "Perubahan belum disimpan",
+  "none": "tidak ada",
+  "{name} users": "Pengguna {name}"
 }

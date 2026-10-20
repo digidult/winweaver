@@ -748,5 +748,13 @@
   "Without it the passwords cannot be read again: there is no way to recover them.": "O olmadan parolalar bir daha okunamaz: onları kurtarmanın bir yolu yoktur.",
   "Remove {name} from the file? An account of a PC stays.": "{name} dosyadan kaldırılsın mı? Bir bilgisayardaki hesap kalır.",
   "Saved {path}; keep {file} next to it and run it as administrator": "{path} kaydedildi; {file} dosyasını yanında tutun ve yönetici olarak çalıştırın",
-  "Accounts that exist are changed by their orders: {names}": "Var olan hesaplar talimatlarına göre değiştirilir: {names}"
+  "Accounts that exist are changed by their orders: {names}": "Var olan hesaplar talimatlarına göre değiştirilir: {names}",
+  "Makes a users file of these accounts; their passwords wait for a master password": "Bu hesaplardan bir kullanıcı dosyası oluşturur; parolaları bir ana parola bekler",
+  "Set a master password first": "Önce bir ana parola belirleyin",
+  "The clipboard history of Windows keeps what is copied.": "Windows pano geçmişi kopyalananı saklar.",
+  "The profile has no file and no preset to compare with": "Profilin karşılaştırılacak ne dosyası ne de hazır ayarı var",
+  "To a users file...": "Kullanıcı dosyasına...",
+  "Unsaved changes": "Kaydedilmemiş değişiklikler",
+  "none": "yok",
+  "{name} users": "{name} kullanıcıları"
 }

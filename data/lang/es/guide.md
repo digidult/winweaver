@@ -97,6 +97,11 @@ mismo en otro PC desde un símbolo del sistema abierto como administrador (`-Pas
 las contraseñas). En el formulario **Cuentas** de un perfil, **De un archivo de usuarios** carga sus
 cuentas, con sus contraseñas si da la contraseña maestra.
 
+Mientras el archivo está desbloqueado, el formulario muestra la contraseña de la cuenta seleccionada como
+puntos, con **Mostrar** y **Copiar** (el historial del portapapeles de Windows conserva lo copiado). En
+el formulario **Cuentas** de un perfil, **A un archivo de usuarios** crea un archivo de usuarios con sus
+cuentas; sus contraseñas esperan una contraseña maestra antes del primer guardado.
+
 ## La ventana
 
 - **Pestañas**: cada documento abierto es una pestaña: un perfil, una comparación, esta guía, los
@@ -171,6 +176,10 @@ todas las diferencias entre el perfil activo y el otro, en tres columnas. "Aplic
 establece esos valores en el perfil a partir del cual se hizo la comparación; "Guardar como archivo de
 diferencias" conserva las diferencias en un archivo `.wwdiff` que se puede aplicar más adelante a
 cualquier perfil.
+
+**Comparar, Cambios sin guardar** abre una pestaña de diferencias del perfil con su archivo, o con el
+perfil predefinido del que procede: a la izquierda el perfil tal como está ahora, a la derecha tal como
+se guardó.
 
 ## Abrir otros archivos
 

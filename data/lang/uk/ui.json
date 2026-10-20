@@ -748,5 +748,13 @@
   "Without it the passwords cannot be read again: there is no way to recover them.": "Без нього паролі більше не прочитати: відновити їх неможливо.",
   "Remove {name} from the file? An account of a PC stays.": "Видалити {name} із файлу? Обліковий запис на ПК залишається.",
   "Saved {path}; keep {file} next to it and run it as administrator": "Збережено {path}; тримайте {file} поруч і запускайте від імені адміністратора",
-  "Accounts that exist are changed by their orders: {names}": "Наявні облікові записи змінюються за їхніми вказівками: {names}"
+  "Accounts that exist are changed by their orders: {names}": "Наявні облікові записи змінюються за їхніми вказівками: {names}",
+  "Makes a users file of these accounts; their passwords wait for a master password": "Створює файл користувачів із цих облікових записів; їхні паролі чекають на майстер-пароль",
+  "Set a master password first": "Спершу задайте майстер-пароль",
+  "The clipboard history of Windows keeps what is copied.": "Історія буфера обміну Windows зберігає скопійоване.",
+  "The profile has no file and no preset to compare with": "У профілю немає ні файлу, ні шаблону для порівняння",
+  "To a users file...": "У файл користувачів...",
+  "Unsaved changes": "Незбережені зміни",
+  "none": "немає",
+  "{name} users": "Користувачі {name}"
 }

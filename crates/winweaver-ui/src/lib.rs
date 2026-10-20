@@ -363,6 +363,10 @@ pub enum Act {
     UsersScript,
     /// The accounts of a users file into the profile in front.
     UsersIntoProfile,
+    /// A users file of the accounts of the profile in front.
+    UsersFromProfile,
+    /// The differences of the profile in front from its file or its preset, as a diff tab.
+    DiffUnsaved,
     /// Import the templates of this Windows (None), of a folder or a catalog file.
     ImportTemplates(ImportSource),
     /// Loads an import that is not loaded, or forgets one that is.
@@ -2265,6 +2269,60 @@ impl App {
         }
     }
 
+    /// A users file of the accounts of the profile in front, in a tab of its own; the passwords
+    /// of the profile wait for a master password before the first save.
+    fn users_from_profile(&mut self) {
+        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+            return;
+        };
+        let (users, passwords) = users::from_accounts(&doc.profile.accounts);
+        let name = trf("{name} users", &[("name", &doc.profile.name)]);
+        let mut file = UsersFile::new(&name);
+        file.users = users;
+        let mut tab = usersview::UsersDoc::new(file, None);
+        tab.dirty = true;
+        if !passwords.is_empty() {
+            tab.passwords = Some(passwords);
+            tab.ask.open(usersview::Purpose::Set);
+        }
+        tab.check();
+        self.docs.push(Doc::Users(Box::new(tab)));
+        self.active = self.docs.len() - 1;
+    }
+
+    /// The differences of the profile in front from its file, or from the preset it came from
+    /// when it has no file yet.
+    fn diff_unsaved(&mut self) {
+        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+            return;
+        };
+        let (saved, path) = match &doc.path {
+            Some(path) => match Profile::load(path) {
+                Ok(saved) => (saved, Some(path.clone())),
+                Err(e) => {
+                    self.status = trf("Compare: {e}", &[("e", &e)]);
+                    return;
+                }
+            },
+            None => {
+                let preset = PRESETS.iter().find(|p| p.0 == doc.profile.name);
+                match preset.map(|(name, text)| Profile::parse(text, name)) {
+                    Some(Ok(saved)) => (saved, None),
+                    Some(Err(e)) => {
+                        self.status = trf("Compare: {e}", &[("e", &e)]);
+                        return;
+                    }
+                    None => {
+                        self.status =
+                            tr("The profile has no file and no preset to compare with").to_owned();
+                        return;
+                    }
+                }
+            }
+        };
+        self.compare_active(saved, path.as_deref());
+    }
+
     /// Loads the accounts of a users file into the profile in front, asking the master password
     /// for their passwords when the file holds some.
     fn users_into_profile(&mut self) {
@@ -3538,6 +3596,8 @@ impl App {
                 Act::UsersRun(operation, names) => self.run_users(operation, &names),
                 Act::UsersScript => self.save_users_script(),
                 Act::UsersIntoProfile => self.users_into_profile(),
+                Act::UsersFromProfile => self.users_from_profile(),
+                Act::DiffUnsaved => self.diff_unsaved(),
                 Act::ImportTemplates(source) => self.start_import(source),
                 Act::ToggleImport(id) => {
                     if self.imports.iter().any(|f| f.id == id) {

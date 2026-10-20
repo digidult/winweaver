@@ -98,6 +98,11 @@ geöffneten Eingabeaufforderung (`-PasswordsOnly` setzt nur die Kennwörter). Im
 Profils lädt **Aus einer Benutzerdatei** deren Konten, mit ihren Kennwörtern, wenn Sie das Masterkennwort
 eingeben.
 
+Solange die Datei entsperrt ist, zeigt das Formular das Kennwort des gewählten Kontos als Punkte, mit
+**Anzeigen** und **Kopieren** (der Zwischenablageverlauf von Windows behält das Kopierte). Im Formular
+**Konten** eines Profils erstellt **In eine Benutzerdatei** eine Benutzerdatei aus seinen Konten; ihre
+Kennwörter warten vor dem ersten Speichern auf ein Masterkennwort.
+
 ## Das Fenster
 
 - **Registerkarten**: Jedes geöffnete Dokument ist eine Registerkarte: ein Profil, ein Vergleich, dieses
@@ -172,6 +177,10 @@ dem Vergleich: jeden Unterschied zwischen dem aktiven Profil und dem anderen, in
 anwenden“ setzt diese Werte in dem Profil, aus dem der Vergleich erstellt wurde; „Als Vergleichsdatei
 speichern“ bewahrt die Unterschiede als `.wwdiff`-Datei auf, die sich später auf jedes Profil anwenden
 lässt.
+
+**Vergleichen, Ungespeicherte Änderungen** öffnet eine Registerkarte mit den Unterschieden des Profils zu
+seiner Datei oder zu der Vorlage, aus der es stammt: links das Profil, wie es jetzt ist, rechts, wie es
+gespeichert wurde.
 
 ## Andere Dateien öffnen
 
