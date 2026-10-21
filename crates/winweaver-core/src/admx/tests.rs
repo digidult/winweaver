@@ -1,11 +1,11 @@
 use super::*;
 use serde_json::Value;
-use crate::catalog::{Action, Catalog, Level, ListNames, Param, Phase, RegKind};
+use crate::catalog::{Action, Catalog, ListNames, Param, Phase, ROOT_POLICIES, RegKind};
 use crate::i18n::CatalogTexts;
 
 use super::xml::parse_xml;
-use super::templates::{Policy, read_pair, resources};
-use super::rules::{cut, en, safe_key};
+use super::templates::read_pair;
+use super::rules::safe_key;
 
 const ADMX: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <policyDefinitions xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions" revision="1.0" schemaVersion="1.0">
