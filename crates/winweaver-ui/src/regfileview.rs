@@ -104,9 +104,6 @@ pub fn items(lines: &[Line]) -> Vec<Item> {
     out
 }
 
-/// The rules of a catalog by the keys they write (in lower case), each with the value it writes in
-/// lower case, `None` for the values of a list.
-
 
 
 

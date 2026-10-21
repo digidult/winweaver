@@ -22,8 +22,6 @@ impl ThemeDoc {
         }
     }
 
-    /// The name of the file of the theme.
-
 }
 
 /// What a colour of the theme paints.
