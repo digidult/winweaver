@@ -683,7 +683,10 @@ fn rule_link(
     };
     ui.horizontal_wrapped(|ui| {
         if ui.link(rtitle(texts, rule)).clicked() {
-            acts.push(Act::Profile(ProfileAct::ShowInProfile(String::new(), id.to_owned())));
+            acts.push(Act::Profile(ProfileAct::ShowInProfile(
+                String::new(),
+                id.to_owned(),
+            )));
         }
         views::catalog_links(ui, imports, id, acts);
     });
@@ -727,7 +730,10 @@ fn key_head(
                 style::chip(ui, tr("Default user profile"), false);
             }
             if ui.link(tr("Open in the registry")).clicked() {
-                acts.push(Act::Registry(RegistryAct::Open(path.clone(), value.clone())));
+                acts.push(Act::Registry(RegistryAct::Open(
+                    path.clone(),
+                    value.clone(),
+                )));
             }
         });
         if in_default_user(path) {
@@ -917,7 +923,10 @@ fn lines_list(
             list::Event::Button(i) => match &doc.file.lines[i] {
                 Line::Value { name, .. } => {
                     if let Some(k) = &key_path {
-                        acts.push(Act::Registry(RegistryAct::Open(k.clone(), Some(name.clone()))));
+                        acts.push(Act::Registry(RegistryAct::Open(
+                            k.clone(),
+                            Some(name.clone()),
+                        )));
                     }
                 }
                 Line::Comment(t) => {

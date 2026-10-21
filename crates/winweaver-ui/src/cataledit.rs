@@ -433,10 +433,16 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
         ui.horizontal_wrapped(|ui| {
             let text = trf("Show in the catalog {name}", &[("name", &name)]);
             if ui.link(text).clicked() {
-                acts.push(Act::Catalog(CatalogAct::OpenAt(id.clone(), form.id.clone())));
+                acts.push(Act::Catalog(CatalogAct::OpenAt(
+                    id.clone(),
+                    form.id.clone(),
+                )));
             }
             if ui.link(tr("Show in the profile")).clicked() {
-                acts.push(Act::Profile(ProfileAct::ShowInProfile(id.clone(), form.id.clone())));
+                acts.push(Act::Profile(ProfileAct::ShowInProfile(
+                    id.clone(),
+                    form.id.clone(),
+                )));
             }
         });
     }

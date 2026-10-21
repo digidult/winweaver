@@ -252,7 +252,6 @@ pub enum CatalogRef {
 /// The colours of the title bar: dark, caption, text, border.
 type TitleColors = (bool, [u8; 3], [u8; 3], [u8; 3]);
 
-
 /// What a read of this PC does with its report. A profile tab is named by its draft key, so a tab
 /// moved meanwhile is found and a tab closed meanwhile is missed without harm.
 enum PcJob {

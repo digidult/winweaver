@@ -336,7 +336,10 @@ fn detail(
         if doc.file.is_none() {
             ui.add_space(8.0);
             if ui.button(tr("Show in the profile tree")).clicked() {
-                acts.push(Act::Profile(ProfileAct::ShowInProfile(file.id.clone(), rule.id.clone())));
+                acts.push(Act::Profile(ProfileAct::ShowInProfile(
+                    file.id.clone(),
+                    rule.id.clone(),
+                )));
             }
         }
     });
@@ -369,7 +372,10 @@ fn detail(
             for f in others {
                 let text = trf("Show in the catalog {name}", &[("name", &f.name)]);
                 if ui.link(text).clicked() {
-                    acts.push(Act::Catalog(CatalogAct::OpenAt(f.id.clone(), rule.id.clone())));
+                    acts.push(Act::Catalog(CatalogAct::OpenAt(
+                        f.id.clone(),
+                        rule.id.clone(),
+                    )));
                 }
             }
         });

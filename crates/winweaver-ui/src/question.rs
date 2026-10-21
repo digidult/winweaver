@@ -62,7 +62,9 @@ impl Question {
     pub fn renew_token() -> Self {
         Self::new(
             tr("Renew the token"),
-            tr("Renew the token of the MCP server? The clients set up with the old one lose their access until they get the new one."),
+            tr(
+                "Renew the token of the MCP server? The clients set up with the old one lose their access until they get the new one.",
+            ),
             tr("Renew"),
             McpAct::RenewToken,
         )

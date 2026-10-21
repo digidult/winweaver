@@ -613,9 +613,13 @@ pub fn detail_view(
                                 }
                                 continue;
                             }
-                            Place::Profile(name) => (name.clone(), Act::Mcp(McpAct::OpenProfile(name))),
+                            Place::Profile(name) => {
+                                (name.clone(), Act::Mcp(McpAct::OpenProfile(name)))
+                            }
                             Place::Catalog(id) => (id.clone(), Act::Catalog(CatalogAct::Open(id))),
-                            Place::Key(key) => (key.clone(), Act::Registry(RegistryAct::Open(key, None))),
+                            Place::Key(key) => {
+                                (key.clone(), Act::Registry(RegistryAct::Open(key, None)))
+                            }
                         };
                         if ui.small_button(text).clicked() {
                             acts.push(act);

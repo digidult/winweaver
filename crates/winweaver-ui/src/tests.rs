@@ -33,7 +33,10 @@ fn app_starts_with_the_office_preset() {
 fn the_guide_opens_once_and_markdown_files_open() {
     let catalog = Catalog::embedded().unwrap();
     let mut app = App::new(catalog, Vec::new(), Settings::default());
-    app.apply(vec![Act::File(FileAct::OpenGuide), Act::File(FileAct::OpenGuide)]);
+    app.apply(vec![
+        Act::File(FileAct::OpenGuide),
+        Act::File(FileAct::OpenGuide),
+    ]);
     assert_eq!(app.docs.len(), 2, "the guide tab exists once");
     assert_eq!(app.docs[1].title(), "Guide.md");
     let dir = std::env::temp_dir().join(format!("winweaver-md-{}", std::process::id()));
@@ -81,7 +84,10 @@ fn every_kind_of_tab_draws_without_a_screen() {
         (Act::Marks(MarksAct::Open), None),
         (Act::Mcp(McpAct::Open), None),
         (Act::File(FileAct::OpenGuide), None),
-        (Act::Theme(ThemeAct::Edit("matrix".to_owned())), Some("Use this theme")),
+        (
+            Act::Theme(ThemeAct::Edit("matrix".to_owned())),
+            Some("Use this theme"),
+        ),
         (Act::Nav(NavAct::Activate(0)), None),
     ] {
         harness.state_mut().apply(vec![act]);
@@ -111,12 +117,16 @@ fn every_kind_of_tab_draws_without_a_screen() {
         matches!(harness.state().docs[0], Doc::Profile(ref d) if d.sel == Sel::Rule("install.bypass-tpm".into())),
         "a click on a rule selects it"
     );
-    harness.state_mut().apply(vec![Act::Diff(DiffAct::CompareWith("Strict"))]);
+    harness
+        .state_mut()
+        .apply(vec![Act::Diff(DiffAct::CompareWith("Strict"))]);
     harness.step();
     harness.step();
     assert!(has(&harness, "Select a difference to see it here."));
     let key = first_rule_key(harness.state()).expect("Strict differs in a rule");
-    harness.state_mut().apply(vec![Act::Diff(DiffAct::Select(key))]);
+    harness
+        .state_mut()
+        .apply(vec![Act::Diff(DiffAct::Select(key))]);
     harness.step();
     harness.step();
     assert!(
@@ -216,13 +226,20 @@ fn screenshots_of_the_window() {
     shot(&mut harness, "02-rule");
     harness.state_mut().apply(vec![
         Act::Marks(MarksAct::Toggle),
-        Act::Marks(MarksAct::SetComment(0, "Ask the customer about the Audit mode".into())),
+        Act::Marks(MarksAct::SetComment(
+            0,
+            "Ask the customer about the Audit mode".into(),
+        )),
         Act::Profile(ProfileAct::Check),
     ]);
     shot(&mut harness, "03-checked");
-    harness.state_mut().apply(vec![Act::Diff(DiffAct::CompareWith("Strict"))]);
+    harness
+        .state_mut()
+        .apply(vec![Act::Diff(DiffAct::CompareWith("Strict"))]);
     if let Some(key) = first_rule_key(harness.state()) {
-        harness.state_mut().apply(vec![Act::Diff(DiffAct::Select(key))]);
+        harness
+            .state_mut()
+            .apply(vec![Act::Diff(DiffAct::Select(key))]);
     }
     shot(&mut harness, "04-diff");
     for (act, name) in [
@@ -233,7 +250,9 @@ fn screenshots_of_the_window() {
     ] {
         harness.state_mut().apply(vec![act]);
         if name == "07-bookmarks" {
-            harness.state_mut().apply(vec![Act::Marks(MarksAct::Select(0))]);
+            harness
+                .state_mut()
+                .apply(vec![Act::Marks(MarksAct::Select(0))]);
         }
         shot(&mut harness, name);
     }
@@ -241,9 +260,10 @@ fn screenshots_of_the_window() {
         .state_mut()
         .apply(vec![Act::Theme(ThemeAct::Edit("latte".to_owned()))]);
     shot(&mut harness, "10-theme-editor");
-    harness
-        .state_mut()
-        .apply(vec![Act::Theme(ThemeAct::Use("matrix".to_owned())), Act::Nav(NavAct::Activate(0))]);
+    harness.state_mut().apply(vec![
+        Act::Theme(ThemeAct::Use("matrix".to_owned())),
+        Act::Nav(NavAct::Activate(0)),
+    ]);
     shot(&mut harness, "11-matrix");
     harness
         .state_mut()
@@ -256,7 +276,9 @@ fn screenshots_of_the_window() {
     let reg = dir.join("Apply-Office.reg");
     let file = RegFile::from_plan(&plan, "Apply the profile Office");
     file.save(&reg).unwrap();
-    harness.state_mut().apply(vec![Act::File(FileAct::OpenPath(reg))]);
+    harness
+        .state_mut()
+        .apply(vec![Act::File(FileAct::OpenPath(reg))]);
     if let Some(Doc::RegFile(d)) = harness.state_mut().docs.last_mut() {
         let key = |l: &Line| matches!(l, Line::Key { .. });
         d.at = d.file.lines.iter().position(key);
@@ -338,7 +360,10 @@ fn bookmarks_toggle_and_lead_back() {
     assert!(app.marks.items.is_empty());
     app.apply(vec![
         Act::Marks(MarksAct::Toggle),
-        Act::Marks(MarksAct::SetComment(0, "Ask the customer\nabout the TPM".into())),
+        Act::Marks(MarksAct::SetComment(
+            0,
+            "Ask the customer\nabout the TPM".into(),
+        )),
         Act::Marks(MarksAct::Toggle),
     ]);
     assert_eq!(
@@ -349,7 +374,10 @@ fn bookmarks_toggle_and_lead_back() {
     assert!(app.question.is_some());
     app.apply(vec![Act::Answer(false)]);
     assert_eq!(app.marks.items.len(), 1);
-    app.apply(vec![Act::Marks(MarksAct::Open), Act::Marks(MarksAct::Select(0))]);
+    app.apply(vec![
+        Act::Marks(MarksAct::Open),
+        Act::Marks(MarksAct::Select(0)),
+    ]);
     let question = marksview::remove_question(&app.catalog, None, &app.imports, &app.marks, 0)
         .expect("the bookmark is there");
     app.apply(vec![question.into()]);
@@ -368,7 +396,10 @@ fn drafts_come_back_after_a_restart() {
     let mut app = App::new(catalog.clone(), Vec::new(), Settings::default());
     app.drafts_dir = dir.join("drafts");
     app.logs_dir = dir.join("logs");
-    app.apply(vec![Act::Profile(ProfileAct::Toggle("install.bypass-tpm".into(), false))]);
+    app.apply(vec![Act::Profile(ProfileAct::Toggle(
+        "install.bypass-tpm".into(),
+        false,
+    ))]);
     app.write_drafts(true);
     let (drafts, _) = session::read_drafts(&app.drafts_dir);
     assert_eq!(drafts.len(), 1);
@@ -483,7 +514,11 @@ and kept"
 fn tabs_move_and_the_tab_in_front_stays_in_front() {
     let catalog = Catalog::embedded().unwrap();
     let mut app = App::new(catalog, Vec::new(), Settings::default());
-    app.apply(vec![Act::File(FileAct::OpenGuide), Act::Marks(MarksAct::Open), Act::Settings(SettingsAct::Open)]);
+    app.apply(vec![
+        Act::File(FileAct::OpenGuide),
+        Act::Marks(MarksAct::Open),
+        Act::Settings(SettingsAct::Open),
+    ]);
     let titles = |app: &App| app.docs.iter().map(Doc::title).collect::<Vec<_>>();
     let start = titles(&app);
     assert_eq!(start.len(), 4);
@@ -492,13 +527,19 @@ fn tabs_move_and_the_tab_in_front_stays_in_front() {
     assert_eq!(app.active, 0, "the moved tab stays in front");
     assert_eq!(titles(&app)[0], start[3]);
     assert_eq!(titles(&app)[1..], start[..3]);
-    app.apply(vec![Act::Nav(NavAct::Activate(2)), Act::Nav(NavAct::MoveTab(0, 3))]);
+    app.apply(vec![
+        Act::Nav(NavAct::Activate(2)),
+        Act::Nav(NavAct::MoveTab(0, 3)),
+    ]);
     assert_eq!(
         app.active, 1,
         "the tab in front shifts left when a tab before it moves after it"
     );
     assert_eq!(titles(&app), start);
-    app.apply(vec![Act::Nav(NavAct::MoveTab(1, 1)), Act::Nav(NavAct::MoveTab(0, 9))]);
+    app.apply(vec![
+        Act::Nav(NavAct::MoveTab(1, 1)),
+        Act::Nav(NavAct::MoveTab(0, 9)),
+    ]);
     assert_eq!(titles(&app), start, "nothing moves out of the row");
 }
 
@@ -591,7 +632,9 @@ fn a_link_selects_and_opens_the_tree_down_to_it() {
     if let Some(Doc::Profile(doc)) = app.docs.get_mut(0) {
         doc.expanded.clear();
     }
-    app.apply(vec![Act::Profile(ProfileAct::Reveal(Sel::Group(group.clone())))]);
+    app.apply(vec![Act::Profile(ProfileAct::Reveal(Sel::Group(
+        group.clone(),
+    )))]);
     let Some(Doc::Profile(doc)) = app.docs.first() else {
         panic!("a profile");
     };
@@ -623,7 +666,10 @@ fn the_rights_of_a_key_change_after_a_question() {
     let owner = rights.names.get("BA").map(String::as_str);
     assert_eq!(owner, Some("Administrators"));
     rights.add = "Users".to_owned();
-    app.apply(vec![Act::Registry(RegistryAct::RightsAdd), Question::change_rights(key).into()]);
+    app.apply(vec![
+        Act::Registry(RegistryAct::RightsAdd),
+        Question::change_rights(key).into(),
+    ]);
     assert!(app.question.is_some(), "a change of the rights asks first");
     assert!(open(&app));
     app.apply(vec![Act::Answer(true)]);
@@ -642,7 +688,10 @@ fn a_group_shows_in_the_profile_from_another_tab() {
         .map(|g| g.id.clone())
         .unwrap();
     let mut app = App::new(catalog, Vec::new(), Settings::default());
-    app.apply(vec![Act::Marks(MarksAct::Open), Act::Profile(ProfileAct::ShowGroupInProfile(group.clone()))]);
+    app.apply(vec![
+        Act::Marks(MarksAct::Open),
+        Act::Profile(ProfileAct::ShowGroupInProfile(group.clone())),
+    ]);
     assert_eq!(app.active, 0, "the profile tab comes to the front");
     let Some(Doc::Profile(doc)) = app.docs.first() else {
         panic!("a profile");
@@ -744,7 +793,9 @@ fn only_the_checked_imports_load_and_unknown_options_find_their_catalog() {
     };
     assert_eq!(state(&app).0, 1);
     assert!(state(&app).2, "the open warns of the option");
-    app.apply(vec![Act::Profile(ProfileAct::Select(Sel::Unknown(id.to_owned())))]);
+    app.apply(vec![Act::Profile(ProfileAct::Select(Sel::Unknown(
+        id.to_owned(),
+    )))]);
     app.apply(vec![Act::Import(ImportAct::LoadCatalogs)]);
     assert_eq!(app.imports.len(), 1, "{}", app.status);
     assert_eq!(app.settings.loaded_imports, Some(vec!["test".to_owned()]));
@@ -792,7 +843,10 @@ fn the_unknown_options_have_their_group_in_the_tree() {
         profile, None, &catalog,
     )))];
     app.active = 0;
-    app.apply(vec![Act::Profile(ProfileAct::Expand(UNKNOWN_GROUP.to_owned(), true))]);
+    app.apply(vec![Act::Profile(ProfileAct::Expand(
+        UNKNOWN_GROUP.to_owned(),
+        true,
+    ))]);
     let mut harness = egui_kittest::Harness::new_eframe(|_| app);
     harness.step();
     let has = |h: &egui_kittest::Harness<'_, App>, label: &str| {
@@ -800,12 +854,16 @@ fn the_unknown_options_have_their_group_in_the_tree() {
     };
     assert!(has(&harness, "Unknown options"));
     assert!(has(&harness, "admx.other.policy"));
-    harness.state_mut().apply(vec![Act::Profile(ProfileAct::Select(Sel::Unknown(
-        "admx.other.policy".to_owned(),
-    )))]);
+    harness
+        .state_mut()
+        .apply(vec![Act::Profile(ProfileAct::Select(Sel::Unknown(
+            "admx.other.policy".to_owned(),
+        )))]);
     harness.step();
     assert!(has(&harness, "Load catalogs"));
-    harness.state_mut().apply(vec![Act::Profile(ProfileAct::Select(Sel::None))]);
+    harness
+        .state_mut()
+        .apply(vec![Act::Profile(ProfileAct::Select(Sel::None))]);
     harness.state_mut().settings.hide_unknown = true;
     harness.step();
     harness.step();
@@ -898,7 +956,10 @@ fn the_registry_tab_edits_asks_and_bookmarks() {
     assert_eq!(reg.read(key).unwrap().values[0].data, Data::Dword(16));
     app.apply(vec![Act::Registry(RegistryAct::AskDelete)]);
     assert!(app.question.is_some(), "a deletion asks");
-    app.apply(vec![Act::Answer(false), Act::Registry(RegistryAct::Bookmark)]);
+    app.apply(vec![
+        Act::Answer(false),
+        Act::Registry(RegistryAct::Bookmark),
+    ]);
     assert_eq!(reg.read(key).unwrap().values.len(), 1);
     assert!(
         app.marks
@@ -906,7 +967,10 @@ fn the_registry_tab_edits_asks_and_bookmarks() {
             .iter()
             .any(|b| b.is_registry() && b.path == key && b.item == "N")
     );
-    app.apply(vec![Act::Registry(RegistryAct::AskDelete), Act::Answer(true)]);
+    app.apply(vec![
+        Act::Registry(RegistryAct::AskDelete),
+        Act::Answer(true),
+    ]);
     assert!(reg.read(key).unwrap().values.is_empty());
     std::fs::remove_dir_all(&dir).unwrap();
 }
@@ -939,14 +1003,20 @@ fn links_open_the_catalog_at_a_policy_and_select_it_in_another_tree() {
     let id = "admx.sample.turnoff";
     let alias: Vec<String> = app.catalog.alias_groups(id).map(str::to_owned).collect();
     assert_eq!(alias.len(), 1, "the second import shows the policy too");
-    app.apply(vec![Act::Profile(ProfileAct::ShowIn(id.to_owned(), alias[0].clone()))]);
+    app.apply(vec![Act::Profile(ProfileAct::ShowIn(
+        id.to_owned(),
+        alias[0].clone(),
+    ))]);
     let Doc::Profile(doc) = &app.docs[0] else {
         panic!("a profile");
     };
     assert_eq!(doc.sel, Sel::Rule(id.to_owned()));
     assert_eq!(doc.focus.as_ref(), Some(&alias[0]));
     assert!(doc.expanded.contains(&alias[0]), "its tree opens to it");
-    app.apply(vec![Act::Catalog(CatalogAct::OpenAt("again".to_owned(), id.to_owned()))]);
+    app.apply(vec![Act::Catalog(CatalogAct::OpenAt(
+        "again".to_owned(),
+        id.to_owned(),
+    ))]);
     let Some(Doc::Catalog(c)) = app.docs.get(app.active) else {
         panic!("the catalog tab");
     };
@@ -980,12 +1050,17 @@ fn removals_ask_first_and_two_catalogs_compare() {
     let mut app = App::new(catalog, Vec::new(), settings);
     app.imports_dir = dir.join("imports");
     app.load_imports();
-    app.apply(vec![Question::remove_import("test", "test".to_owned()).into()]);
+    app.apply(vec![
+        Question::remove_import("test", "test".to_owned()).into(),
+    ]);
     assert!(app.question.is_some());
     app.apply(vec![Act::Answer(false)]);
     assert!(dir.join("imports").join("test.wwcatalog").exists());
     assert_eq!(app.imports.len(), 1);
-    app.apply(vec![Act::Profile(ProfileAct::Toggle("install.bypass-tpm".to_owned(), false))]);
+    app.apply(vec![Act::Profile(ProfileAct::Toggle(
+        "install.bypass-tpm".to_owned(),
+        false,
+    ))]);
     let act = app.discard_act(0);
     app.apply(vec![act]);
     assert!(app.question.is_some(), "a tab with changes asks");

@@ -53,7 +53,9 @@ impl RuleLink<'_> {
             RuleLink::Catalog(file) if file.rules.iter().any(|r| r.id == id) => {
                 Act::Catalog(CatalogAct::Reveal(id))
             }
-            RuleLink::Catalog(_) | RuleLink::Elsewhere => Act::Profile(ProfileAct::ShowInProfile(String::new(), id)),
+            RuleLink::Catalog(_) | RuleLink::Elsewhere => {
+                Act::Profile(ProfileAct::ShowInProfile(String::new(), id))
+            }
         }
     }
 }
@@ -473,13 +475,19 @@ pub fn tree_view(
     let out = tree::show(ui, id, &rows, selected, scroll);
     for event in out.events {
         match event {
-            tree::Event::Select((sel, group)) => acts.push(Act::Profile(ProfileAct::SelectIn(sel, group))),
-            tree::Event::Expand((Sel::Group(g), _), open) => acts.push(Act::Profile(ProfileAct::Expand(g, open))),
+            tree::Event::Select((sel, group)) => {
+                acts.push(Act::Profile(ProfileAct::SelectIn(sel, group)))
+            }
+            tree::Event::Expand((Sel::Group(g), _), open) => {
+                acts.push(Act::Profile(ProfileAct::Expand(g, open)))
+            }
             tree::Event::Toggle((Sel::Rule(id), _)) => {
                 let on = !doc.profile.is_on(&id);
                 acts.push(Act::Profile(ProfileAct::Toggle(id, on)));
             }
-            tree::Event::Switch((Sel::Rule(id), _), on) => acts.push(Act::Profile(ProfileAct::Toggle(id, on))),
+            tree::Event::Switch((Sel::Rule(id), _), on) => {
+                acts.push(Act::Profile(ProfileAct::Toggle(id, on)))
+            }
             tree::Event::Toggle((Sel::Group(g), _)) => {
                 let rules = catalog.rules_under(&g);
                 let all = !rules.is_empty() && rules.iter().all(|r| doc.resolution.shown_on(&r.id));
@@ -852,7 +860,10 @@ fn this_pc_buttons(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
             (tr("Check on this PC"), Act::Pc(PcAct::Check)),
             (tr("Read into the profile"), Act::Pc(PcAct::ReadSelection)),
             (tr("Apply to this PC..."), Act::Pc(PcAct::PlanNative(false))),
-            (tr("Return to Windows defaults..."), Act::Pc(PcAct::PlanNative(true))),
+            (
+                tr("Return to Windows defaults..."),
+                Act::Pc(PcAct::PlanNative(true)),
+            ),
             (
                 tr("Save an apply script..."),
                 Act::Pc(PcAct::SaveScript(ScriptKind::Apply)),
@@ -861,7 +872,10 @@ fn this_pc_buttons(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
                 tr("Save a return-to-defaults script..."),
                 Act::Pc(PcAct::SaveScript(ScriptKind::Revert)),
             ),
-            (tr("Save a registry file..."), Act::Pc(PcAct::SaveRegFile(false))),
+            (
+                tr("Save a registry file..."),
+                Act::Pc(PcAct::SaveRegFile(false)),
+            ),
             (
                 tr("Save a return-to-defaults registry file..."),
                 Act::Pc(PcAct::SaveRegFile(true)),
@@ -1077,21 +1091,29 @@ fn other_catalogs(
             ui.horizontal_wrapped(|ui| {
                 ui.weak(tr("The same policy in"));
                 if ui.link(import_of(catalog, texts, group)).clicked() {
-                    acts.push(Act::Profile(ProfileAct::ShowIn(rule.id.clone(), group.to_owned())));
+                    acts.push(Act::Profile(ProfileAct::ShowIn(
+                        rule.id.clone(),
+                        group.to_owned(),
+                    )));
                 }
             });
         }
         for other in similar {
             ui.horizontal_wrapped(|ui| {
                 if ui.link(rtitle(texts, other)).clicked() {
-                    acts.push(Act::Profile(ProfileAct::Reveal(Sel::Rule(other.id.clone()))));
+                    acts.push(Act::Profile(ProfileAct::Reveal(Sel::Rule(
+                        other.id.clone(),
+                    ))));
                 }
                 // The import, a link to its catalog tab at the policy.
                 let holds = |f: &&CatalogFile| f.rules.iter().any(|r| r.id == other.id);
                 match imports.iter().find(holds) {
                     Some(f) => {
                         if ui.link(import_of(catalog, texts, &other.group)).clicked() {
-                            acts.push(Act::Catalog(CatalogAct::OpenAt(f.id.clone(), other.id.clone())));
+                            acts.push(Act::Catalog(CatalogAct::OpenAt(
+                                f.id.clone(),
+                                other.id.clone(),
+                            )));
                         }
                     }
                     None => {
@@ -1118,7 +1140,10 @@ pub(crate) fn catalog_links(
             .link(trf("Show in the catalog {name}", &[("name", &f.name)]))
             .clicked()
         {
-            acts.push(Act::Catalog(CatalogAct::OpenAt(f.id.clone(), rule.to_owned())));
+            acts.push(Act::Catalog(CatalogAct::OpenAt(
+                f.id.clone(),
+                rule.to_owned(),
+            )));
         }
     }
 }

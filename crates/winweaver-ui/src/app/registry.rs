@@ -325,7 +325,12 @@ impl App {
                 Act::Registry(RegistryAct::Delete(path.clone(), None)),
             ),
         };
-        self.ask(Question::new(tr("Delete from the registry"), text, tr("Delete"), act));
+        self.ask(Question::new(
+            tr("Delete from the registry"),
+            text,
+            tr("Delete"),
+            act,
+        ));
     }
 
     pub(crate) fn registry_delete(&mut self, path: &str, value: Option<&str>) {

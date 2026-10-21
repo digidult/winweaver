@@ -240,7 +240,9 @@ impl App {
             }
             Ok(file) => {
                 let n = file.users.len();
-                self.apply(vec![Act::Profile(ProfileAct::SetAccounts(file.accounts(None)))]);
+                self.apply(vec![Act::Profile(ProfileAct::SetAccounts(
+                    file.accounts(None),
+                ))]);
                 self.status = trf("{n} accounts loaded without passwords", &[("n", &n)]);
             }
             Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
@@ -256,11 +258,15 @@ impl App {
             usersview::ImportDone::Open => {}
             usersview::ImportDone::Cancel => self.users_import = None,
             usersview::ImportDone::Without => {
-                acts.push(Act::Profile(ProfileAct::SetAccounts(import.file.accounts(None))));
+                acts.push(Act::Profile(ProfileAct::SetAccounts(
+                    import.file.accounts(None),
+                )));
                 self.users_import = None;
             }
             usersview::ImportDone::With(passwords) => {
-                acts.push(Act::Profile(ProfileAct::SetAccounts(import.file.accounts(Some(&passwords)))));
+                acts.push(Act::Profile(ProfileAct::SetAccounts(
+                    import.file.accounts(Some(&passwords)),
+                )));
                 self.users_import = None;
             }
         }

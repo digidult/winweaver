@@ -502,7 +502,10 @@ impl App {
                             acts.push(Act::Catalog(CatalogAct::Open(f.id.clone())));
                         }
                         if ui.small_button(tr("Rename")).clicked() {
-                            acts.push(Act::Settings(SettingsAct::StartRename(f.id.clone(), f.name.clone())));
+                            acts.push(Act::Settings(SettingsAct::StartRename(
+                                f.id.clone(),
+                                f.name.clone(),
+                            )));
                         }
                     }
                     None => {

@@ -424,8 +424,12 @@ pub fn registry_view(
             }
             for event in shown.events {
                 match event {
-                    tree::Event::Select(path) => acts.push(Act::Registry(RegistryAct::Go(path, None))),
-                    tree::Event::Expand(path, open) => acts.push(Act::Registry(RegistryAct::Expand(path, open))),
+                    tree::Event::Select(path) => {
+                        acts.push(Act::Registry(RegistryAct::Go(path, None)))
+                    }
+                    tree::Event::Expand(path, open) => {
+                        acts.push(Act::Registry(RegistryAct::Expand(path, open)))
+                    }
                     _ => {}
                 }
             }
@@ -520,7 +524,10 @@ fn search_panel(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
                 };
                 let label = egui::RichText::new(text).monospace();
                 if ui.selectable_label(false, label).clicked() {
-                    acts.push(Act::Registry(RegistryAct::Go(hit.path.clone(), hit.value.clone())));
+                    acts.push(Act::Registry(RegistryAct::Go(
+                        hit.path.clone(),
+                        hit.value.clone(),
+                    )));
                 }
             }
         });

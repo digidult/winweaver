@@ -8,8 +8,8 @@ use eframe::egui::{self, Align, Align2, CornerRadius, Layout, Margin, RichText, 
 use crate::i18n::{tr, trf};
 use crate::style::{self, Palette};
 use crate::{
-    Act, App, CatalogAct, DiffAct, Doc, FileAct, Form, ImportAct, MarksAct, McpAct, NavAct, PRESETS,
-    PcAct, ProfileAct, RegFileAct, RegistryAct, ScriptKind, Sel, Settings, SettingsAct,
+    Act, App, CatalogAct, DiffAct, Doc, FileAct, Form, ImportAct, MarksAct, McpAct, NavAct,
+    PRESETS, PcAct, ProfileAct, RegFileAct, RegistryAct, ScriptKind, Sel, Settings, SettingsAct,
     SettingsSection, Tab, ThemeAct, UsersAct, texts_for, views,
 };
 use winweaver_core::validate::{self, Severity, Target};
@@ -208,7 +208,12 @@ impl App {
             }
         };
         ui.menu_button(tr("New"), |ui| {
-            item(ui, tr("Empty profile"), "Ctrl+N", Act::File(FileAct::NewProfile(None)));
+            item(
+                ui,
+                tr("Empty profile"),
+                "Ctrl+N",
+                Act::File(FileAct::NewProfile(None)),
+            );
             ui.separator();
             for (name, _) in PRESETS {
                 item(
@@ -241,7 +246,12 @@ impl App {
             });
         });
         item(ui, tr("Save"), "Ctrl+S", Act::File(FileAct::Save));
-        item(ui, tr("Save as..."), "Ctrl+Shift+S", Act::File(FileAct::SaveAs));
+        item(
+            ui,
+            tr("Save as..."),
+            "Ctrl+Shift+S",
+            Act::File(FileAct::SaveAs),
+        );
         item(
             ui,
             tr("Close tab"),
@@ -265,7 +275,12 @@ impl App {
             Act::Registry(RegistryAct::Open("HKEY_LOCAL_MACHINE".to_owned(), None)),
         );
         item(ui, tr("MCP server"), "", Act::Mcp(McpAct::Open));
-        item(ui, tr("Settings"), "Ctrl+,", Act::Settings(SettingsAct::Open));
+        item(
+            ui,
+            tr("Settings"),
+            "Ctrl+,",
+            Act::Settings(SettingsAct::Open),
+        );
         ui.separator();
         item(
             ui,
@@ -414,7 +429,9 @@ impl App {
                 }
                 self.compare_tool(ui, acts, compact);
                 if tool(ui, "\u{270F}", tr("Edit"), "", true) {
-                    acts.push(Act::Catalog(CatalogAct::Edit(crate::CatalogRef::Tab(self.active))));
+                    acts.push(Act::Catalog(CatalogAct::Edit(crate::CatalogRef::Tab(
+                        self.active,
+                    ))));
                 }
             }
             Some(Doc::Catalog(c)) => {
@@ -461,10 +478,14 @@ impl App {
                 sep(ui);
                 let key = d.selected_key();
                 if tool(ui, "\u{1F4C1}", tr("New key"), "", true) {
-                    acts.push(Act::RegFile(RegFileAct::New(crate::regfileview::EditKind::Key)));
+                    acts.push(Act::RegFile(RegFileAct::New(
+                        crate::regfileview::EditKind::Key,
+                    )));
                 }
                 if tool(ui, "\u{2795}", tr("New value"), "", key.is_some()) {
-                    acts.push(Act::RegFile(RegFileAct::New(crate::regfileview::EditKind::Value)));
+                    acts.push(Act::RegFile(RegFileAct::New(
+                        crate::regfileview::EditKind::Value,
+                    )));
                 }
                 if tool(ui, "\u{270F}", tr("Edit"), "", d.target().is_some()) {
                     acts.push(Act::RegFile(RegFileAct::Edit));
@@ -553,7 +574,10 @@ impl App {
                 }
                 sep(ui);
                 if tool(ui, "\u{1F4C1}", tr("New key"), "", true) {
-                    acts.push(Act::Registry(RegistryAct::New(crate::regview::EditKind::NewKey, "")));
+                    acts.push(Act::Registry(RegistryAct::New(
+                        crate::regview::EditKind::NewKey,
+                        "",
+                    )));
                 }
                 if tool(ui, "\u{2795}", tr("New value"), "", true) {
                     acts.push(Act::Registry(RegistryAct::New(
@@ -664,7 +688,9 @@ impl App {
         }
         ui.separator();
         if ui.button(tr("Settings of the policy templates")).clicked() {
-            acts.push(Act::Settings(SettingsAct::OpenSection(SettingsSection::Templates)));
+            acts.push(Act::Settings(SettingsAct::OpenSection(
+                SettingsSection::Templates,
+            )));
             ui.close();
         }
     }
@@ -706,7 +732,10 @@ impl App {
                         break;
                     };
                     let title = crate::catalogview::group_title(file, &lang, found).to_owned();
-                    chain.push((title, Some(Act::Catalog(CatalogAct::Select(format!("g:{g}"))))));
+                    chain.push((
+                        title,
+                        Some(Act::Catalog(CatalogAct::Select(format!("g:{g}")))),
+                    ));
                     group = found.parent.clone();
                 }
                 out.extend(chain.into_iter().rev());
@@ -1146,13 +1175,21 @@ pub(crate) fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
             ui.close();
         }
     };
-    item(ui, tr("Read this PC into a new profile"), Act::Pc(PcAct::Read));
+    item(
+        ui,
+        tr("Read this PC into a new profile"),
+        Act::Pc(PcAct::Read),
+    );
     item(
         ui,
         tr("Read the selection into this profile"),
         Act::Pc(PcAct::ReadSelection),
     );
-    item(ui, tr("Check the selection on this PC"), Act::Pc(PcAct::Check));
+    item(
+        ui,
+        tr("Check the selection on this PC"),
+        Act::Pc(PcAct::Check),
+    );
     ui.separator();
     item(
         ui,
@@ -1190,9 +1227,17 @@ pub(crate) fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         tr("Return the selection to Windows defaults..."),
         Act::Pc(PcAct::PlanNative(true)),
     );
-    item(ui, tr("Undo a change from its backup..."), Act::Pc(PcAct::PlanUndo));
+    item(
+        ui,
+        tr("Undo a change from its backup..."),
+        Act::Pc(PcAct::PlanUndo),
+    );
     ui.separator();
-    item(ui, tr("Open an audit report..."), Act::File(FileAct::OpenReport));
+    item(
+        ui,
+        tr("Open an audit report..."),
+        Act::File(FileAct::OpenReport),
+    );
 }
 
 /// The parts of the breadcrumb that fit a width: all of them, else the first, an ellipsis

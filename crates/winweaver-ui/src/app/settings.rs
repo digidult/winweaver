@@ -300,7 +300,8 @@ impl App {
                 ))
                 .clicked()
             {
-                self.pending_acts.push(Act::Theme(ThemeAct::Edit(shown.clone())));
+                self.pending_acts
+                    .push(Act::Theme(ThemeAct::Edit(shown.clone())));
             }
             if ui.button(tr("Open a theme file...")).clicked() {
                 self.pending_acts.push(Act::Theme(ThemeAct::OpenFile));
