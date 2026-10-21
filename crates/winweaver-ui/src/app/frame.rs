@@ -134,15 +134,7 @@ impl App {
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(p.bg))
             .show(ui, |ui| {
-                views::detail_view(
-                    ui,
-                    &self.catalog,
-                    texts,
-                    &self.imports,
-                    doc,
-                    settings,
-                    acts,
-                );
+                views::detail_view(ui, &self.catalog, texts, &self.imports, doc, settings, acts);
             });
     }
 
@@ -168,15 +160,7 @@ impl App {
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(p.bg))
             .show(ui, |ui| {
-                diffview::diff_detail(
-                    ui,
-                    &self.catalog,
-                    texts,
-                    doc,
-                    &self.settings,
-                    marked,
-                    acts,
-                );
+                diffview::diff_detail(ui, &self.catalog, texts, doc, &self.settings, marked, acts);
             });
     }
 

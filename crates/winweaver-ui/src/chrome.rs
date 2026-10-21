@@ -8,8 +8,7 @@ use eframe::egui::{self, Align, Align2, CornerRadius, Layout, Margin, RichText, 
 use crate::i18n::{tr, trf};
 use crate::style::{self, Palette};
 use crate::{
-    Act, App, Doc, Form, PRESETS, ScriptKind, Sel, Settings, SettingsSection, Tab, texts_for,
-    views,
+    Act, App, Doc, Form, PRESETS, ScriptKind, Sel, Settings, SettingsSection, Tab, texts_for, views,
 };
 use winweaver_core::validate::{self, Severity, Target};
 
