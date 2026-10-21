@@ -744,7 +744,7 @@ impl App {
         let current = self.current_bookmark();
         let star = current.is_some();
         let marked = current.is_some_and(|b| self.marks.find(&b).is_some());
-        let hint = self.docs.get(self.active).map_or("", search_hint);
+        let hint = self.search_hint_now();
         let search_open = self.active_search().is_some_and(|s| s.open);
         let tools = compact && self.has_tools();
         let tools_id = egui::Id::new("nav-tools-width");
