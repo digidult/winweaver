@@ -17,14 +17,14 @@ use crate::{
 };
 
 mod detail;
+mod profile_tree;
 mod rule;
-mod tree;
 #[cfg(test)]
 mod tests;
 
 pub(crate) use detail::*;
+pub(crate) use profile_tree::*;
 pub(crate) use rule::*;
-pub(crate) use tree::*;
 
 pub fn rtitle<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule) -> &'a str {
     texts.map_or(rule.title.as_str(), |t| t.rule_title(rule))

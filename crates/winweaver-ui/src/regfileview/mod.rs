@@ -24,9 +24,9 @@ use crate::{
 };
 
 mod editor;
-mod view;
 #[cfg(test)]
 mod tests;
+mod view;
 
 pub(crate) use editor::*;
 pub(crate) use view::*;

@@ -105,7 +105,12 @@ pub(crate) fn snapshot(path: &str, name: &str) -> BackupEntry {
     }
 }
 
-pub(crate) fn write_value(path: &str, name: &str, kind: RegKind, data: &Value) -> Result<(), String> {
+pub(crate) fn write_value(
+    path: &str,
+    name: &str,
+    kind: RegKind,
+    data: &Value,
+) -> Result<(), String> {
     let value = encode(kind, data)?;
     let (root, sub) = hive_path(path)?;
     let (key, _) = root.create_subkey(&sub).map_err(|e| e.to_string())?;

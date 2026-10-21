@@ -49,7 +49,12 @@ pub(crate) fn outline_row(lines: &[Line], item: &Item, index: usize) -> tree::Ro
 }
 
 /// The outline: the whole file first, then the entries the search finds.
-pub(crate) fn outline(ui: &mut egui::Ui, doc: &mut RegFileDoc, items: &[Item], selected: Option<usize>) {
+pub(crate) fn outline(
+    ui: &mut egui::Ui,
+    doc: &mut RegFileDoc,
+    items: &[Item],
+    selected: Option<usize>,
+) {
     let lines = &doc.file.lines;
     let words = doc.search.words();
     let keys = lines

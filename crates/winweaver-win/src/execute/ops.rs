@@ -84,7 +84,11 @@ pub(crate) fn subkey_names(path: &str) -> Result<Vec<String>, String> {
 
 /// Every value under a key and its subkeys, as a path and a name; a tree deeper than 32 keys or
 /// with more than 10000 values is refused, so it is never deleted without its backup.
-pub(crate) fn values_under(path: &str, out: &mut Vec<(String, String)>, depth: usize) -> Result<(), String> {
+pub(crate) fn values_under(
+    path: &str,
+    out: &mut Vec<(String, String)>,
+    depth: usize,
+) -> Result<(), String> {
     if depth > 32 || out.len() > 10_000 {
         return Err(format!("{path} is too large to back up"));
     }
@@ -359,7 +363,12 @@ pub(crate) fn set_list(
 
 /// Sets the start type of a service that is present; with `only_from`, only when its start type
 /// is that one now.
-pub(crate) fn service_start(backup: &mut Backup, name: &str, start: u32, only_from: Option<u32>) -> Outcome {
+pub(crate) fn service_start(
+    backup: &mut Backup,
+    name: &str,
+    start: u32,
+    only_from: Option<u32>,
+) -> Outcome {
     let key = apply::service_key(name);
     match NativeMachine.value(&key, "Start") {
         Ok(Some(now)) => {
@@ -382,7 +391,13 @@ pub(crate) fn service_start(backup: &mut Backup, name: &str, start: u32, only_fr
 }
 
 /// Runs a program of the system folder with the folder of the installation media in its arguments.
-pub(crate) fn run_from_media(folder: &str, pattern: &str, deep: bool, file: &str, args: &[String]) -> Outcome {
+pub(crate) fn run_from_media(
+    folder: &str,
+    pattern: &str,
+    deep: bool,
+    file: &str,
+    args: &[String],
+) -> Outcome {
     let Some(source) = media_folder(folder, pattern, deep) else {
         return ("skipped", format!("no drive has {folder} with {pattern}"));
     };
