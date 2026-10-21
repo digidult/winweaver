@@ -5,7 +5,10 @@ use serde_json::{Value, json};
 use winweaver_core::catalog::{Action, Catalog, Param, Rule, check};
 use winweaver_core::resolver::{self, State as RuleState};
 
-use super::{Args, Kind, LIST_LIMIT, Needs, Outcome, Tool, current, current_mut, fail, resolution, s, schema};
+use super::{
+    Args, Kind, LIST_LIMIT, Needs, Outcome, Tool, ToolError, current, current_mut, fail, resolution,
+    s, schema,
+};
 use crate::{Server, State};
 
 pub(super) const LIST_GROUPS: Tool = Tool {
@@ -406,8 +409,6 @@ fn param_value(param: &Param, pname: &str, value: Value) -> Result<Value, ToolEr
         }
     })
 }
-
-use super::ToolError;
 
 fn set_param(server: &Server, state: &mut State, args: &Args<'_>) -> Outcome {
     let catalog = &server.catalog;

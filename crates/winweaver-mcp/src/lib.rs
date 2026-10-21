@@ -325,7 +325,7 @@ impl Server {
     /// the mode: the choice of the person who starts the server.
     pub fn select(&self, name: &str) -> Result<(), String> {
         let mut state = self.lock();
-        tools::select(self, &mut state, name).map_err(|e| format!("{}: {}", e.kind, e.message))
+        tools::select(self, &mut state, name).map_err(|e| format!("{}: {}", e.kind.name(), e.message))
     }
 
     /// Handles one JSON-RPC message given as text; `None` for a notification.
@@ -470,18 +470,18 @@ impl Server {
                 "WARN",
                 &format!(
                     "tool {name} {} in {ms} ms: {}",
-                    e.kind,
+                    e.kind.name(),
                     e.message.chars().take(200).collect::<String>()
                 ),
             ),
         }
         let answer = match &outcome {
             Ok(value) => value.clone(),
-            Err(e) => Value::from(format!("{}: {}", e.kind, e.message)),
+            Err(e) => Value::from(format!("{}: {}", e.kind.name(), e.message)),
         };
         let result = match &outcome {
             Ok(_) => "ok",
-            Err(e) => e.kind,
+            Err(e) => e.kind.name(),
         };
         self.record(Call {
             method: name,
@@ -502,7 +502,7 @@ impl Server {
             }
             Err(e) => {
                 json!({
-                    "content": [{ "type": "text", "text": format!("{}: {}", e.kind, e.message) }],
+                    "content": [{ "type": "text", "text": format!("{}: {}", e.kind.name(), e.message) }],
                     "isError": true,
                 })
             }

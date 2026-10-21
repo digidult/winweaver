@@ -9,7 +9,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::catalog::Catalog;
+use crate::admx::RULE_PREFIX;
+use crate::catalog::{Catalog, Param, check};
 use crate::jsonfile::{self, DocError, Document};
 
 pub const FORMAT: &str = "winweaver-profile";
@@ -222,6 +223,47 @@ impl Profile {
             .rule(id)
             .and_then(|r| r.params.get(name))
             .map(|p| p.default_value())
+    }
+
+    /// Sets a parameter of a rule: the value, or nothing when it is the default of the
+    /// parameter; whether the choice changed.
+    pub fn set_param(&mut self, catalog: &Catalog, id: &str, name: &str, value: Value) -> bool {
+        let changed = self
+            .param(catalog, id, name)
+            .is_none_or(|v| !check::same_value(&v, &value));
+        if changed {
+            let default = catalog
+                .rule(id)
+                .and_then(|r| r.params.get(name))
+                .map(Param::default_value);
+            let choice = self.rules.entry(id.to_owned()).or_default();
+            if default.is_some_and(|d| check::same_value(&d, &value)) {
+                choice.params.shift_remove(name);
+            } else {
+                choice.params.insert(name.to_owned(), value);
+            }
+        }
+        changed
+    }
+
+    /// Turns every rule of a group and its subgroups on or off; turning on leaves the imported
+    /// policies as they are, since a group never turns them on by itself. The count of rules
+    /// that changed.
+    pub fn set_group(&mut self, catalog: &Catalog, group: &str, on: bool) -> usize {
+        let ids: Vec<String> = catalog
+            .rules_under(group)
+            .iter()
+            .filter(|r| !on || !r.id.starts_with(RULE_PREFIX))
+            .map(|r| r.id.clone())
+            .collect();
+        let mut changed = 0;
+        for id in &ids {
+            if self.is_on(id) != on {
+                self.set_on(id, on);
+                changed += 1;
+            }
+        }
+        changed
     }
 
     /// The ids of the rules the catalog does not have, moved into `unknown`.
