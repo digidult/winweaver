@@ -36,8 +36,11 @@ struct Collected {
     post_blocks: Vec<String>,
 }
 
+/// The lines of a component or a pass.
+type Lines = Vec<String>;
+
 /// The components a pass gets beyond the fixed ones, by pass: the component and its lines.
-type Extra = BTreeMap<String, Vec<(String, Vec<String>)>>;
+type Extra = BTreeMap<String, Vec<(String, Lines)>>;
 
 /// The rules in effect: their commands, settings and OOBE elements for the passes, the blocks of
 /// their script actions for the scripts.
@@ -397,7 +400,7 @@ impl Assembly<'_> {
 
     /// The pass specialize: the deployment commands (the scripts extracted and Setup-System run),
     /// the time zone and the computer name, the workgroup.
-    fn specialize(&mut self) -> Result<(Vec<String>, Vec<String>, Vec<String>), RenderError> {
+    fn specialize(&mut self) -> Result<(Lines, Lines, Lines), RenderError> {
         let profile = self.profile;
         let install = &profile.install;
         let mut commands = Vec::new();
@@ -449,7 +452,7 @@ impl Assembly<'_> {
     }
 
     /// The pass oobeSystem: the languages, the OOBE elements of the rules and the accounts.
-    fn oobe_system(&mut self) -> Result<(Vec<String>, Vec<String>), RenderError> {
+    fn oobe_system(&mut self) -> Result<(Lines, Lines), RenderError> {
         let profile = self.profile;
         let l = &profile.languages;
         let mut international = vec![
