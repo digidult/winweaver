@@ -35,7 +35,6 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use eframe::egui;
-use serde_json::Value;
 use winweaver_core::admx::{self, CatalogFile};
 use winweaver_core::bookmarks::{self, Bookmark, Bookmarks};
 use winweaver_core::catalog::{Catalog, TREE_ROOTS, check};
@@ -44,7 +43,7 @@ use winweaver_core::diff::{self, Diff};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::import;
 use winweaver_core::jsonfile;
-use winweaver_core::profile::{self, Install, Languages, Profile};
+use winweaver_core::profile::{self, Profile};
 use winweaver_core::regfile::{self, Line, RegFile};
 use winweaver_core::render;
 use winweaver_core::resolver::{self, Resolution};
