@@ -6,7 +6,7 @@ impl App {
     /// Opens a page of the documentation a link names, such as
     /// `docs/technical/reference/18-browsers.md#microsoft-edge`, at the heading of its anchor; a
     /// link `#heading` goes to a heading of the Markdown tab that is open.
-    fn open_doc(&mut self, link: &str) {
+    pub(crate) fn open_doc(&mut self, link: &str) {
         let (file, anchor) = match link.split_once('#') {
             Some((f, a)) => (f, Some(a.to_owned())),
             None => (link, None),
@@ -56,12 +56,12 @@ impl App {
         }
     }
 
-    fn remember_recent(&mut self, path: &Path) {
+    pub(crate) fn remember_recent(&mut self, path: &Path) {
         self.settings.remember(path);
         self.settings_dirty = true;
     }
 
-    fn open_path(&mut self, path: PathBuf) {
+    pub(crate) fn open_path(&mut self, path: PathBuf) {
         if path.extension().is_some_and(|e| e == diff::EXTENSION) {
             self.open_diff_path(path);
             return;
@@ -149,7 +149,7 @@ impl App {
         }
     }
 
-    fn save_active(&mut self, ask: bool) {
+    pub(crate) fn save_active(&mut self, ask: bool) {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             self.status = tr("Nothing to save: the active tab is not a profile").to_owned();
             return;
@@ -190,7 +190,7 @@ impl App {
         }
     }
 
-    fn open_license(&mut self) {
+    pub(crate) fn open_license(&mut self) {
         match self
             .docs
             .iter()
@@ -204,7 +204,7 @@ impl App {
         }
     }
 
-    fn open_guide(&mut self) {
+    pub(crate) fn open_guide(&mut self) {
         match self
             .docs
             .iter()
@@ -218,7 +218,7 @@ impl App {
         }
     }
 
-    fn open_md_path(&mut self, path: PathBuf) {
+    pub(crate) fn open_md_path(&mut self, path: PathBuf) {
         match winweaver_core::jsonfile::read_text(&path, MARKDOWN_MAX_BYTES) {
             Ok(text) => {
                 let title = path
@@ -240,7 +240,7 @@ impl App {
 
     /// Opens an answer file (its embedded profile), a WinKickOff profile or an audit report as a
     /// new, unsaved profile.
-    fn open_foreign(&mut self, path: PathBuf, ext: &str) {
+    pub(crate) fn open_foreign(&mut self, path: PathBuf, ext: &str) {
         let name = jsonfile::display_name(&path);
         let text = match jsonfile::read_text_bom(&path, jsonfile::MAX_BYTES) {
             Ok(t) => t,

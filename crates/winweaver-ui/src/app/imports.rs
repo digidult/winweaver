@@ -4,7 +4,7 @@ use crate::*;
 
 impl App {
     /// Opens a catalog file in a tab of its own, without importing it.
-    fn open_catalog_path(&mut self, path: PathBuf) {
+    pub(crate) fn open_catalog_path(&mut self, path: PathBuf) {
         if let Some(i) = self
             .docs
             .iter()
@@ -27,7 +27,7 @@ impl App {
 
     /// Opens an ADMX file as a catalog tab without importing it: its policies with the texts of
     /// the ADML next to it; the command bar of the tab offers Import.
-    fn open_admx_path(&mut self, path: PathBuf) {
+    pub(crate) fn open_admx_path(&mut self, path: PathBuf) {
         if let Some(i) = self
             .docs
             .iter()
@@ -61,7 +61,7 @@ impl App {
 
     /// Imports the catalog file of the active tab: it is saved next to the executable, merged
     /// into the catalog, and the tab shows the import from now on.
-    fn import_open_catalog(&mut self) {
+    pub(crate) fn import_open_catalog(&mut self) {
         let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) else {
             return;
         };
@@ -95,7 +95,7 @@ impl App {
     /// Reads the catalog files of the imports the settings load, and no other file; the
     /// templates of this Windows first, so that they win a policy two imports hold. Settings of
     /// an earlier version load every import but the hidden ones, and name them from now on.
-    fn load_imports(&mut self) {
+    pub(crate) fn load_imports(&mut self) {
         let ids = loaded_import_ids(&self.settings, &self.imports_dir);
         if self.settings.loaded_imports.is_none() {
             self.settings.loaded_imports = Some(ids.clone());
@@ -116,12 +116,12 @@ impl App {
 
     /// Lists the catalog files of the imports folder for the settings; of a file that is not
     /// loaded only the header is read.
-    fn refresh_import_list(&mut self) {
+    pub(crate) fn refresh_import_list(&mut self) {
         self.import_list = import_entries(&self.imports_dir, &self.imports);
     }
 
     /// Reads the catalog file of an import, unless it is loaded, and marks it in the settings.
-    fn load_import(&mut self, id: &str) -> Result<(), String> {
+    pub(crate) fn load_import(&mut self, id: &str) -> Result<(), String> {
         if !self.imports.iter().any(|f| f.id == id) {
             let path = self
                 .imports_dir
@@ -136,7 +136,7 @@ impl App {
     }
 
     /// Names an import among the loaded ones of the settings.
-    fn mark_loaded(&mut self, id: &str) {
+    pub(crate) fn mark_loaded(&mut self, id: &str) {
         let list = self.settings.loaded_imports.get_or_insert_with(Vec::new);
         if !list.iter().any(|x| x == id) {
             list.push(id.to_owned());
@@ -145,7 +145,7 @@ impl App {
     }
 
     /// Forgets an import: out of the settings, out of memory, and its tab closes.
-    fn unload_import(&mut self, id: &str) {
+    pub(crate) fn unload_import(&mut self, id: &str) {
         self.imports.retain(|f| f.id != id);
         if let Some(list) = &mut self.settings.loaded_imports {
             list.retain(|x| x != id);
@@ -171,7 +171,7 @@ impl App {
     /// files of the imports that are not loaded, reading only the ids of their rules, and loads
     /// the files that have some of them: the templates of this Windows first, no file more than
     /// needed.
-    fn load_catalogs_for_unknown(&mut self) {
+    pub(crate) fn load_catalogs_for_unknown(&mut self) {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             return;
         };
@@ -224,7 +224,7 @@ impl App {
 
     /// Merges the loaded imports into the catalog and brings the choices of the open profiles in
     /// line with it.
-    fn rebuild_catalog(&mut self) {
+    pub(crate) fn rebuild_catalog(&mut self) {
         match admx::merge(&self.base_catalog, &self.imports) {
             Ok((catalog, notes)) => {
                 self.catalog = catalog;
@@ -263,7 +263,7 @@ impl App {
     }
 
     /// Starts an import in a thread: the templates of this Windows, a folder or a catalog file.
-    fn start_import(&mut self, source: ImportSource) {
+    pub(crate) fn start_import(&mut self, source: ImportSource) {
         if self.importing.is_some() {
             return;
         }
@@ -353,7 +353,7 @@ impl App {
     }
 
     /// Takes the result of a finished import: saved next to the executable, merged.
-    fn poll_import(&mut self, ctx: &egui::Context) {
+    pub(crate) fn poll_import(&mut self, ctx: &egui::Context) {
         let Some(rx) = &self.importing else {
             return;
         };
@@ -395,7 +395,7 @@ impl App {
     }
 
     /// Opens the tab of an import, or brings it to the front.
-    fn open_catalog(&mut self, id: &str) {
+    pub(crate) fn open_catalog(&mut self, id: &str) {
         if let Some(i) = self
             .docs
             .iter()
@@ -413,7 +413,7 @@ impl App {
     }
 
     /// Gives an import another name, in the settings and as the title of its tree.
-    fn rename_import(&mut self, id: &str, name: &str) {
+    pub(crate) fn rename_import(&mut self, id: &str, name: &str) {
         self.renaming = None;
         let name = name.trim();
         if name.is_empty() || name.chars().count() > 120 || name.chars().any(char::is_control) {
@@ -452,7 +452,7 @@ impl App {
         };
     }
 
-    fn export_import(&mut self, id: &str) {
+    pub(crate) fn export_import(&mut self, id: &str) {
         let Some(file) = self.imports.iter().find(|f| f.id == id) else {
             return;
         };
@@ -474,7 +474,7 @@ impl App {
     }
 
     /// The section of the settings that lists the imports of policy templates.
-    fn imports_view(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    pub(crate) fn imports_view(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         style::section_title(ui, tr("Policy templates"));
         ui.weak(tr("Imported ADMX templates become rules under Standard policies. Only the checked catalogs are read and loaded; when two of them hold a policy, the templates of this Windows win."));
         for entry in &self.import_list {
@@ -563,7 +563,7 @@ impl App {
 
     /// Opens the editor of a loaded import or of the file of a catalog tab; an editor of the same
     /// file comes to the front.
-    fn edit_catalog(&mut self, which: CatalogRef) {
+    pub(crate) fn edit_catalog(&mut self, which: CatalogRef) {
         let import_path =
             |dir: &Path, id: &str| dir.join(format!("{id}.{}", admx::CATALOG_EXTENSION));
         let (file, path, import) = match &which {
@@ -597,7 +597,7 @@ impl App {
     }
 
     /// An empty catalog file among the imports, loaded, in its editor.
-    fn new_catalog(&mut self) {
+    pub(crate) fn new_catalog(&mut self) {
         let mut n = 1;
         let id = loop {
             let id = format!("custom-{n}");
@@ -636,7 +636,7 @@ impl App {
     }
 
     /// Saves the file of the editor in front after a check; a loaded import is read again.
-    fn save_catalog_edit(&mut self) {
+    pub(crate) fn save_catalog_edit(&mut self) {
         let Some(Doc::CatalogEdit(d)) = self.docs.get_mut(self.active) else {
             return;
         };
@@ -663,7 +663,7 @@ impl App {
     }
 
     /// The catalog of the active tab and the other one, side by side in a Markdown page.
-    fn compare_catalog(&mut self, other: CatalogRef) {
+    pub(crate) fn compare_catalog(&mut self, other: CatalogRef) {
         let Some(Doc::Catalog(c)) = self.docs.get(self.active) else {
             return;
         };

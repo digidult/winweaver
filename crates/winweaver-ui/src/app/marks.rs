@@ -4,7 +4,7 @@ use crate::*;
 
 impl App {
     /// Asks before a bookmark is removed, naming its comment when it has one.
-    fn ask_remove_mark(&mut self, i: usize) {
+    pub(crate) fn ask_remove_mark(&mut self, i: usize) {
         let Some(b) = self.marks.items.get(i) else {
             return;
         };
@@ -61,7 +61,7 @@ impl App {
     }
 
     /// Writes the bookmark file; `false` (and a status message) when it cannot be written.
-    fn save_marks(&mut self) -> bool {
+    pub(crate) fn save_marks(&mut self) -> bool {
         if let Some(parent) = self.marks_path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
@@ -74,7 +74,7 @@ impl App {
         }
     }
 
-    fn open_marks_path(&mut self, path: PathBuf) {
+    pub(crate) fn open_marks_path(&mut self, path: PathBuf) {
         match Bookmarks::load(&path) {
             Ok(marks) => {
                 self.marks = marks;
@@ -94,7 +94,7 @@ impl App {
     /// title) and selects its item.
     /// Opens the profile of a bookmark (loading its file when no tab has it) and selects the
     /// option; without a profile file the option is shown in the profile tab in front, else the first one.
-    fn go_to_mark(&mut self, i: usize) {
+    pub(crate) fn go_to_mark(&mut self, i: usize) {
         let Some(mark) = self.marks.items.get(i).cloned() else {
             return;
         };

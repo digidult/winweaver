@@ -5,7 +5,7 @@ use crate::*;
 impl App {
     /// Unlocks the passwords of the users file in front, sets or changes their master password
     /// (`set`), or sets the password of the selected account (`password`) once unlocked.
-    fn users_unlock(&mut self, set: bool, password: bool) {
+    pub(crate) fn users_unlock(&mut self, set: bool, password: bool) {
         let Some(d) = self.active_users() else {
             return;
         };
@@ -18,7 +18,7 @@ impl App {
         }
     }
 
-    fn active_users(&mut self) -> Option<&mut usersview::UsersDoc> {
+    pub(crate) fn active_users(&mut self) -> Option<&mut usersview::UsersDoc> {
         match self.docs.get_mut(self.active) {
             Some(Doc::Users(d)) => Some(d),
             _ => None,
@@ -26,7 +26,7 @@ impl App {
     }
 
     /// A new users file in a tab of its own, empty or of the accounts of this PC.
-    fn new_users_doc(&mut self, read: Vec<users::User>) {
+    pub(crate) fn new_users_doc(&mut self, read: Vec<users::User>) {
         let mut file = UsersFile::new(tr("Users"));
         file.users = read;
         let mut doc = usersview::UsersDoc::new(file, None);
@@ -37,7 +37,7 @@ impl App {
     }
 
     /// Opens a users file in a tab of its own, or brings its tab to the front.
-    fn open_users_path(&mut self, path: PathBuf) {
+    pub(crate) fn open_users_path(&mut self, path: PathBuf) {
         let same = |d: &Doc| matches!(d, Doc::Users(u) if u.path.as_ref() == Some(&path));
         if let Some(i) = self.docs.iter().position(same) {
             self.active = i;
@@ -58,7 +58,7 @@ impl App {
 
     /// Saves the users file in front, with its passwords encrypted again, at its place or at
     /// one the user picks.
-    fn save_users_doc(&mut self, ask: bool) {
+    pub(crate) fn save_users_doc(&mut self, ask: bool) {
         let Some(Doc::Users(d)) = self.docs.get(self.active) else {
             return;
         };
@@ -96,7 +96,7 @@ impl App {
     }
 
     /// Asks before an operation of the users file in front on this PC, once its plan is sound.
-    fn ask_users_run(&mut self, operation: users::Operation, all: bool) {
+    pub(crate) fn ask_users_run(&mut self, operation: users::Operation, all: bool) {
         if !winweaver_win::elevated() {
             self.status =
                 tr("Run WinWeaver as administrator to change the accounts of this PC").to_owned();
@@ -132,7 +132,7 @@ impl App {
     }
 
     /// Runs a confirmed operation on this PC and shows its outcomes in the tab.
-    fn run_users(&mut self, operation: users::Operation, names: &[String]) {
+    pub(crate) fn run_users(&mut self, operation: users::Operation, names: &[String]) {
         let Some(d) = self.active_users() else {
             return;
         };
@@ -157,7 +157,7 @@ impl App {
     }
 
     /// Saves the stand-alone script of the users file in front next to the file it reads.
-    fn save_users_script(&mut self) {
+    pub(crate) fn save_users_script(&mut self) {
         let Some(Doc::Users(d)) = self.docs.get(self.active) else {
             return;
         };
@@ -202,7 +202,7 @@ impl App {
 
     /// A users file of the accounts of the profile in front, in a tab of its own; the passwords
     /// of the profile wait for a master password before the first save.
-    fn users_from_profile(&mut self) {
+    pub(crate) fn users_from_profile(&mut self) {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             return;
         };
@@ -223,7 +223,7 @@ impl App {
 
     /// Loads the accounts of a users file into the profile in front, asking the master password
     /// for their passwords when the file holds some.
-    fn users_into_profile(&mut self) {
+    pub(crate) fn users_into_profile(&mut self) {
         if self.active_profile().is_none() {
             return;
         }
@@ -248,7 +248,7 @@ impl App {
     }
 
     /// The window of the master password of a users file loaded into a profile.
-    fn users_import_view(&mut self, ctx: &egui::Context, acts: &mut Vec<Act>) {
+    pub(crate) fn users_import_view(&mut self, ctx: &egui::Context, acts: &mut Vec<Act>) {
         let Some(import) = &mut self.users_import else {
             return;
         };

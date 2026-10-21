@@ -5,7 +5,7 @@ use crate::*;
 impl App {
     /// Reads the configuration of the MCP tab at the start: `mcp/default.wwmcp`, made from the port
     /// and the token an earlier version kept in the settings when it does not exist yet.
-    fn load_mcp_config(&mut self) {
+    pub(crate) fn load_mcp_config(&mut self) {
         let path = self.mcp.path.clone();
         if path.exists() {
             match winweaver_mcp::config::Config::load(&path) {
@@ -35,7 +35,7 @@ impl App {
     }
 
     /// Writes the configuration of the MCP tab once it changed; a failure is shown once.
-    fn persist_mcp(&mut self) {
+    pub(crate) fn persist_mcp(&mut self) {
         let config = self.mcp.config();
         if self.mcp.saved.as_ref() == Some(&config) {
             return;
@@ -47,7 +47,7 @@ impl App {
     }
 
     /// Opens a configuration file in the MCP tab; a running server keeps the one it has.
-    fn open_mcp_config(&mut self, path: PathBuf) {
+    pub(crate) fn open_mcp_config(&mut self, path: PathBuf) {
         if self.mcp.run.is_some() {
             self.status =
                 tr("Stop the MCP server before you open another configuration").to_owned();
@@ -66,7 +66,7 @@ impl App {
     }
 
     /// Saves the configuration of the MCP tab into another file, which the tab edits from then on.
-    fn save_mcp_as(&mut self) {
+    pub(crate) fn save_mcp_as(&mut self) {
         let dir = winweaver_mcp::config::Config::folder(&exe_dir());
         let _ = std::fs::create_dir_all(&dir);
         let ext = winweaver_mcp::config::EXTENSION;
@@ -94,7 +94,7 @@ impl App {
     }
 
     /// Starts the HTTP server of the window with the configuration of the MCP tab.
-    fn start_mcp(&mut self) {
+    pub(crate) fn start_mcp(&mut self) {
         if self.mcp.token.is_empty() {
             match winweaver_mcp::new_token() {
                 Ok(t) => self.mcp.token = t,

@@ -5,7 +5,7 @@ use crate::*;
 impl App {
     /// The theme of the settings: a colour theme over its light or dark base, or the plain theme.
     /// The id of the theme the settings choose for a side when they follow Windows.
-    fn shown_theme_id(&self, dark_mode: bool) -> String {
+    pub(crate) fn shown_theme_id(&self, dark_mode: bool) -> String {
         if !self.settings.custom_theme.is_empty() {
             return self.settings.custom_theme.clone();
         }
@@ -19,7 +19,7 @@ impl App {
 
     /// The light and dark themes of the window and the preference: the theme in the editor in
     /// front, else the one of the settings, else Light and Dark as Windows shows its apps.
-    fn wanted_theme(&self) -> (themes::Theme, themes::Theme, egui::ThemePreference) {
+    pub(crate) fn wanted_theme(&self) -> (themes::Theme, themes::Theme, egui::ThemePreference) {
         let light = themes::find(&self.themes, "light");
         let dark = themes::find(&self.themes, "dark");
         let chosen = match self.docs.get(self.active) {
@@ -34,7 +34,7 @@ impl App {
         }
     }
 
-    fn apply_theme(&mut self, ctx: &egui::Context) {
+    pub(crate) fn apply_theme(&mut self, ctx: &egui::Context) {
         let wanted = self.wanted_theme();
         if self.applied_theme.as_ref() == Some(&wanted) {
             return;
@@ -50,7 +50,7 @@ impl App {
     }
 
     /// Opens the editor of a theme, or brings its tab to the front.
-    fn edit_theme(&mut self, theme: themes::Theme) {
+    pub(crate) fn edit_theme(&mut self, theme: themes::Theme) {
         if let Some(i) = self
             .docs
             .iter()
@@ -64,7 +64,7 @@ impl App {
         self.active = self.docs.len() - 1;
     }
 
-    fn open_theme_path(&mut self, path: PathBuf) {
+    pub(crate) fn open_theme_path(&mut self, path: PathBuf) {
         match themes::Theme::load(&path) {
             Ok(theme) => {
                 self.edit_theme(theme);
@@ -75,7 +75,7 @@ impl App {
     }
 
     /// Writes the theme of the active tab to its file, or to one the user names.
-    fn save_theme(&mut self, ask: bool) {
+    pub(crate) fn save_theme(&mut self, ask: bool) {
         let Some(Doc::Theme(d)) = self.docs.get(self.active) else {
             return;
         };
@@ -124,7 +124,7 @@ impl App {
 
     /// The title bar in the colours of the theme (Windows 11; the dark frame on Windows 10), given
     /// again whenever the colours change, also when the theme follows Windows.
-    fn color_title_bar(&mut self, ui: &egui::Ui, frame: &eframe::Frame) {
+    pub(crate) fn color_title_bar(&mut self, ui: &egui::Ui, frame: &eframe::Frame) {
         use raw_window_handle::{HasWindowHandle, RawWindowHandle};
         let v = ui.visuals();
         let rgb = |c: egui::Color32| [c.r(), c.g(), c.b()];

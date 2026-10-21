@@ -4,7 +4,7 @@ use crate::*;
 
 impl App {
     /// Opens a registry file in a tab of its own, or brings its tab to the front.
-    fn open_reg_path(&mut self, path: PathBuf) {
+    pub(crate) fn open_reg_path(&mut self, path: PathBuf) {
         if let Some(i) = self
             .docs
             .iter()
@@ -26,7 +26,7 @@ impl App {
     }
 
     /// Saves the registry file in front at its place, or at one the user picks.
-    fn save_reg_doc(&mut self, ask: bool) {
+    pub(crate) fn save_reg_doc(&mut self, ask: bool) {
         let Some(Doc::RegFile(d)) = self.docs.get(self.active) else {
             return;
         };
@@ -64,7 +64,7 @@ impl App {
 
     /// Opens the window of the rights of the selected key of the registry tab in front: its owner
     /// and its access list with the names of the accounts.
-    fn registry_rights(&mut self) {
+    pub(crate) fn registry_rights(&mut self) {
         use winweaver_core::security::{self, Rights};
         let reg = self.registry.clone();
         let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
@@ -101,7 +101,7 @@ impl App {
     }
 
     /// Adds an entry that lets the account typed in the window of the rights read the key.
-    fn registry_rights_add(&mut self) {
+    pub(crate) fn registry_rights_add(&mut self) {
         use winweaver_core::security::{Entry, Scope};
         let reg = self.registry.clone();
         let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
@@ -132,7 +132,7 @@ impl App {
     }
 
     /// Writes the access list of the window of the rights to its key.
-    fn registry_rights_save(&mut self) {
+    pub(crate) fn registry_rights_save(&mut self) {
         let reg = self.registry.clone();
         let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
             return;
@@ -152,7 +152,7 @@ impl App {
 
     /// Starts the search of the registry tab in front under its selected key, in a thread of its
     /// own; `poll_registry_search` takes the result.
-    fn registry_find(&mut self) {
+    pub(crate) fn registry_find(&mut self) {
         let reg = self.registry.clone();
         let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
             return;
@@ -200,7 +200,7 @@ impl App {
     }
 
     /// Takes the result of a finished search of a registry tab.
-    fn poll_registry_search(&mut self, ctx: &egui::Context) {
+    pub(crate) fn poll_registry_search(&mut self, ctx: &egui::Context) {
         for doc in &mut self.docs {
             let Doc::Registry(d) = doc else {
                 continue;
@@ -226,7 +226,7 @@ impl App {
     }
 
     /// Opens the registry tab, or brings it to the front, at a key and a value of it.
-    fn open_registry(&mut self, path: &str, value: Option<&str>) {
+    pub(crate) fn open_registry(&mut self, path: &str, value: Option<&str>) {
         let reg = self.registry.clone();
         match self.docs.iter().position(|d| matches!(d, Doc::Registry(_))) {
             Some(i) => {
@@ -245,7 +245,7 @@ impl App {
 
     /// Writes the value or makes the key of the editor of the registry tab; an error stays in
     /// the editor.
-    fn registry_save(&mut self) {
+    pub(crate) fn registry_save(&mut self) {
         use regview::EditKind;
         let reg = self.registry.clone();
         let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
@@ -300,7 +300,7 @@ impl App {
     }
 
     /// Asks before the selected value of the registry tab, or its key without one, is deleted.
-    fn ask_registry_delete(&mut self) {
+    pub(crate) fn ask_registry_delete(&mut self) {
         let Some(Doc::Registry(d)) = self.docs.get(self.active) else {
             return;
         };
@@ -333,7 +333,7 @@ impl App {
         });
     }
 
-    fn registry_delete(&mut self, path: &str, value: Option<&str>) {
+    pub(crate) fn registry_delete(&mut self, path: &str, value: Option<&str>) {
         let reg = self.registry.clone();
         let result = match value {
             Some(v) => reg.delete_value(path, v),
@@ -356,7 +356,7 @@ impl App {
     }
 
     /// Bookmarks the key of the registry tab and its selected value.
-    fn bookmark_registry(&mut self) {
+    pub(crate) fn bookmark_registry(&mut self) {
         let Some(Doc::Registry(d)) = self.docs.get(self.active) else {
             return;
         };

@@ -3,7 +3,7 @@
 use crate::*;
 
 impl App {
-    fn active_profile(&mut self) -> Option<&mut ProfileDoc> {
+    pub(crate) fn active_profile(&mut self) -> Option<&mut ProfileDoc> {
         match self.docs.get_mut(self.active) {
             Some(Doc::Profile(doc)) => Some(doc),
             _ => None,
@@ -11,7 +11,7 @@ impl App {
     }
 
     /// The search of the active tab, `None` for a tab without one.
-    fn active_search(&mut self) -> Option<&mut Search> {
+    pub(crate) fn active_search(&mut self) -> Option<&mut Search> {
         match self.docs.get_mut(self.active)? {
             Doc::Profile(d) => Some(&mut d.search),
             Doc::Diff(d) => Some(&mut d.search),
@@ -27,7 +27,7 @@ impl App {
 
     /// After the search of a tab is cleared, the selected item stays in view: the groups above
     /// it open and its row is scrolled to at the next frame.
-    fn reveal_selection(&mut self) {
+    pub(crate) fn reveal_selection(&mut self) {
         let catalog = &self.catalog;
         match self.docs.get_mut(self.active) {
             Some(Doc::Profile(doc)) => {
@@ -79,14 +79,14 @@ impl App {
         }
     }
 
-    fn refresh_active(&mut self) {
+    pub(crate) fn refresh_active(&mut self) {
         let catalog = &self.catalog;
         if let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) {
             doc.refresh(catalog);
         }
     }
 
-    fn crumbs(&self) -> Vec<(String, Sel)> {
+    pub(crate) fn crumbs(&self) -> Vec<(String, Sel)> {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             return Vec::new();
         };
@@ -136,7 +136,7 @@ impl App {
         crumbs
     }
 
-    fn check_active(&mut self) {
+    pub(crate) fn check_active(&mut self) {
         let catalog = &self.catalog;
         let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
             self.status = tr("Nothing to check: the active tab is not a profile").to_owned();
@@ -148,7 +148,7 @@ impl App {
 
     /// Checks the profile, builds the answer file and writes it with its scripts into the
     /// output folder; errors and warnings go to the messages panel.
-    fn build_active(&mut self) {
+    pub(crate) fn build_active(&mut self) {
         self.check_active();
         let catalog = &self.catalog;
         let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
@@ -215,7 +215,7 @@ impl App {
 
     /// The rule ids of the selection of the active profile: a rule, the rules of a group, or every
     /// rule when nothing (or a form) is selected.
-    fn selection_ids(&self) -> Vec<String> {
+    pub(crate) fn selection_ids(&self) -> Vec<String> {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             return Vec::new();
         };
@@ -234,7 +234,7 @@ impl App {
 
     /// Shows a policy of an import in the tree of a profile: an import that is not loaded is, the
     /// first profile tab comes to the front, the groups above the policy open and it is selected.
-    fn show_in_profile(&mut self, import: &str, rule: &str) {
+    pub(crate) fn show_in_profile(&mut self, import: &str, rule: &str) {
         if !import.is_empty() && !self.imports.iter().any(|f| f.id == import) {
             if let Err(e) = self.load_import(import) {
                 self.status = trf("The import was not loaded: {e}", &[("e", &e)]);

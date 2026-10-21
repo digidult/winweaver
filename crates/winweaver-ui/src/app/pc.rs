@@ -4,7 +4,7 @@ use crate::*;
 
 impl App {
     /// Reads this PC: every rule into a new profile tab, or the selection into the open profile.
-    fn read_pc(&mut self, only_selection: bool) {
+    pub(crate) fn read_pc(&mut self, only_selection: bool) {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             self.status =
                 tr("Read this PC: open a profile first; its rules and forms are the base")
@@ -35,7 +35,7 @@ impl App {
     }
 
     /// Compares the selected rules of the profile with this PC.
-    fn check_on_pc(&mut self) {
+    pub(crate) fn check_on_pc(&mut self) {
         let ids = self.selection_ids();
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             return;
@@ -49,7 +49,7 @@ impl App {
 
     /// Starts a read of this PC in a thread of its own, one at a time; `poll_pc_read` takes its
     /// report.
-    fn start_pc_read(&mut self, job: PcJob, plan: thispc::Plan, read_system: bool) {
+    pub(crate) fn start_pc_read(&mut self, job: PcJob, plan: thispc::Plan, read_system: bool) {
         if self.pc_read.is_some() {
             self.status = tr("This PC is being read; wait until the read ends").to_owned();
             return;
@@ -79,7 +79,7 @@ impl App {
     }
 
     /// Takes the report of a finished read of this PC.
-    fn poll_pc_read(&mut self, ctx: &egui::Context) {
+    pub(crate) fn poll_pc_read(&mut self, ctx: &egui::Context) {
         let Some(read) = &self.pc_read else {
             return;
         };
@@ -100,7 +100,7 @@ impl App {
     }
 
     /// Puts the report of a read of this PC where its job wants it.
-    fn finish_pc_read(&mut self, job: PcJob, plan: &thispc::Plan, report: &Report) {
+    pub(crate) fn finish_pc_read(&mut self, job: PcJob, plan: &thispc::Plan, report: &Report) {
         let readings = thispc::judge(&self.catalog, plan, &report.results);
         match job {
             PcJob::Check { doc } => self.finish_check(&doc, plan, report, &readings),
@@ -112,7 +112,7 @@ impl App {
     }
 
     /// The capture of a read: a new profile tab, or the profile of the tab named by `target`.
-    fn finish_capture(
+    pub(crate) fn finish_capture(
         &mut self,
         target: Option<&str>,
         base: &Profile,
@@ -170,7 +170,7 @@ impl App {
     }
 
     /// The result of a check of the rules of the tab named by `key`, listed in its messages.
-    fn finish_check(
+    pub(crate) fn finish_check(
         &mut self,
         key: &str,
         plan: &thispc::Plan,
@@ -220,7 +220,7 @@ impl App {
 
     /// Saves a stand-alone script for the selection into a folder the user picks; an apply or
     /// return script gets the undo script next to it.
-    fn save_script(&mut self, kind: ScriptKind) {
+    pub(crate) fn save_script(&mut self, kind: ScriptKind) {
         let ids = self.selection_ids();
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             self.status = tr("Save a script: the active tab is not a profile").to_owned();
@@ -293,7 +293,7 @@ impl App {
 
     /// Saves the registry steps of the apply or the return of the selection as a registry file, as
     /// the scripts are saved; the steps a registry file cannot hold are comments in it.
-    fn save_plan_reg(&mut self, revert: bool) {
+    pub(crate) fn save_plan_reg(&mut self, revert: bool) {
         let ids = self.selection_ids();
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             self.status = tr("Save a registry file: the active tab is not a profile").to_owned();
@@ -351,7 +351,7 @@ impl App {
     }
 
     /// Opens the report of an audit script made on another PC and reads it into a new profile.
-    fn open_report(&mut self) {
+    pub(crate) fn open_report(&mut self) {
         let Some(path) = rfd::FileDialog::new()
             .set_title(tr("Open an audit report"))
             .add_filter(tr("Audit report"), &["json"])
@@ -366,7 +366,7 @@ impl App {
     }
 
     /// Reads an audit report into a new profile, on the base of the open profile.
-    fn open_report_from(&mut self, report: Report, path: &Path) {
+    pub(crate) fn open_report_from(&mut self, report: Report, path: &Path) {
         let base = match self.docs.get(self.active) {
             Some(Doc::Profile(doc)) => doc.profile.clone(),
             _ => Profile::parse(PRESETS[0].1, PRESETS[0].0)
@@ -396,7 +396,7 @@ impl App {
     }
 
     /// Prepares the native apply or return of the selection and asks for the confirmation.
-    fn plan_native(&mut self, revert: bool) {
+    pub(crate) fn plan_native(&mut self, revert: bool) {
         if self.running.is_some() {
             self.status = tr("A change of this PC is running; wait for its report").to_owned();
             return;
@@ -429,7 +429,7 @@ impl App {
     }
 
     /// Prepares the undo of a backup file the user picks.
-    fn plan_undo(&mut self) {
+    pub(crate) fn plan_undo(&mut self) {
         let start = output_dir();
         let dialog = rfd::FileDialog::new()
             .set_title(tr("Choose the backup to restore"))
@@ -466,7 +466,7 @@ impl App {
 
     /// Writes the confirmed plan into the output folder and runs the elevated helper on it in a
     /// thread; the report comes back through a channel.
-    fn run_plan(&mut self) {
+    pub(crate) fn run_plan(&mut self) {
         let Some(plan) = self.confirm.take() else {
             return;
         };
@@ -525,7 +525,7 @@ impl App {
     }
 
     /// Takes the report of a finished helper.
-    fn poll_running(&mut self, ctx: &egui::Context) {
+    pub(crate) fn poll_running(&mut self, ctx: &egui::Context) {
         let Some(rx) = &self.running else {
             return;
         };
@@ -585,7 +585,7 @@ impl App {
     }
 
     /// The confirmation of a plan, over the window.
-    fn confirm_view(&self, ctx: &egui::Context, acts: &mut Vec<Act>) {
+    pub(crate) fn confirm_view(&self, ctx: &egui::Context, acts: &mut Vec<Act>) {
         let Some(plan) = &self.confirm else {
             return;
         };

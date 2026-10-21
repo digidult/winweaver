@@ -5,7 +5,7 @@ use crate::*;
 impl App {
     /// Writes the drafts of the modified profiles: two seconds after the last change, and all of
     /// them when the window closes.
-    fn write_drafts(&mut self, all: bool) {
+    pub(crate) fn write_drafts(&mut self, all: bool) {
         let mut failed = None;
         for doc in &mut self.docs {
             let Doc::Profile(d) = doc else {
@@ -40,7 +40,7 @@ impl App {
     }
 
     /// Remembers the files of the open tabs for the next start.
-    fn remember_tabs(&mut self) {
+    pub(crate) fn remember_tabs(&mut self) {
         let mut tabs = Vec::new();
         let mut active = 0;
         for (i, doc) in self.docs.iter().enumerate() {
@@ -73,7 +73,7 @@ impl App {
     }
 
     /// Opens the tabs of the last close and the drafts of unsaved changes.
-    fn restore_session(&mut self) {
+    pub(crate) fn restore_session(&mut self) {
         let start_tab_untouched =
             matches!(self.docs.first(), Some(Doc::Profile(d)) if !d.dirty && d.path.is_none());
         let before = self.docs.len();
@@ -155,14 +155,14 @@ impl App {
     }
 
     /// Writes every new status line to the log.
-    fn log_status(&mut self) {
+    pub(crate) fn log_status(&mut self) {
         if self.status != self.last_logged {
             session::log(&self.logs_dir, "INFO", &self.status);
             self.last_logged = self.status.clone();
         }
     }
 
-    fn window_title(&self) -> String {
+    pub(crate) fn window_title(&self) -> String {
         match self.docs.get(self.active) {
             Some(doc) => format!("{} - WinWeaver", doc.title()),
             None => "WinWeaver".to_owned(),

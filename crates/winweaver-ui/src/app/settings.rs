@@ -3,7 +3,7 @@
 use crate::*;
 
 impl App {
-    fn open_settings(&mut self) {
+    pub(crate) fn open_settings(&mut self) {
         match self.docs.iter().position(|d| matches!(d, Doc::Settings)) {
             Some(i) => self.active = i,
             None => {
@@ -13,7 +13,7 @@ impl App {
         }
     }
 
-    fn settings_view(&mut self, ui: &mut egui::Ui) {
+    pub(crate) fn settings_view(&mut self, ui: &mut egui::Ui) {
         let before = self.settings.clone();
         let p = style::palette(ui);
         views::header(ui, |ui| {
@@ -96,7 +96,7 @@ impl App {
     }
 
     /// The folders next to the executable and the recent files.
-    fn files_settings(&mut self, ui: &mut egui::Ui) {
+    pub(crate) fn files_settings(&mut self, ui: &mut egui::Ui) {
         style::section_title(ui, tr("Files"));
         ui.add_space(4.0);
         ui.label(trf(
@@ -141,7 +141,7 @@ impl App {
     }
 
     /// Language, theme, the fonts of the theme and the behaviour of the window, in cards.
-    fn general_settings(&mut self, ui: &mut egui::Ui) {
+    pub(crate) fn general_settings(&mut self, ui: &mut egui::Ui) {
         views::block(ui, |ui| {
             style::section_title(ui, tr("Language and theme"));
             ui.add_space(4.0);
@@ -187,7 +187,7 @@ impl App {
     }
 
     /// The renderer of the next start, among the ones of this executable.
-    fn renderer_choice(&mut self, ui: &mut egui::Ui) {
+    pub(crate) fn renderer_choice(&mut self, ui: &mut egui::Ui) {
         let current = Renderer::parse(&self.settings.renderer);
         ui.horizontal(|ui| {
             ui.label(tr("Renderer"));
@@ -218,7 +218,7 @@ impl App {
         }
     }
 
-    fn language_and_theme(&mut self, ui: &mut egui::Ui) {
+    pub(crate) fn language_and_theme(&mut self, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             ui.label(tr("Language"));
             let langs = i18n::languages(&lang_dir());
@@ -301,7 +301,7 @@ impl App {
     }
 
     /// The fonts of the theme the window shows, saved in its file when one changes.
-    fn theme_fonts(&mut self, ui: &mut egui::Ui) {
+    pub(crate) fn theme_fonts(&mut self, ui: &mut egui::Ui) {
         let shown = self.shown_theme_id(ui.visuals().dark_mode);
         let mut theme = themes::find(&self.themes, &shown);
         style::section_title(
@@ -333,7 +333,7 @@ impl App {
 
     /// The language the window shows: the setting, or the language of Windows when it says to
     /// follow Windows, English when there is no file for it.
-    fn effective_language(&self) -> String {
+    pub(crate) fn effective_language(&self) -> String {
         let wanted = if self.settings.language.is_empty() {
             winweaver_win::ui_language().unwrap_or_else(|| "en".to_owned())
         } else {
@@ -349,12 +349,12 @@ impl App {
         }
     }
 
-    fn apply_language(&mut self) {
+    pub(crate) fn apply_language(&mut self) {
         let code = self.effective_language();
         i18n::set_language(&code, &lang_dir());
     }
 
-    fn persist_settings(&mut self) {
+    pub(crate) fn persist_settings(&mut self) {
         if !self.settings_dirty {
             return;
         }

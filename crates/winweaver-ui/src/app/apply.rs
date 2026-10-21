@@ -4,7 +4,7 @@ use crate::*;
 
 impl App {
     /// The question over the window, when there is one.
-    fn ask_view(&self, ctx: &egui::Context, acts: &mut Vec<Act>) {
+    pub(crate) fn ask_view(&self, ctx: &egui::Context, acts: &mut Vec<Act>) {
         let Some(ask) = &self.ask else {
             return;
         };
@@ -26,7 +26,7 @@ impl App {
             });
     }
 
-    fn shortcuts(&mut self, ctx: &egui::Context) -> Vec<Act> {
+    pub(crate) fn shortcuts(&mut self, ctx: &egui::Context) -> Vec<Act> {
         use egui::{Key, KeyboardShortcut, Modifiers};
         let mut acts = Vec::new();
         let active = self.active;
@@ -111,7 +111,7 @@ impl App {
         acts
     }
 
-    fn apply(&mut self, acts: Vec<Act>) {
+    pub(crate) fn apply(&mut self, acts: Vec<Act>) {
         for act in acts {
             match act {
                 Act::Select(sel) => {
@@ -822,7 +822,7 @@ impl App {
     }
 
     /// Moves a tab to another place of the row; the tab in front stays in front.
-    fn move_tab(&mut self, from: usize, to: usize) {
+    pub(crate) fn move_tab(&mut self, from: usize, to: usize) {
         let n = self.docs.len();
         if from >= n || to >= n || from == to {
             return;

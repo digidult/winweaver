@@ -4,7 +4,7 @@ use crate::*;
 
 impl App {
     /// Saves the active diff to its file, or asks for one.
-    fn save_diff(&mut self) {
+    pub(crate) fn save_diff(&mut self) {
         let Some(Doc::Diff(d)) = self.docs.get_mut(self.active) else {
             return;
         };
@@ -24,7 +24,7 @@ impl App {
 
     /// The differences of the profile in front from its file, or from the preset it came from
     /// when it has no file yet.
-    fn diff_unsaved(&mut self) {
+    pub(crate) fn diff_unsaved(&mut self) {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             return;
         };
@@ -55,7 +55,7 @@ impl App {
         self.compare_active(saved, path.as_deref());
     }
 
-    fn open_diff_path(&mut self, path: PathBuf) {
+    pub(crate) fn open_diff_path(&mut self, path: PathBuf) {
         match Diff::load(&path) {
             Ok(diff) => {
                 self.docs
@@ -68,7 +68,7 @@ impl App {
         }
     }
 
-    fn compare_active(&mut self, other: Profile, other_path: Option<&Path>) {
+    pub(crate) fn compare_active(&mut self, other: Profile, other_path: Option<&Path>) {
         let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
             self.status = tr("Compare: the active tab is not a profile").to_owned();
             return;
@@ -84,7 +84,7 @@ impl App {
 
     /// The profile tab a diff belongs to: the one with the path of its base, else the one with
     /// its name, else the first profile tab.
-    fn diff_target(&self, diff: &Diff) -> Option<usize> {
+    pub(crate) fn diff_target(&self, diff: &Diff) -> Option<usize> {
         let by_path = |d: &Doc| {
             matches!(d, Doc::Profile(p) if !diff.base.path.is_empty()
                 && p.path.as_ref().is_some_and(|x| x.display().to_string() == diff.base.path))
@@ -97,7 +97,7 @@ impl App {
             .or_else(|| self.docs.iter().position(|d| matches!(d, Doc::Profile(_))))
     }
 
-    fn apply_active_diff(&mut self) {
+    pub(crate) fn apply_active_diff(&mut self) {
         let Some(Doc::Diff(d)) = self.docs.get(self.active) else {
             return;
         };
@@ -120,7 +120,7 @@ impl App {
 
     /// Shows an item of the active diff in the profile tab of a side; the profile is opened from
     /// its file, or from the preset of its name, when no tab has it.
-    fn go_to_diff_item(&mut self, key: &str, other: bool) {
+    pub(crate) fn go_to_diff_item(&mut self, key: &str, other: bool) {
         let Some(Doc::Diff(d)) = self.docs.get(self.active) else {
             return;
         };
@@ -175,7 +175,7 @@ impl App {
     }
 
     /// Sets one item of the active diff in the profile of its base and stays on the diff.
-    fn apply_diff_item(&mut self, key: &str) {
+    pub(crate) fn apply_diff_item(&mut self, key: &str) {
         let Some(Doc::Diff(d)) = self.docs.get(self.active) else {
             return;
         };
@@ -192,7 +192,7 @@ impl App {
         }
     }
 
-    fn save_active_diff(&mut self) {
+    pub(crate) fn save_active_diff(&mut self) {
         let Some(Doc::Diff(d)) = self.docs.get(self.active) else {
             self.status = tr("Save as a diff file: the active tab is not a diff").to_owned();
             return;
