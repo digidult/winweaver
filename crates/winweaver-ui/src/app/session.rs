@@ -58,11 +58,11 @@ impl App {
     }
 
     pub(crate) fn save_failed(&mut self, e: impl std::fmt::Display) {
-        self.save_failed(e);
+        self.status = trf("Save failed: {e}", &[("e", &e)]);
     }
 
     pub(crate) fn open_failed(&mut self, e: impl std::fmt::Display) {
-        self.open_failed(e);
+        self.status = trf("Open failed: {e}", &[("e", &e)]);
     }
 
     /// Writes the drafts of the modified profiles: two seconds after the last change, and all of

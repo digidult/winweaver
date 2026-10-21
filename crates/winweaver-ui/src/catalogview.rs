@@ -217,7 +217,6 @@ pub fn catalog_view(
     if selected.is_none() && scroll != tree::Scroll::None {
         acts.push(Act::Nav(NavAct::Revealed));
     }
-    let p = style::palette(ui);
     widgets::side_panel(ui, "catalog-tree", 380.0, |ui| {
             if filter.words && filter.rules.is_empty() {
                 ui.weak(tr("Nothing matches the search."));

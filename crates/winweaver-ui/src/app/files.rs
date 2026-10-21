@@ -37,7 +37,7 @@ impl App {
             self.status = trf("No page {name} in the documentation", &[("name", &name)]);
             return;
         };
-        self.show_or_open(
+        let i = self.show_or_open(
             |d| matches!(d, Doc::Markdown(m) if m.path.is_none() && m.title == title),
             || Doc::Markdown(Box::new(MdDoc::new(title.clone(), None, text))),
         );
