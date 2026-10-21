@@ -414,7 +414,7 @@ impl App {
 
     /// Gives an import another name, in the settings and as the title of its tree.
     pub(crate) fn rename_import(&mut self, id: &str, name: &str) {
-        self.renaming = None;
+        self.open_settings().renaming = None;
         let name = name.trim();
         if name.is_empty() || name.chars().count() > 120 || name.chars().any(char::is_control) {
             self.status =
@@ -477,6 +477,11 @@ impl App {
     pub(crate) fn imports_view(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         style::section_title(ui, tr("Policy templates"));
         ui.weak(tr("Imported ADMX templates become rules under Standard policies. Only the checked catalogs are read and loaded; when two of them hold a policy, the templates of this Windows win."));
+        let mut none = None;
+        let renaming = match self.docs.get_mut(self.active) {
+            Some(Doc::Settings(d)) => &mut d.renaming,
+            _ => &mut none,
+        };
         for entry in &self.import_list {
             let file = self.imports.iter().find(|f| f.id == entry.id);
             ui.horizontal(|ui| {
@@ -511,7 +516,7 @@ impl App {
                     acts.push(Act::AskRemoveImport(entry.id.clone()));
                 }
             });
-            if let Some((id, name)) = &mut self.renaming
+            if let Some((id, name)) = &mut *renaming
                 && id == &entry.id
             {
                 ui.horizontal(|ui| {

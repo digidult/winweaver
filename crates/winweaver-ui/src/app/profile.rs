@@ -12,17 +12,7 @@ impl App {
 
     /// The search of the active tab, `None` for a tab without one.
     pub(crate) fn active_search(&mut self) -> Option<&mut Search> {
-        match self.docs.get_mut(self.active)? {
-            Doc::Profile(d) => Some(&mut d.search),
-            Doc::Diff(d) => Some(&mut d.search),
-            Doc::Markdown(d) => Some(&mut d.search),
-            Doc::Catalog(d) => Some(&mut d.search),
-            Doc::Bookmarks => Some(&mut self.marks_search),
-            Doc::Mcp => Some(&mut self.mcp_search),
-            Doc::RegFile(d) => Some(&mut d.search),
-            Doc::Users(d) => Some(&mut d.search),
-            Doc::Settings | Doc::Theme(_) | Doc::Registry(_) | Doc::CatalogEdit(_) => None,
-        }
+        self.docs.get_mut(self.active)?.search()
     }
 
     /// After the search of a tab is cleared, the selected item stays in view: the groups above
@@ -71,8 +61,8 @@ impl App {
                 c.reveal = true;
             }
             Some(Doc::Diff(d)) => d.reveal = true,
-            Some(Doc::Bookmarks) => self.marks_tab.reveal = true,
-            Some(Doc::Mcp) => self.mcp.journal_reveal = true,
+            Some(Doc::Bookmarks(d)) => d.reveal = true,
+            Some(Doc::Mcp(_)) => self.mcp.journal_reveal = true,
             Some(Doc::RegFile(d)) => d.follow = true,
             Some(Doc::Users(d)) => d.follow = true,
             _ => {}

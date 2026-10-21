@@ -3,6 +3,7 @@
 mod apply;
 mod diff;
 mod files;
+mod frame;
 mod imports;
 mod marks;
 mod mcp;

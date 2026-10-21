@@ -3,6 +3,19 @@
 use crate::*;
 
 impl App {
+    /// The bookmark tab, when it is open.
+    pub(crate) fn marks_doc(&mut self) -> Option<&mut marksview::MarksDoc> {
+        self.docs.iter_mut().find_map(|d| match d {
+            Doc::Bookmarks(m) => Some(&mut **m),
+            _ => None,
+        })
+    }
+
+    /// Brings the bookmark tab to the front, opening it when there is none.
+    pub(crate) fn open_marks(&mut self) {
+        self.show_single(DocKind::Bookmarks, || Doc::Bookmarks(Box::default()));
+    }
+
     /// Asks before a bookmark is removed, naming its comment when it has one.
     pub(crate) fn ask_remove_mark(&mut self, i: usize) {
         let Some(b) = self.marks.items.get(i) else {
@@ -98,7 +111,9 @@ impl App {
         let Some(mark) = self.marks.items.get(i).cloned() else {
             return;
         };
-        self.marks_tab.sel = Some(i);
+        if let Some(m) = self.marks_doc() {
+            m.sel = Some(i);
+        }
         if mark.is_registry() {
             let value = (!mark.item.is_empty()).then_some(mark.item.as_str());
             self.open_registry(&mark.path, value);

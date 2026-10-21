@@ -7,41 +7,11 @@ use eframe::egui::{self, Align, Align2, CornerRadius, Layout, Margin, RichText, 
 
 use crate::i18n::{tr, trf};
 use crate::style::{self, Palette};
-use crate::{Act, App, Doc, Form, PRESETS, ScriptKind, Sel, Settings, texts_for, views};
+use crate::{
+    Act, App, Doc, Form, PRESETS, ScriptKind, Sel, Settings, SettingsSection, Tab, texts_for,
+    views,
+};
 use winweaver_core::validate::{self, Severity, Target};
-
-/// The icon of a kind of tab.
-fn doc_icon(doc: &Doc) -> &'static str {
-    match doc {
-        Doc::Profile(_) => "\u{2699}",
-        Doc::Diff(_) => "\u{21C6}",
-        Doc::Markdown(_) => "\u{1F4D6}",
-        Doc::Bookmarks => "\u{2605}",
-        Doc::Mcp => "\u{1F517}",
-        Doc::Settings => "\u{2699}",
-        Doc::Catalog(_) => "\u{1F4E6}",
-        Doc::Theme(_) => "\u{1F3A8}",
-        Doc::Registry(_) => "\u{1F5C2}",
-        Doc::CatalogEdit(_) => "\u{270F}",
-        Doc::RegFile(_) => "\u{1F4C3}",
-        Doc::Users(_) => "\u{1F465}",
-    }
-}
-
-/// The hint of the search field of a kind of tab.
-fn search_hint(doc: &Doc) -> &'static str {
-    match doc {
-        Doc::Profile(_) => "Search rules (Ctrl+F)",
-        Doc::Diff(_) => "Search the differences (Ctrl+F)",
-        Doc::Markdown(_) => "Search the text (Ctrl+F)",
-        Doc::Bookmarks => "Search the bookmarks (Ctrl+F)",
-        Doc::Mcp => "Filter the journal (Ctrl+F)",
-        Doc::Catalog(_) => "Search policies (Ctrl+F)",
-        Doc::RegFile(_) => "Search the keys, values and comments (Ctrl+F)",
-        Doc::Users(_) => "Search the accounts (Ctrl+F)",
-        Doc::Settings | Doc::Theme(_) | Doc::Registry(_) | Doc::CatalogEdit(_) => "",
-    }
-}
 
 /// A frame of a bar: the card colour with a line under it.
 fn bar_frame(p: &Palette, margin: Margin) -> egui::Frame {
@@ -141,7 +111,7 @@ impl App {
             painter.text(
                 egui::pos2(x + 6.0, rect.center().y),
                 Align2::CENTER_CENTER,
-                doc_icon(doc),
+                doc.kind().icon(),
                 style::font(ui, 12.0),
                 color,
             );
@@ -217,12 +187,7 @@ impl App {
                 ui.close();
             }
         });
-        let hint = match doc {
-            Doc::Profile(d) => d.path.as_ref().map(|p| p.display().to_string()),
-            Doc::Diff(d) => d.path.as_ref().map(|p| p.display().to_string()),
-            Doc::Markdown(d) => d.path.as_ref().map(|p| p.display().to_string()),
-            _ => None,
-        };
+        let hint = doc.path().map(|p| p.display().to_string());
         match hint {
             Some(h) => response.on_hover_text(h),
             None => response,
@@ -319,7 +284,9 @@ impl App {
 
     /// Whether the active tab has commands in the command bar.
     pub(crate) fn has_tools(&self) -> bool {
-        !matches!(self.docs.get(self.active), Some(Doc::Settings))
+        self.docs
+            .get(self.active)
+            .is_none_or(|d| d.kind().has_tools())
     }
 
     /// The command bar of the active tab; `compact` draws the icons alone.
@@ -411,12 +378,12 @@ impl App {
                     acts.push(Act::ApplyDiff);
                 }
             }
-            Some(Doc::Markdown(_)) | Some(Doc::Bookmarks) => {
+            Some(Doc::Markdown(_)) | Some(Doc::Bookmarks(_)) => {
                 if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
                     acts.push(Act::Open);
                 }
             }
-            Some(Doc::Mcp) => {
+            Some(Doc::Mcp(_)) => {
                 let running = self.mcp.run.is_some();
                 if tool(ui, "\u{25B6}", tr("Start"), "", !running) {
                     acts.push(Act::McpStart);
@@ -604,7 +571,7 @@ impl App {
                     acts.push(Act::RegistryRights);
                 }
             }
-            Some(Doc::Settings) => {}
+            Some(Doc::Settings(_)) => {}
             None => {
                 if tool(ui, "\u{1F4C4}", tr("New"), "Ctrl+N", true) {
                     acts.push(Act::NewProfile(None));
@@ -690,7 +657,7 @@ impl App {
         }
         ui.separator();
         if ui.button(tr("Settings of the policy templates")).clicked() {
-            acts.push(Act::OpenSettingsSection(1));
+            acts.push(Act::OpenSettingsSection(SettingsSection::Templates));
             ui.close();
         }
     }
@@ -745,32 +712,23 @@ impl App {
 
     /// Whether the active tab has a navigation row: a history, a breadcrumb or a search.
     pub(crate) fn has_nav(&self) -> bool {
-        match self.docs.get(self.active) {
-            Some(Doc::Profile(_)) | Some(Doc::Catalog(_)) => true,
-            Some(Doc::Settings)
-            | Some(Doc::Theme(_))
-            | Some(Doc::Registry(_))
-            | Some(Doc::CatalogEdit(_))
-            | None => false,
-            _ => !self.has_tools(),
-        }
+        self.docs
+            .get(self.active)
+            .is_some_and(|d| d.kind().has_nav())
     }
 
     /// Whether the active tab has something to search.
     pub(crate) fn has_search(&self) -> bool {
-        !matches!(
-            self.docs.get(self.active),
-            Some(Doc::Settings)
-                | Some(Doc::Theme(_))
-                | Some(Doc::Registry(_))
-                | Some(Doc::CatalogEdit(_))
-                | None
-        )
+        self.docs
+            .get(self.active)
+            .is_some_and(|d| d.kind().has_search())
     }
 
     /// The hint of the search field of the active tab.
     pub(crate) fn search_hint_now(&self) -> &'static str {
-        self.docs.get(self.active).map_or("", search_hint)
+        self.docs
+            .get(self.active)
+            .map_or("", |d| d.kind().search_hint())
     }
 
     /// The navigation row of the active tab: the history, the breadcrumb (shortened to the first

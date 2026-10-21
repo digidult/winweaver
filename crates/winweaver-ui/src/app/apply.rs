@@ -242,12 +242,9 @@ impl App {
                     self.open_settings();
                 }
                 Act::ImportOpenCatalog => self.import_open_catalog(),
-                Act::OpenSettingsSection(section) => {
-                    self.settings_section = section;
-                    self.open_settings();
-                }
+                Act::OpenSettingsSection(section) => self.open_settings().section = section,
                 Act::Save => match self.docs.get(self.active) {
-                    Some(Doc::Mcp) => self.persist_mcp(),
+                    Some(Doc::Mcp(_)) => self.persist_mcp(),
                     Some(Doc::Diff(_)) => self.save_diff(),
                     Some(Doc::Theme(_)) => self.save_theme(false),
                     Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
@@ -256,7 +253,7 @@ impl App {
                     _ => self.save_active(false),
                 },
                 Act::SaveAs => match self.docs.get(self.active) {
-                    Some(Doc::Mcp) => self.save_mcp_as(),
+                    Some(Doc::Mcp(_)) => self.save_mcp_as(),
                     Some(Doc::Diff(_)) => self.save_active_diff(),
                     Some(Doc::Theme(_)) => self.save_theme(true),
                     Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
@@ -324,13 +321,7 @@ impl App {
                         }
                     }
                 }
-                Act::OpenMcp => match self.docs.iter().position(|d| matches!(d, Doc::Mcp)) {
-                    Some(i) => self.active = i,
-                    None => {
-                        self.docs.push(Doc::Mcp);
-                        self.active = self.docs.len() - 1;
-                    }
-                },
+                Act::OpenMcp => self.open_mcp(),
                 Act::McpStart => self.start_mcp(),
                 Act::McpStop => {
                     self.mcp.run = None;
@@ -353,15 +344,7 @@ impl App {
                         self.active = self.docs.len() - 1;
                     }
                 }
-                Act::OpenMarks => {
-                    match self.docs.iter().position(|d| matches!(d, Doc::Bookmarks)) {
-                        Some(i) => self.active = i,
-                        None => {
-                            self.docs.push(Doc::Bookmarks);
-                            self.active = self.docs.len() - 1;
-                        }
-                    }
-                }
+                Act::OpenMarks => self.open_marks(),
                 Act::GoToMark(i) => self.go_to_mark(i),
                 Act::SetMarkComment(i, text) => {
                     if let Some(b) = self.marks.items.get_mut(i) {
@@ -372,16 +355,22 @@ impl App {
                 Act::RemoveMark(i) => {
                     if i < self.marks.items.len() {
                         self.marks.items.remove(i);
-                        self.marks_tab.sel = match self.marks_tab.sel {
-                            Some(s) if s == i => None,
-                            Some(s) if s > i => Some(s - 1),
-                            other => other,
-                        };
+                        if let Some(m) = self.marks_doc() {
+                            m.sel = match m.sel {
+                                Some(s) if s == i => None,
+                                Some(s) if s > i => Some(s - 1),
+                                other => other,
+                            };
+                        }
                         self.save_marks();
                     }
                 }
                 Act::RemoveMarkAsk(i) => self.ask_remove_mark(i),
-                Act::MarkSelect(i) => self.marks_tab.sel = Some(i),
+                Act::MarkSelect(i) => {
+                    if let Some(m) = self.marks_doc() {
+                        m.sel = Some(i);
+                    }
+                }
                 Act::ShowInFolder(path) => {
                     // A folder of the program that is not there yet is made first.
                     if !path.exists() && path.extension().is_none() {
@@ -680,7 +669,7 @@ impl App {
                     }
                 }
                 Act::ExportImport(id) => self.export_import(&id),
-                Act::StartRename(id, name) => self.renaming = Some((id, name)),
+                Act::StartRename(id, name) => self.open_settings().renaming = Some((id, name)),
                 Act::OpenCatalog(id) => self.open_catalog(&id),
                 Act::CatalogSelect(key) => {
                     if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) {
@@ -719,7 +708,7 @@ impl App {
                         None => self.status = tr("Open a profile first").to_owned(),
                     }
                 }
-                Act::CancelRename => self.renaming = None,
+                Act::CancelRename => self.open_settings().renaming = None,
                 Act::RenameImport(id, name) => self.rename_import(&id, &name),
                 Act::PlanNative(revert) => self.plan_native(revert),
                 Act::PlanUndo => self.plan_undo(),
@@ -801,9 +790,9 @@ impl App {
                         d.reveal = false;
                         d.follow = false;
                     }
-                    Some(Doc::Bookmarks) => {
-                        self.marks_tab.reveal = false;
-                        self.marks_tab.follow = false;
+                    Some(Doc::Bookmarks(d)) => {
+                        d.reveal = false;
+                        d.follow = false;
                     }
                     _ => {}
                 },
@@ -811,7 +800,7 @@ impl App {
                     Some(Doc::Profile(doc)) => doc.follow = true,
                     Some(Doc::Catalog(c)) => c.follow = true,
                     Some(Doc::Diff(d)) => d.follow = true,
-                    Some(Doc::Bookmarks) => self.marks_tab.follow = true,
+                    Some(Doc::Bookmarks(d)) => d.follow = true,
                     _ => {}
                 },
                 Act::OpenDoc(link) => self.open_doc(&link),

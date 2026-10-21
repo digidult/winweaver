@@ -358,7 +358,7 @@ fn bookmarks_toggle_and_lead_back() {
     assert!(app.ask.is_some());
     app.apply(vec![Act::AskYes]);
     assert!(app.marks.items.is_empty());
-    assert_eq!(app.marks_tab.sel, None);
+    assert_eq!(app.marks_doc().and_then(|m| m.sel), None);
     std::fs::remove_dir_all(&dir).unwrap();
 }
 

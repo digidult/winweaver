@@ -3,19 +3,22 @@
 use crate::*;
 
 impl App {
-    pub(crate) fn open_settings(&mut self) {
-        match self.docs.iter().position(|d| matches!(d, Doc::Settings)) {
-            Some(i) => self.active = i,
-            None => {
-                self.docs.push(Doc::Settings);
-                self.active = self.docs.len() - 1;
-            }
-        }
+    /// Brings the settings tab to the front, opening it when there is none, and gives it.
+    pub(crate) fn open_settings(&mut self) -> &mut SettingsDoc {
+        let i = self.show_single(DocKind::Settings, || Doc::Settings(Box::default()));
+        let Doc::Settings(doc) = &mut self.docs[i] else {
+            unreachable!("the tab at {i} is the settings");
+        };
+        doc
     }
 
     pub(crate) fn settings_view(&mut self, ui: &mut egui::Ui) {
         let before = self.settings.clone();
         let p = style::palette(ui);
+        let mut section = match self.docs.get(self.active) {
+            Some(Doc::Settings(d)) => d.section,
+            _ => SettingsSection::General,
+        };
         views::header(ui, |ui| {
             ui.label(style::strong(ui, tr("Settings"), 18.0));
         });
@@ -31,9 +34,9 @@ impl App {
                     ui.vertical(|ui| {
                         ui.set_width(200.0);
                         ui.spacing_mut().item_spacing.y = 2.0;
-                        let sections = [tr("General"), tr("Policy templates"), tr("Files")];
-                        for (i, title) in sections.into_iter().enumerate() {
-                            let selected = self.settings_section == i;
+                        for s in SettingsSection::ALL {
+                            let title = s.title();
+                            let selected = section == s;
                             let (rect, response) = ui.allocate_exact_size(
                                 egui::vec2(200.0, style::row_height(ui)),
                                 egui::Sense::click(),
@@ -64,7 +67,7 @@ impl App {
                                 )
                             });
                             if response.clicked() {
-                                self.settings_section = i;
+                                section = s;
                             }
                         }
                     });
@@ -74,19 +77,24 @@ impl App {
                     .id_salt("settings-page")
                     .auto_shrink(false)
                     .show(ui, |ui| {
-                        match self.settings_section {
-                            1 => {
+                        match section {
+                            SettingsSection::Templates => {
                                 let mut acts = Vec::new();
                                 views::block(ui, |ui| self.imports_view(ui, &mut acts));
                                 self.pending_acts.extend(acts);
                             }
-                            2 => views::block(ui, |ui| self.files_settings(ui)),
-                            _ => self.general_settings(ui),
+                            SettingsSection::Files => {
+                                views::block(ui, |ui| self.files_settings(ui));
+                            }
+                            SettingsSection::General => self.general_settings(ui),
                         }
                         ui.add_space(12.0);
                     });
             });
         });
+        if let Some(Doc::Settings(d)) = self.docs.get_mut(self.active) {
+            d.section = section;
+        }
         if before != self.settings {
             self.settings_dirty = true;
             if before.language != self.settings.language {

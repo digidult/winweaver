@@ -24,6 +24,13 @@ pub struct McpRun {
     pub http: HttpServer,
 }
 
+/// The MCP tab: its search of the journal. The server itself is the `McpPanel` of the
+/// window, since it runs with the tab closed too.
+#[derive(Default)]
+pub struct McpDoc {
+    pub search: crate::Search,
+}
+
 /// The configuration the tab edits, the server it runs and the state of its journal.
 pub struct McpPanel {
     /// The configuration file, saved at every change.

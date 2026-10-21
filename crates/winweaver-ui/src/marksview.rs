@@ -14,9 +14,10 @@ use crate::i18n::{tr, trf};
 use crate::views::{self, gsummary, gtitle, rtitle};
 use crate::{Act, Form, Settings, list, style, tree};
 
-/// The state of the bookmark tab.
+/// The bookmark tab.
 #[derive(Default)]
-pub struct MarksTab {
+pub struct MarksDoc {
+    pub search: crate::Search,
     /// The index of the selected bookmark in the file.
     pub sel: Option<usize>,
     /// The selection moved with the keys: it comes into view at the next frame.
@@ -148,7 +149,7 @@ pub fn marks_view(
     marks: &Bookmarks,
     path: &Path,
     search: &crate::Search,
-    tab: &MarksTab,
+    tab: &MarksDoc,
     acts: &mut Vec<Act>,
 ) {
     views::header(ui, |ui| {
@@ -252,7 +253,7 @@ pub fn marks_detail(
     texts: Option<&CatalogTexts>,
     imports: &[CatalogFile],
     marks: &Bookmarks,
-    tab: &MarksTab,
+    tab: &MarksDoc,
     settings: &Settings,
     acts: &mut Vec<Act>,
 ) {

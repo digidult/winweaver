@@ -3,6 +3,20 @@
 use crate::*;
 
 impl App {
+    /// Brings the tab of a kind the window holds once to the front, making it when there is
+    /// none, and gives its index.
+    pub(crate) fn show_single(&mut self, kind: DocKind, make: impl FnOnce() -> Doc) -> usize {
+        let i = match self.docs.iter().position(|d| d.kind() == kind) {
+            Some(i) => i,
+            None => {
+                self.docs.push(make());
+                self.docs.len() - 1
+            }
+        };
+        self.active = i;
+        i
+    }
+
     /// Writes the drafts of the modified profiles: two seconds after the last change, and all of
     /// them when the window closes.
     pub(crate) fn write_drafts(&mut self, all: bool) {
@@ -44,20 +58,7 @@ impl App {
         let mut tabs = Vec::new();
         let mut active = 0;
         for (i, doc) in self.docs.iter().enumerate() {
-            let path = match doc {
-                Doc::Profile(d) => d.path.clone(),
-                Doc::Diff(d) => d.path.clone(),
-                Doc::Markdown(d) => d.path.clone(),
-                Doc::Catalog(c) => c.path.clone(),
-                Doc::Theme(t) => t.theme.path.clone(),
-                Doc::Bookmarks
-                | Doc::Mcp
-                | Doc::Settings
-                | Doc::Registry(_)
-                | Doc::CatalogEdit(_) => None,
-                Doc::RegFile(d) => Some(d.path.clone()),
-                Doc::Users(d) => d.path.clone(),
-            };
+            let path = doc.path().map(Path::to_path_buf);
             if let Some(p) = path {
                 if i == self.active {
                     active = tabs.len();

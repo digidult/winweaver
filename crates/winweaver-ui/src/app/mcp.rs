@@ -3,6 +3,11 @@
 use crate::*;
 
 impl App {
+    /// Brings the MCP tab to the front, opening it when there is none.
+    pub(crate) fn open_mcp(&mut self) {
+        self.show_single(DocKind::Mcp, || Doc::Mcp(Box::default()));
+    }
+
     /// Reads the configuration of the MCP tab at the start: `mcp/default.wwmcp`, made from the port
     /// and the token an earlier version kept in the settings when it does not exist yet.
     pub(crate) fn load_mcp_config(&mut self) {

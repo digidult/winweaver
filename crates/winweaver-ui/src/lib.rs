@@ -10,6 +10,7 @@ mod cataledit;
 mod catalogview;
 mod chrome;
 mod diffview;
+mod doc;
 mod forms;
 mod i18n;
 mod list;
@@ -51,6 +52,7 @@ use winweaver_core::users::{self, UsersFile};
 use winweaver_core::validate::{self, Issue, Severity, Target};
 
 pub use diffview::DiffDoc;
+pub use doc::{Doc, DocKind, SettingsDoc, SettingsSection, Tab};
 pub use forms::Form;
 pub use i18n::{tr, trf};
 pub use mdview::MdDoc;
@@ -192,56 +194,6 @@ struct Ask {
     text: String,
     yes: String,
     act: Act,
-}
-
-/// A tab of the window.
-pub enum Doc {
-    Profile(Box<ProfileDoc>),
-    Diff(Box<DiffDoc>),
-    Markdown(Box<MdDoc>),
-    Bookmarks,
-    Mcp,
-    Settings,
-    /// The tree of an import of policy templates.
-    Catalog(Box<catalogview::CatalogDoc>),
-    /// The editor of a theme.
-    Theme(Box<themeview::ThemeDoc>),
-    /// The registry of this PC.
-    Registry(Box<regview::RegistryDoc>),
-    /// The editor of a catalog file.
-    CatalogEdit(Box<cataledit::EditorDoc>),
-    /// A registry file (`.reg`).
-    RegFile(Box<regfileview::RegFileDoc>),
-    /// A users file (`.wwusers`).
-    Users(Box<usersview::UsersDoc>),
-}
-
-impl Doc {
-    pub fn title(&self) -> String {
-        match self {
-            Doc::Profile(d) => d.title(),
-            Doc::Diff(d) => d.title(),
-            Doc::Markdown(d) => d.title.clone(),
-            Doc::Bookmarks => tr("Bookmarks").to_owned(),
-            Doc::Mcp => "MCP".to_owned(),
-            Doc::Settings => tr("Settings").to_owned(),
-            Doc::Catalog(d) => d.name.clone(),
-            Doc::Theme(d) => d.title(),
-            Doc::Registry(d) => d.title(),
-            Doc::CatalogEdit(d) => d.title(),
-            Doc::RegFile(d) => d.title(),
-            Doc::Users(d) => d.title(),
-        }
-    }
-
-    pub fn dirty(&self) -> bool {
-        matches!(self, Doc::Profile(d) if d.dirty)
-            || matches!(self, Doc::Diff(d) if d.dirty)
-            || matches!(self, Doc::Theme(d) if d.dirty)
-            || matches!(self, Doc::CatalogEdit(d) if d.dirty)
-            || matches!(self, Doc::RegFile(d) if d.dirty)
-            || matches!(self, Doc::Users(d) if d.dirty)
-    }
 }
 
 /// The search of a tab, at the right end of its navigation row.
@@ -501,8 +453,8 @@ pub enum Act {
     OpenDoc(String),
     /// Shows a file in its folder in Explorer, or opens a folder of the program, made first.
     ShowInFolder(PathBuf),
-    /// Opens the settings at a section (0 general, 1 policy templates, 2 files).
-    OpenSettingsSection(usize),
+    /// Opens the settings at a section.
+    OpenSettingsSection(SettingsSection),
     /// Imports the catalog file of the active tab.
     ImportOpenCatalog,
     /// Opens the editor of a theme by its id.
@@ -561,12 +513,8 @@ pub struct App {
     settings_dirty: bool,
     /// The recent searches of every tab.
     search_history: Vec<String>,
-    /// The searches of the bookmark tab and of the MCP tab.
-    marks_search: Search,
-    marks_tab: marksview::MarksTab,
     /// A question over the window and the act a yes runs.
     ask: Option<Ask>,
-    mcp_search: Search,
     /// Whether the message bar shows its list or one line.
     messages_open: bool,
     status: String,
@@ -588,10 +536,6 @@ pub struct App {
     mcp: mcpview::McpPanel,
     /// Actions requested by views that run without the list of the frame.
     pending_acts: Vec<Act>,
-    /// The section of the settings tab: general, policy templates, files.
-    settings_section: usize,
-    /// The import being renamed and the name typed so far.
-    renaming: Option<(String, String)>,
     /// A plan waiting for the confirmation of the user.
     confirm: Option<winweaver_core::apply::Plan>,
     /// The helper that runs a confirmed plan, and what the plan left out.
@@ -635,10 +579,7 @@ impl App {
             settings,
             settings_dirty: false,
             search_history,
-            marks_search: Search::default(),
-            marks_tab: marksview::MarksTab::default(),
             ask: None,
-            mcp_search: Search::default(),
             messages_open: true,
             status: "Ready".to_owned(),
             marks: Bookmarks::default(),
@@ -653,8 +594,6 @@ impl App {
             graphics: String::new(),
             confirm: None,
             pending_acts: Vec::new(),
-            settings_section: 0,
-            renaming: None,
             running: None,
             running_skipped: Vec::new(),
             mcp: mcpview::McpPanel::new(winweaver_mcp::config::Config::default_path(&exe_dir())),
@@ -662,303 +601,6 @@ impl App {
             shown_file: None,
             users_import: None,
         }
-    }
-}
-
-impl eframe::App for App {
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
-        if self.exit {
-            ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-        }
-        self.apply_theme(ui.ctx());
-        self.color_title_bar(ui, frame);
-        let title = self.window_title();
-        if title != self.last_title {
-            ui.ctx()
-                .send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
-            self.last_title = title;
-        }
-        let mut acts = self.shortcuts(ui.ctx());
-        let (tabs_frame, tool_frame, nav_frame, status_frame) = Self::chrome_frames(ui);
-        egui::Panel::top("tabs")
-            .frame(tabs_frame)
-            .show_separator_line(false)
-            .show(ui, |ui| self.tabs_row(ui, &mut acts));
-        let compact = ui.available_width() < COMPACT_WIDTH;
-        if !compact && self.has_tools() {
-            let search_here = !self.has_nav() && self.has_search();
-            let hint = self.search_hint_now();
-            egui::Panel::top("toolbar")
-                .frame(tool_frame)
-                .show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        self.toolbar(ui, &mut acts, false);
-                        if search_here {
-                            ui.with_layout(
-                                egui::Layout::right_to_left(egui::Align::Center),
-                                |ui| {
-                                    self.search_field(ui, &mut acts, hint, 0.0);
-                                },
-                            );
-                        }
-                    });
-                });
-        }
-        if self.has_nav() || (compact && self.has_tools()) {
-            egui::Panel::top("nav")
-                .frame(nav_frame)
-                .show(ui, |ui| self.nav_row(ui, &mut acts, compact));
-        }
-        self.messages_panel(ui, &mut acts);
-        egui::Panel::bottom("status")
-            .frame(status_frame)
-            .show(ui, |ui| self.status_bar(ui, &mut acts));
-        let kind = match self.docs.get(self.active) {
-            Some(Doc::Profile(_)) => 0,
-            Some(Doc::Settings) => 1,
-            Some(Doc::Diff(_)) => 3,
-            Some(Doc::Markdown(_)) => 4,
-            Some(Doc::Bookmarks) => 5,
-            Some(Doc::Mcp) => 6,
-            Some(Doc::Catalog(_)) => 7,
-            Some(Doc::Theme(_)) => 8,
-            Some(Doc::Registry(_)) => 9,
-            Some(Doc::CatalogEdit(_)) => 10,
-            Some(Doc::RegFile(_)) => 11,
-            Some(Doc::Users(_)) => 12,
-            None => 2,
-        };
-        if kind == 0 {
-            let catalog = &self.catalog;
-            let texts = texts_for(&self.texts, &i18n::current());
-            let settings = &self.settings;
-            if let Some(Doc::Profile(doc)) = self.docs.get(self.active) {
-                let doc: &ProfileDoc = doc;
-                let p = style::palette(ui);
-                egui::Panel::left("tree")
-                    .resizable(true)
-                    .default_size(380.0)
-                    .frame(
-                        egui::Frame::new()
-                            .fill(p.card)
-                            .inner_margin(egui::Margin::symmetric(0, 4)),
-                    )
-                    .show(ui, |ui| {
-                        views::tree_view(
-                            ui,
-                            catalog,
-                            texts,
-                            doc,
-                            &doc.search,
-                            settings.inline_switches,
-                            !settings.hide_unknown,
-                            &mut acts,
-                        );
-                    });
-                egui::CentralPanel::default()
-                    .frame(egui::Frame::new().fill(p.bg))
-                    .show(ui, |ui| {
-                        views::detail_view(
-                            ui,
-                            catalog,
-                            texts,
-                            &self.imports,
-                            doc,
-                            settings,
-                            &mut acts,
-                        );
-                    });
-            }
-        } else if kind == 3 {
-            let catalog = &self.catalog;
-            let texts = texts_for(&self.texts, &i18n::current());
-            let settings = &self.settings;
-            let marked = self
-                .current_bookmark()
-                .is_some_and(|b| self.marks.find(&b).is_some());
-            if let Some(Doc::Diff(doc)) = self.docs.get(self.active) {
-                let doc: &DiffDoc = doc;
-                let p = style::palette(ui);
-                let (default, range) = list_split(ui);
-                egui::Panel::left("diff-list")
-                    .resizable(true)
-                    .default_size(default)
-                    .size_range(range)
-                    .frame(egui::Frame::new().fill(p.card))
-                    .show(ui, |ui| {
-                        diffview::diff_view(ui, catalog, texts, doc, &mut acts);
-                    });
-                egui::CentralPanel::default()
-                    .frame(egui::Frame::new().fill(p.bg))
-                    .show(ui, |ui| {
-                        diffview::diff_detail(ui, catalog, texts, doc, settings, marked, &mut acts);
-                    });
-            }
-        } else if kind == 4 {
-            if let Some(Doc::Markdown(doc)) = self.docs.get_mut(self.active) {
-                egui::CentralPanel::default().show(ui, |ui| mdview::md_view(ui, doc));
-            }
-        } else if kind == 6 {
-            let panel = &mut self.mcp;
-            let search = &self.mcp_search;
-            let imports: Vec<String> = self.imports.iter().map(|f| f.id.clone()).collect();
-            let catalog = &self.catalog;
-            let texts = texts_for(&self.texts, &i18n::current());
-            let p = style::palette(ui);
-            let settings_frame = egui::Frame::new().fill(p.bg);
-            if panel.run.is_some() {
-                let max = (ui.available_height() - 120.0).max(160.0);
-                egui::Panel::top("mcp-settings")
-                    .resizable(true)
-                    .default_size(420.0)
-                    .size_range(120.0..=max)
-                    .frame(settings_frame)
-                    .show(ui, |ui| {
-                        egui::ScrollArea::vertical()
-                            .auto_shrink(false)
-                            .show(ui, |ui| mcpview::mcp_view(ui, panel, &mut acts));
-                    });
-                if panel.detail_open {
-                    egui::Panel::right("mcp-detail")
-                        .resizable(true)
-                        .default_size(380.0)
-                        .frame(
-                            egui::Frame::new()
-                                .fill(p.bg)
-                                .inner_margin(egui::Margin::same(12)),
-                        )
-                        .show(ui, |ui| {
-                            mcpview::detail_view(ui, panel, catalog, texts, &imports, &mut acts)
-                        });
-                }
-                egui::CentralPanel::default()
-                    .frame(egui::Frame::new().fill(p.card))
-                    .show(ui, |ui| mcpview::journal_view(ui, panel, search));
-            } else {
-                egui::CentralPanel::default()
-                    .frame(settings_frame)
-                    .show(ui, |ui| {
-                        egui::ScrollArea::vertical()
-                            .auto_shrink(false)
-                            .show(ui, |ui| mcpview::mcp_view(ui, panel, &mut acts));
-                    });
-            }
-        } else if kind == 5 {
-            let catalog = &self.catalog;
-            let texts = texts_for(&self.texts, &i18n::current());
-            let imports = &self.imports;
-            let settings = &self.settings;
-            let marks = &self.marks;
-            let path = &self.marks_path;
-            let search = &self.marks_search;
-            let tab = &self.marks_tab;
-            let p = style::palette(ui);
-            let (default, range) = list_split(ui);
-            egui::Panel::left("marks-list")
-                .resizable(true)
-                .default_size(default)
-                .size_range(range)
-                .frame(egui::Frame::new().fill(p.card))
-                .show(ui, |ui| {
-                    marksview::marks_view(
-                        ui, catalog, texts, imports, marks, path, search, tab, &mut acts,
-                    );
-                });
-            egui::CentralPanel::default()
-                .frame(egui::Frame::new().fill(p.bg))
-                .show(ui, |ui| {
-                    marksview::marks_detail(
-                        ui, catalog, texts, imports, marks, tab, settings, &mut acts,
-                    );
-                });
-        } else if kind == 7 {
-            let shown = match self.docs.get(self.active) {
-                Some(Doc::Catalog(doc)) => doc.catalog(&self.imports).map(|f| (f, doc)),
-                _ => None,
-            };
-            match shown {
-                Some((file, doc)) => catalogview::catalog_view(
-                    ui,
-                    file,
-                    doc,
-                    &self.catalog,
-                    &self.imports,
-                    &self.settings,
-                    &mut acts,
-                ),
-                None => {
-                    egui::CentralPanel::default().show(ui, |ui| {
-                        ui.label(tr("This import is no longer there."));
-                    });
-                }
-            }
-        } else if kind == 8 {
-            let families = style::installed_families();
-            let p = style::palette(ui);
-            if let Some(Doc::Theme(doc)) = self.docs.get_mut(self.active) {
-                egui::CentralPanel::default()
-                    .frame(egui::Frame::new().fill(p.bg))
-                    .show(ui, |ui| {
-                        themeview::theme_view(ui, doc, &families, &mut acts);
-                    });
-            }
-        } else if kind == 10 {
-            if let Some(Doc::CatalogEdit(doc)) = self.docs.get_mut(self.active) {
-                cataledit::editor_view(ui, doc, &mut acts);
-            }
-        } else if kind == 11 {
-            let texts = texts_for(&self.texts, &i18n::current());
-            if let Some(Doc::RegFile(doc)) = self.docs.get_mut(self.active) {
-                regfileview::regfile_view(ui, doc, &self.catalog, texts, &self.imports, &mut acts);
-            }
-        } else if kind == 12 {
-            if let Some(Doc::Users(doc)) = self.docs.get_mut(self.active) {
-                usersview::users_view(ui, doc, &mut acts);
-            }
-        } else if kind == 9 {
-            let texts = texts_for(&self.texts, &i18n::current());
-            if let Some(Doc::Registry(doc)) = self.docs.get_mut(self.active) {
-                regview::registry_view(ui, doc, &self.catalog, texts, &mut acts);
-            }
-        } else if kind == 1 {
-            let p = style::palette(ui);
-            egui::CentralPanel::default()
-                .frame(egui::Frame::new().fill(p.bg))
-                .show(ui, |ui| self.settings_view(ui));
-        } else {
-            egui::CentralPanel::default().show(ui, |ui| {
-                ui.label(tr("No document is open. Use Menu, New or Ctrl+N."));
-            });
-        }
-        self.confirm_view(ui.ctx(), &mut acts);
-        self.ask_view(ui.ctx(), &mut acts);
-        self.users_import_view(ui.ctx(), &mut acts);
-        let links: Vec<String> = ui.ctx().output_mut(|o| {
-            let mut found = Vec::new();
-            o.commands.retain(|c| match c {
-                egui::OutputCommand::OpenUrl(u) if is_doc_link(&u.url) => {
-                    found.push(u.url.clone());
-                    false
-                }
-                _ => true,
-            });
-            found
-        });
-        acts.extend(links.into_iter().map(Act::OpenDoc));
-        acts.append(&mut self.pending_acts);
-        self.apply(acts);
-        self.poll_running(ui.ctx());
-        self.poll_import(ui.ctx());
-        self.poll_pc_read(ui.ctx());
-        self.poll_registry_search(ui.ctx());
-        let closing = self.exit || ui.ctx().input(|i| i.viewport().close_requested());
-        self.write_drafts(closing);
-        if closing {
-            self.remember_tabs();
-        }
-        self.persist_settings();
-        self.persist_mcp();
-        self.log_status();
     }
 }
 
