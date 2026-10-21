@@ -10,7 +10,7 @@ use std::path::Path;
 use serde_json::Value;
 
 use crate::apply::{self, Op, Plan};
-use crate::catalog::RegKind;
+use crate::catalog::{RegKind, values};
 use crate::jsonfile;
 use crate::registry::{self, Data};
 
@@ -431,39 +431,15 @@ const DEFAULT_USER: [&str; 3] = [
     "and unload it after the import with  reg unload HKU\\UnattendDefault",
 ];
 
-/// A number of the data of a plan.
-fn number(data: &Value) -> u64 {
-    match data {
-        Value::Number(n) => n
-            .as_u64()
-            .or_else(|| n.as_i64().map(|i| i as u64))
-            .unwrap_or(0),
-        Value::String(s) => s.trim().parse().unwrap_or(0),
-        Value::Bool(b) => u64::from(*b),
-        _ => 0,
-    }
-}
-
-fn text(data: &Value) -> String {
-    match data {
-        Value::String(s) => s.clone(),
-        Value::Null => String::new(),
-        other => other.to_string(),
-    }
-}
-
 /// The data of a value of a plan in the types of regedit.
 fn data_of(kind: RegKind, data: &Value) -> Data {
+    let number = |v: &Value| values::number(v).unwrap_or(0);
     match kind {
         RegKind::DWord => Data::Dword(number(data) as u32),
-        RegKind::QWord => Data::Qword(number(data)),
-        RegKind::String => Data::Sz(text(data)),
-        RegKind::ExpandString => Data::ExpandSz(text(data)),
-        RegKind::MultiString => Data::MultiSz(match data {
-            Value::Array(items) => items.iter().map(text).collect(),
-            Value::String(s) if s.is_empty() => Vec::new(),
-            other => vec![text(other)],
-        }),
+        RegKind::QWord => Data::Qword(number(data) as u64),
+        RegKind::String => Data::Sz(values::text(data)),
+        RegKind::ExpandString => Data::ExpandSz(values::text(data)),
+        RegKind::MultiString => Data::MultiSz(values::multi_items(data)),
         RegKind::Binary => Data::Binary(
             data.as_array()
                 .map(|items| items.iter().map(|v| number(v) as u8).collect())

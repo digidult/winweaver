@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-use crate::catalog::{Action, Catalog, RegKind, Rule};
+use crate::catalog::{Action, Catalog, RegKind, Rule, values};
 use crate::jsonfile;
 use crate::profile::Profile;
 use crate::render;
@@ -457,7 +457,7 @@ fn apply_ops(
             kind,
         } => {
             let items = render::list_values(params, param);
-            let (names, values) = render::list_entries(*names, prefix, &items)?;
+            let (names, values) = values::list_entries(*names, prefix, &items)?;
             vec![Op::SetList {
                 path: native_path(path)?,
                 kind: *kind,

@@ -10,7 +10,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::catalog::{Action, Catalog, Param, Phase, RegKind, Rule, check::same_value};
+use crate::catalog::{Action, Catalog, Param, Phase, RegKind, Rule, check::same_value, values};
 use crate::jsonfile;
 use crate::profile::{Account, Profile};
 use crate::render;
@@ -281,7 +281,7 @@ fn checks_of(
         } => {
             let (path, note) = audit_path(path);
             let items = render::list_values(params, param);
-            match render::list_entries(*names, prefix, &items) {
+            match values::list_entries(*names, prefix, &items) {
                 Ok((names, values)) => vec![check(
                     Probe::RegList {
                         path,
@@ -516,16 +516,8 @@ pub struct Report {
     pub results: Vec<CheckResult>,
 }
 
-fn text_of(value: &Value) -> String {
-    match value {
-        Value::Null => String::new(),
-        Value::String(s) => s.clone(),
-        other => other.to_string(),
-    }
-}
-
 fn field(value: &Value, key: &str) -> String {
-    value.get(key).map(text_of).unwrap_or_default()
+    value.get(key).map(values::text).unwrap_or_default()
 }
 
 /// A list, also when PowerShell wrote a single object or nothing.
@@ -557,7 +549,7 @@ impl SystemInfo {
                     },
                     other => InputLanguage {
                         tag: field(other, "tag"),
-                        tips: items(other, "tips").iter().map(text_of).collect(),
+                        tips: items(other, "tips").iter().map(values::text).collect(),
                     },
                 })
                 .filter(|i| !i.tag.is_empty())
@@ -622,8 +614,8 @@ impl Report {
 
 fn expected_text(expected: &Value) -> String {
     match expected {
-        Value::Array(list) => list.iter().map(text_of).collect::<Vec<_>>().join(","),
-        other => text_of(other),
+        Value::Array(list) => list.iter().map(values::text).collect::<Vec<_>>().join(","),
+        other => values::text(other),
     }
 }
 
@@ -911,7 +903,7 @@ fn param_value(param: &Param, current: &str) -> Option<Value> {
             let matches = match &v.value {
                 Value::Number(n) => current.parse::<i64>().ok() == n.as_i64(),
                 Value::String(s) => s.eq_ignore_ascii_case(current),
-                other => text_of(other) == current,
+                other => values::text(other) == current,
             };
             matches.then(|| v.value.clone())
         }),

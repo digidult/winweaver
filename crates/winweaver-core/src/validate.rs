@@ -449,7 +449,7 @@ fn check_rules(
                         );
                         continue;
                     }
-                    let items = crate::render::list_items(Some(&value));
+                    let items = crate::catalog::values::list_items(Some(&value));
                     if items
                         .iter()
                         .any(|t| !t.is_ascii() || t.chars().any(char::is_control))
@@ -471,7 +471,7 @@ fn check_rules(
                             ..
                         } = action
                             && param == name
-                            && let Err(e) = crate::render::list_entries(*names, prefix, &items)
+                            && let Err(e) = crate::catalog::values::list_entries(*names, prefix, &items)
                         {
                             push(
                                 issues,

@@ -3,6 +3,7 @@
 pub mod check;
 pub mod embedded;
 pub mod model;
+pub mod values;
 
 use std::collections::HashMap;
 use std::path::Path;
