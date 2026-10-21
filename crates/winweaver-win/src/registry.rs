@@ -13,6 +13,8 @@ use winreg::enums::{
 use winreg::{RegKey, RegValue};
 use winweaver_core::registry::{self, Data, Key, Registry, Value};
 
+use crate::ffi::{DaclError, Sid, account_of_sid, set_dacl, take_text, wide};
+
 /// The registry of Windows.
 pub struct NativeRegistry;
 
@@ -138,7 +140,8 @@ impl Registry for NativeRegistry {
         use windows_sys::Win32::Security::{
             DACL_SECURITY_INFORMATION, OWNER_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR,
         };
-        let (mut name, full) = security_name(path)?;
+        let (name, full) = security_name(path)?;
+        let mut name = wide(&name);
         let what = OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION;
         let mut sd: PSECURITY_DESCRIPTOR = std::ptr::null_mut();
         let (mut owner, mut group) = (std::ptr::null_mut(), std::ptr::null_mut());
@@ -182,103 +185,24 @@ impl Registry for NativeRegistry {
     }
 
     fn set_security(&self, path: &str, dacl: &str, protected: bool) -> Result<(), String> {
-        use windows_sys::Win32::Foundation::LocalFree;
-        use windows_sys::Win32::Security::Authorization::{
-            ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1, SE_REGISTRY_KEY,
-            SetNamedSecurityInfoW,
-        };
-        use windows_sys::Win32::Security::{
-            ACL, DACL_SECURITY_INFORMATION, GetSecurityDescriptorDacl,
-            PROTECTED_DACL_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR,
-            UNPROTECTED_DACL_SECURITY_INFORMATION,
-        };
-        let (mut name, full) = security_name(path)?;
-        let text = wide(dacl);
-        let mut sd: PSECURITY_DESCRIPTOR = std::ptr::null_mut();
-        let size = std::ptr::null_mut();
-        // SAFETY: the text is null-terminated; the descriptor is allocated by the call.
-        let made = unsafe {
-            ConvertStringSecurityDescriptorToSecurityDescriptorW(
-                text.as_ptr(),
-                SDDL_REVISION_1,
-                &mut sd,
-                size,
-            )
-        };
-        if made == 0 {
-            return Err(format!("{full}: Windows does not take this access list"));
-        }
-        let (mut present, mut defaulted) = (0, 0);
-        let mut list: *mut ACL = std::ptr::null_mut();
-        // SAFETY: the descriptor came from the call above; the list points into it.
-        let ok = unsafe { GetSecurityDescriptorDacl(sd, &mut present, &mut list, &mut defaulted) };
-        let inherit = if protected {
-            PROTECTED_DACL_SECURITY_INFORMATION
-        } else {
-            UNPROTECTED_DACL_SECURITY_INFORMATION
-        };
-        let status = if ok == 0 || present == 0 {
-            None
-        } else {
-            let none = std::ptr::null_mut();
-            // SAFETY: the name is null-terminated and the list lives in the descriptor, which is
-            // freed only below.
-            Some(unsafe {
-                SetNamedSecurityInfoW(
-                    name.as_mut_ptr(),
-                    SE_REGISTRY_KEY,
-                    DACL_SECURITY_INFORMATION | inherit,
-                    none,
-                    none,
-                    list,
-                    std::ptr::null(),
-                )
-            })
-        };
-        // SAFETY: the descriptor was allocated by the conversion above and is freed once.
-        unsafe { LocalFree(sd) };
-        match status {
-            Some(0) => Ok(()),
-            Some(code) => Err(rights_error(code, &full)),
-            None => {
-                let why = format!("{full}: the access list has no entries Windows takes");
-                Err(why)
+        use windows_sys::Win32::Security::Authorization::SE_REGISTRY_KEY;
+        let (name, full) = security_name(path)?;
+        match set_dacl(SE_REGISTRY_KEY, &name, dacl, protected) {
+            Ok(()) => Ok(()),
+            Err(DaclError::NotTaken) => {
+                Err(format!("{full}: Windows does not take this access list"))
             }
+            Err(DaclError::Empty) => {
+                Err(format!("{full}: the access list has no entries Windows takes"))
+            }
+            Err(DaclError::Status(code)) => Err(rights_error(code, &full)),
         }
     }
 
     fn account_name(&self, sid: &str) -> Option<String> {
-        use windows_sys::Win32::Foundation::LocalFree;
-        use windows_sys::Win32::Security::Authorization::ConvertStringSidToSidW;
-        use windows_sys::Win32::Security::{LookupAccountSidW, PSID, SID_NAME_USE};
-        let text = wide(sid);
-        let mut psid: PSID = std::ptr::null_mut();
-        // SAFETY: the text is null-terminated; the identifier is allocated by the call.
-        if unsafe { ConvertStringSidToSidW(text.as_ptr(), &mut psid) } == 0 {
-            return None;
-        }
-        let (mut name, mut domain) = ([0u16; 256], [0u16; 256]);
-        let (mut name_len, mut domain_len) = (256u32, 256u32);
-        let mut kind: SID_NAME_USE = 0;
-        // SAFETY: the buffers are valid for the sizes passed, in characters.
-        let ok = unsafe {
-            LookupAccountSidW(
-                std::ptr::null(),
-                psid,
-                name.as_mut_ptr(),
-                &mut name_len,
-                domain.as_mut_ptr(),
-                &mut domain_len,
-                &mut kind,
-            )
-        };
-        // SAFETY: the identifier was allocated by the conversion above and is freed once.
-        unsafe { LocalFree(psid) };
-        if ok == 0 {
-            return None;
-        }
-        let name = String::from_utf16_lossy(&name[..name_len as usize]);
-        let domain = String::from_utf16_lossy(&domain[..domain_len as usize]);
+        let psid = Sid::parse(sid).ok()?;
+        // SAFETY: the identifier is valid while `psid` lives.
+        let (name, domain) = unsafe { account_of_sid(psid.0) }?;
         Some(if domain.is_empty() {
             name
         } else {
@@ -323,13 +247,9 @@ impl Registry for NativeRegistry {
     }
 }
 
-fn wide(text: &str) -> Vec<u16> {
-    text.encode_utf16().chain([0]).collect()
-}
-
-/// A key as the security functions of Windows name it (`MACHINE\SOFTWARE`), null-terminated,
-/// with the path in the form of regedit for the messages.
-fn security_name(path: &str) -> Result<(Vec<u16>, String), String> {
+/// A key as the security functions of Windows name it (`MACHINE\SOFTWARE`), with the path in
+/// the form of regedit for the messages.
+fn security_name(path: &str) -> Result<(String, String), String> {
     let full =
         registry::normalize(path).ok_or_else(|| format!("not a path of the registry: {path}"))?;
     let (hive, rest) = full.split_once('\\').unwrap_or((full.as_str(), ""));
@@ -345,25 +265,7 @@ fn security_name(path: &str) -> Result<(Vec<u16>, String), String> {
     } else {
         format!("{root}\\{rest}")
     };
-    Ok((wide(&name), full))
-}
-
-/// A text Windows allocated, read up to its null and released with LocalFree.
-///
-/// # Safety
-/// `p` is a null-terminated text allocated by Windows for LocalFree.
-unsafe fn take_text(p: *mut u16) -> String {
-    use windows_sys::Win32::Foundation::LocalFree;
-    let mut len = 0usize;
-    // SAFETY: the caller guarantees a terminating null.
-    while unsafe { *p.add(len) } != 0 {
-        len += 1;
-    }
-    // SAFETY: the `len` units before the null were read just above.
-    let text = String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(p, len) });
-    // SAFETY: the caller guarantees the text is released by LocalFree, once.
-    unsafe { LocalFree(p.cast()) };
-    text
+    Ok((name, full))
 }
 
 /// The message of an error of the security functions of Windows.

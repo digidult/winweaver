@@ -5,10 +5,11 @@ use std::path::Path;
 use serde_json::Value;
 use winweaver_core::catalog::{Action, Catalog, Param, Phase, Rule};
 use winweaver_core::profile::Profile;
+use winweaver_core::registry::Data;
 use winweaver_core::resources::{self, Locales};
 use winweaver_core::thispc::{
     self, FIRST_SIGN_IN, InputLanguage, MemoryMachine, NOTE_ADMIN, NOTE_CURRENT_USER,
-    NOTE_NOT_ON_BUILD, ONLY_DURING_INSTALL, Probe, ReadAccount, RegData, Report, SIGN_IN_SCREEN,
+    NOTE_NOT_ON_BUILD, ONLY_DURING_INSTALL, Probe, ReadAccount, Report, SIGN_IN_SCREEN,
     Status, SystemInfo, Verdict,
 };
 
@@ -50,17 +51,17 @@ fn reg_actions(rule: &Rule) -> Vec<(String, String, Value)> {
         .collect()
 }
 
-fn data_of(value: &Value) -> RegData {
+fn data_of(value: &Value) -> Data {
     match value {
-        Value::Number(n) => RegData::Dword(n.as_u64().unwrap_or(0) as u32),
-        Value::String(s) => RegData::Str(s.clone()),
-        Value::Array(items) => RegData::Multi(
+        Value::Number(n) => Data::Dword(n.as_u64().unwrap_or(0) as u32),
+        Value::String(s) => Data::Sz(s.clone()),
+        Value::Array(items) => Data::MultiSz(
             items
                 .iter()
                 .map(|v| v.as_str().unwrap_or("").to_owned())
                 .collect(),
         ),
-        other => RegData::Str(other.to_string()),
+        other => Data::Sz(other.to_string()),
     }
 }
 
@@ -120,7 +121,7 @@ fn a_rule_is_judged_by_its_values() {
         Verdict::InEffect
     );
     let mut other = MemoryMachine::default();
-    other.set(&path, &name, RegData::Dword(77));
+    other.set(&path, &name, Data::Dword(77));
     assert_eq!(
         reading(&catalog, &other, "defender.pua").verdict,
         Verdict::NotInEffect
@@ -159,7 +160,7 @@ fn a_partly_applied_rule_is_partly_in_effect() {
     let regs = reg_actions(rule);
     let mut m = MemoryMachine::default();
     m.set(&regs[0].0, &regs[0].1, data_of(&regs[0].2));
-    m.set(&regs[1].0, &regs[1].1, RegData::Dword(4242));
+    m.set(&regs[1].0, &regs[1].1, Data::Dword(4242));
     assert_eq!(reading(&catalog, &m, &rule.id).verdict, Verdict::Partly);
 }
 
@@ -173,7 +174,7 @@ fn a_value_a_clean_windows_has_is_no_evidence() {
             m.set(
                 &format!("HKLM:\\SYSTEM\\CurrentControlSet\\Services\\{name}"),
                 "Start",
-                RegData::Dword(*start),
+                Data::Dword(*start),
             );
         }
     }
@@ -488,7 +489,7 @@ fn a_rule_partly_in_effect_names_what_differs() {
         m.set(path, name, data_of(value));
     }
     let (path, name, _) = &actions[0];
-    m.set(path, name, RegData::Dword(1));
+    m.set(path, name, Data::Dword(1));
     let r = reading(&catalog, &m, id);
     assert_eq!(r.verdict, Verdict::Partly);
     assert_eq!(r.differing.len(), 1, "{:?}", r.differing);

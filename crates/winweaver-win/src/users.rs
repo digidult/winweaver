@@ -3,15 +3,13 @@
 //! their identifiers, the folder of a profile with its access list and its registration. An
 //! account is never deleted, and a profile that exists elsewhere is never moved.
 
-use windows_sys::Win32::Foundation::{ERROR_MORE_DATA, LocalFree};
 use windows_sys::Win32::NetworkManagement::NetManagement::{
-    FILTER_NORMAL_ACCOUNT, LOCALGROUP_MEMBERS_INFO_0, MAX_PREFERRED_LENGTH, NERR_Success,
-    NetLocalGroupAddMembers, NetLocalGroupDelMembers, NetUserAdd, NetUserEnum, NetUserGetInfo,
-    NetUserSetInfo, UF_ACCOUNTDISABLE, UF_DONT_EXPIRE_PASSWD, UF_NORMAL_ACCOUNT, UF_SCRIPT,
-    USER_INFO_1, USER_INFO_20, USER_INFO_1003, USER_INFO_1007, USER_INFO_1011, USER_PRIV_USER,
+    LOCALGROUP_MEMBERS_INFO_0, NERR_Success, NetLocalGroupAddMembers, NetLocalGroupDelMembers,
+    NetUserAdd, NetUserGetInfo, NetUserSetInfo, UF_ACCOUNTDISABLE, UF_DONT_EXPIRE_PASSWD,
+    UF_NORMAL_ACCOUNT, UF_SCRIPT, USER_INFO_1, USER_INFO_20, USER_INFO_1003, USER_INFO_1007,
+    USER_INFO_1011, USER_PRIV_USER,
 };
-use windows_sys::Win32::Security::Authorization::ConvertStringSidToSidW;
-use windows_sys::Win32::Security::{PSID, WinBuiltinAdministratorsSid, WinBuiltinUsersSid};
+use windows_sys::Win32::Security::{WinBuiltinAdministratorsSid, WinBuiltinUsersSid};
 use winreg::RegKey;
 use winreg::enums::{HKEY_LOCAL_MACHINE, KEY_READ, RegType};
 use winweaver_core::registry::Registry;
@@ -20,7 +18,11 @@ use winweaver_core::userstore::Passwords;
 use zeroize::Zeroize;
 
 use crate::accounts::{self, DISABLED, NEVER_EXPIRES};
-use crate::native::{builtin_group, groups_of, wide_text};
+use crate::ffi::{
+    DaclError, NetBuffer, Sid, USER_NOT_FOUND, each_user, net_error, set_dacl, user_name,
+    utf16_bytes, wide, wide_text,
+};
+use crate::native::{builtin_group, groups_of};
 use crate::registry::NativeRegistry;
 
 const PROFILE_LIST: &str = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList";
@@ -28,25 +30,6 @@ const PROFILE_LIST: &str = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Profil
 /// (ERROR_MEMBER_NOT_IN_ALIAS): no change was needed.
 const IN_ALIAS: u32 = 1378;
 const NOT_IN_ALIAS: u32 = 1377;
-
-fn wide(text: &str) -> Vec<u16> {
-    text.encode_utf16().chain([0]).collect()
-}
-
-/// The text of an error of the network management API the operator can act on.
-fn explain(status: u32) -> String {
-    match status {
-        5 => "access denied: WinWeaver needs to run as administrator".to_owned(),
-        2224 => "the name is taken by an account".to_owned(),
-        2223 => "the name is taken by a group".to_owned(),
-        2245 => {
-            "the password does not meet the password policy of this PC (its length, its complexity, a part of the name of the account in it, or a password used before)"
-                .to_owned()
-        }
-        2221 => "the account does not exist".to_owned(),
-        other => format!("error {other}"),
-    }
-}
 
 /// The names of the two groups in the language of this Windows: Administrators, Users.
 fn group_names() -> Result<(String, String), String> {
@@ -62,74 +45,42 @@ fn group_names() -> Result<(String, String), String> {
 pub fn read_this_pc() -> Result<Vec<User>, String> {
     let (admins, users) = group_names()?;
     let mut found = Vec::new();
-    let mut resume = 0u32;
-    loop {
-        let mut buffer: *mut u8 = std::ptr::null_mut();
-        let (mut read, mut total) = (0u32, 0u32);
-        // SAFETY: the call allocates the buffer and writes its counts and the resume handle.
-        let status = unsafe {
-            NetUserEnum(
-                std::ptr::null(),
-                20,
-                FILTER_NORMAL_ACCOUNT,
-                &mut buffer,
-                MAX_PREFERRED_LENGTH,
-                &mut read,
-                &mut total,
-                &mut resume,
+    each_user(|entry| {
+        if matches!(entry.usri20_user_id, 500 | 501 | 503 | 504) {
+            return;
+        }
+        // SAFETY: the texts are null-terminated strings inside the buffer of the call.
+        let (name, full_name, description) = unsafe {
+            (
+                wide_text(entry.usri20_name),
+                wide_text(entry.usri20_full_name),
+                wide_text(entry.usri20_comment),
             )
         };
-        let more = status == ERROR_MORE_DATA;
-        if (status == NERR_Success || more) && !buffer.is_null() {
-            // SAFETY: the buffer holds `read` entries of level 20.
-            let entries =
-                unsafe { std::slice::from_raw_parts(buffer.cast::<USER_INFO_20>(), read as usize) };
-            for entry in entries {
-                if matches!(entry.usri20_user_id, 500 | 501 | 503 | 504) {
-                    continue;
-                }
-                // SAFETY: the texts are null-terminated strings inside the buffer.
-                let (name, full_name, description) = unsafe {
-                    (
-                        wide_text(entry.usri20_name),
-                        wide_text(entry.usri20_full_name),
-                        wide_text(entry.usri20_comment),
-                    )
-                };
-                let groups = groups_of(&name);
-                let in_group = |g: &str| groups.iter().any(|x| x.eq_ignore_ascii_case(g));
-                let disabled = entry.usri20_flags & UF_ACCOUNTDISABLE != 0;
-                found.push(User {
-                    profile_path: NativeRegistry
-                        .account_sid(&name)
-                        .and_then(|sid| profile_of(&sid))
-                        .unwrap_or_default(),
-                    name,
-                    full_name,
-                    description,
-                    admin: in_group(&admins),
-                    password_never_expires: entry.usri20_flags & UF_DONT_EXPIRE_PASSWD != 0,
-                    apply_password: false,
-                    state: if disabled {
-                        State::Disabled
-                    } else {
-                        State::Enabled
-                    },
-                    force_group: !in_group(&admins) && !in_group(&users),
-                });
-            }
-        }
-        accounts::free(buffer);
-        if status == NERR_Success {
-            return Ok(found);
-        }
-        if !more || read == 0 {
-            return Err(format!(
-                "the local accounts were not read ({})",
-                explain(status)
-            ));
-        }
-    }
+        let groups = groups_of(&name);
+        let in_group = |g: &str| groups.iter().any(|x| x.eq_ignore_ascii_case(g));
+        let disabled = entry.usri20_flags & UF_ACCOUNTDISABLE != 0;
+        found.push(User {
+            profile_path: NativeRegistry
+                .account_sid(&name)
+                .and_then(|sid| profile_of(&sid))
+                .unwrap_or_default(),
+            name,
+            full_name,
+            description,
+            admin: in_group(&admins),
+            password_never_expires: entry.usri20_flags & UF_DONT_EXPIRE_PASSWD != 0,
+            apply_password: false,
+            state: if disabled {
+                State::Disabled
+            } else {
+                State::Enabled
+            },
+            force_group: !in_group(&admins) && !in_group(&users),
+        });
+    })
+    .map_err(|status| format!("the local accounts were not read ({})", net_error(status)))?;
+    Ok(found)
 }
 
 /// The folder of the profile of an identifier, when Windows registered one.
@@ -146,30 +97,27 @@ fn profile_of(sid: &str) -> Option<String> {
 /// no such account.
 fn info(name: &str) -> Result<Option<(u32, String, String)>, String> {
     let name_w = wide(name);
-    let mut buffer: *mut u8 = std::ptr::null_mut();
+    let mut buffer = NetBuffer::default();
     // SAFETY: the name is null-terminated; the call allocates the buffer of level 20.
-    let status = unsafe { NetUserGetInfo(std::ptr::null(), name_w.as_ptr(), 20, &mut buffer) };
-    if status == 2221 {
-        accounts::free(buffer);
+    let status = unsafe { NetUserGetInfo(std::ptr::null(), name_w.as_ptr(), 20, buffer.out()) };
+    if status == USER_NOT_FOUND {
         return Ok(None);
     }
-    if status != NERR_Success || buffer.is_null() {
-        accounts::free(buffer);
+    if status != NERR_Success || buffer.get().is_null() {
         return Err(format!(
             "the account {name} was not read ({})",
-            explain(status)
+            net_error(status)
         ));
     }
     // SAFETY: on success the buffer holds one entry of level 20 with null-terminated texts.
     let found = unsafe {
-        let entry = &*buffer.cast::<USER_INFO_20>();
+        let entry = &*buffer.get().cast::<USER_INFO_20>();
         (
             entry.usri20_flags,
             wide_text(entry.usri20_full_name),
             wide_text(entry.usri20_comment),
         )
     };
-    accounts::free(buffer);
     Ok(Some(found))
 }
 
@@ -181,7 +129,7 @@ fn set_info(name: &str, level: u32, info: *const u8, what: &str) -> Result<(), S
     let status =
         unsafe { NetUserSetInfo(std::ptr::null(), name_w.as_ptr(), level, info, &mut bad) };
     if status != NERR_Success {
-        return Err(format!("{what} was not set ({})", explain(status)));
+        return Err(format!("{what} was not set ({})", net_error(status)));
     }
     Ok(())
 }
@@ -241,31 +189,12 @@ fn create(user: &User, password: &str) -> Result<(), String> {
     let status = unsafe { NetUserAdd(std::ptr::null(), 1, buffer, &mut bad) };
     password_w.zeroize();
     if status != NERR_Success {
-        return Err(format!("the account was not created ({})", explain(status)));
+        return Err(format!(
+            "the account was not created ({})",
+            net_error(status)
+        ));
     }
     Ok(())
-}
-
-/// A string identifier as the API wants it, freed when dropped.
-struct Sid(PSID);
-
-impl Sid {
-    fn parse(text: &str) -> Result<Self, String> {
-        let text_w = wide(text);
-        let mut psid: PSID = std::ptr::null_mut();
-        // SAFETY: the text is null-terminated; the identifier is allocated by the call.
-        if unsafe { ConvertStringSidToSidW(text_w.as_ptr(), &mut psid) } == 0 {
-            return Err(format!("{text} is not an identifier"));
-        }
-        Ok(Self(psid))
-    }
-}
-
-impl Drop for Sid {
-    fn drop(&mut self) {
-        // SAFETY: the identifier was allocated by ConvertStringSidToSidW and is freed once.
-        unsafe { LocalFree(self.0) };
-    }
 }
 
 /// Adds an account to a group or removes it; no change is no error.
@@ -287,14 +216,17 @@ fn membership(group: &str, sid: &Sid, add: bool) -> Result<(), String> {
     let what = if add { "added to" } else { "removed from" };
     Err(format!(
         "not {what} the group {group} ({})",
-        explain(status)
+        net_error(status)
     ))
 }
 
 /// The identifier of the account this process runs as, which is never removed from
 /// Administrators.
 fn current_sid() -> Option<String> {
-    let name = std::env::var("USERNAME").ok()?;
+    let name = user_name();
+    if name.is_empty() {
+        return None;
+    }
     NativeRegistry.account_sid(&name)
 }
 
@@ -328,60 +260,16 @@ fn set_groups(name: &str, sid: &str, admin: bool, strict: bool) -> Result<Vec<St
 
 /// Gives a folder the access list of an SDDL text, protected from the entries of its parent.
 fn set_folder_access(folder: &str, dacl: &str) -> Result<(), String> {
-    use windows_sys::Win32::Security::Authorization::{
-        ConvertStringSecurityDescriptorToSecurityDescriptorW, SDDL_REVISION_1, SE_FILE_OBJECT,
-        SetNamedSecurityInfoW,
-    };
-    use windows_sys::Win32::Security::{
-        ACL, DACL_SECURITY_INFORMATION, GetSecurityDescriptorDacl,
-        PROTECTED_DACL_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR,
-    };
-    let mut name = wide(folder);
-    let text = wide(dacl);
-    let mut sd: PSECURITY_DESCRIPTOR = std::ptr::null_mut();
-    let size = std::ptr::null_mut();
-    // SAFETY: the text is null-terminated; the descriptor is allocated by the call.
-    let made = unsafe {
-        ConvertStringSecurityDescriptorToSecurityDescriptorW(
-            text.as_ptr(),
-            SDDL_REVISION_1,
-            &mut sd,
-            size,
-        )
-    };
-    if made == 0 {
-        return Err("Windows does not take the access list of the folder".to_owned());
-    }
-    let (mut present, mut defaulted) = (0, 0);
-    let mut list: *mut ACL = std::ptr::null_mut();
-    // SAFETY: the descriptor came from the call above; the list points into it.
-    let ok = unsafe { GetSecurityDescriptorDacl(sd, &mut present, &mut list, &mut defaulted) };
-    let status = if ok == 0 || present == 0 {
-        None
-    } else {
-        let none = std::ptr::null_mut();
-        // SAFETY: the name is null-terminated and the list lives in the descriptor, which is
-        // freed only below.
-        Some(unsafe {
-            SetNamedSecurityInfoW(
-                name.as_mut_ptr(),
-                SE_FILE_OBJECT,
-                DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION,
-                none,
-                none,
-                list,
-                std::ptr::null(),
-            )
-        })
-    };
-    // SAFETY: the descriptor was allocated by the conversion above and is freed once.
-    unsafe { LocalFree(sd) };
-    match status {
-        Some(0) => Ok(()),
-        Some(code) => Err(format!(
+    use windows_sys::Win32::Security::Authorization::SE_FILE_OBJECT;
+    match set_dacl(SE_FILE_OBJECT, folder, dacl, true) {
+        Ok(()) => Ok(()),
+        Err(DaclError::NotTaken) => {
+            Err("Windows does not take the access list of the folder".to_owned())
+        }
+        Err(DaclError::Empty) => Err("the access list of the folder is empty".to_owned()),
+        Err(DaclError::Status(code)) => Err(format!(
             "the access list of the folder was not set (error {code})"
         )),
-        None => Err("the access list of the folder is empty".to_owned()),
     }
 }
 
@@ -430,12 +318,8 @@ fn make_profile(sid: &str, folder: &str) -> Result<Option<String>, String> {
         .create_subkey(format!("{PROFILE_LIST}\\{sid}"))
         .map_err(|e| format!("the profile was not registered: {e}"))?
         .0;
-    let mut bytes: Vec<u8> = Vec::new();
-    for unit in wide(folder) {
-        bytes.extend_from_slice(&unit.to_le_bytes());
-    }
     let path = winreg::RegValue {
-        bytes: bytes.into(),
+        bytes: utf16_bytes(folder).into(),
         vtype: RegType::REG_EXPAND_SZ,
     };
     key.set_raw_value("ProfileImagePath", &path)

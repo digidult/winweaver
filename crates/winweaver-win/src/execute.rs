@@ -11,54 +11,21 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
-use winreg::enums::{
-    HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, HKEY_USERS, KEY_READ, KEY_SET_VALUE, RegType,
-};
+use winreg::enums::{HKEY_USERS, KEY_READ, KEY_SET_VALUE, RegType};
 use winreg::{RegKey, RegValue};
 use winweaver_core::apply::{self, BackupEntry, Op, Plan, Report, StepResult};
-use winweaver_core::catalog::RegKind;
-use winweaver_core::thispc::{Machine, RegData};
+use winweaver_core::catalog::{RegKind, values};
+use winweaver_core::registry::Data;
+use winweaver_core::thispc::Machine;
 
+use crate::ffi::{buffer_text, hive_path, system_root, user_name, utf16_bytes, wide};
 use crate::native::NativeMachine;
 
-fn split(path: &str) -> Result<(RegKey, String), String> {
-    let (root, sub) = path
-        .split_once(":\\")
-        .ok_or_else(|| format!("unsupported registry path {path}"))?;
-    let hive = match root.to_ascii_uppercase().as_str() {
-        "HKLM" => HKEY_LOCAL_MACHINE,
-        "HKCU" => HKEY_CURRENT_USER,
-        "HKU" => HKEY_USERS,
-        _ => return Err(format!("unsupported registry path {path}")),
-    };
-    Ok((RegKey::predef(hive), sub.to_owned()))
-}
-
-fn utf16(text: &str) -> Vec<u8> {
-    text.encode_utf16()
-        .chain([0])
-        .flat_map(u16::to_le_bytes)
-        .collect()
-}
+/// What a step did: its status (`ok`, `failed`, `skipped`) and its note.
+type Outcome = (&'static str, String);
 
 fn number(data: &Value) -> Result<i64, String> {
-    match data {
-        Value::Number(n) => n
-            .as_i64()
-            .or_else(|| n.as_u64().map(|u| u as i64))
-            .ok_or_else(|| format!("{n} is not a whole number")),
-        Value::String(s) => s.trim().parse().map_err(|_| format!("{s} is not a number")),
-        Value::Bool(b) => Ok(i64::from(*b)),
-        other => Err(format!("{other} is not a number")),
-    }
-}
-
-fn text(data: &Value) -> String {
-    match data {
-        Value::String(s) => s.clone(),
-        Value::Null => String::new(),
-        other => other.to_string(),
-    }
+    values::number(data).ok_or_else(|| format!("{} is not a number", values::text(data)))
 }
 
 /// The raw bytes of a value of a kind.
@@ -72,17 +39,12 @@ pub fn encode(kind: RegKind, data: &Value) -> Result<RegValue<'static>, String> 
             (number(data)? as u64).to_le_bytes().to_vec(),
             RegType::REG_QWORD,
         ),
-        RegKind::String => (utf16(&text(data)), RegType::REG_SZ),
-        RegKind::ExpandString => (utf16(&text(data)), RegType::REG_EXPAND_SZ),
+        RegKind::String => (utf16_bytes(&values::text(data)), RegType::REG_SZ),
+        RegKind::ExpandString => (utf16_bytes(&values::text(data)), RegType::REG_EXPAND_SZ),
         RegKind::MultiString => {
-            let items: Vec<String> = match data {
-                Value::Array(list) => list.iter().map(text).collect(),
-                Value::String(s) if s.is_empty() => Vec::new(),
-                other => vec![text(other)],
-            };
             let mut bytes = Vec::new();
-            for item in &items {
-                bytes.extend(utf16(item));
+            for item in values::multi_items(data) {
+                bytes.extend(utf16_bytes(&item));
             }
             bytes.extend([0, 0]);
             (bytes, RegType::REG_MULTI_SZ)
@@ -106,20 +68,20 @@ pub fn encode(kind: RegKind, data: &Value) -> Result<RegValue<'static>, String> 
 }
 
 /// The backup entry of a value as it is now.
-fn snapshot(machine: &NativeMachine, path: &str, name: &str) -> BackupEntry {
-    let (existed, value_type, value) = match machine.value(path, name) {
+fn snapshot(path: &str, name: &str) -> BackupEntry {
+    let (existed, value_type, value) = match NativeMachine.value(path, name) {
         Ok(Some(data)) => {
             let (t, v) = match data {
-                RegData::Dword(v) => (Some("DWord"), Value::from(v as i32)),
-                RegData::Qword(v) => (Some("QWord"), Value::from(v as i64)),
-                RegData::Str(s) => (Some("String"), Value::from(s)),
-                RegData::ExpandStr(s) => (Some("ExpandString"), Value::from(s)),
-                RegData::Multi(items) => (Some("MultiString"), Value::from(items)),
-                RegData::Binary(bytes) => (
+                Data::Dword(v) => (Some("DWord"), Value::from(v as i32)),
+                Data::Qword(v) => (Some("QWord"), Value::from(v as i64)),
+                Data::Sz(s) => (Some("String"), Value::from(s)),
+                Data::ExpandSz(s) => (Some("ExpandString"), Value::from(s)),
+                Data::MultiSz(items) => (Some("MultiString"), Value::from(items)),
+                Data::Binary(bytes) => (
                     Some("Binary"),
                     Value::from(bytes.into_iter().map(u64::from).collect::<Vec<_>>()),
                 ),
-                RegData::Other => (None, Value::Null),
+                Data::None(_) | Data::Other { .. } => (None, Value::Null),
             };
             (true, t.map(str::to_owned), v)
         }
@@ -137,14 +99,14 @@ fn snapshot(machine: &NativeMachine, path: &str, name: &str) -> BackupEntry {
 
 fn write_value(path: &str, name: &str, kind: RegKind, data: &Value) -> Result<(), String> {
     let value = encode(kind, data)?;
-    let (root, sub) = split(path)?;
+    let (root, sub) = hive_path(path)?;
     let (key, _) = root.create_subkey(&sub).map_err(|e| e.to_string())?;
     let name = if name == "(Default)" { "" } else { name };
     key.set_raw_value(name, &value).map_err(|e| e.to_string())
 }
 
 fn delete_value(path: &str, name: &str) -> Result<bool, String> {
-    let (root, sub) = split(path)?;
+    let (root, sub) = hive_path(path)?;
     let key = match root.open_subkey_with_flags(&sub, KEY_READ | KEY_SET_VALUE) {
         Ok(k) => k,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(false),
@@ -156,10 +118,6 @@ fn delete_value(path: &str, name: &str) -> Result<bool, String> {
         Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
         Err(e) => Err(e.to_string()),
     }
-}
-
-fn wide(text: &str) -> Vec<u16> {
-    text.encode_utf16().chain([0]).collect()
 }
 
 /// The key of the default user profile under HKEY_USERS (`UnattendDefault`).
@@ -223,8 +181,7 @@ fn default_user_hive() -> Result<PathBuf, String> {
     if unsafe { GetDefaultUserProfileDirectoryW(buffer.as_mut_ptr(), &mut size) } == 0 {
         return Err("the folder of the default user profile is not known".to_owned());
     }
-    let end = buffer.iter().position(|&c| c == 0).unwrap_or(buffer.len());
-    Ok(PathBuf::from(String::from_utf16_lossy(&buffer[..end])).join("NTUSER.DAT"))
+    Ok(PathBuf::from(buffer_text(&buffer)).join("NTUSER.DAT"))
 }
 
 /// The hive of the default user profile, loaded at the key of the stand-alone apply script while
@@ -291,7 +248,7 @@ impl Drop for DefaultUser {
 /// The names of the values of a key, `(Default)` for the default value; none when the key does
 /// not exist.
 fn value_names(path: &str) -> Result<Vec<String>, String> {
-    let (root, sub) = split(path)?;
+    let (root, sub) = hive_path(path)?;
     let key = match root.open_subkey_with_flags(&sub, KEY_READ) {
         Ok(k) => k,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
@@ -322,8 +279,7 @@ pub fn system_program(file: &str) -> Result<PathBuf, String> {
     if !ok {
         return Err(format!("{file} is not a program of the system folder"));
     }
-    let root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_owned());
-    Ok(Path::new(&root).join("System32").join(file))
+    Ok(system_root().join("System32").join(file))
 }
 
 fn run(file: &str, args: &[String]) -> Result<String, String> {
@@ -358,7 +314,7 @@ fn run(file: &str, args: &[String]) -> Result<String, String> {
 
 /// The names of the subkeys of a key; none when the key does not exist.
 fn subkey_names(path: &str) -> Result<Vec<String>, String> {
-    let (root, sub) = split(path)?;
+    let (root, sub) = hive_path(path)?;
     let key = match root.open_subkey_with_flags(&sub, KEY_READ) {
         Ok(k) => k,
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
@@ -386,7 +342,7 @@ fn values_under(path: &str, out: &mut Vec<(String, String)>, depth: usize) -> Re
 
 /// Deletes a key with everything under it; false when it did not exist.
 fn delete_key(path: &str) -> Result<bool, String> {
-    let (root, sub) = split(path)?;
+    let (root, sub) = hive_path(path)?;
     match root.delete_subkey_all(&sub) {
         Ok(()) => Ok(true),
         Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(false),
@@ -454,13 +410,38 @@ fn named(kind: &str, name: &str) -> BackupEntry {
 }
 
 /// The status of a step that did several things: failed when one of them failed.
-fn outcome(failed: bool, notes: Vec<String>) -> (&'static str, String) {
+fn outcome(failed: bool, notes: Vec<String>) -> Outcome {
     let status = if failed { "failed" } else { "ok" };
     (status, notes.join("; "))
 }
 
+/// The outcome of a step that did one thing.
+fn done(result: Result<(), String>) -> Outcome {
+    match result {
+        Ok(()) => ("ok", String::new()),
+        Err(e) => ("failed", e),
+    }
+}
+
+/// The backup of a run: every registry value saved before its first change, and the changes no
+/// undo takes back, named.
+#[derive(Default)]
+struct Backup {
+    entries: Vec<BackupEntry>,
+    seen: HashSet<(String, String)>,
+}
+
+impl Backup {
+    /// Saves a value as it is now, the first time it is named.
+    fn remember(&mut self, path: &str, name: &str) {
+        if self.seen.insert((path.to_lowercase(), name.to_lowercase())) {
+            self.entries.push(snapshot(path, name));
+        }
+    }
+}
+
 /// Sets "password never expires" on the accounts of the profile that exist.
-fn never_expires(accounts: &[String], backup: &mut Vec<BackupEntry>) -> (&'static str, String) {
+fn never_expires(accounts: &[String], backup: &mut Backup) -> Outcome {
     let mut notes = Vec::new();
     let mut failed = false;
     if accounts.is_empty() {
@@ -470,7 +451,7 @@ fn never_expires(accounts: &[String], backup: &mut Vec<BackupEntry>) -> (&'stati
         match crate::accounts::set_flag(name, crate::accounts::NEVER_EXPIRES, true) {
             Ok(Some(true)) => {
                 let what = format!("{name}: password never expires");
-                backup.push(named("account-changed", &what));
+                backup.entries.push(named("account-changed", &what));
                 notes.push(format!("{name}: set"));
             }
             Ok(Some(false)) => notes.push(format!("{name}: set already")),
@@ -485,12 +466,12 @@ fn never_expires(accounts: &[String], backup: &mut Vec<BackupEntry>) -> (&'stati
 }
 
 /// Disables the built-in Administrator and Guest, never the account the helper runs as.
-fn disable_builtin(backup: &mut Vec<BackupEntry>) -> (&'static str, String) {
+fn disable_builtin(backup: &mut Backup) -> Outcome {
     let found = match crate::accounts::builtin() {
         Ok(found) => found,
         Err(e) => return ("failed", e),
     };
-    let me = std::env::var("USERNAME").unwrap_or_default();
+    let me = user_name();
     let mut notes = Vec::new();
     let mut failed = false;
     for name in found {
@@ -500,7 +481,9 @@ fn disable_builtin(backup: &mut Vec<BackupEntry>) -> (&'static str, String) {
         }
         match crate::accounts::set_flag(&name, crate::accounts::DISABLED, true) {
             Ok(Some(true)) => {
-                backup.push(named("account-changed", &format!("{name}: disabled")));
+                backup
+                    .entries
+                    .push(named("account-changed", &format!("{name}: disabled")));
                 notes.push(format!("{name}: disabled"));
             }
             Ok(Some(false)) => notes.push(format!("{name}: disabled already")),
@@ -516,7 +499,7 @@ fn disable_builtin(backup: &mut Vec<BackupEntry>) -> (&'static str, String) {
 
 /// The lines of the error file of the installation in the note, then the file deleted; no other
 /// file is read.
-fn collect_errors(file: &str) -> (&'static str, String) {
+fn collect_errors(file: &str) -> Outcome {
     use std::io::Read;
     if !file.eq_ignore_ascii_case(apply::SETUP_ERRORS) {
         let why = format!("{file} is not the error file of the installation");
@@ -548,7 +531,7 @@ fn collect_errors(file: &str) -> (&'static str, String) {
 }
 
 /// Deletes the copies of the answer file that exist; no other file is deleted.
-fn delete_files(paths: &[String], backup: &mut Vec<BackupEntry>) -> (&'static str, String) {
+fn delete_files(paths: &[String], backup: &mut Backup) -> Outcome {
     let mut notes = Vec::new();
     let mut failed = false;
     for path in paths {
@@ -562,7 +545,7 @@ fn delete_files(paths: &[String], backup: &mut Vec<BackupEntry>) -> (&'static st
         }
         match std::fs::remove_file(path) {
             Ok(()) => {
-                backup.push(named("file-deleted", path));
+                backup.entries.push(named("file-deleted", path));
                 notes.push(format!("deleted {path}"));
             }
             Err(e) if e.kind() == io::ErrorKind::NotFound => {}
@@ -580,20 +563,13 @@ fn delete_files(paths: &[String], backup: &mut Vec<BackupEntry>) -> (&'static st
 
 /// Removes apps for every user and for new accounts; each app found goes into the backup the way
 /// the apply script names it, so `Undo-Apply.ps1` lists it as not restorable.
-fn remove_apps(names: &[String], backup: &mut Vec<BackupEntry>) -> (&'static str, String) {
+fn remove_apps(names: &[String], backup: &mut Backup) -> Outcome {
     let done = match crate::apps::remove_apps(names) {
         Ok(done) => done,
         Err(e) => return ("failed", e),
     };
     for name in &done.found {
-        backup.push(BackupEntry {
-            kind: "app-removed".to_owned(),
-            path: String::new(),
-            name: name.clone(),
-            existed: true,
-            value_type: None,
-            value: Value::Null,
-        });
+        backup.entries.push(named("app-removed", name));
     }
     let mut notes = Vec::new();
     if done.found.is_empty() {
@@ -601,30 +577,18 @@ fn remove_apps(names: &[String], backup: &mut Vec<BackupEntry>) -> (&'static str
     }
     notes.extend(done.done.iter().cloned());
     notes.extend(done.failed.iter().cloned());
-    let status = if done.failed.is_empty() {
-        "ok"
-    } else {
-        "failed"
-    };
-    (status, notes.join("; "))
+    outcome(!done.failed.is_empty(), notes)
 }
 
 /// Removes the capabilities of a pattern; each one removed goes into the backup the way the
 /// apply script names it, so `Undo-Apply.ps1` lists it as not restorable.
-fn remove_capabilities(pattern: &str, backup: &mut Vec<BackupEntry>) -> (&'static str, String) {
+fn remove_capabilities(pattern: &str, backup: &mut Backup) -> Outcome {
     let done = match crate::dism::remove_capabilities(pattern) {
         Ok(done) => done,
         Err(e) => return ("failed", e),
     };
     for name in &done.removed {
-        backup.push(BackupEntry {
-            kind: "capability-removed".to_owned(),
-            path: String::new(),
-            name: name.clone(),
-            existed: true,
-            value_type: None,
-            value: Value::Null,
-        });
+        backup.entries.push(named("capability-removed", name));
     }
     let mut notes = Vec::new();
     if done.removed.is_empty() && done.failed.is_empty() {
@@ -637,199 +601,196 @@ fn remove_capabilities(pattern: &str, backup: &mut Vec<BackupEntry>) -> (&'stati
         notes.push("Windows finishes it after a restart".to_owned());
     }
     notes.extend(done.failed.iter().cloned());
-    let status = if done.failed.is_empty() {
-        "ok"
-    } else {
-        "failed"
+    outcome(!done.failed.is_empty(), notes)
+}
+
+/// Writes the values of a list key; without `additive` the other values of the key go first.
+fn set_list(
+    backup: &mut Backup,
+    path: &str,
+    kind: RegKind,
+    names: &[String],
+    values: &[String],
+    additive: bool,
+) -> Outcome {
+    let present = match value_names(path) {
+        Ok(present) => present,
+        Err(e) => return ("failed", e),
     };
-    (status, notes.join("; "))
+    for n in present.iter().chain(names) {
+        backup.remember(path, n);
+    }
+    let mut failed = Vec::new();
+    if !additive {
+        for n in present
+            .iter()
+            .filter(|n| !names.iter().any(|x| x.eq_ignore_ascii_case(n)))
+        {
+            if let Err(e) = delete_value(path, n) {
+                failed.push(e);
+            }
+        }
+    }
+    for (n, v) in names.iter().zip(values) {
+        if let Err(e) = write_value(path, n, kind, &Value::from(v.as_str())) {
+            failed.push(e);
+        }
+    }
+    if failed.is_empty() {
+        ("ok", String::new())
+    } else {
+        ("failed", failed.join("; "))
+    }
+}
+
+/// Sets the start type of a service that is present; with `only_from`, only when its start type
+/// is that one now.
+fn service_start(backup: &mut Backup, name: &str, start: u32, only_from: Option<u32>) -> Outcome {
+    let key = apply::service_key(name);
+    match NativeMachine.value(&key, "Start") {
+        Ok(Some(now)) => {
+            if let Some(from) = only_from
+                && !matches!(now, Data::Dword(n) if n == from)
+            {
+                return ("ok", format!("the start type is not {from}, unchanged"));
+            }
+            backup.remember(&key, "Start");
+            done(write_value(&key, "Start", RegKind::DWord, &Value::from(start)))
+        }
+        Ok(None) => ("skipped", "the service is not present".to_owned()),
+        Err(e) => ("failed", e),
+    }
+}
+
+/// Runs a program of the system folder with the folder of the installation media in its arguments.
+fn run_from_media(folder: &str, pattern: &str, deep: bool, file: &str, args: &[String]) -> Outcome {
+    let Some(source) = media_folder(folder, pattern, deep) else {
+        return ("skipped", format!("no drive has {folder} with {pattern}"));
+    };
+    let source = source.display().to_string();
+    let args: Vec<String> = args
+        .iter()
+        .map(|a| a.replace("{source}", &source))
+        .collect();
+    match run(file, &args) {
+        Ok(note) => ("ok", note),
+        Err(e) => ("failed", e),
+    }
+}
+
+/// Writes a value into every subkey of a key.
+fn set_in_subkeys(backup: &mut Backup, path: &str, name: &str, kind: RegKind, data: &Value) -> Outcome {
+    let subs = match subkey_names(path) {
+        Ok(subs) => subs,
+        Err(e) => return ("failed", e),
+    };
+    if subs.is_empty() {
+        return ("skipped", "the key has no subkeys".to_owned());
+    }
+    let mut failed = Vec::new();
+    for sub in &subs {
+        let at = format!("{path}\\{sub}");
+        backup.remember(&at, name);
+        if let Err(e) = write_value(&at, name, kind, data) {
+            failed.push(e);
+        }
+    }
+    let note = format!("{} subkeys", subs.len());
+    outcome(!failed.is_empty(), [vec![note], failed].concat())
+}
+
+/// Deletes a key with everything under it, every value of it backed up first.
+fn remove_key(backup: &mut Backup, path: &str) -> Outcome {
+    let mut found = Vec::new();
+    if let Err(e) = values_under(path, &mut found, 0) {
+        return ("failed", e);
+    }
+    for (at, name) in &found {
+        backup.remember(at, name);
+    }
+    match delete_key(path) {
+        Ok(true) => ("ok", format!("{} values backed up", found.len())),
+        Ok(false) => ("ok", "it did not exist".to_owned()),
+        Err(e) => ("failed", e),
+    }
+}
+
+/// One step of a plan.
+fn step(backup: &mut Backup, op: &Op) -> Outcome {
+    match op {
+        Op::SetValue {
+            path,
+            name,
+            kind,
+            data,
+        } => {
+            backup.remember(path, name);
+            done(write_value(path, name, *kind, data))
+        }
+        Op::DeleteValue { path, name } => {
+            backup.remember(path, name);
+            match delete_value(path, name) {
+                Ok(true) => ("ok", String::new()),
+                Ok(false) => ("ok", "it did not exist".to_owned()),
+                Err(e) => ("failed", e),
+            }
+        }
+        Op::SetList {
+            path,
+            kind,
+            names,
+            values,
+            additive,
+        } => set_list(backup, path, *kind, names, values, *additive),
+        Op::ServiceStart { name, start } => service_start(backup, name, *start, None),
+        Op::ServiceStartFrom { name, from, start } => {
+            service_start(backup, name, *start, Some(*from))
+        }
+        Op::Run { file, args } => match run(file, args) {
+            Ok(note) => ("ok", note),
+            Err(e) => ("failed", e),
+        },
+        Op::RemoveCapability { pattern } => remove_capabilities(pattern, backup),
+        Op::RemoveApps { names } => remove_apps(names, backup),
+        Op::RunFromMedia {
+            folder,
+            pattern,
+            deep,
+            file,
+            args,
+        } => run_from_media(folder, pattern, *deep, file, args),
+        Op::SetValueInSubkeys {
+            path,
+            name,
+            kind,
+            data,
+        } => set_in_subkeys(backup, path, name, *kind, data),
+        Op::DeleteKey { path } => remove_key(backup, path),
+        Op::PasswordNeverExpires { accounts } => never_expires(accounts, backup),
+        Op::DisableBuiltinAccounts => disable_builtin(backup),
+        Op::CollectErrors { file } => collect_errors(file),
+        Op::DeleteFiles { paths } => delete_files(paths, backup),
+    }
 }
 
 /// Runs a plan: every registry value is saved to `backup-<stamp>.json` in `out_dir` before its
 /// first change. Programs and unknown services are reported, never fatal. The hive of the default
 /// user profile is loaded for the steps that write it and unloaded after the last step.
 pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
-    let machine = NativeMachine;
-    let mut backup: Vec<BackupEntry> = Vec::new();
-    let mut seen: HashSet<(String, String)> = HashSet::new();
-    let mut remember = |path: &str, name: &str, backup: &mut Vec<BackupEntry>| {
-        if seen.insert((path.to_lowercase(), name.to_lowercase())) {
-            backup.push(snapshot(&machine, path, name));
-        }
-    };
+    let mut backup = Backup::default();
     let mut report = Report {
         purpose: plan.purpose.clone(),
         ..Report::default()
     };
     let hive = plan.uses_default_user().then(DefaultUser::mount);
-    for step in &plan.steps {
-        if let Some(Err(why)) = &hive
-            && step.op.in_default_user()
-        {
-            report.results.push(StepResult {
-                rule: step.rule.clone(),
-                what: step.op.describe(),
-                status: "failed".to_owned(),
-                note: why.clone(),
-            });
-            continue;
-        }
-        let (status, note) = match &step.op {
-            Op::SetValue {
-                path,
-                name,
-                kind,
-                data,
-            } => {
-                remember(path, name, &mut backup);
-                match write_value(path, name, *kind, data) {
-                    Ok(()) => ("ok", String::new()),
-                    Err(e) => ("failed", e),
-                }
-            }
-            Op::DeleteValue { path, name } => {
-                remember(path, name, &mut backup);
-                match delete_value(path, name) {
-                    Ok(true) => ("ok", String::new()),
-                    Ok(false) => ("ok", "it did not exist".to_owned()),
-                    Err(e) => ("failed", e),
-                }
-            }
-            Op::SetList {
-                path,
-                kind,
-                names,
-                values,
-                additive,
-            } => match value_names(path) {
-                Err(e) => ("failed", e),
-                Ok(present) => {
-                    for n in present.iter().chain(names) {
-                        remember(path, n, &mut backup);
-                    }
-                    let mut failed = Vec::new();
-                    if !*additive {
-                        for n in present
-                            .iter()
-                            .filter(|n| !names.iter().any(|x| x.eq_ignore_ascii_case(n)))
-                        {
-                            if let Err(e) = delete_value(path, n) {
-                                failed.push(e);
-                            }
-                        }
-                    }
-                    for (n, v) in names.iter().zip(values) {
-                        if let Err(e) = write_value(path, n, *kind, &Value::from(v.as_str())) {
-                            failed.push(e);
-                        }
-                    }
-                    if failed.is_empty() {
-                        ("ok", String::new())
-                    } else {
-                        ("failed", failed.join("; "))
-                    }
-                }
-            },
-            Op::ServiceStart { name, start } => {
-                let key = apply::service_key(name);
-                match machine.value(&key, "Start") {
-                    Ok(Some(_)) => {
-                        remember(&key, "Start", &mut backup);
-                        match write_value(&key, "Start", RegKind::DWord, &Value::from(*start)) {
-                            Ok(()) => ("ok", String::new()),
-                            Err(e) => ("failed", e),
-                        }
-                    }
-                    Ok(None) => ("skipped", "the service is not present".to_owned()),
-                    Err(e) => ("failed", e),
-                }
-            }
-            Op::Run { file, args } => match run(file, args) {
-                Ok(note) => ("ok", note),
-                Err(e) => ("failed", e),
-            },
-            Op::RemoveCapability { pattern } => remove_capabilities(pattern, &mut backup),
-            Op::RemoveApps { names } => remove_apps(names, &mut backup),
-            Op::RunFromMedia {
-                folder,
-                pattern,
-                deep,
-                file,
-                args,
-            } => match media_folder(folder, pattern, *deep) {
-                None => ("skipped", format!("no drive has {folder} with {pattern}")),
-                Some(source) => {
-                    let source = source.display().to_string();
-                    let args: Vec<String> = args
-                        .iter()
-                        .map(|a| a.replace("{source}", &source))
-                        .collect();
-                    match run(file, &args) {
-                        Ok(note) => ("ok", note),
-                        Err(e) => ("failed", e),
-                    }
-                }
-            },
-            Op::ServiceStartFrom { name, from, start } => {
-                let key = apply::service_key(name);
-                match machine.value(&key, "Start") {
-                    Ok(Some(RegData::Dword(now))) if now == *from => {
-                        remember(&key, "Start", &mut backup);
-                        match write_value(&key, "Start", RegKind::DWord, &Value::from(*start)) {
-                            Ok(()) => ("ok", String::new()),
-                            Err(e) => ("failed", e),
-                        }
-                    }
-                    Ok(Some(_)) => ("ok", format!("the start type is not {from}, unchanged")),
-                    Ok(None) => ("skipped", "the service is not present".to_owned()),
-                    Err(e) => ("failed", e),
-                }
-            }
-            Op::SetValueInSubkeys {
-                path,
-                name,
-                kind,
-                data,
-            } => match subkey_names(path) {
-                Err(e) => ("failed", e),
-                Ok(subs) if subs.is_empty() => ("skipped", "the key has no subkeys".to_owned()),
-                Ok(subs) => {
-                    let mut failed = Vec::new();
-                    for sub in &subs {
-                        let at = format!("{path}\\{sub}");
-                        remember(&at, name, &mut backup);
-                        if let Err(e) = write_value(&at, name, *kind, data) {
-                            failed.push(e);
-                        }
-                    }
-                    let note = format!("{} subkeys", subs.len());
-                    outcome(!failed.is_empty(), [vec![note], failed].concat())
-                }
-            },
-            Op::DeleteKey { path } => {
-                let mut found = Vec::new();
-                match values_under(path, &mut found, 0) {
-                    Err(e) => ("failed", e),
-                    Ok(()) => {
-                        for (at, name) in &found {
-                            remember(at, name, &mut backup);
-                        }
-                        match delete_key(path) {
-                            Ok(true) => ("ok", format!("{} values backed up", found.len())),
-                            Ok(false) => ("ok", "it did not exist".to_owned()),
-                            Err(e) => ("failed", e),
-                        }
-                    }
-                }
-            }
-            Op::PasswordNeverExpires { accounts } => never_expires(accounts, &mut backup),
-            Op::DisableBuiltinAccounts => disable_builtin(&mut backup),
-            Op::CollectErrors { file } => collect_errors(file),
-            Op::DeleteFiles { paths } => delete_files(paths, &mut backup),
+    for item in &plan.steps {
+        let (status, note) = match &hive {
+            Some(Err(why)) if item.op.in_default_user() => ("failed", why.clone()),
+            _ => step(&mut backup, &item.op),
         };
         report.results.push(StepResult {
-            rule: step.rule.clone(),
-            what: step.op.describe(),
+            rule: item.rule.clone(),
+            what: item.op.describe(),
             status: status.to_owned(),
             note,
         });
@@ -844,9 +805,10 @@ pub fn execute(plan: &Plan, out_dir: &Path, stamp: &str) -> Report {
             note: e,
         });
     }
-    if !backup.is_empty() {
+    if !backup.entries.is_empty() {
         let name = format!("backup-{stamp}.json");
-        let text = serde_json::to_string_pretty(&backup).unwrap_or_else(|_| "[]".to_owned());
+        let text =
+            serde_json::to_string_pretty(&backup.entries).unwrap_or_else(|_| "[]".to_owned());
         match std::fs::create_dir_all(out_dir)
             .and_then(|()| std::fs::write(out_dir.join(&name), text))
         {
@@ -986,31 +948,28 @@ mod tests {
         assert_eq!(report.count("failed"), 0, "{report:?}");
         assert_eq!(report.count("skipped"), 1, "the missing service is skipped");
         let m = NativeMachine;
-        assert_eq!(m.value(&key, "D"), Ok(Some(RegData::Dword(7))));
-        assert_eq!(m.value(&key, "S"), Ok(Some(RegData::Str("text".into()))));
+        assert_eq!(m.value(&key, "D"), Ok(Some(Data::Dword(7))));
+        assert_eq!(m.value(&key, "S"), Ok(Some(Data::Sz("text".into()))));
         assert_eq!(
             m.value(&key, "M"),
-            Ok(Some(RegData::Multi(vec!["a".into(), "b".into()])))
+            Ok(Some(Data::MultiSz(vec!["a".into(), "b".into()])))
         );
-        assert_eq!(
-            m.value(&key, "B"),
-            Ok(Some(RegData::Binary(vec![1, 2, 255])))
-        );
-        assert_eq!(m.value(&key, "Q"), Ok(Some(RegData::Qword(5))));
+        assert_eq!(m.value(&key, "B"), Ok(Some(Data::Binary(vec![1, 2, 255]))));
+        assert_eq!(m.value(&key, "Q"), Ok(Some(Data::Qword(5))));
         let list = format!("{key}\\L");
         assert_eq!(
             m.value(&list, "old"),
             Ok(None),
             "the list deletes the other values"
         );
-        assert_eq!(m.value(&list, "2"), Ok(Some(RegData::Str("b".into()))));
+        assert_eq!(m.value(&list, "2"), Ok(Some(Data::Sz("b".into()))));
         let entries = apply::read_backup(&out.join(&report.backup)).unwrap();
         assert_eq!(entries.len(), 9);
         assert!(entries.iter().all(|e| !e.existed));
         let undo = execute(&plan_undo(&entries, "n"), &out, "undo");
         assert_eq!(undo.count("failed"), 0, "{undo:?}");
         assert_eq!(m.value(&key, "D"), Ok(None));
-        let (root, sub) = split(&key).unwrap();
+        let (root, sub) = hive_path(&key).unwrap();
         root.delete_subkey_all(&sub).unwrap();
         std::fs::remove_dir_all(&out).unwrap();
         assert!(system_program("..\\x.exe").is_err() && system_program("cmd").is_err());
@@ -1125,16 +1084,16 @@ mod tests {
         assert_eq!(report.count("failed"), 1, "{report:?}");
         assert!(kept.exists());
         let m = NativeMachine;
-        assert_eq!(m.value(&one, "N"), Ok(Some(RegData::Dword(2))));
-        assert_eq!(m.value(&two, "N"), Ok(Some(RegData::Dword(2))));
+        assert_eq!(m.value(&one, "N"), Ok(Some(Data::Dword(2))));
+        assert_eq!(m.value(&two, "N"), Ok(Some(Data::Dword(2))));
         assert_eq!(m.value(&deep, "x"), Ok(None), "the key is deleted");
         // The undo makes the deleted key again with its value and removes the new values.
         let entries = apply::read_backup(&out.join(&report.backup)).unwrap();
         let undo = execute(&plan_undo(&entries, "n"), &out, "steps-undo");
         assert_eq!(undo.count("failed"), 0, "{undo:?}");
-        assert_eq!(m.value(&deep, "x"), Ok(Some(RegData::Str("old".into()))));
+        assert_eq!(m.value(&deep, "x"), Ok(Some(Data::Sz("old".into()))));
         assert_eq!(m.value(&one, "N"), Ok(None));
-        let (root, sub) = split(&key).unwrap();
+        let (root, sub) = hive_path(&key).unwrap();
         root.delete_subkey_all(&sub).unwrap();
         std::fs::remove_dir_all(&out).unwrap();
     }

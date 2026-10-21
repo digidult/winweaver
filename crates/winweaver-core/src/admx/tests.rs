@@ -570,8 +570,8 @@ fn lists_of_templates_are_built_applied_and_checked() {
     let checks = crate::thispc::plan(&catalog, &profile, &ids);
     let key = "HKLM:\\Software\\Policies\\Test\\N";
     let mut m = crate::thispc::MemoryMachine::default();
-    m.set(key, "1", crate::thispc::RegData::Str("x".into()));
-    m.set(key, "2", crate::thispc::RegData::Str("y".into()));
+    m.set(key, "1", crate::registry::Data::Sz("x".into()));
+    m.set(key, "2", crate::registry::Data::Sz("y".into()));
     let status = |m: &crate::thispc::MemoryMachine| {
         let report = crate::thispc::run(m, &checks, false, "now");
         report
@@ -581,7 +581,7 @@ fn lists_of_templates_are_built_applied_and_checked() {
             .map(|r| r.status)
     };
     assert_eq!(status(&m), Some(crate::thispc::Status::Ok));
-    m.set(key, "3", crate::thispc::RegData::Str("z".into()));
+    m.set(key, "3", crate::registry::Data::Sz("z".into()));
     assert_eq!(
         status(&m),
         Some(crate::thispc::Status::Differs),

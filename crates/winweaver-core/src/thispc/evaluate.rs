@@ -4,11 +4,12 @@
 use serde_json::Value;
 
 use crate::catalog::{RegKind, values};
+use crate::registry::Data;
 
 use super::plan::{Check, Plan, Probe, wildcard};
 use super::report::{CheckResult, Report, Status};
 use super::{
-    Components, Machine, NOTE_ADMIN, NOTE_NOT_ON_BUILD, PROVISIONED_PACKAGES, RegData, SERVICES,
+    Components, Machine, NOTE_ADMIN, NOTE_NOT_ON_BUILD, PROVISIONED_PACKAGES, SERVICES,
     USER_PACKAGES,
 };
 
@@ -58,7 +59,7 @@ fn result(check: &Check, status: Status, current: String, note: &str) -> CheckRe
 
 /// Whether a value read equals the expected one, as the audit script compares (PowerShell
 /// compares texts without regard to case).
-fn matches_expected(kind: RegKind, data: &RegData, expected: &Value) -> bool {
+fn matches_expected(kind: RegKind, data: &Data, expected: &Value) -> bool {
     match kind {
         RegKind::DWord | RegKind::QWord => {
             let want = match expected {
@@ -69,7 +70,7 @@ fn matches_expected(kind: RegKind, data: &RegData, expected: &Value) -> bool {
             };
             want.is_some_and(|w| data.numbers().contains(&w))
         }
-        _ => data.text().to_lowercase() == expected_text(expected).to_lowercase(),
+        _ => data.audit_text().to_lowercase() == expected_text(expected).to_lowercase(),
     }
 }
 
@@ -100,13 +101,13 @@ fn evaluate(machine: &dyn Machine, components: Option<&Components>, check: &Chec
                 } else {
                     Status::Differs
                 };
-                result(check, status, data.text(), "")
+                result(check, status, data.audit_text(), "")
             }
         },
         Probe::RegAbsent { path, name, .. } => match machine.value(path, name) {
             Err(e) => result(check, Status::Unknown, String::new(), &e),
             Ok(None) => result(check, Status::Ok, String::new(), ""),
-            Ok(Some(data)) => result(check, Status::Differs, data.text(), ""),
+            Ok(Some(data)) => result(check, Status::Differs, data.audit_text(), ""),
         },
         Probe::RegList {
             path,
@@ -122,7 +123,7 @@ fn evaluate(machine: &dyn Machine, components: Option<&Components>, check: &Chec
                     present
                         .iter()
                         .find(|(p, _)| p.eq_ignore_ascii_case(n))
-                        .map(|(_, d)| d.text())
+                        .map(|(_, d)| d.audit_text())
                 };
                 let listed = names
                     .iter()
@@ -134,7 +135,7 @@ fn evaluate(machine: &dyn Machine, components: Option<&Components>, check: &Chec
                 let ok = listed && (*additive || !extra);
                 let current = present
                     .iter()
-                    .map(|(n, d)| format!("{n}={}", d.text()))
+                    .map(|(n, d)| format!("{n}={}", d.audit_text()))
                     .collect::<Vec<_>>()
                     .join(",");
                 let status = if ok { Status::Ok } else { Status::Differs };
@@ -151,7 +152,7 @@ fn evaluate(machine: &dyn Machine, components: Option<&Components>, check: &Chec
                     } else {
                         Status::Differs
                     };
-                    result(check, status, data.text(), "")
+                    result(check, status, data.audit_text(), "")
                 }
             }
         }

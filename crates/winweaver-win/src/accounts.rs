@@ -2,51 +2,33 @@
 //! the network management API of Windows, as the script steps of the rules do with PowerShell. No
 //! password is read or written.
 
-use windows_sys::Win32::Foundation::ERROR_MORE_DATA;
 use windows_sys::Win32::NetworkManagement::NetManagement::{
-    FILTER_NORMAL_ACCOUNT, MAX_PREFERRED_LENGTH, NERR_Success, NetApiBufferFree, NetUserEnum,
-    NetUserGetInfo, NetUserSetInfo, UF_ACCOUNTDISABLE, UF_DONT_EXPIRE_PASSWD, USER_INFO_1,
-    USER_INFO_20, USER_INFO_1008,
+    NERR_Success, NetUserGetInfo, NetUserSetInfo, UF_ACCOUNTDISABLE, UF_DONT_EXPIRE_PASSWD,
+    USER_INFO_1, USER_INFO_1008,
 };
 
-use crate::native::wide_text;
+use crate::ffi::{NetBuffer, USER_NOT_FOUND, each_user, net_error, wide, wide_text};
 
 /// The flag of an account whose password never expires.
 pub const NEVER_EXPIRES: u32 = UF_DONT_EXPIRE_PASSWD;
 /// The flag of a disabled account.
 pub const DISABLED: u32 = UF_ACCOUNTDISABLE;
-/// The error of an account that does not exist (NERR_UserNotFound).
-const USER_NOT_FOUND: u32 = 2221;
-
-fn wide(text: &str) -> Vec<u16> {
-    text.encode_utf16().chain([0]).collect()
-}
-
-pub(crate) fn free(buffer: *mut u8) {
-    if !buffer.is_null() {
-        // SAFETY: the buffer came from a network management call and is freed once.
-        unsafe { NetApiBufferFree(buffer.cast_const().cast()) };
-    }
-}
 
 /// The flags of an account; `None` when it does not exist.
 pub(crate) fn flags(name: &str) -> Result<Option<u32>, String> {
     let name_w = wide(name);
-    let mut buffer: *mut u8 = std::ptr::null_mut();
+    let mut buffer = NetBuffer::default();
     // SAFETY: the name is null-terminated; the call allocates the buffer of level 1.
-    let status = unsafe { NetUserGetInfo(std::ptr::null(), name_w.as_ptr(), 1, &mut buffer) };
+    let status = unsafe { NetUserGetInfo(std::ptr::null(), name_w.as_ptr(), 1, buffer.out()) };
     if status == USER_NOT_FOUND {
-        free(buffer);
         return Ok(None);
     }
-    if status != NERR_Success || buffer.is_null() {
-        free(buffer);
-        let e = format!("the account {name} was not read (error {status})");
+    if status != NERR_Success || buffer.get().is_null() {
+        let e = format!("the account {name} was not read ({})", net_error(status));
         return Err(e);
     }
     // SAFETY: on success the buffer holds one entry of level 1.
-    let flags = unsafe { (*buffer.cast::<USER_INFO_1>()).usri1_flags };
-    free(buffer);
+    let flags = unsafe { (*buffer.get().cast::<USER_INFO_1>()).usri1_flags };
     Ok(Some(flags))
 }
 
@@ -70,7 +52,7 @@ pub fn set_flag(name: &str, flag: u32, on: bool) -> Result<Option<bool>, String>
     let status =
         unsafe { NetUserSetInfo(std::ptr::null(), name_w.as_ptr(), 1008, buffer, &mut bad) };
     if status != NERR_Success {
-        let e = format!("the account {name} was not changed (error {status})");
+        let e = format!("the account {name} was not changed ({})", net_error(status));
         return Err(e);
     }
     Ok(Some(true))
@@ -80,44 +62,14 @@ pub fn set_flag(name: &str, flag: u32, on: bool) -> Result<Option<bool>, String>
 /// language of this Windows.
 pub fn builtin() -> Result<Vec<String>, String> {
     let mut names = Vec::new();
-    let mut resume = 0u32;
-    loop {
-        let mut buffer: *mut u8 = std::ptr::null_mut();
-        let (mut read, mut total) = (0u32, 0u32);
-        // SAFETY: the call allocates the buffer and writes its counts and the resume handle.
-        let status = unsafe {
-            NetUserEnum(
-                std::ptr::null(),
-                20,
-                FILTER_NORMAL_ACCOUNT,
-                &mut buffer,
-                MAX_PREFERRED_LENGTH,
-                &mut read,
-                &mut total,
-                &mut resume,
-            )
-        };
-        let more = status == ERROR_MORE_DATA;
-        if (status == NERR_Success || more) && !buffer.is_null() {
-            // SAFETY: the buffer holds `read` entries of level 20.
-            let entries =
-                unsafe { std::slice::from_raw_parts(buffer.cast::<USER_INFO_20>(), read as usize) };
-            for entry in entries {
-                if matches!(entry.usri20_user_id, 500 | 501) {
-                    // SAFETY: the name is a null-terminated string inside the buffer.
-                    names.push(unsafe { wide_text(entry.usri20_name) });
-                }
-            }
+    each_user(|entry| {
+        if matches!(entry.usri20_user_id, 500 | 501) {
+            // SAFETY: the name is a null-terminated string inside the buffer of the call.
+            names.push(unsafe { wide_text(entry.usri20_name) });
         }
-        free(buffer);
-        if !more {
-            if status != NERR_Success {
-                let e = format!("the local accounts were not read (error {status})");
-                return Err(e);
-            }
-            return Ok(names);
-        }
-    }
+    })
+    .map_err(|status| format!("the local accounts were not read ({})", net_error(status)))?;
+    Ok(names)
 }
 
 #[cfg(test)]

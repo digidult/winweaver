@@ -13,6 +13,8 @@ mod dism;
 #[cfg(windows)]
 mod execute;
 #[cfg(windows)]
+mod ffi;
+#[cfg(windows)]
 mod locales;
 #[cfg(windows)]
 mod native;
@@ -190,8 +192,7 @@ pub fn show_in_folder(path: &std::path::Path) -> Result<(), String> {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
-        let root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_owned());
-        let explorer = std::path::Path::new(&root).join("explorer.exe");
+        let explorer = ffi::system_root().join("explorer.exe");
         let mut command = std::process::Command::new(explorer);
         if path.is_file() {
             command.raw_arg(format!("/select,\"{}\"", path.display()));

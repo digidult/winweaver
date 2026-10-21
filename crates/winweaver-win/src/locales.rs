@@ -11,6 +11,8 @@ use winreg::RegKey;
 use winreg::enums::HKEY_LOCAL_MACHINE;
 use winweaver_core::resources::{InputLanguage, KeyboardLayout, Locales};
 
+use crate::ffi::{buffer_text, wide, wide_text};
+
 /// The keyboard layouts of Windows, one key a layout id.
 const LAYOUTS: &str = r"SYSTEM\CurrentControlSet\Control\Keyboard Layouts";
 /// The locale id of a locale without one of its own (`LOCALE_CUSTOM_UNSPECIFIED`).
@@ -32,7 +34,7 @@ fn names() -> Vec<String> {
         // enumeration, and `name` a null-terminated string Windows hands to the callback.
         unsafe {
             let names = &mut *(data as *mut Vec<String>);
-            names.push(crate::native::wide_text(name));
+            names.push(wide_text(name));
         }
         1
     }
@@ -129,16 +131,8 @@ fn display_name(key: &RegKey) -> Option<String> {
     if status != 0 {
         return None;
     }
-    let len = buffer.iter().take_while(|&&c| c != 0).count();
-    if len == 0 {
-        return None;
-    }
-    Some(String::from_utf16_lossy(&buffer[..len]))
-}
-
-/// A text as a null-terminated wide string for the Windows API.
-fn wide(text: &str) -> Vec<u16> {
-    text.encode_utf16().chain(std::iter::once(0)).collect()
+    let text = buffer_text(&buffer);
+    (!text.is_empty()).then_some(text)
 }
 
 #[cfg(test)]

@@ -11,6 +11,8 @@ use windows_sys::Win32::System::LibraryLoader::{
 };
 use winweaver_core::thispc::{self, Components};
 
+use crate::ffi::{wide, wide_text};
+
 /// `DISM_ONLINE_IMAGE` of dismapi.h: the Windows that runs.
 const ONLINE_IMAGE: &str = "DISM_{53BFAE52-B167-4E2F-A258-0A37B57FF845}";
 /// `DismLogErrors`.
@@ -54,24 +56,6 @@ struct Api {
     remove_capability: Option<RemoveCapability>,
     delete: Delete,
     close_session: CloseSession,
-}
-
-fn wide(text: &str) -> Vec<u16> {
-    text.encode_utf16().chain(std::iter::once(0)).collect()
-}
-
-/// A terminated wide string of DISM.
-fn text_of(ptr: *const u16) -> String {
-    if ptr.is_null() {
-        return String::new();
-    }
-    let mut len = 0;
-    // SAFETY: DISM gives terminated strings that live until the array is deleted.
-    while unsafe { *ptr.add(len) } != 0 {
-        len += 1;
-    }
-    // SAFETY: the `len` units before the terminator were read above.
-    String::from_utf16_lossy(unsafe { std::slice::from_raw_parts(ptr, len) })
 }
 
 fn failed(call: &str, hr: i32) -> String {
@@ -142,7 +126,9 @@ fn items(
         .map(|i| {
             // SAFETY: DISM gave `count` packed items at `array`; they are read unaligned.
             let item = unsafe { std::ptr::read_unaligned(array.add(i)) };
-            (text_of(item.name), item.state)
+            // SAFETY: DISM gives terminated names that live until the array is deleted
+            // below.
+            (unsafe { wide_text(item.name) }, item.state)
         })
         .collect();
     // SAFETY: the array came from DISM and is deleted once.

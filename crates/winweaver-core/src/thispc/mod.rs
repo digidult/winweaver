@@ -12,6 +12,7 @@
 //! (a machine in memory for the tests).
 
 use crate::catalog::{Action, Phase, Rule};
+use crate::registry::Data;
 
 mod capture;
 mod evaluate;
@@ -94,40 +95,31 @@ pub fn edition_of(edition_id: &str) -> Option<&'static str> {
         .map(|(_, name)| *name)
 }
 
-/// A registry value as read.
-#[derive(Debug, Clone, PartialEq)]
-pub enum RegData {
-    Dword(u32),
-    Qword(u64),
-    Str(String),
-    ExpandStr(String),
-    Multi(Vec<String>),
-    Binary(Vec<u8>),
-    Other,
-}
-
-impl RegData {
-    /// The value as the audit script reports it.
-    pub fn text(&self) -> String {
+impl Data {
+    /// The value as the audit script reports it: a DWORD as a signed number, a list joined by
+    /// commas, bytes as numbers, another kind of value named as such.
+    pub fn audit_text(&self) -> String {
         match self {
-            RegData::Dword(v) => (*v as i32).to_string(),
-            RegData::Qword(v) => v.to_string(),
-            RegData::Str(s) | RegData::ExpandStr(s) => s.clone(),
-            RegData::Multi(items) => items.join(","),
-            RegData::Binary(bytes) => bytes
+            Data::Dword(v) => (*v as i32).to_string(),
+            Data::Qword(v) => v.to_string(),
+            Data::Sz(s) | Data::ExpandSz(s) => s.clone(),
+            Data::MultiSz(items) => items.join(","),
+            Data::Binary(bytes) => bytes
                 .iter()
                 .map(u8::to_string)
                 .collect::<Vec<_>>()
                 .join(","),
-            RegData::Other => "(another kind of value)".to_owned(),
+            Data::None(_) | Data::Other { .. } => "(another kind of value)".to_owned(),
         }
     }
 
+    /// The numbers a value stands for when a rule wants a number: a DWORD both unsigned and
+    /// signed, a QWORD, a text of digits.
     pub(super) fn numbers(&self) -> Vec<i64> {
         match self {
-            RegData::Dword(v) => vec![i64::from(*v), i64::from(*v as i32)],
-            RegData::Qword(v) => vec![*v as i64],
-            RegData::Str(s) | RegData::ExpandStr(s) => s.trim().parse().into_iter().collect(),
+            Data::Dword(v) => vec![i64::from(*v), i64::from(*v as i32)],
+            Data::Qword(v) => vec![*v as i64],
+            Data::Sz(s) | Data::ExpandSz(s) => s.trim().parse().into_iter().collect(),
             _ => Vec::new(),
         }
     }
@@ -137,11 +129,11 @@ impl RegData {
 /// (`HKLM:\...`, `HKCU:\...`, `HKU:\...`); the name `(Default)` is the default value of a key.
 pub trait Machine {
     /// The value, `None` when the key or the value does not exist, an error when it cannot be read.
-    fn value(&self, path: &str, name: &str) -> Result<Option<RegData>, String>;
+    fn value(&self, path: &str, name: &str) -> Result<Option<Data>, String>;
     /// The names of the subkeys, `None` when the key does not exist.
     fn subkeys(&self, path: &str) -> Result<Option<Vec<String>>, String>;
     /// The values of a key with their names, `None` when the key does not exist.
-    fn values(&self, path: &str) -> Result<Option<Vec<(String, RegData)>>, String>;
+    fn values(&self, path: &str) -> Result<Option<Vec<(String, Data)>>, String>;
     fn is_admin(&self) -> bool;
     fn computer_name(&self) -> String;
     /// The data of the forms (edition, time zone, languages).

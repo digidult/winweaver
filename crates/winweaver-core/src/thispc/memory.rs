@@ -1,13 +1,15 @@
 //! A machine kept in memory, for the tests and for a look at a report without a PC.
 
+use crate::registry::Data;
+
 use super::report::SystemInfo;
-use super::{Components, Machine, RegData};
+use super::{Components, Machine};
 
 /// A machine kept in memory, for the tests and for a look at a report without a PC.
 #[derive(Debug, Clone, Default)]
 pub struct MemoryMachine {
     /// Values by `(path, name)`, both in lower case.
-    pub values: std::collections::HashMap<(String, String), RegData>,
+    pub values: std::collections::HashMap<(String, String), Data>,
     /// Keys that exist, in lower case, with their subkey names.
     pub keys: std::collections::HashMap<String, Vec<String>>,
     /// Keys that cannot be read, in lower case.
@@ -23,14 +25,14 @@ pub struct MemoryMachine {
 }
 
 impl MemoryMachine {
-    pub fn set(&mut self, path: &str, name: &str, data: RegData) {
+    pub fn set(&mut self, path: &str, name: &str, data: Data) {
         self.values
             .insert((path.to_lowercase(), name.to_lowercase()), data);
     }
 }
 
 impl Machine for MemoryMachine {
-    fn value(&self, path: &str, name: &str) -> Result<Option<RegData>, String> {
+    fn value(&self, path: &str, name: &str) -> Result<Option<Data>, String> {
         let p = path.to_lowercase();
         if self.denied.iter().any(|d| p.starts_with(d)) {
             return Err("access is denied".to_owned());
@@ -46,12 +48,12 @@ impl Machine for MemoryMachine {
         Ok(self.keys.get(&p).cloned())
     }
 
-    fn values(&self, path: &str) -> Result<Option<Vec<(String, RegData)>>, String> {
+    fn values(&self, path: &str) -> Result<Option<Vec<(String, Data)>>, String> {
         let p = path.to_lowercase();
         if self.denied.iter().any(|d| p.starts_with(d)) {
             return Err("access is denied".to_owned());
         }
-        let mut found: Vec<(String, RegData)> = self
+        let mut found: Vec<(String, Data)> = self
             .values
             .iter()
             .filter(|((key, _), _)| *key == p)
