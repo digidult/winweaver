@@ -5,8 +5,8 @@
 
 use serde_json::Value;
 
-use crate::catalog::{Action, Catalog, Level, Param, check::same_value};
-use crate::profile::Profile;
+use crate::catalog::{Action, Catalog, Level, Param, Rule, check::same_value};
+use crate::profile::{Account, Profile};
 use crate::resolver::{Resolution, State};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -205,62 +205,7 @@ fn check_accounts(
         }
         let mut seen: Vec<String> = Vec::new();
         for a in &profile.accounts {
-            let name = a.name.trim();
-            if name.is_empty() {
-                push(
-                    issues,
-                    Severity::Error,
-                    Target::Accounts,
-                    "An account has no name",
-                );
-                continue;
-            }
-            if !name.is_ascii() || !a.password.is_ascii() {
-                push(
-                    issues,
-                    Severity::Error,
-                    Target::Accounts,
-                    format!(
-                        "Account {name}: the name and the password must be ASCII, Windows Setup turns other characters into question marks"
-                    ),
-                );
-            }
-            if name.chars().count() > ACCOUNT_NAME_MAX {
-                push(
-                    issues,
-                    Severity::Error,
-                    Target::Accounts,
-                    format!(
-                        "Account {name}: the name is longer than {ACCOUNT_NAME_MAX} characters"
-                    ),
-                );
-            }
-            if !a.display_name.is_ascii() {
-                push(
-                    issues,
-                    Severity::Info,
-                    Target::Accounts,
-                    format!("Account {name}: the display name outside ASCII is set after OOBE"),
-                );
-            }
-            if !matches!(a.group.as_str(), "Administrators" | "Users") {
-                push(
-                    issues,
-                    Severity::Error,
-                    Target::Accounts,
-                    format!("Account {name}: the group must be Administrators or Users"),
-                );
-            }
-            let lower = name.to_lowercase();
-            if seen.contains(&lower) {
-                push(
-                    issues,
-                    Severity::Error,
-                    Target::Accounts,
-                    format!("Account {name} is listed twice"),
-                );
-            }
-            seen.push(lower);
+            check_account(a, &mut seen, issues);
         }
     } else if mode == "ask" {
         for id in [RULE_HIDE_ONLINE_ACCOUNT, RULE_BYPASS_NRO] {
@@ -277,43 +222,92 @@ fn check_accounts(
         }
     }
     if resolution.in_effect(RULE_AUTOLOGON) {
-        let account = profile
-            .param(catalog, RULE_AUTOLOGON, "account")
-            .and_then(|v| v.as_str().map(str::to_owned))
-            .unwrap_or_default();
-        let target = Target::Rule(RULE_AUTOLOGON.to_owned());
-        match profile
-            .accounts
-            .iter()
-            .find(|a| a.name.eq_ignore_ascii_case(&account))
-        {
-            Some(a) if !a.password.is_empty() => push(
-                issues,
-                Severity::Error,
-                target,
-                format!(
-                    "The automatic sign-in needs an account without a password; {account} has one"
-                ),
+        check_autologon(catalog, profile, mode, issues);
+    }
+}
+
+/// One account of the profile: its name, its password, its texts, its group, and the names seen
+/// so far (lower case) for a name listed twice.
+fn check_account(a: &Account, seen: &mut Vec<String>, issues: &mut Vec<Issue>) {
+    let err = |issues: &mut Vec<Issue>, text: String| {
+        push(issues, Severity::Error, Target::Accounts, text)
+    };
+    let name = a.name.trim();
+    if name.is_empty() {
+        err(issues, "An account has no name".into());
+        return;
+    }
+    if !name.is_ascii() || !a.password.is_ascii() {
+        err(
+            issues,
+            format!(
+                "Account {name}: the name and the password must be ASCII, Windows Setup turns other characters into question marks"
             ),
-            Some(_) => {
-                if mode == "ask" {
-                    push(
-                        issues,
-                        Severity::Warning,
-                        target,
-                        "The automatic sign-in names an account of the profile, but in the mode ask Windows Setup creates the account",
-                    );
-                }
+        );
+    }
+    if name.chars().count() > ACCOUNT_NAME_MAX {
+        err(
+            issues,
+            format!("Account {name}: the name is longer than {ACCOUNT_NAME_MAX} characters"),
+        );
+    }
+    if !a.display_name.is_ascii() {
+        push(
+            issues,
+            Severity::Info,
+            Target::Accounts,
+            format!("Account {name}: the display name outside ASCII is set after OOBE"),
+        );
+    }
+    if !matches!(a.group.as_str(), "Administrators" | "Users") {
+        err(
+            issues,
+            format!("Account {name}: the group must be Administrators or Users"),
+        );
+    }
+    let lower = name.to_lowercase();
+    if seen.contains(&lower) {
+        err(issues, format!("Account {name} is listed twice"));
+    }
+    seen.push(lower);
+}
+
+/// The automatic sign-in names an account of the profile without a password.
+fn check_autologon(catalog: &Catalog, profile: &Profile, mode: &str, issues: &mut Vec<Issue>) {
+    let account = profile
+        .param(catalog, RULE_AUTOLOGON, "account")
+        .and_then(|v| v.as_str().map(str::to_owned))
+        .unwrap_or_default();
+    let target = Target::Rule(RULE_AUTOLOGON.to_owned());
+    match profile
+        .accounts
+        .iter()
+        .find(|a| a.name.eq_ignore_ascii_case(&account))
+    {
+        Some(a) if !a.password.is_empty() => push(
+            issues,
+            Severity::Error,
+            target,
+            format!("The automatic sign-in needs an account without a password; {account} has one"),
+        ),
+        Some(_) => {
+            if mode == "ask" {
+                push(
+                    issues,
+                    Severity::Warning,
+                    target,
+                    "The automatic sign-in names an account of the profile, but in the mode ask Windows Setup creates the account",
+                );
             }
-            None => push(
-                issues,
-                Severity::Error,
-                target,
-                format!(
-                    "The automatic sign-in names the account {account}, which the profile does not list"
-                ),
-            ),
         }
+        None => push(
+            issues,
+            Severity::Error,
+            target,
+            format!(
+                "The automatic sign-in names the account {account}, which the profile does not list"
+            ),
+        ),
     }
 }
 
@@ -398,111 +392,8 @@ fn check_rules(
             let Some(value) = profile.param(catalog, &rule.id, name) else {
                 continue;
             };
-            match param {
-                Param::Enum {
-                    values,
-                    differs_from,
-                    same_allowed,
-                    ..
-                } => {
-                    if !values.iter().any(|v| same_value(&v.value, &value)) {
-                        push(
-                            issues,
-                            Severity::Error,
-                            target(),
-                            format!("Parameter {name}: {value} is not one of its options"),
-                        );
-                    }
-                    if let Some(other) = differs_from
-                        && let Some(other_value) = profile.param(catalog, &rule.id, other)
-                        && same_value(&other_value, &value)
-                        && !same_allowed.iter().any(|v| same_value(v, &value))
-                    {
-                        push(
-                            issues,
-                            Severity::Error,
-                            target(),
-                            format!("Parameters {name} and {other} must differ"),
-                        );
-                    }
-                }
-                Param::Int { min, max, .. } => {
-                    if !value.as_i64().is_some_and(|v| (*min..=*max).contains(&v)) {
-                        push(
-                            issues,
-                            Severity::Error,
-                            target(),
-                            format!("Parameter {name}: {value} is outside {min}..{max}"),
-                        );
-                    }
-                }
-                Param::List { .. } => {
-                    let texts = value
-                        .as_array()
-                        .is_some_and(|items| items.iter().all(Value::is_string));
-                    if !texts {
-                        push(
-                            issues,
-                            Severity::Error,
-                            target(),
-                            format!("Parameter {name}: a list of texts is needed"),
-                        );
-                        continue;
-                    }
-                    let items = crate::catalog::values::list_items(Some(&value));
-                    if items
-                        .iter()
-                        .any(|t| !t.is_ascii() || t.chars().any(char::is_control))
-                    {
-                        push(
-                            issues,
-                            Severity::Error,
-                            target(),
-                            format!(
-                                "Parameter {name}: every item must be ASCII text, the embedded scripts are read without a code page"
-                            ),
-                        );
-                    }
-                    for action in &rule.actions {
-                        if let Action::RegList {
-                            param,
-                            names,
-                            prefix,
-                            ..
-                        } = action
-                            && param == name
-                            && let Err(e) = crate::catalog::values::list_entries(*names, prefix, &items)
-                        {
-                            push(
-                                issues,
-                                Severity::Error,
-                                target(),
-                                format!("Parameter {name}: {e}"),
-                            );
-                        }
-                    }
-                }
-                Param::Text { required, .. } => {
-                    let text = value.as_str().unwrap_or_default();
-                    if *required && text.trim().is_empty() {
-                        push(
-                            issues,
-                            Severity::Error,
-                            target(),
-                            format!("Parameter {name} is empty"),
-                        );
-                    }
-                    if !text.is_ascii() {
-                        push(
-                            issues,
-                            Severity::Error,
-                            target(),
-                            format!(
-                                "Parameter {name}: the text must be ASCII, the embedded scripts are read without a code page"
-                            ),
-                        );
-                    }
-                }
+            for text in param_problems(catalog, profile, rule, name, param, &value) {
+                push(issues, Severity::Error, target(), text);
             }
         }
     }
@@ -514,6 +405,95 @@ fn check_rules(
             format!("Conflicts with {b}: turn one of them off"),
         );
     }
+}
+
+/// What is wrong with the value of a parameter of a rule in effect, as messages; none when it
+/// fits.
+fn param_problems(
+    catalog: &Catalog,
+    profile: &Profile,
+    rule: &Rule,
+    name: &str,
+    param: &Param,
+    value: &Value,
+) -> Vec<String> {
+    match param {
+        Param::Enum {
+            values,
+            differs_from,
+            same_allowed,
+            ..
+        } => {
+            let mut out = Vec::new();
+            if !values.iter().any(|v| same_value(&v.value, value)) {
+                out.push(format!("Parameter {name}: {value} is not one of its options"));
+            }
+            if let Some(other) = differs_from
+                && let Some(other_value) = profile.param(catalog, &rule.id, other)
+                && same_value(&other_value, value)
+                && !same_allowed.iter().any(|v| same_value(v, value))
+            {
+                out.push(format!("Parameters {name} and {other} must differ"));
+            }
+            out
+        }
+        Param::Int { min, max, .. } => {
+            if value.as_i64().is_some_and(|v| (*min..=*max).contains(&v)) {
+                Vec::new()
+            } else {
+                vec![format!("Parameter {name}: {value} is outside {min}..{max}")]
+            }
+        }
+        Param::List { .. } => list_problems(rule, name, value),
+        Param::Text { required, .. } => {
+            let text = value.as_str().unwrap_or_default();
+            let mut out = Vec::new();
+            if *required && text.trim().is_empty() {
+                out.push(format!("Parameter {name} is empty"));
+            }
+            if !text.is_ascii() {
+                out.push(format!(
+                    "Parameter {name}: the text must be ASCII, the embedded scripts are read without a code page"
+                ));
+            }
+            out
+        }
+    }
+}
+
+/// The problems of a list parameter: texts only, ASCII, and the names of the values of every
+/// `reg-list` that writes it.
+fn list_problems(rule: &Rule, name: &str, value: &Value) -> Vec<String> {
+    let texts = value
+        .as_array()
+        .is_some_and(|items| items.iter().all(Value::is_string));
+    if !texts {
+        return vec![format!("Parameter {name}: a list of texts is needed")];
+    }
+    let mut out = Vec::new();
+    let items = crate::catalog::values::list_items(Some(value));
+    if items
+        .iter()
+        .any(|t| !t.is_ascii() || t.chars().any(char::is_control))
+    {
+        out.push(format!(
+            "Parameter {name}: every item must be ASCII text, the embedded scripts are read without a code page"
+        ));
+    }
+    for action in &rule.actions {
+        if let Action::RegList {
+            param,
+            names,
+            prefix,
+            ..
+        } = action
+            && param == name
+            && let Err(e) = crate::catalog::values::list_entries(*names, prefix, &items)
+        {
+            out.push(format!("Parameter {name}: {e}"));
+        }
+    }
+    out
 }
 
 fn is_name_char(c: char) -> bool {
