@@ -4,7 +4,8 @@ name: CI
 # runs when it is opened ready, marked ready for review or pushed while ready; main runs after a merge, a
 # tag v* for the release; any branch on demand (Actions, CI, Run workflow, or gh workflow run ci.yml --ref
 # <branch>). A newer push cancels the run of the same pull request or branch, and a head commit with
-# [skip ci] in its message runs nothing.
+# [skip ci] in its message runs nothing. A run on demand with windows=false (gh workflow run ci.yml --ref
+# <branch> -f windows=false) stops after the Linux job, which checks the whole workspace for Windows.
 on:
   push:
     branches: [main]
@@ -12,6 +13,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
+    inputs:
+      windows:
+        description: "Run the Windows job (tests, the build, the archive) after the Linux checks"
+        type: boolean
+        default: true
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
@@ -33,6 +39,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+          targets: x86_64-pc-windows-gnu
       - uses: Swatinem/rust-cache@v2
       - name: Format check
         id: fmt
@@ -44,8 +51,10 @@ jobs:
           cargo fmt --all
           git diff > fmt.patch
           git checkout -- .
-      - name: Clippy (core only; the window needs the Windows runner)
-        run: cargo clippy -p winweaver-core --all-targets -- -D warnings
+      - name: Clippy (the whole workspace, checked for Windows)
+        # The Windows crates compile for the Windows target without linking, so the Linux runner checks
+        # every crate and every test; no dependency builds C code for that target.
+        run: cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu -- -D warnings
       - name: Tests (core)
         run: cargo test -p winweaver-core
       - name: CI files (Cargo.lock, the format patch)
@@ -67,6 +76,7 @@ jobs:
   build-windows:
     name: Build and tests (Windows)
     needs: check
+    if: github.event_name != 'workflow_dispatch' || inputs.windows
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
