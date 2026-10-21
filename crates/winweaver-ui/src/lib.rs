@@ -65,7 +65,10 @@ pub use act::{
 };
 pub use catalogview::TreeKey;
 pub use dialogs::file_stem;
-pub(crate) use dialogs::{ask_save_path, file_dialog, kept_name, pick_any, pick_profile, reg_extension, with_extension, write_file};
+pub(crate) use dialogs::{
+    ask_save_path, file_dialog, kept_name, pick_any, pick_profile, reg_extension, with_extension,
+    write_file,
+};
 pub use diffview::DiffDoc;
 pub use doc::{Doc, DocKind, SettingsDoc, SettingsSection, Tab};
 pub use folders::{imports_dir, lang_dir, output_dir, profiles_dir, themes_dir};
