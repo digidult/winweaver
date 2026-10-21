@@ -5,7 +5,7 @@ use serde_json::Value;
 
 use crate::catalog::{RegKind, values};
 
-use super::plan::{Check, Plan, Probe};
+use super::plan::{Check, Plan, Probe, wildcard};
 use super::report::{CheckResult, Report, Status};
 use super::{
     Components, Machine, NOTE_ADMIN, NOTE_NOT_ON_BUILD, PROVISIONED_PACKAGES, RegData, SERVICES,
