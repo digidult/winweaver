@@ -5,6 +5,7 @@
 
 use std::path::Path;
 
+use serde::Serialize;
 use serde::de::DeserializeOwned;
 
 /// The default size limit of a document file.
@@ -144,6 +145,96 @@ pub fn parse<T: DeserializeOwned>(text: &str, name: &str) -> Result<T, JsonError
 pub fn read<T: DeserializeOwned>(path: &Path, limit: u64) -> Result<T, JsonError> {
     let text = read_text(path, limit)?;
     parse(&text, &display_name(path))
+}
+
+/// What went wrong while reading or writing a document of the program (a profile, a diff, a
+/// bookmarks file, a users file). `name` is the file name only, never the full path.
+#[derive(Debug, thiserror::Error)]
+pub enum DocError {
+    #[error(transparent)]
+    Json(#[from] JsonError),
+    #[error("{name}: {source}")]
+    Io {
+        name: String,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("{name}: not a WinWeaver {kind} (format {found})")]
+    Format {
+        name: String,
+        kind: &'static str,
+        found: String,
+    },
+    #[error("{name}: {kind} version {found} is newer than this program knows ({known})")]
+    Version {
+        name: String,
+        kind: &'static str,
+        found: u32,
+        known: u32,
+    },
+}
+
+/// A JSON document of the program: a format name and a version in its first fields, an
+/// extension, a kind the messages name. The methods with bodies read and write every document
+/// the same way: strictly, and through a temporary file that replaces the target.
+pub trait Document: Serialize + DeserializeOwned {
+    const FORMAT: &'static str;
+    const VERSION: u32;
+    const EXTENSION: &'static str;
+    /// What a message calls the document: "profile", "diff", "bookmark file", "users file".
+    const KIND: &'static str;
+    /// The size limit of its file.
+    const MAX_BYTES: u64 = MAX_BYTES;
+
+    fn format(&self) -> &str;
+    fn version(&self) -> u32;
+
+    /// Parses the text and checks its format and version.
+    fn parse_checked(text: &str, name: &str) -> Result<Self, DocError> {
+        let doc: Self = parse(text, name)?;
+        if doc.format() != Self::FORMAT {
+            return Err(DocError::Format {
+                name: name.to_owned(),
+                kind: Self::KIND,
+                found: doc.format().to_owned(),
+            });
+        }
+        if doc.version() > Self::VERSION {
+            return Err(DocError::Version {
+                name: name.to_owned(),
+                kind: Self::KIND,
+                found: doc.version(),
+                known: Self::VERSION,
+            });
+        }
+        Ok(doc)
+    }
+
+    /// Reads the file strictly.
+    fn load_checked(path: &Path) -> Result<Self, DocError> {
+        let text = read_text(path, Self::MAX_BYTES)?;
+        Self::parse_checked(&text, &display_name(path))
+    }
+
+    /// The canonical text of the document: two-space indentation, a trailing line break.
+    fn json_text(&self) -> String {
+        let mut text = serde_json::to_string_pretty(self).unwrap_or_else(|_| "{}".into());
+        text.push('\n');
+        text
+    }
+}
+
+/// Writes a text through a temporary file that replaces the target, so a failed write leaves the
+/// old file whole.
+pub fn write_atomic(path: &Path, text: &str) -> Result<(), DocError> {
+    let name = display_name(path);
+    let io = |source: std::io::Error| DocError::Io {
+        name: name.clone(),
+        source,
+    };
+    let tmp = path.with_extension("tmp");
+    std::fs::write(&tmp, text).map_err(io)?;
+    std::fs::rename(&tmp, path).map_err(io)
 }
 
 /// The deepest nesting of objects and arrays in JSON text, counted outside strings.

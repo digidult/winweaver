@@ -8,7 +8,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::clock;
-use crate::jsonfile::{self, JsonError};
+use crate::jsonfile::{self, DocError, Document};
 use crate::profile::Account;
 use crate::render::{self, RenderError};
 use crate::userstore::{Container, Passwords};
@@ -21,21 +21,8 @@ pub const NAME_MAX: usize = 20;
 const MAX_BYTES: u64 = 4 * 1024 * 1024;
 const SCRIPT: &str = include_str!("../../../data/templates/Create-Users.runtime.ps1");
 
-#[derive(Debug, thiserror::Error)]
-pub enum UsersError {
-    #[error(transparent)]
-    Json(#[from] JsonError),
-    #[error("{name}: {source}")]
-    Io {
-        name: String,
-        #[source]
-        source: std::io::Error,
-    },
-    #[error("{name}: not a WinWeaver users file (format {found})")]
-    Format { name: String, found: String },
-    #[error("{name}: users file version {found} is newer than this program knows ({VERSION})")]
-    Version { name: String, found: u32 },
-}
+/// What went wrong while reading or writing a users file: the errors of every document.
+pub type UsersError = DocError;
 
 /// What to do with the enabled flag of an account: nothing to one that exists (a new one is
 /// made enabled), enable it, or disable it (a new one is made disabled).
@@ -117,6 +104,22 @@ impl Default for UsersFile {
     }
 }
 
+impl Document for UsersFile {
+    const FORMAT: &'static str = FORMAT;
+    const VERSION: u32 = VERSION;
+    const EXTENSION: &'static str = EXTENSION;
+    const KIND: &'static str = "users file";
+    const MAX_BYTES: u64 = MAX_BYTES;
+
+    fn format(&self) -> &str {
+        &self.format
+    }
+
+    fn version(&self) -> u32 {
+        self.version
+    }
+}
+
 impl UsersFile {
     pub fn new(name: &str) -> Self {
         let now = clock::now_utc_iso();
@@ -133,45 +136,21 @@ impl UsersFile {
     }
 
     pub fn load(path: &Path) -> Result<Self, UsersError> {
-        let name = jsonfile::display_name(path);
-        let text = jsonfile::read_text(path, MAX_BYTES)?;
-        Self::parse(&text, &name)
+        Self::load_checked(path)
     }
 
     pub fn parse(text: &str, name: &str) -> Result<Self, UsersError> {
-        let file: Self = jsonfile::parse(text, name)?;
-        if file.format != FORMAT {
-            return Err(UsersError::Format {
-                name: name.to_owned(),
-                found: file.format,
-            });
-        }
-        if file.version > VERSION {
-            return Err(UsersError::Version {
-                name: name.to_owned(),
-                found: file.version,
-            });
-        }
-        Ok(file)
+        Self::parse_checked(text, name)
     }
 
     pub fn to_json(&self) -> String {
-        let mut text = serde_json::to_string_pretty(self).unwrap_or_else(|_| "{}".into());
-        text.push('\n');
-        text
+        self.json_text()
     }
 
     /// Writes the file through a temporary one; `modified` is set to now.
     pub fn save(&mut self, path: &Path) -> Result<(), UsersError> {
         self.modified = clock::now_utc_iso();
-        let name = jsonfile::display_name(path);
-        let io = |source: std::io::Error| UsersError::Io {
-            name: name.clone(),
-            source,
-        };
-        let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, self.to_json()).map_err(io)?;
-        std::fs::rename(&tmp, path).map_err(io)
+        jsonfile::write_atomic(path, &self.to_json())
     }
 
     /// The user of a name, without regard to case.

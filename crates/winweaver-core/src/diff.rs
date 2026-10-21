@@ -7,7 +7,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::jsonfile::{self, JsonError};
+use crate::jsonfile::{self, DocError, Document};
 use crate::paths;
 use crate::profile::{Choice, Profile};
 
@@ -15,21 +15,8 @@ pub const FORMAT: &str = "winweaver-diff";
 pub const VERSION: u32 = 1;
 pub const EXTENSION: &str = "wwdiff";
 
-#[derive(Debug, thiserror::Error)]
-pub enum DiffError {
-    #[error(transparent)]
-    Json(#[from] JsonError),
-    #[error("{name}: {source}")]
-    Io {
-        name: String,
-        #[source]
-        source: std::io::Error,
-    },
-    #[error("{name}: not a WinWeaver diff (format {found})")]
-    Format { name: String, found: String },
-    #[error("{name}: diff version {found} is newer than this program knows ({VERSION})")]
-    Version { name: String, found: u32 },
-}
+/// What went wrong while reading or writing a diff: the errors of every document.
+pub type DiffError = DocError;
 
 /// One of the two profiles of a diff, as it was when the diff was made.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -131,6 +118,21 @@ fn merged<T: Serialize + serde::de::DeserializeOwned>(
         map.insert(k.clone(), d.other.clone());
     }
     serde_json::from_value(Value::Object(map.into_iter().collect())).ok()
+}
+
+impl Document for Diff {
+    const FORMAT: &'static str = FORMAT;
+    const VERSION: u32 = VERSION;
+    const EXTENSION: &'static str = EXTENSION;
+    const KIND: &'static str = "diff";
+
+    fn format(&self) -> &str {
+        &self.format
+    }
+
+    fn version(&self) -> u32 {
+        self.version
+    }
 }
 
 impl Diff {
@@ -256,9 +258,7 @@ impl Diff {
 
     /// The file with the profiles inside the program folder named by absolute paths again.
     pub fn load(path: &Path) -> Result<Self, DiffError> {
-        let name = jsonfile::display_name(path);
-        let text = jsonfile::read_text(path, jsonfile::MAX_BYTES)?;
-        let mut diff = Self::parse(&text, &name)?;
+        let mut diff = Self::load_checked(path)?;
         diff.resolve_in(&paths::program_dir());
         Ok(diff)
     }
@@ -280,37 +280,15 @@ impl Diff {
     }
 
     pub fn parse(text: &str, name: &str) -> Result<Self, DiffError> {
-        let diff: Self = jsonfile::parse(text, name)?;
-        if diff.format != FORMAT {
-            return Err(DiffError::Format {
-                name: name.to_owned(),
-                found: diff.format,
-            });
-        }
-        if diff.version > VERSION {
-            return Err(DiffError::Version {
-                name: name.to_owned(),
-                found: diff.version,
-            });
-        }
-        Ok(diff)
+        Self::parse_checked(text, name)
     }
 
     pub fn to_json(&self) -> String {
-        let mut text = serde_json::to_string_pretty(self).unwrap_or_else(|_| "{}".into());
-        text.push('\n');
-        text
+        self.json_text()
     }
 
     pub fn save(&self, path: &Path) -> Result<(), DiffError> {
-        let name = jsonfile::display_name(path);
-        let io = |source: std::io::Error| DiffError::Io {
-            name: name.clone(),
-            source,
-        };
-        let tmp = path.with_extension("tmp");
         let text = self.stored_in(&paths::program_dir()).to_json();
-        std::fs::write(&tmp, text).map_err(io)?;
-        std::fs::rename(&tmp, path).map_err(io)
+        jsonfile::write_atomic(path, &text)
     }
 }

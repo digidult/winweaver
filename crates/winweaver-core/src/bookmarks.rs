@@ -5,7 +5,7 @@ use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 
-use crate::jsonfile::{self, JsonError};
+use crate::jsonfile::{self, DocError, Document};
 use crate::paths;
 
 pub const FORMAT: &str = "winweaver-bookmarks";
@@ -15,21 +15,8 @@ pub const EXTENSION: &str = "wwmarks";
 pub const DEFAULT_FILE: &str = "bookmarks.wwmarks";
 const MAX_BYTES: u64 = 4 * 1024 * 1024;
 
-#[derive(Debug, thiserror::Error)]
-pub enum BookmarksError {
-    #[error(transparent)]
-    Json(#[from] JsonError),
-    #[error("{name}: {source}")]
-    Io {
-        name: String,
-        #[source]
-        source: std::io::Error,
-    },
-    #[error("{name}: not a WinWeaver bookmark file (format {found})")]
-    Format { name: String, found: String },
-    #[error("{name}: bookmark file version {found} is newer than this program knows ({VERSION})")]
-    Version { name: String, found: u32 },
-}
+/// What went wrong while reading or writing a bookmark file: the errors of every document.
+pub type BookmarksError = DocError;
 
 /// The kind of document of a bookmark of an option.
 pub const OPTION: &str = "profile";
@@ -114,6 +101,22 @@ impl Default for Bookmarks {
     }
 }
 
+impl Document for Bookmarks {
+    const FORMAT: &'static str = FORMAT;
+    const VERSION: u32 = VERSION;
+    const EXTENSION: &'static str = EXTENSION;
+    const KIND: &'static str = "bookmark file";
+    const MAX_BYTES: u64 = MAX_BYTES;
+
+    fn format(&self) -> &str {
+        &self.format
+    }
+
+    fn version(&self) -> u32 {
+        self.version
+    }
+}
+
 impl Bookmarks {
     pub fn find(&self, position: &Bookmark) -> Option<usize> {
         self.items.iter().position(|b| b.same_position(position))
@@ -143,9 +146,7 @@ impl Bookmarks {
 
     /// The file with the documents inside the program folder named by absolute paths again.
     pub fn load(path: &Path) -> Result<Self, BookmarksError> {
-        let name = jsonfile::display_name(path);
-        let text = jsonfile::read_text(path, MAX_BYTES)?;
-        let mut marks = Self::parse(&text, &name)?;
+        let mut marks = Self::load_checked(path)?;
         marks.resolve_in(&paths::program_dir());
         Ok(marks)
     }
@@ -167,38 +168,16 @@ impl Bookmarks {
     }
 
     pub fn parse(text: &str, name: &str) -> Result<Self, BookmarksError> {
-        let marks: Self = jsonfile::parse(text, name)?;
-        if marks.format != FORMAT {
-            return Err(BookmarksError::Format {
-                name: name.to_owned(),
-                found: marks.format,
-            });
-        }
-        if marks.version > VERSION {
-            return Err(BookmarksError::Version {
-                name: name.to_owned(),
-                found: marks.version,
-            });
-        }
-        Ok(marks)
+        Self::parse_checked(text, name)
     }
 
     pub fn to_json(&self) -> String {
-        let mut text = serde_json::to_string_pretty(self).unwrap_or_else(|_| "{}".into());
-        text.push('\n');
-        text
+        self.json_text()
     }
 
     pub fn save(&self, path: &Path) -> Result<(), BookmarksError> {
-        let name = jsonfile::display_name(path);
-        let io = |source: std::io::Error| BookmarksError::Io {
-            name: name.clone(),
-            source,
-        };
-        let tmp = path.with_extension("tmp");
         let text = self.stored_in(&paths::program_dir()).to_json();
-        std::fs::write(&tmp, text).map_err(io)?;
-        std::fs::rename(&tmp, path).map_err(io)
+        jsonfile::write_atomic(path, &text)
     }
 }
 

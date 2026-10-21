@@ -10,27 +10,14 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::catalog::Catalog;
-use crate::jsonfile::{self, JsonError};
+use crate::jsonfile::{self, DocError, Document};
 
 pub const FORMAT: &str = "winweaver-profile";
 pub const VERSION: u32 = 1;
 pub const EXTENSION: &str = "wwprofile";
 
-#[derive(Debug, thiserror::Error)]
-pub enum ProfileError {
-    #[error(transparent)]
-    Json(#[from] JsonError),
-    #[error("{name}: {source}")]
-    Io {
-        name: String,
-        #[source]
-        source: std::io::Error,
-    },
-    #[error("{name}: not a WinWeaver profile (format {found})")]
-    Format { name: String, found: String },
-    #[error("{name}: profile version {found} is newer than this program knows ({VERSION})")]
-    Version { name: String, found: u32 },
-}
+/// What went wrong while reading or writing a profile: the errors of every document.
+pub type ProfileError = DocError;
 
 /// The form "Installation".
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -143,6 +130,21 @@ pub struct Profile {
     /// Choices of rules the loaded catalog does not have, kept unchanged.
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     pub unknown: IndexMap<String, Value>,
+}
+
+impl Document for Profile {
+    const FORMAT: &'static str = FORMAT;
+    const VERSION: u32 = VERSION;
+    const EXTENSION: &'static str = EXTENSION;
+    const KIND: &'static str = "profile";
+
+    fn format(&self) -> &str {
+        &self.format
+    }
+
+    fn version(&self) -> u32 {
+        self.version
+    }
 }
 
 impl Profile {
@@ -262,46 +264,22 @@ impl Profile {
 
     /// Reads a profile file strictly.
     pub fn load(path: &Path) -> Result<Self, ProfileError> {
-        let name = jsonfile::display_name(path);
-        let text = jsonfile::read_text(path, jsonfile::MAX_BYTES)?;
-        Self::parse(&text, &name)
+        Self::load_checked(path)
     }
 
     /// Parses profile text.
     pub fn parse(text: &str, name: &str) -> Result<Self, ProfileError> {
-        let profile: Self = jsonfile::parse(text, name)?;
-        if profile.format != FORMAT {
-            return Err(ProfileError::Format {
-                name: name.to_owned(),
-                found: profile.format,
-            });
-        }
-        if profile.version > VERSION {
-            return Err(ProfileError::Version {
-                name: name.to_owned(),
-                found: profile.version,
-            });
-        }
-        Ok(profile)
+        Self::parse_checked(text, name)
     }
 
     /// The canonical text of the profile: two-space indentation, a trailing line break.
     pub fn to_json(&self) -> String {
-        let mut text = serde_json::to_string_pretty(self).unwrap_or_else(|_| "{}".into());
-        text.push('\n');
-        text
+        self.json_text()
     }
 
     /// Writes the profile through a temporary file that replaces the target, so a failed save
     /// leaves the old file whole.
     pub fn save(&self, path: &Path) -> Result<(), ProfileError> {
-        let name = jsonfile::display_name(path);
-        let io = |source: std::io::Error| ProfileError::Io {
-            name: name.clone(),
-            source,
-        };
-        let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, self.to_json()).map_err(io)?;
-        std::fs::rename(&tmp, path).map_err(io)
+        jsonfile::write_atomic(path, &self.to_json())
     }
 }

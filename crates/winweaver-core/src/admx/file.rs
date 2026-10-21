@@ -56,9 +56,7 @@ impl CatalogFile {
 
     pub fn save(&self, path: &Path) -> Result<(), String> {
         let text = serde_json::to_string(self).map_err(|e| e.to_string())?;
-        let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, text).map_err(|e| format!("{}: {e}", tmp.display()))?;
-        std::fs::rename(&tmp, path).map_err(|e| format!("{}: {e}", path.display()))
+        jsonfile::write_atomic(path, &text).map_err(|e| e.to_string())
     }
 
     /// A new policy of the file, empty, in a group of it: the id `admx.<file>.<name>`, the phase of
