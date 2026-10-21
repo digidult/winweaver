@@ -65,17 +65,14 @@ pub use act::{
 };
 pub use catalogview::TreeKey;
 pub use dialogs::file_stem;
-pub(crate) use dialogs::{
-    ask_save_path, file_dialog, kept_name, pick_any, pick_profile, profile_dialog, reg_extension,
-    with_extension, write_file,
-};
+pub(crate) use dialogs::{ask_save_path, file_dialog, kept_name, pick_any, pick_profile, reg_extension, with_extension, write_file};
 pub use diffview::DiffDoc;
-pub use folders::{imports_dir, lang_dir, output_dir, profiles_dir, themes_dir};
 pub use doc::{Doc, DocKind, SettingsDoc, SettingsSection, Tab};
+pub use folders::{imports_dir, lang_dir, output_dir, profiles_dir, themes_dir};
 pub use forms::Form;
 pub use i18n::{tr, trf};
 pub use importlist::{ImportEntry, import_files, loaded_import_ids, read_imports};
-pub(crate) use importlist::{import_entries, size_text, unknown_issues};
+pub(crate) use importlist::{import_entries, import_order, size_text, unknown_issues};
 pub use mdview::MdDoc;
 pub use question::Question;
 pub use renderer::Renderer;
