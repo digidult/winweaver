@@ -3,7 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use serde_json::{Value, json};
+use serde_json::json;
 use winweaver_core::diff::{Diff, Side};
 use winweaver_core::profile::{self, Profile};
 use winweaver_core::resolver;
