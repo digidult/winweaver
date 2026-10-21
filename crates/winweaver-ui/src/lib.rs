@@ -10,10 +10,12 @@ mod app;
 mod cataledit;
 mod catalogview;
 mod chrome;
+mod commands;
 mod diffview;
 mod doc;
 mod forms;
 mod i18n;
+mod icons;
 mod list;
 mod marksview;
 mod mcpview;
@@ -30,6 +32,7 @@ mod themeview;
 mod tree;
 mod usersview;
 mod views;
+mod widgets;
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -210,6 +213,12 @@ impl Search {
             .map(str::to_lowercase)
             .collect()
     }
+}
+
+/// Whether a text holds every word of a search, ignoring case.
+pub fn matches_words(hay: &str, words: &[String]) -> bool {
+    let hay = hay.to_lowercase();
+    words.iter().all(|w| hay.contains(w.as_str()))
 }
 
 /// Puts a search first in the history of the searches; `true` when the history changed.
@@ -396,15 +405,6 @@ fn is_doc_link(url: &str) -> bool {
         && (url.starts_with('#')
             || url.to_ascii_lowercase().ends_with(".md")
             || url.to_ascii_lowercase().contains(".md#"))
-}
-
-/// The selection a bookmark item names: a form id, a rule id or a group id.
-/// The first width of the list of a diff or of the bookmarks and the widths its divider may take:
-/// the detail on the right keeps at least 300 points.
-fn list_split(ui: &egui::Ui) -> (f32, std::ops::RangeInclusive<f32>) {
-    let width = ui.available_width();
-    let max = (width - 300.0).max(320.0);
-    ((width * 0.55).clamp(320.0, max), 320.0..=max)
 }
 
 /// The profile tab with this draft key.
@@ -780,11 +780,7 @@ fn with_extension(path: PathBuf) -> PathBuf {
 fn file_dialog(kind: &str, extension: &str) -> rfd::FileDialog {
     let dir = profiles_dir();
     let dialog = rfd::FileDialog::new().add_filter(kind, &[extension]);
-    if dir.is_dir() {
-        dialog.set_directory(dir)
-    } else {
-        dialog
-    }
+    widgets::in_folder(dialog, &dir)
 }
 
 fn profile_dialog() -> rfd::FileDialog {
@@ -817,12 +813,7 @@ fn pick_any() -> Option<PathBuf> {
         .add_filter(tr("Answer files (the profile they embed)"), &["xml"])
         .add_filter(tr("WinKickOff profiles and audit reports"), &["json"])
         .add_filter(tr("Markdown pages"), &["md"]);
-    let dialog = if dir.is_dir() {
-        dialog.set_directory(dir)
-    } else {
-        dialog
-    };
-    dialog.pick_file()
+    widgets::in_folder(dialog, &dir).pick_file()
 }
 
 fn ask_save_path(proposed: &str) -> Option<PathBuf> {

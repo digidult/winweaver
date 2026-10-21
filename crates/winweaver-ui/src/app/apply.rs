@@ -9,11 +9,7 @@ impl App {
         let Some(ask) = &self.question else {
             return;
         };
-        egui::Window::new(ask.title.as_str())
-            .collapsible(false)
-            .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-            .show(ctx, |ui| {
+        widgets::Modal::new(ask.title.as_str()).show(ctx, |ui| {
                 ui.label(ask.text.as_str());
                 ui.add_space(8.0);
                 ui.horizontal(|ui| {
@@ -28,7 +24,8 @@ impl App {
     }
 
     pub(crate) fn shortcuts(&mut self, ctx: &egui::Context) -> Vec<Act> {
-        use egui::{Key, KeyboardShortcut, Modifiers};
+        use crate::commands::keys;
+        use egui::{Key, Modifiers};
         let mut acts = Vec::new();
         let active = self.active;
         let count = self.docs.len();
@@ -36,63 +33,58 @@ impl App {
         let asking = self.question.is_some();
         let mut focus_search = false;
         ctx.input_mut(|i| {
-            let sc = |m, k| KeyboardShortcut::new(m, k);
-            if i.consume_shortcut(&sc(Modifiers::CTRL, Key::F)) {
+            if i.consume_shortcut(&keys::FIND.shortcut()) {
                 focus_search = true;
             }
-            if i.consume_shortcut(&sc(Modifiers::CTRL, Key::D)) {
+            if i.consume_shortcut(&keys::FOLD.shortcut()) {
                 acts.push(Act::Nav(NavAct::Fold));
             }
-            if i.consume_shortcut(&sc(Modifiers::CTRL | Modifiers::SHIFT, Key::S)) {
+            if i.consume_shortcut(&keys::SAVE_AS.shortcut()) {
                 acts.push(Act::File(FileAct::SaveAs));
             }
-            if i.consume_shortcut(&sc(Modifiers::CTRL, Key::S)) {
+            if i.consume_shortcut(&keys::SAVE.shortcut()) {
                 acts.push(Act::File(FileAct::Save));
             }
-            if i.consume_shortcut(&sc(Modifiers::CTRL, Key::O)) {
+            if i.consume_shortcut(&keys::OPEN.shortcut()) {
                 acts.push(Act::File(FileAct::Open));
             }
-            if i.consume_shortcut(&sc(Modifiers::CTRL, Key::N)) {
+            if i.consume_shortcut(&keys::NEW.shortcut()) {
                 acts.push(Act::File(FileAct::NewProfile(None)));
             }
-            if i.consume_shortcut(&sc(Modifiers::CTRL, Key::B)) {
+            if i.consume_shortcut(&keys::BOOKMARK.shortcut()) {
                 acts.push(Act::Marks(MarksAct::Toggle));
             }
-            if i.consume_shortcut(&sc(Modifiers::CTRL, Key::W)) {
+            if i.consume_shortcut(&keys::CLOSE.shortcut()) {
                 acts.push(Act::Nav(NavAct::CloseTab(active, false)));
             }
-            if i.consume_shortcut(&sc(Modifiers::CTRL, Key::Comma)) {
+            if i.consume_shortcut(&keys::SETTINGS.shortcut()) {
                 acts.push(Act::Settings(SettingsAct::Open));
             }
-            if i.consume_shortcut(&sc(Modifiers::NONE, Key::F1)) {
+            if i.consume_shortcut(&keys::GUIDE.shortcut()) {
                 acts.push(Act::File(FileAct::OpenGuide));
             }
-            if i.consume_shortcut(&sc(Modifiers::NONE, Key::F9)) {
+            if i.consume_shortcut(&keys::BUILD.shortcut()) {
                 acts.push(Act::Profile(ProfileAct::Build));
             }
-            if i.consume_shortcut(&sc(Modifiers::NONE, Key::F7)) {
+            if i.consume_shortcut(&keys::CHECK.shortcut()) {
                 acts.push(Act::Profile(ProfileAct::Check));
             }
-            if i.consume_shortcut(&sc(Modifiers::ALT, Key::ArrowLeft)) {
+            if i.consume_shortcut(&keys::BACK.shortcut()) {
                 acts.push(Act::Profile(ProfileAct::Back));
             }
-            if i.consume_shortcut(&sc(Modifiers::ALT, Key::ArrowRight)) {
+            if i.consume_shortcut(&keys::FORWARD.shortcut()) {
                 acts.push(Act::Profile(ProfileAct::Forward));
             }
-            if count > 1 && i.consume_shortcut(&sc(Modifiers::CTRL | Modifiers::SHIFT, Key::Tab)) {
+            if count > 1 && i.consume_shortcut(&keys::PREVIOUS_TAB.shortcut()) {
                 acts.push(Act::Nav(NavAct::Activate((active + count - 1) % count)));
             }
-            if count > 1 && i.consume_shortcut(&sc(Modifiers::CTRL, Key::Tab)) {
+            if count > 1 && i.consume_shortcut(&keys::NEXT_TAB.shortcut()) {
                 acts.push(Act::Nav(NavAct::Activate((active + 1) % count)));
             }
-            if active > 0
-                && i.consume_shortcut(&sc(Modifiers::CTRL | Modifiers::SHIFT, Key::PageUp))
-            {
+            if active > 0 && i.consume_shortcut(&keys::TAB_LEFT.shortcut()) {
                 acts.push(Act::Nav(NavAct::MoveTab(active, active - 1)));
             }
-            if active + 1 < count
-                && i.consume_shortcut(&sc(Modifiers::CTRL | Modifiers::SHIFT, Key::PageDown))
-            {
+            if active + 1 < count && i.consume_shortcut(&keys::TAB_RIGHT.shortcut()) {
                 acts.push(Act::Nav(NavAct::MoveTab(active, active + 1)));
             }
             if confirming && i.consume_key(Modifiers::NONE, Key::Escape) {

@@ -11,7 +11,7 @@ use winweaver_core::admx::CatalogFile;
 use winweaver_core::catalog::{Group, Rule};
 
 use crate::i18n::{tr, trf};
-use crate::{Act, CatalogAct, NavAct, ProfileAct, Search, style, tree};
+use crate::{Act, CatalogAct, NavAct, ProfileAct, Search, matches_words, style, tree, widgets};
 
 /// An open tab of a catalog.
 pub struct CatalogDoc {
@@ -102,8 +102,8 @@ fn matches(file: &CatalogFile, lang: &str, words: &[String]) -> (HashSet<String>
     let mut groups = HashSet::new();
     for rule in &file.rules {
         let (title, summary) = rule_texts(file, lang, rule);
-        let hay = format!("{} {} {} {}", rule.id, rule.title, title, summary).to_lowercase();
-        if !words.iter().all(|w| hay.contains(w.as_str())) {
+        let hay = format!("{} {} {} {}", rule.id, rule.title, title, summary);
+        if !matches_words(&hay, words) {
             continue;
         }
         rules.insert(rule.id.clone());
@@ -213,26 +213,12 @@ pub fn catalog_view(
         _ => None,
     };
     let selected = key.and_then(|k| rows.iter().position(|r| r.key == k));
-    let scroll = if doc.reveal {
-        tree::Scroll::Center
-    } else if doc.follow {
-        tree::Scroll::Near
-    } else {
-        tree::Scroll::None
-    };
+    let scroll = tree::Scroll::wanted(doc.reveal, doc.follow);
     if selected.is_none() && scroll != tree::Scroll::None {
         acts.push(Act::Nav(NavAct::Revealed));
     }
     let p = style::palette(ui);
-    egui::Panel::left("catalog-tree")
-        .resizable(true)
-        .default_size(380.0)
-        .frame(
-            egui::Frame::new()
-                .fill(p.card)
-                .inner_margin(egui::Margin::symmetric(0, 4)),
-        )
-        .show(ui, |ui| {
+    widgets::side_panel(ui, "catalog-tree", 380.0, |ui| {
             if filter.words && filter.rules.is_empty() {
                 ui.weak(tr("Nothing matches the search."));
             }

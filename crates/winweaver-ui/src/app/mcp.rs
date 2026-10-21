@@ -89,12 +89,11 @@ impl App {
         let config = self.mcp.config();
         match config.save(&path) {
             Ok(()) => {
-                self.status = trf("Saved {path}", &[("path", &path.display())]);
-                self.shown_file = Some((self.status.clone(), path.clone()));
+                self.saved(&path);
                 self.mcp.path = path;
                 self.mcp.saved = Some(config);
             }
-            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+            Err(e) => self.save_failed(e),
         }
     }
 
@@ -171,8 +170,7 @@ impl App {
                 if let Some(profile) = profile {
                     let mut doc = ProfileDoc::new(profile, None, &self.catalog);
                     doc.dirty = true;
-                    self.docs.push(Doc::Profile(Box::new(doc)));
-                    self.active = self.docs.len() - 1;
+                    self.open_tab(Doc::Profile(Box::new(doc)));
                 }
             }
         }

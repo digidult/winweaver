@@ -51,12 +51,7 @@ impl App {
 
     /// Opens the editor of a theme, or brings its tab to the front.
     pub(crate) fn edit_theme(&mut self, theme: themes::Theme) {
-        if let Some(i) = self
-            .docs
-            .iter()
-            .position(|d| matches!(d, Doc::Theme(t) if t.theme.id == theme.id))
-        {
-            self.active = i;
+        if self.focus_tab(|d| matches!(d, Doc::Theme(t) if t.theme.id == theme.id)) {
             return;
         }
         self.docs
@@ -70,7 +65,7 @@ impl App {
                 self.edit_theme(theme);
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+            Err(e) => self.open_failed(e),
         }
     }
 
@@ -113,12 +108,11 @@ impl App {
                     .unwrap_or_default();
                 d.theme.path = Some(path.clone());
                 d.dirty = false;
-                self.status = trf("Saved {path}", &[("path", &path.display())]);
-                self.shown_file = Some((self.status.clone(), path.clone()));
+                self.saved(&path);
                 self.themes = themes::themes(&dir);
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+            Err(e) => self.save_failed(e),
         }
     }
 
@@ -157,11 +151,7 @@ impl App {
                 let dialog = rfd::FileDialog::new()
                     .add_filter(tr("WinWeaver theme"), &[themes::EXTENSION, "json"])
                     .set_title(tr("Open a theme file"));
-                let dialog = if dir.is_dir() {
-                    dialog.set_directory(dir)
-                } else {
-                    dialog
-                };
+                let dialog = widgets::in_folder(dialog, &dir);
                 if let Some(path) = dialog.pick_file() {
                     self.open_theme_path(path);
                 }

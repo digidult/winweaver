@@ -11,7 +11,7 @@ use zeroize::Zeroizing;
 
 use crate::i18n::{tr, trf};
 use crate::tree::Scroll;
-use crate::{Act, Question, Search, UsersAct, list, style};
+use crate::{Act, Question, Search, UsersAct, icons, list, matches_words, style, widgets};
 
 /// Why the master password is asked.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -319,8 +319,8 @@ fn list_panel(ui: &mut egui::Ui, doc: &mut UsersDoc, acts: &mut Vec<Act>) {
         .enumerate()
         .filter(|(_, u)| {
             words.is_empty() || {
-                let text = format!("{} {} {}", u.name, u.full_name, u.profile_path).to_lowercase();
-                words.iter().all(|w| text.contains(w))
+                let text = format!("{} {} {}", u.name, u.full_name, u.profile_path);
+                matches_words(&text, &words)
             }
         })
         .map(|(i, u)| {
@@ -350,11 +350,7 @@ fn list_panel(ui: &mut egui::Ui, doc: &mut UsersDoc, acts: &mut Vec<Act>) {
     let selected = doc
         .selected
         .and_then(|i| rows.iter().position(|r| r.key == i));
-    let scroll = if doc.follow {
-        Scroll::Near
-    } else {
-        Scroll::None
-    };
+    let scroll = Scroll::wanted(false, doc.follow);
     doc.follow = false;
     let out = list::show(
         ui,
@@ -467,7 +463,7 @@ fn password_row(ui: &mut egui::Ui, doc: &mut UsersDoc, name: &str) {
         if doc.show_password {
             ui.monospace(password.as_str());
         } else {
-            ui.monospace("\u{2022}".repeat(8));
+            ui.monospace(icons::BULLET.repeat(8));
         }
         let eye = if doc.show_password {
             tr("Hide")
@@ -532,11 +528,7 @@ fn master_window(ui: &mut egui::Ui, doc: &mut UsersDoc) {
         Purpose::Set => tr("Set the master password"),
     };
     let mut done = None;
-    egui::Window::new(title)
-        .collapsible(false)
-        .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-        .show(ui.ctx(), |ui| {
+    widgets::Modal::new(title).show(ui.ctx(), |ui| {
             ui.label(tr("Master password"));
             let field = egui::TextEdit::singleline(&mut doc.ask.text)
                 .password(true)
@@ -595,11 +587,7 @@ fn password_window(ui: &mut egui::Ui, doc: &mut UsersDoc) {
     };
     let mut done = None;
     let title = trf("The password of {name}", &[("name", &edit.name)]);
-    egui::Window::new(title)
-        .collapsible(false)
-        .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-        .show(ui.ctx(), |ui| {
+    widgets::Modal::new(title).show(ui.ctx(), |ui| {
             ui.label(tr("Password"));
             let field = egui::TextEdit::singleline(&mut edit.text)
                 .password(true)
@@ -671,11 +659,7 @@ pub enum ImportDone {
 pub fn import_window(ctx: &egui::Context, import: &mut UsersImport) -> ImportDone {
     let mut done = ImportDone::Open;
     let mut unlock = false;
-    egui::Window::new(tr("Accounts from a users file"))
-        .collapsible(false)
-        .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-        .show(ctx, |ui| {
+    widgets::Modal::new(tr("Accounts from a users file")).show(ctx, |ui| {
             let n = import.file.users.len();
             ui.label(trf(
                 "{n} accounts of {name}",

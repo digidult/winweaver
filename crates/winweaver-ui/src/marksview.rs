@@ -13,7 +13,8 @@ use winweaver_core::i18n::CatalogTexts;
 use crate::i18n::{tr, trf};
 use crate::views::{self, gsummary, gtitle, rtitle};
 use crate::{
-    Act, CatalogAct, Form, MarksAct, NavAct, ProfileAct, Question, Settings, list, style, tree,
+    Act, CatalogAct, Form, MarksAct, NavAct, ProfileAct, Question, Settings, icons, list,
+    matches_words, style, tree,
 };
 
 /// The question before the removal of a bookmark, naming its option and its comment.
@@ -160,9 +161,8 @@ fn shown(
             let hay = format!(
                 "{} {} {} {} {}",
                 t.title, t.group, b.item, b.path, b.comment
-            )
-            .to_lowercase();
-            words.iter().all(|w| hay.contains(w.as_str()))
+            );
+            matches_words(&hay, &words)
         })
         .collect()
 }
@@ -228,18 +228,12 @@ pub fn marks_view(
                     list::Cell::new(profile_name(b)).muted(),
                     list::Cell::new(b.comment.clone()).muted(),
                 ],
-                button: Some(("\u{2197}", open_hint(b))),
+                button: Some((icons::GO_TO, open_hint(b))),
             }
         })
         .collect();
     let selected = tab.sel.and_then(|s| indexes.iter().position(|&i| i == s));
-    let scroll = if tab.reveal {
-        tree::Scroll::Center
-    } else if tab.follow {
-        tree::Scroll::Near
-    } else {
-        tree::Scroll::None
-    };
+    let scroll = tree::Scroll::wanted(tab.reveal, tab.follow);
     let out = list::show(
         ui,
         egui::Id::new("marks-list"),
@@ -312,7 +306,7 @@ pub fn marks_detail(
                     let p = style::palette(ui);
                     if style::icon_button(
                         ui,
-                        "\u{2605}",
+                        icons::STAR,
                         tr("Remove the bookmark"),
                         true,
                         Some(p.accent),

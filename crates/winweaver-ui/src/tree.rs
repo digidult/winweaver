@@ -61,6 +61,20 @@ pub enum Scroll {
     Center,
 }
 
+impl Scroll {
+    /// What a tree or a list does with its selection: to the middle after a reveal, into view
+    /// after a move with the keys, else nothing.
+    pub fn wanted(reveal: bool, follow: bool) -> Self {
+        if reveal {
+            Self::Center
+        } else if follow {
+            Self::Near
+        } else {
+            Self::None
+        }
+    }
+}
+
 pub struct Output<K> {
     pub events: Vec<Event<K>>,
     /// The selection moved with the keys, so it should follow into view at the next frame.

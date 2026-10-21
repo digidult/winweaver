@@ -13,7 +13,7 @@ use winweaver_core::resolver::State;
 use crate::i18n::{tr, trf};
 use crate::{
     Act, CatalogAct, Form, ImportAct, NavAct, PcAct, ProfileAct, ProfileDoc, RegistryAct,
-    ScriptKind, Search, Sel, Settings, UNKNOWN_GROUP, style, tree,
+    ScriptKind, Search, Sel, Settings, UNKNOWN_GROUP, icons, matches_words, style, tree,
 };
 
 pub fn rtitle<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule) -> &'a str {
@@ -155,8 +155,7 @@ fn matches(texts: Option<&CatalogTexts>, rule: &Rule, words: &[String]) -> bool 
     );
     hay.push(' ');
     hay.push_str(rsummary(texts, rule));
-    let hay = hay.to_lowercase();
-    words.iter().all(|w| hay.contains(w.as_str()))
+    matches_words(&hay, words)
 }
 
 /// A small on and off switch.
@@ -255,9 +254,9 @@ fn param_summary(catalog: &Catalog, doc: &ProfileDoc, rule: &Rule) -> String {
 
 fn form_icon(form: Form) -> &'static str {
     match form {
-        Form::Install => "\u{1F4CB}",
-        Form::Accounts => "\u{1F464}",
-        Form::Languages => "\u{1F310}",
+        Form::Install => icons::CLIPBOARD,
+        Form::Accounts => icons::PERSON,
+        Form::Languages => icons::GLOBE,
     }
 }
 
@@ -387,8 +386,7 @@ fn unknown_rows(rows: &mut Vec<tree::Row<Key>>, doc: &ProfileDoc, words: &[Strin
     let shown: Vec<(&String, &Value)> = unknown
         .iter()
         .filter(|(id, _)| {
-            let id = id.to_lowercase();
-            words.iter().all(|w| id.contains(w.as_str()))
+            matches_words(id, words)
         })
         .collect();
     if unknown.is_empty() || shown.is_empty() {
@@ -461,13 +459,7 @@ pub fn tree_view(
                     .is_none_or(|g| r.key.1.as_ref() == Some(g))
         })
         .or_else(|| rows.iter().position(|r| r.key.0 == doc.sel));
-    let scroll = if doc.reveal {
-        tree::Scroll::Center
-    } else if doc.follow {
-        tree::Scroll::Near
-    } else {
-        tree::Scroll::None
-    };
+    let scroll = tree::Scroll::wanted(doc.reveal, doc.follow);
     if selected.is_none() && scroll != tree::Scroll::None {
         acts.push(Act::Nav(NavAct::Revealed));
     }
@@ -608,7 +600,7 @@ pub(crate) fn id_line(ui: &mut egui::Ui, id: &str) {
             RichText::new(id).font(style::mono(ui, 12.0)).color(p.muted),
             false,
         );
-        if style::icon_button(ui, "\u{1F4CB}", tr("Copy the id"), true, None).clicked() {
+        if style::icon_button(ui, icons::CLIPBOARD, tr("Copy the id"), true, None).clicked() {
             ui.ctx().copy_text(id.to_owned());
         }
     });
@@ -1020,7 +1012,7 @@ fn writes(ui: &mut egui::Ui, rule: &Rule, acts: &mut Vec<Act>) {
                     ui.horizontal(|ui| {
                         cell(ui, path, true, false, widths[0] - 24.0);
                         let open = ui
-                            .small_button("\u{2197}")
+                            .small_button(icons::GO_TO)
                             .on_hover_text(tr("Open in the registry"));
                         if open.clicked() {
                             let value = (!name.is_empty()).then(|| name.clone());
@@ -1259,9 +1251,9 @@ pub(crate) fn rule_description(
                 style::section_title(ui, tr("Description"));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let (icon, hint) = if open {
-                        ("\u{25BE}", tr("Fold the description (Ctrl+D)"))
+                        (icons::UNFOLDED, tr("Fold the description (Ctrl+D)"))
                     } else {
-                        ("\u{25B8}", tr("Show the description (Ctrl+D)"))
+                        (icons::FOLDED, tr("Show the description (Ctrl+D)"))
                     };
                     if style::icon_button(ui, icon, hint, true, None).clicked() {
                         acts.push(Act::Nav(NavAct::Fold));

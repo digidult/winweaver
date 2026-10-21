@@ -13,7 +13,7 @@ use winweaver_core::catalog::{Action, Phase, ROOT_POLICIES, RegKind, Rule};
 use winweaver_core::registry;
 
 use crate::i18n::{tr, trf};
-use crate::{Act, CatalogAct, ProfileAct, Question, RegistryAct, style, tree};
+use crate::{Act, CatalogAct, ProfileAct, Question, RegistryAct, icons, style, tree, widgets};
 
 /// The kinds of values the form writes.
 const KINDS: [(RegKind, &str); 4] = [
@@ -336,15 +336,7 @@ fn rows(doc: &EditorDoc, out: &mut Vec<tree::Row<String>>, group: &str, depth: u
 /// The tab: the tree on the left, the form on the right.
 pub fn editor_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
     let p = style::palette(ui);
-    egui::Panel::left("catalog-editor-tree")
-        .resizable(true)
-        .default_size(360.0)
-        .frame(
-            egui::Frame::new()
-                .fill(p.card)
-                .inner_margin(egui::Margin::symmetric(0, 4)),
-        )
-        .show(ui, |ui| {
+    widgets::side_panel(ui, "catalog-editor-tree", 360.0, |ui| {
             let mut out = Vec::new();
             let roots: Vec<String> = doc
                 .file
@@ -492,7 +484,7 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
                                 .desired_width(300.0),
                         );
                         if ui
-                            .small_button("\u{1F5C2}")
+                            .small_button(icons::REGISTRY)
                             .on_hover_text(tr("Open in the registry"))
                             .clicked()
                         {
@@ -529,7 +521,7 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
                     }
                 }
                 if ui
-                    .small_button("\u{2715}")
+                    .small_button(icons::CLOSE)
                     .on_hover_text(tr("Remove the line"))
                     .clicked()
                 {

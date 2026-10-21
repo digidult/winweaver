@@ -5,35 +5,23 @@ use crate::*;
 impl App {
     /// Opens a catalog file in a tab of its own, without importing it.
     pub(crate) fn open_catalog_path(&mut self, path: PathBuf) {
-        if let Some(i) = self
-            .docs
-            .iter()
-            .position(|d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path)))
-        {
-            self.active = i;
+        if self.focus_tab(|d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path))) {
             return;
         }
         match CatalogFile::load(&path) {
             Ok(file) => {
                 let doc = catalogview::CatalogDoc::from_file(file, path.clone());
-                self.docs.push(Doc::Catalog(Box::new(doc)));
-                self.active = self.docs.len() - 1;
-                self.status = trf("Opened {path}", &[("path", &path.display())]);
-                self.remember_recent(&path);
+                self.open_tab(Doc::Catalog(Box::new(doc)));
+                self.opened(&path);
             }
-            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+            Err(e) => self.open_failed(e),
         }
     }
 
     /// Opens an ADMX file as a catalog tab without importing it: its policies with the texts of
     /// the ADML next to it; the command bar of the tab offers Import.
     pub(crate) fn open_admx_path(&mut self, path: PathBuf) {
-        if let Some(i) = self
-            .docs
-            .iter()
-            .position(|d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path)))
-        {
-            self.active = i;
+        if self.focus_tab(|d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path))) {
             return;
         }
         let templates = admx::read_file(&path);
@@ -43,7 +31,7 @@ impl App {
                 .first()
                 .map(|s| s.1.clone())
                 .unwrap_or_else(|| tr("no policies").to_owned());
-            self.status = trf("Open failed: {e}", &[("e", &why)]);
+            self.open_failed(why);
             return;
         }
         let name = path
@@ -53,10 +41,8 @@ impl App {
         let id = format!("file-{:08x}", session::fnv(&kept_name(&path)) as u32);
         let file = admx::to_catalog_file(&templates, &id, &name, "", &clock::now_utc_iso());
         let doc = catalogview::CatalogDoc::from_file(file, path.clone());
-        self.docs.push(Doc::Catalog(Box::new(doc)));
-        self.active = self.docs.len() - 1;
-        self.status = trf("Opened {path}", &[("path", &path.display())]);
-        self.remember_recent(&path);
+        self.open_tab(Doc::Catalog(Box::new(doc)));
+        self.opened(&path);
     }
 
     /// Imports the catalog file of the active tab: it is saved next to the executable, merged
@@ -396,12 +382,7 @@ impl App {
 
     /// Opens the tab of an import, or brings it to the front.
     pub(crate) fn open_catalog(&mut self, id: &str) {
-        if let Some(i) = self
-            .docs
-            .iter()
-            .position(|d| matches!(d, Doc::Catalog(c) if c.id == id))
-        {
-            self.active = i;
+        if self.focus_tab(|d| matches!(d, Doc::Catalog(c) if c.id == id)) {
             return;
         }
         let Some(file) = self.imports.iter().find(|f| f.id == id) else {
@@ -466,10 +447,9 @@ impl App {
         };
         match file.save(&path) {
             Ok(()) => {
-                self.status = trf("Saved {path}", &[("path", &path.display())]);
-                self.shown_file = Some((self.status.clone(), path));
+                self.saved(&path);
             }
-            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+            Err(e) => self.save_failed(e),
         }
     }
 
@@ -591,17 +571,11 @@ impl App {
                 _ => return,
             },
         };
-        if let Some(i) = self
-            .docs
-            .iter()
-            .position(|d| matches!(d, Doc::CatalogEdit(e) if e.path == path))
-        {
-            self.active = i;
+        if self.focus_tab(|d| matches!(d, Doc::CatalogEdit(e) if e.path == path)) {
             return;
         }
         let doc = cataledit::EditorDoc::new(file, path, import);
-        self.docs.push(Doc::CatalogEdit(Box::new(doc)));
-        self.active = self.docs.len() - 1;
+        self.open_tab(Doc::CatalogEdit(Box::new(doc)));
     }
 
     /// An empty catalog file among the imports, loaded, in its editor.
@@ -630,7 +604,7 @@ impl App {
             .join(format!("{id}.{}", admx::CATALOG_EXTENSION));
         let _ = std::fs::create_dir_all(&self.imports_dir);
         if let Err(e) = file.save(&path) {
-            self.status = trf("Save failed: {e}", &[("e", &e)]);
+            self.save_failed(e);
             return;
         }
         self.imports.push(file.clone());
@@ -639,8 +613,7 @@ impl App {
         self.refresh_import_list();
         self.rebuild_catalog();
         let doc = cataledit::EditorDoc::new(file, path, true);
-        self.docs.push(Doc::CatalogEdit(Box::new(doc)));
-        self.active = self.docs.len() - 1;
+        self.open_tab(Doc::CatalogEdit(Box::new(doc)));
     }
 
     /// Saves the file of the editor in front after a check; a loaded import is read again.
@@ -653,14 +626,13 @@ impl App {
         }
         let result = d.file.check().and_then(|()| d.file.save(&d.path));
         if let Err(e) = result {
-            self.status = trf("Save failed: {e}", &[("e", &e)]);
+            self.save_failed(e);
             return;
         }
         d.dirty = false;
         let path = d.path.clone();
         let reload = d.import.then(|| d.file.clone());
-        self.status = trf("Saved {path}", &[("path", &path.display())]);
-        self.shown_file = Some((self.status.clone(), path));
+        self.saved(&path);
         if let Some(file) = reload {
             if let Some(slot) = self.imports.iter_mut().find(|f| f.id == file.id) {
                 *slot = file;

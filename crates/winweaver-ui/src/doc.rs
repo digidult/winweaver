@@ -15,7 +15,7 @@ use crate::regfileview::RegFileDoc;
 use crate::regview::RegistryDoc;
 use crate::themeview::ThemeDoc;
 use crate::usersview::UsersDoc;
-use crate::{ProfileDoc, Search};
+use crate::{ProfileDoc, Search, icons};
 
 /// What every tab answers, so the chrome draws it without knowing the document.
 pub trait Tab {
@@ -59,17 +59,17 @@ impl DocKind {
     /// The icon of the tab.
     pub fn icon(self) -> &'static str {
         match self {
-            DocKind::Profile | DocKind::Settings => "\u{2699}",
-            DocKind::Diff => "\u{21C6}",
-            DocKind::Markdown => "\u{1F4D6}",
-            DocKind::Bookmarks => "\u{2605}",
-            DocKind::Mcp => "\u{1F517}",
-            DocKind::Catalog => "\u{1F4E6}",
-            DocKind::Theme => "\u{1F3A8}",
-            DocKind::Registry => "\u{1F5C2}",
-            DocKind::CatalogEdit => "\u{270F}",
-            DocKind::RegFile => "\u{1F4C3}",
-            DocKind::Users => "\u{1F465}",
+            DocKind::Profile | DocKind::Settings => icons::GEAR,
+            DocKind::Diff => icons::COMPARE,
+            DocKind::Markdown => icons::BOOK,
+            DocKind::Bookmarks => icons::STAR,
+            DocKind::Mcp => icons::LINK,
+            DocKind::Catalog => icons::PACKAGE,
+            DocKind::Theme => icons::PALETTE,
+            DocKind::Registry => icons::REGISTRY,
+            DocKind::CatalogEdit => icons::EDIT,
+            DocKind::RegFile => icons::PAGE,
+            DocKind::Users => icons::PEOPLE,
         }
     }
 

@@ -5,23 +5,16 @@ use crate::*;
 impl App {
     /// Opens a registry file in a tab of its own, or brings its tab to the front.
     pub(crate) fn open_reg_path(&mut self, path: PathBuf) {
-        if let Some(i) = self
-            .docs
-            .iter()
-            .position(|d| matches!(d, Doc::RegFile(r) if r.path == path))
-        {
-            self.active = i;
+        if self.focus_tab(|d| matches!(d, Doc::RegFile(r) if r.path == path)) {
             return;
         }
         match RegFile::load(&path) {
             Ok(file) => {
                 let doc = regfileview::RegFileDoc::new(file, path.clone());
-                self.docs.push(Doc::RegFile(Box::new(doc)));
-                self.active = self.docs.len() - 1;
-                self.status = trf("Opened {path}", &[("path", &path.display())]);
-                self.remember_recent(&path);
+                self.open_tab(Doc::RegFile(Box::new(doc)));
+                self.opened(&path);
             }
-            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+            Err(e) => self.open_failed(e),
         }
     }
 
@@ -37,8 +30,8 @@ impl App {
                 .add_filter(tr("Registry files"), &[regfile::EXTENSION])
                 .set_file_name(name);
             let dialog = match d.path.parent() {
-                Some(dir) if dir.is_dir() => dialog.set_directory(dir),
-                _ => dialog,
+                Some(dir) => widgets::in_folder(dialog, dir),
+                None => dialog,
             };
             match dialog.save_file() {
                 Some(p) => reg_extension(p),
@@ -54,11 +47,10 @@ impl App {
             Ok(()) => {
                 d.path = path.clone();
                 d.dirty = false;
-                self.status = trf("Saved {path}", &[("path", &path.display())]);
-                self.shown_file = Some((self.status.clone(), path.clone()));
+                self.saved(&path);
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+            Err(e) => self.save_failed(e),
         }
     }
 
@@ -237,8 +229,7 @@ impl App {
             }
             None => {
                 let doc = regview::RegistryDoc::new(&*reg, path, value);
-                self.docs.push(Doc::Registry(Box::new(doc)));
-                self.active = self.docs.len() - 1;
+                self.open_tab(Doc::Registry(Box::new(doc)));
             }
         }
     }

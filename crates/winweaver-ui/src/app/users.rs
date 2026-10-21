@@ -32,8 +32,7 @@ impl App {
         let mut doc = usersview::UsersDoc::new(file, None);
         doc.dirty = !doc.file.users.is_empty();
         doc.check();
-        self.docs.push(Doc::Users(Box::new(doc)));
-        self.active = self.docs.len() - 1;
+        self.open_tab(Doc::Users(Box::new(doc)));
     }
 
     /// Opens a users file in a tab of its own, or brings its tab to the front.
@@ -47,12 +46,10 @@ impl App {
             Ok(file) => {
                 let mut doc = usersview::UsersDoc::new(file, Some(path.clone()));
                 doc.check();
-                self.docs.push(Doc::Users(Box::new(doc)));
-                self.active = self.docs.len() - 1;
-                self.status = trf("Opened {path}", &[("path", &path.display())]);
-                self.remember_recent(&path);
+                self.open_tab(Doc::Users(Box::new(doc)));
+                self.opened(&path);
             }
-            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+            Err(e) => self.open_failed(e),
         }
     }
 
@@ -80,18 +77,17 @@ impl App {
             return;
         };
         if let Err(e) = d.seal() {
-            self.status = trf("Save failed: {e}", &[("e", &e)]);
+            self.save_failed(e);
             return;
         }
         match d.file.save(&path) {
             Ok(()) => {
                 d.path = Some(path.clone());
                 d.dirty = false;
-                self.status = trf("Saved {path}", &[("path", &path.display())]);
-                self.shown_file = Some((self.status.clone(), path.clone()));
+                self.saved(&path);
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+            Err(e) => self.save_failed(e),
         }
     }
 
@@ -196,7 +192,7 @@ impl App {
                 );
                 self.shown_file = Some((self.status.clone(), target));
             }
-            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+            Err(e) => self.save_failed(e),
         }
     }
 
@@ -217,8 +213,7 @@ impl App {
             tab.ask.open(usersview::Purpose::Set);
         }
         tab.check();
-        self.docs.push(Doc::Users(Box::new(tab)));
-        self.active = self.docs.len() - 1;
+        self.open_tab(Doc::Users(Box::new(tab)));
     }
 
     /// Loads the accounts of a users file into the profile in front, asking the master password
@@ -245,7 +240,7 @@ impl App {
                 ))]);
                 self.status = trf("{n} accounts loaded without passwords", &[("n", &n)]);
             }
-            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+            Err(e) => self.open_failed(e),
         }
     }
 

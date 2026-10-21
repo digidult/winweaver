@@ -5,6 +5,7 @@ use std::path::PathBuf;
 
 use eframe::egui;
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
+use crate::matches_words;
 
 /// The guide shown at the first start and from the menu (F1).
 pub const GUIDE: &str = include_str!("../../../data/docs/guide.md");
@@ -226,8 +227,7 @@ pub fn matching_blocks(text: &str, words: &[String]) -> Vec<String> {
     let mut in_code = false;
     let mut block = String::new();
     let flush = |block: &mut String, heading: &str, out: &mut Vec<String>| {
-        let lower = block.to_lowercase();
-        if !block.trim().is_empty() && words.iter().all(|w| lower.contains(w.as_str())) {
+        if !block.trim().is_empty() && matches_words(block, words) {
             if heading.is_empty() || block.trim_start().starts_with('#') {
                 out.push(block.clone());
             } else {

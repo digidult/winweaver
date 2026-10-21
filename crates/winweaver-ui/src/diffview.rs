@@ -13,7 +13,10 @@ use winweaver_core::profile::Choice;
 
 use crate::i18n::{tr, trf};
 use crate::views::{self, gtitle, rtitle};
-use crate::{Act, DiffAct, FileAct, MarksAct, NavAct, ProfileAct, Settings, list, style, tree};
+use crate::{
+    Act, DiffAct, FileAct, MarksAct, NavAct, ProfileAct, Settings, icons, list, matches_words,
+    style, tree,
+};
 
 pub struct DiffDoc {
     pub diff: Diff,
@@ -180,9 +183,8 @@ fn shown<'a>(catalog: &'a Catalog, texts: Option<&CatalogTexts>, doc: &DiffDoc) 
                 item.base.join(" "),
                 item.other.join(" "),
                 doc.diff.comments.get(&item.key).map_or("", String::as_str)
-            )
-            .to_lowercase();
-            words.iter().all(|w| hay.contains(w.as_str()))
+            );
+            matches_words(&hay, &words)
         });
     }
     items
@@ -273,13 +275,7 @@ pub fn diff_view(
         .sel
         .as_ref()
         .and_then(|k| items.iter().position(|i| &i.key == k));
-    let scroll = if doc.reveal {
-        tree::Scroll::Center
-    } else if doc.follow {
-        tree::Scroll::Near
-    } else {
-        tree::Scroll::None
-    };
+    let scroll = tree::Scroll::wanted(doc.reveal, doc.follow);
     let out = list::show(
         ui,
         egui::Id::new((
@@ -366,9 +362,9 @@ pub fn diff_detail(
                     ui.horizontal(|ui| {
                         let p = style::palette(ui);
                         let (icon, hint) = if marked {
-                            ("\u{2605}", tr("Remove the bookmark (Ctrl+B)"))
+                            (icons::STAR, tr("Remove the bookmark (Ctrl+B)"))
                         } else {
-                            ("\u{2606}", tr("Bookmark this (Ctrl+B)"))
+                            (icons::STAR_EMPTY, tr("Bookmark this (Ctrl+B)"))
                         };
                         if style::icon_button(ui, icon, hint, true, Some(p.accent)).clicked() {
                             acts.push(Act::Marks(MarksAct::Toggle));

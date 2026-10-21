@@ -80,7 +80,7 @@ impl Search {
 }
 
 use crate::i18n::{tr, trf};
-use crate::{Act, Question, RegistryAct, style, tree, views};
+use crate::{Act, Question, RegistryAct, icons, style, tree, views, widgets};
 
 /// The most rules the line above the values names.
 const WRITERS_MAX: usize = 12;
@@ -287,7 +287,7 @@ fn rows(
         check: tree::Check::None,
         open: Some(open),
         muted: false,
-        icon: Some("\u{1F4C1}"),
+        icon: Some(icons::FOLDER),
         switch: None,
     });
     if !open {
@@ -397,15 +397,7 @@ pub fn registry_view(
             )
             .show(ui, |ui| search_panel(ui, doc, acts));
     }
-    egui::Panel::left("registry-tree")
-        .resizable(true)
-        .default_size(360.0)
-        .frame(
-            egui::Frame::new()
-                .fill(p.card)
-                .inner_margin(egui::Margin::symmetric(0, 4)),
-        )
-        .show(ui, |ui| {
+    widgets::side_panel(ui, "registry-tree", 360.0, |ui| {
             let mut out = Vec::new();
             for (hive, _) in HIVES {
                 rows(doc, &mut out, hive, hive, 0);
@@ -413,11 +405,7 @@ pub fn registry_view(
             let selected = out
                 .iter()
                 .position(|r| r.key.eq_ignore_ascii_case(&doc.path));
-            let scroll = if doc.reveal {
-                tree::Scroll::Center
-            } else {
-                tree::Scroll::None
-            };
+            let scroll = tree::Scroll::wanted(doc.reveal, false);
             let shown = tree::show(ui, egui::Id::new("registry-tree"), &out, selected, scroll);
             if shown.scrolled || selected.is_none() {
                 doc.reveal = false;
@@ -599,12 +587,7 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
         EditKind::NewKey => tr("New key"),
     };
     let mut close = false;
-    egui::Window::new(title)
-        .collapsible(false)
-        .resizable(true)
-        .default_width(560.0)
-        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
-        .show(ctx, |ui| {
+    widgets::Modal::new(title).width(560.0).show(ctx, |ui| {
             ui.weak(&doc.path);
             ui.add_space(6.0);
             egui::Grid::new("registry-edit")
@@ -765,12 +748,9 @@ fn rights_window(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>
     };
     let mut close = false;
     let mut gone = None;
-    egui::Window::new(tr("Permissions"))
-        .id(egui::Id::new("registry-rights"))
-        .collapsible(false)
-        .resizable(true)
-        .default_width(680.0)
-        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+    widgets::Modal::new(tr("Permissions"))
+        .id("registry-rights")
+        .width(680.0)
         .show(ctx, |ui| {
             ui.weak(&edit.path);
             ui.add_space(4.0);
@@ -811,7 +791,7 @@ fn rights_window(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>
                             });
                         } else {
                             changed |= entry_controls(ui, i, entry);
-                            let remove = ui.small_button("\u{2715}");
+                            let remove = ui.small_button(icons::CLOSE);
                             if remove.on_hover_text(tr("Remove the entry")).clicked() {
                                 gone = Some(i);
                             }

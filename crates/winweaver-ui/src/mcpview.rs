@@ -16,7 +16,10 @@ use winweaver_mcp::http::HttpServer;
 use winweaver_mcp::{Entry, Mode, RegistryAccess, Server};
 
 use crate::i18n::{tr, trf};
-use crate::{Act, CatalogAct, FileAct, McpAct, Question, RegistryAct, list, style, tree, views};
+use crate::{
+    Act, CatalogAct, FileAct, McpAct, Question, RegistryAct, list, matches_words, style, tree,
+    views,
+};
 
 /// A server the window runs.
 pub struct McpRun {
@@ -437,9 +440,8 @@ pub fn journal_view(ui: &mut egui::Ui, panel: &mut McpPanel, search: &crate::Sea
             let hay = format!(
                 "{} {} {} {} {}",
                 e.time, e.client, e.method, e.detail, e.result
-            )
-            .to_lowercase();
-            words.iter().all(|w| hay.contains(w.as_str()))
+            );
+            matches_words(&hay, &words)
         })
         .map(|(i, e)| {
             let result = list::Cell::new(&e.result);

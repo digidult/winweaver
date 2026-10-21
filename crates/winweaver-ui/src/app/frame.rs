@@ -111,15 +111,7 @@ impl App {
         let texts = texts_for(&self.texts, &i18n::current());
         let settings = &self.settings;
         let p = style::palette(ui);
-        egui::Panel::left("tree")
-            .resizable(true)
-            .default_size(380.0)
-            .frame(
-                egui::Frame::new()
-                    .fill(p.card)
-                    .inner_margin(egui::Margin::symmetric(0, 4)),
-            )
-            .show(ui, |ui| {
+        widgets::side_panel(ui, "tree", 380.0, |ui| {
                 views::tree_view(
                     ui,
                     &self.catalog,
@@ -148,7 +140,7 @@ impl App {
         };
         let texts = texts_for(&self.texts, &i18n::current());
         let p = style::palette(ui);
-        let (default, range) = list_split(ui);
+        let (default, range) = widgets::list_split(ui);
         egui::Panel::left("diff-list")
             .resizable(true)
             .default_size(default)
@@ -229,7 +221,7 @@ impl App {
         };
         let texts = texts_for(&self.texts, &i18n::current());
         let p = style::palette(ui);
-        let (default, range) = list_split(ui);
+        let (default, range) = widgets::list_split(ui);
         egui::Panel::left("marks-list")
             .resizable(true)
             .default_size(default)

@@ -158,8 +158,7 @@ impl App {
             let mut doc = ProfileDoc::new(profile, None, catalog);
             doc.dirty = true;
             doc.issues = issues;
-            self.docs.push(Doc::Profile(Box::new(doc)));
-            self.active = self.docs.len() - 1;
+            self.open_tab(Doc::Profile(Box::new(doc)));
             let forms = if summary.forms.is_empty() {
                 String::new()
             } else {
@@ -265,11 +264,7 @@ impl App {
         };
         let start = output_dir();
         let dialog = rfd::FileDialog::new().set_title(tr("Choose the folder for the script"));
-        let dialog = if start.is_dir() {
-            dialog.set_directory(start)
-        } else {
-            dialog
-        };
+        let dialog = widgets::in_folder(dialog, &start);
         let Some(dir) = dialog.pick_folder() else {
             return;
         };
@@ -330,11 +325,7 @@ impl App {
             .set_title(tr("Save the registry file"))
             .add_filter(tr("Registry files"), &[regfile::EXTENSION])
             .set_file_name(name);
-        let dialog = if start.is_dir() {
-            dialog.set_directory(start)
-        } else {
-            dialog
-        };
+        let dialog = widgets::in_folder(dialog, &start);
         let Some(path) = dialog.save_file() else {
             return;
         };
@@ -390,8 +381,7 @@ impl App {
         let mut doc = ProfileDoc::new(profile, None, &self.catalog);
         doc.dirty = true;
         doc.issues = capture_issues(&summary);
-        self.docs.push(Doc::Profile(Box::new(doc)));
-        self.active = self.docs.len() - 1;
+        self.open_tab(Doc::Profile(Box::new(doc)));
         self.status = format!("Read the report {}: {}", path.display(), summary.line());
     }
 
@@ -434,11 +424,7 @@ impl App {
         let dialog = rfd::FileDialog::new()
             .set_title(tr("Choose the backup to restore"))
             .add_filter(tr("Backups"), &["json"]);
-        let dialog = if start.is_dir() {
-            dialog.set_directory(start)
-        } else {
-            dialog
-        };
+        let dialog = widgets::in_folder(dialog, &start);
         let Some(path) = dialog.pick_file() else {
             return;
         };
@@ -594,11 +580,7 @@ impl App {
             "undo" => tr("Undo a change"),
             _ => tr("Apply to this PC"),
         };
-        egui::Window::new(title)
-            .collapsible(false)
-            .resizable(false)
-            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
-            .show(ctx, |ui| {
+        widgets::Modal::new(title).show(ctx, |ui| {
                 ui.label(trf(
                     "{n} changes of this PC run as administrator; Windows asks for the permission first.",
                     &[("n", &plan.changes())],

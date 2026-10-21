@@ -5,14 +5,36 @@
 
 use eframe::egui::{self, Align, Align2, CornerRadius, Layout, Margin, RichText, Sense, Stroke};
 
+use crate::commands::{Item, Menu, keys};
 use crate::i18n::{tr, trf};
 use crate::style::{self, Palette};
 use crate::{
-    Act, App, CatalogAct, DiffAct, Doc, FileAct, Form, ImportAct, MarksAct, McpAct, NavAct,
-    PRESETS, PcAct, ProfileAct, RegFileAct, RegistryAct, ScriptKind, Sel, Settings, SettingsAct,
-    SettingsSection, Tab, ThemeAct, UsersAct, texts_for, views,
+    Act, App, CatalogAct, DiffAct, Doc, FileAct, Form, ImportAct, MarksAct, McpAct, NavAct, PRESETS,
+    PcAct, ProfileAct, RegistryAct, ScriptKind, Sel, Settings, SettingsAct, SettingsSection, Tab,
+    UsersAct, icons, texts_for, views,
 };
 use winweaver_core::validate::{self, Severity, Target};
+
+/// The height of a tab.
+const TAB_HEIGHT: f32 = 32.0;
+/// The title of a tab is cut at this width.
+const TAB_TITLE_WIDTH: f32 = 200.0;
+/// The parts of a tab from left to right: the padding, the icon, the dot of unsaved changes,
+/// the gap after the title and the close button.
+const TAB_PADDING: f32 = 12.0;
+const TAB_ICON: f32 = 18.0;
+const TAB_DOT: f32 = 10.0;
+const TAB_GAP: f32 = 8.0;
+const TAB_CLOSE: f32 = 20.0;
+/// The width the navigation row keeps for the command bar until it is measured.
+const TOOLS_WIDTH: f32 = 320.0;
+/// The width of the search field, open and closed.
+const SEARCH_OPEN_WIDTH: f32 = 240.0;
+const SEARCH_CLOSED_WIDTH: f32 = 34.0;
+/// The width of the star, the margin of the breadcrumb and its least room.
+const STAR_WIDTH: f32 = 34.0;
+const CRUMBS_MARGIN: f32 = 32.0;
+const CRUMBS_MIN: f32 = 80.0;
 
 /// A frame of a bar: the card colour with a line under it.
 fn bar_frame(p: &Palette, margin: Margin) -> egui::Frame {
@@ -30,7 +52,7 @@ impl App {
         let p = Self::palette_now(ui);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
-            let menu = style::icon_button(ui, "\u{2630}", tr("Menu"), true, Some(p.text));
+            let menu = style::icon_button(ui, icons::MENU, tr("Menu"), true, Some(p.text));
             egui::Popup::menu(&menu).show(|ui| {
                 ui.set_min_width(260.0);
                 self.menu_items(ui, acts);
@@ -84,11 +106,12 @@ impl App {
             .layout_no_wrap(title.clone(), font.clone(), p.text)
             .size()
             .x
-            .min(200.0);
+            .min(TAB_TITLE_WIDTH);
         let dirty = doc.dirty();
-        let width = 12.0 + 16.0 + if dirty { 10.0 } else { 0.0 } + text_w + 8.0 + 22.0;
+        let dot = if dirty { TAB_DOT } else { 0.0 };
+        let width = TAB_PADDING + TAB_ICON + dot + text_w + TAB_GAP + TAB_CLOSE;
         let (rect, response) =
-            ui.allocate_exact_size(egui::vec2(width, 32.0), Sense::click_and_drag());
+            ui.allocate_exact_size(egui::vec2(width, TAB_HEIGHT), Sense::click_and_drag());
         let close_rect = egui::Rect::from_center_size(
             egui::pos2(rect.right() - 15.0, rect.center().y),
             egui::vec2(18.0, 18.0),
@@ -108,7 +131,7 @@ impl App {
                 painter.rect_filled(rect, corners, p.hover);
             }
             let color = if active { p.text } else { p.muted };
-            let mut x = rect.left() + 12.0;
+            let mut x = rect.left() + TAB_PADDING;
             painter.text(
                 egui::pos2(x + 6.0, rect.center().y),
                 Align2::CENTER_CENTER,
@@ -116,10 +139,10 @@ impl App {
                 style::font(ui, 12.0),
                 color,
             );
-            x += 18.0;
+            x += TAB_ICON;
             if dirty {
                 painter.circle_filled(egui::pos2(x + 2.0, rect.center().y), 3.0, p.accent);
-                x += 10.0;
+                x += TAB_DOT;
             }
             let galley = painter.layout_no_wrap(title.clone(), font, color);
             let clip = egui::Rect::from_min_max(
@@ -137,7 +160,7 @@ impl App {
             painter.text(
                 close_rect.center(),
                 Align2::CENTER_CENTER,
-                "\u{2715}",
+                icons::CLOSE,
                 style::font(ui, 10.0),
                 if active || response.hovered() {
                     p.muted
@@ -211,7 +234,7 @@ impl App {
             item(
                 ui,
                 tr("Empty profile"),
-                "Ctrl+N",
+                keys::NEW.text,
                 Act::File(FileAct::NewProfile(None)),
             );
             ui.separator();
@@ -232,7 +255,7 @@ impl App {
                 Act::Users(UsersAct::OfThisPc),
             );
         });
-        item(ui, tr("Open..."), "Ctrl+O", Act::File(FileAct::Open));
+        item(ui, tr("Open..."), keys::OPEN.text, Act::File(FileAct::Open));
         ui.add_enabled_ui(!self.settings.recent.is_empty(), |ui| {
             ui.menu_button(tr("Open recent"), |ui| {
                 for path in &self.settings.recent {
@@ -245,17 +268,17 @@ impl App {
                 }
             });
         });
-        item(ui, tr("Save"), "Ctrl+S", Act::File(FileAct::Save));
+        item(ui, tr("Save"), keys::SAVE.text, Act::File(FileAct::Save));
         item(
             ui,
             tr("Save as..."),
-            "Ctrl+Shift+S",
+            keys::SAVE_AS.text,
             Act::File(FileAct::SaveAs),
         );
         item(
             ui,
             tr("Close tab"),
-            "Ctrl+W",
+            keys::CLOSE.text,
             Act::Nav(NavAct::CloseTab(self.active, false)),
         );
         item(
@@ -265,7 +288,7 @@ impl App {
             self.discard_act(self.active),
         );
         ui.separator();
-        item(ui, tr("Guide"), "F1", Act::File(FileAct::OpenGuide));
+        item(ui, tr("Guide"), keys::GUIDE.text, Act::File(FileAct::OpenGuide));
         item(ui, tr("License"), "", Act::File(FileAct::OpenLicense));
         item(ui, tr("Bookmarks"), "", Act::Marks(MarksAct::Open));
         item(
@@ -278,7 +301,7 @@ impl App {
         item(
             ui,
             tr("Settings"),
-            "Ctrl+,",
+            keys::SETTINGS.text,
             Act::Settings(SettingsAct::Open),
         );
         ui.separator();
@@ -307,316 +330,73 @@ impl App {
 
     /// The command bar of the active tab; `compact` draws the icons alone.
     pub(crate) fn toolbar(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>, compact: bool) {
-        let tool = |ui: &mut egui::Ui, icon: &str, text: &str, keys: &str, enabled: bool| {
-            let hint = if keys.is_empty() {
-                text.to_owned()
-            } else {
-                format!("{text} ({keys})")
-            };
-            style::tool_button(ui, icon, text, &hint, enabled, compact, false).clicked()
-        };
-        let split = |ui: &mut egui::Ui, icon: &str, text: &str| {
-            style::tool_button(ui, icon, text, text, true, compact, true)
-        };
-        let sep = |ui: &mut egui::Ui| {
-            ui.add_space(2.0);
-            ui.separator();
-            ui.add_space(2.0);
-        };
-        match self.docs.get(self.active) {
-            Some(Doc::Profile(_)) => {
-                if tool(ui, "\u{1F4C4}", tr("New"), "Ctrl+N", true) {
-                    acts.push(Act::File(FileAct::NewProfile(None)));
-                }
-                if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::File(FileAct::Open));
-                }
-                if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
-                    acts.push(Act::File(FileAct::Save));
-                }
-                sep(ui);
-                if tool(ui, "\u{2714}", tr("Check"), "F7", true) {
-                    acts.push(Act::Profile(ProfileAct::Check));
-                }
-                if tool(ui, "\u{2699}", tr("Build"), "F9", true) {
-                    acts.push(Act::Profile(ProfileAct::Build));
-                }
-                sep(ui);
-                let pc = split(ui, "\u{1F5A5}", tr("This PC"));
-                egui::Popup::menu(&pc).show(|ui| {
-                    ui.set_min_width(300.0);
-                    this_pc_menu(ui, acts);
-                });
-                let compare = split(ui, "\u{21C6}", tr("Compare"));
-                egui::Popup::menu(&compare).show(|ui| {
-                    ui.set_min_width(220.0);
-                    if ui.button(tr("Compare with a file...")).clicked() {
-                        acts.push(Act::Diff(DiffAct::Compare));
-                        ui.close();
-                    }
+        for item in self.commands() {
+            match item {
+                Item::Separator => {
+                    ui.add_space(2.0);
                     ui.separator();
-                    for (name, _) in PRESETS {
-                        if ui
-                            .button(trf("With the preset {name}", &[("name", &name)]))
-                            .clicked()
-                        {
-                            acts.push(Act::Diff(DiffAct::CompareWith(name)));
-                            ui.close();
+                    ui.add_space(2.0);
+                }
+                Item::Command(c) => {
+                    let hint = match c.keys {
+                        Some(k) => format!("{} ({})", c.label, k.text),
+                        None => c.label.to_owned(),
+                    };
+                    let enabled = c.act.is_some();
+                    let button =
+                        style::tool_button(ui, c.icon, c.label, &hint, enabled, compact, false);
+                    if button.clicked()
+                        && let Some(act) = c.act
+                    {
+                        acts.push(act);
+                    }
+                }
+                Item::Menu(menu) => {
+                    let label = menu.label();
+                    let button =
+                        style::tool_button(ui, menu.icon(), label, label, true, compact, true);
+                    egui::Popup::menu(&button).show(|ui| {
+                        ui.set_min_width(menu.width());
+                        match menu {
+                            Menu::ThisPc => this_pc_menu(ui, acts),
+                            Menu::CompareProfile => self.compare_profile_menu(ui, acts),
+                            Menu::Catalogs => self.catalogs_menu(ui, acts),
+                            Menu::CompareCatalog => self.compare_catalog_menu(ui, acts),
                         }
-                    }
-                    ui.separator();
-                    let dirty = self.docs.get(self.active).is_some_and(Doc::dirty);
-                    let unsaved = egui::Button::new(tr("Unsaved changes"));
-                    if ui.add_enabled(dirty, unsaved).clicked() {
-                        acts.push(Act::Diff(DiffAct::Unsaved));
-                        ui.close();
-                    }
-                });
-                sep(ui);
-                let catalogs = split(ui, "\u{1F4E6}", tr("Catalogs"));
-                egui::Popup::menu(&catalogs).show(|ui| {
-                    ui.set_min_width(300.0);
-                    self.catalogs_menu(ui, acts);
-                });
-            }
-            Some(Doc::Diff(_)) => {
-                if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::File(FileAct::Open));
-                }
-                if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
-                    acts.push(Act::File(FileAct::Save));
-                }
-                if tool(ui, "\u{1F4BE}", tr("Save as"), "Ctrl+Shift+S", true) {
-                    acts.push(Act::Diff(DiffAct::SaveAs));
-                }
-                sep(ui);
-                if tool(ui, "\u{2714}", tr("Apply"), "", true) {
-                    acts.push(Act::Diff(DiffAct::Apply));
-                }
-            }
-            Some(Doc::Markdown(_)) | Some(Doc::Bookmarks(_)) => {
-                if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::File(FileAct::Open));
-                }
-            }
-            Some(Doc::Mcp(_)) => {
-                let running = self.mcp.run.is_some();
-                if tool(ui, "\u{25B6}", tr("Start"), "", !running) {
-                    acts.push(Act::Mcp(McpAct::Start));
-                }
-                if tool(ui, "\u{25A0}", tr("Stop"), "", running) {
-                    acts.push(Act::Mcp(McpAct::Stop));
-                }
-            }
-            Some(Doc::Theme(_)) => {
-                if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::Theme(ThemeAct::OpenFile));
-                }
-                if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
-                    acts.push(Act::File(FileAct::Save));
-                }
-                if tool(ui, "\u{1F4BE}", tr("Save as"), "Ctrl+Shift+S", true) {
-                    acts.push(Act::File(FileAct::SaveAs));
-                }
-            }
-            Some(Doc::Catalog(c)) if c.file.is_some() => {
-                if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::File(FileAct::Open));
-                }
-                sep(ui);
-                if tool(ui, "\u{1F4E5}", tr("Import"), "", true) {
-                    acts.push(Act::Catalog(CatalogAct::ImportOpen));
-                }
-                self.compare_tool(ui, acts, compact);
-                if tool(ui, "\u{270F}", tr("Edit"), "", true) {
-                    acts.push(Act::Catalog(CatalogAct::Edit(crate::CatalogRef::Tab(
-                        self.active,
-                    ))));
-                }
-            }
-            Some(Doc::Catalog(c)) => {
-                if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::File(FileAct::Open));
-                }
-                sep(ui);
-                let selected = c.sel.clone();
-                if tool(
-                    ui,
-                    "\u{27A1}",
-                    tr("Show in the profile"),
-                    "",
-                    selected.is_some(),
-                ) && let Some(rule) = selected
-                {
-                    acts.push(Act::Profile(ProfileAct::ShowInProfile(c.id.clone(), rule)));
-                }
-                if tool(ui, "\u{1F4E4}", tr("Export"), "", true) {
-                    acts.push(Act::Import(ImportAct::Export(c.id.clone())));
-                }
-                self.compare_tool(ui, acts, compact);
-                if tool(ui, "\u{270F}", tr("Edit"), "", true) {
-                    acts.push(Act::Catalog(CatalogAct::Edit(crate::CatalogRef::Import(
-                        c.id.clone(),
-                    ))));
-                }
-            }
-            Some(Doc::CatalogEdit(_)) => {
-                if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
-                    acts.push(Act::File(FileAct::Save));
-                }
-            }
-            Some(Doc::RegFile(d)) => {
-                if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::File(FileAct::Open));
-                }
-                if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
-                    acts.push(Act::File(FileAct::Save));
-                }
-                if tool(ui, "\u{1F4BE}", tr("Save as"), "Ctrl+Shift+S", true) {
-                    acts.push(Act::File(FileAct::SaveAs));
-                }
-                sep(ui);
-                let key = d.selected_key();
-                if tool(ui, "\u{1F4C1}", tr("New key"), "", true) {
-                    acts.push(Act::RegFile(RegFileAct::New(
-                        crate::regfileview::EditKind::Key,
-                    )));
-                }
-                if tool(ui, "\u{2795}", tr("New value"), "", key.is_some()) {
-                    acts.push(Act::RegFile(RegFileAct::New(
-                        crate::regfileview::EditKind::Value,
-                    )));
-                }
-                if tool(ui, "\u{270F}", tr("Edit"), "", d.target().is_some()) {
-                    acts.push(Act::RegFile(RegFileAct::Edit));
-                }
-                if tool(ui, "\u{1F5D1}", tr("Delete"), "", d.removal().is_some())
-                    && let Some(question) = d.remove_question()
-                {
-                    acts.push(question.into());
-                }
-                sep(ui);
-                if tool(
-                    ui,
-                    "\u{1F5C2}",
-                    tr("Open in the registry"),
-                    "",
-                    key.is_some(),
-                ) && let Some((_, path)) = key
-                {
-                    acts.push(Act::Registry(RegistryAct::Open(path, d.selected_value())));
-                }
-            }
-            Some(Doc::Users(d)) => {
-                use winweaver_core::users::Operation;
-                if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
-                    acts.push(Act::File(FileAct::Save));
-                }
-                if tool(ui, "\u{1F4BE}", tr("Save as"), "Ctrl+Shift+S", true) {
-                    acts.push(Act::File(FileAct::SaveAs));
-                }
-                sep(ui);
-                let one = d.selected_user().is_some();
-                if tool(ui, "\u{2795}", tr("Add"), "", true) {
-                    acts.push(Act::Users(UsersAct::Add));
-                }
-                if tool(ui, "\u{29C9}", tr("Duplicate"), "", one) {
-                    acts.push(Act::Users(UsersAct::Duplicate));
-                }
-                if tool(ui, "\u{1F5D1}", tr("Remove"), "", one)
-                    && let Some(question) = d.remove_question()
-                {
-                    acts.push(question.into());
-                }
-                if tool(ui, "\u{2191}", tr("Up"), "", one) {
-                    acts.push(Act::Users(UsersAct::Move(false)));
-                }
-                if tool(ui, "\u{2193}", tr("Down"), "", one) {
-                    acts.push(Act::Users(UsersAct::Move(true)));
-                }
-                sep(ui);
-                if d.unlocked() {
-                    if tool(ui, "\u{1F513}", tr("Lock"), "", true) {
-                        acts.push(Act::Users(UsersAct::Lock));
-                    }
-                    if tool(ui, "\u{1F511}", tr("Password"), "", one) {
-                        acts.push(Act::Users(UsersAct::SetPassword));
-                    }
-                    if tool(ui, "\u{1F510}", tr("Master password"), "", true) {
-                        acts.push(Act::Users(UsersAct::SetMaster));
-                    }
-                } else if tool(ui, "\u{1F512}", tr("Unlock"), "", true) {
-                    acts.push(Act::Users(UsersAct::Unlock));
-                }
-                sep(ui);
-                if tool(ui, "\u{2714}", tr("Check"), "", true) {
-                    acts.push(Act::Users(UsersAct::Check));
-                }
-                if tool(ui, "\u{1F5A5}", tr("Read this PC"), "", true) {
-                    acts.push(Act::Users(UsersAct::ReadPc));
-                }
-                let create = Operation::Create {
-                    update_existing: false,
-                };
-                if tool(ui, "\u{25B6}", tr("Create on this PC"), "", d.unlocked()) {
-                    acts.push(Act::Users(UsersAct::AskRun(create, true)));
-                }
-                if tool(ui, "\u{1F511}", tr("Apply passwords"), "", d.unlocked()) {
-                    acts.push(Act::Users(UsersAct::AskRun(Operation::Passwords, true)));
-                }
-                if tool(ui, "\u{1F4DC}", tr("Script"), "", true) {
-                    acts.push(Act::Users(UsersAct::Script));
-                }
-            }
-            Some(Doc::Registry(d)) => {
-                if tool(ui, "\u{21BB}", tr("Refresh"), "", true) {
-                    acts.push(Act::Registry(RegistryAct::Refresh));
-                }
-                sep(ui);
-                if tool(ui, "\u{1F4C1}", tr("New key"), "", true) {
-                    acts.push(Act::Registry(RegistryAct::New(
-                        crate::regview::EditKind::NewKey,
-                        "",
-                    )));
-                }
-                if tool(ui, "\u{2795}", tr("New value"), "", true) {
-                    acts.push(Act::Registry(RegistryAct::New(
-                        crate::regview::EditKind::NewValue,
-                        "REG_SZ",
-                    )));
-                }
-                if tool(ui, "\u{270F}", tr("Edit"), "", d.selected().is_some()) {
-                    acts.push(Act::Registry(RegistryAct::Edit));
-                }
-                if tool(ui, "\u{1F5D1}", tr("Delete"), "", true) {
-                    acts.push(Act::Registry(RegistryAct::AskDelete));
-                }
-                sep(ui);
-                if tool(ui, "\u{2605}", tr("Bookmark"), "", true) {
-                    acts.push(Act::Registry(RegistryAct::Bookmark));
-                }
-                if tool(ui, "\u{1F50D}", tr("Find"), "", true) {
-                    acts.push(Act::Registry(RegistryAct::Search));
-                }
-                if tool(ui, "\u{1F512}", tr("Permissions"), "", true) {
-                    acts.push(Act::Registry(RegistryAct::Rights));
-                }
-            }
-            Some(Doc::Settings(_)) => {}
-            None => {
-                if tool(ui, "\u{1F4C4}", tr("New"), "Ctrl+N", true) {
-                    acts.push(Act::File(FileAct::NewProfile(None)));
-                }
-                if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::File(FileAct::Open));
+                    });
                 }
             }
         }
     }
 
-    /// Compare in the bar of a catalog tab: a menu of the loaded imports and the tabs of catalog
-    /// files to compare the catalog of the tab with.
-    fn compare_tool(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>, compact: bool) {
+    /// The menu Compare of a profile tab: a file, a preset, the unsaved changes.
+    fn compare_profile_menu(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+        if ui.button(tr("Compare with a file...")).clicked() {
+            acts.push(Act::Diff(DiffAct::Compare));
+            ui.close();
+        }
+        ui.separator();
+        for (name, _) in PRESETS {
+            if ui
+                .button(trf("With the preset {name}", &[("name", &name)]))
+                .clicked()
+            {
+                acts.push(Act::Diff(DiffAct::CompareWith(name)));
+                ui.close();
+            }
+        }
+        ui.separator();
+        let dirty = self.docs.get(self.active).is_some_and(Doc::dirty);
+        let unsaved = egui::Button::new(tr("Unsaved changes"));
+        if ui.add_enabled(dirty, unsaved).clicked() {
+            acts.push(Act::Diff(DiffAct::Unsaved));
+            ui.close();
+        }
+    }
+
+    /// The menu Compare of a catalog tab: the loaded imports and the tabs of catalog files to
+    /// compare the catalog of the tab with.
+    fn compare_catalog_menu(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         let own = match self.docs.get(self.active) {
             Some(Doc::Catalog(c)) if c.file.is_none() => Some(c.id.clone()),
             _ => None,
@@ -635,22 +415,17 @@ impl App {
                 others.push((f.name.clone(), crate::CatalogRef::Tab(i)));
             }
         }
-        let label = tr("Compare");
-        let compare = style::tool_button(ui, "\u{21C6}", label, label, true, compact, true);
-        egui::Popup::menu(&compare).show(|ui| {
-            ui.set_min_width(300.0);
-            if others.is_empty() {
-                ui.weak(tr(
-                    "Load or open another catalog to compare it with this one",
-                ));
+        if others.is_empty() {
+            ui.weak(tr(
+                "Load or open another catalog to compare it with this one",
+            ));
+        }
+        for (name, other) in others {
+            if ui.button(name).clicked() {
+                acts.push(Act::Catalog(CatalogAct::Compare(other)));
+                ui.close();
             }
-            for (name, other) in others {
-                if ui.button(name).clicked() {
-                    acts.push(Act::Catalog(CatalogAct::Compare(other)));
-                    ui.close();
-                }
-            }
-        });
+        }
     }
 
     /// The menu of the policy templates: the imports to open in a tab and the import commands.
@@ -788,16 +563,16 @@ impl App {
         let tools = compact && self.has_tools();
         let tools_id = egui::Id::new("nav-tools-width");
         let tools_w = if tools {
-            ui.data(|d| d.get_temp::<f32>(tools_id)).unwrap_or(320.0)
+            ui.data(|d| d.get_temp::<f32>(tools_id)).unwrap_or(TOOLS_WIDTH)
         } else {
             0.0
         };
         let search_w = if hint.is_empty() {
             0.0
         } else if search_open {
-            240.0
+            SEARCH_OPEN_WIDTH
         } else {
-            34.0
+            SEARCH_CLOSED_WIDTH
         };
         let clone_act = |a: &Act| match a {
             Act::Profile(ProfileAct::Select(s)) => {
@@ -814,25 +589,26 @@ impl App {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
             if let Some((back, forward)) = history {
-                if style::icon_button(ui, "\u{2190}", tr("Back (Alt+Left)"), back, None).clicked() {
+                if style::icon_button(ui, icons::BACK, tr("Back (Alt+Left)"), back, None).clicked() {
                     acts.push(Act::Profile(ProfileAct::Back));
                 }
-                if style::icon_button(ui, "\u{2192}", tr("Forward (Alt+Right)"), forward, None)
+                if style::icon_button(ui, icons::FORWARD, tr("Forward (Alt+Right)"), forward, None)
                     .clicked()
                 {
                     acts.push(Act::Profile(ProfileAct::Forward));
                 }
                 ui.add_space(6.0);
             }
-            let star_w = if star { 34.0 } else { 0.0 };
-            let room = (ui.available_width() - tools_w - search_w - star_w - 32.0).max(80.0);
+            let star_w = if star { STAR_WIDTH } else { 0.0 };
+            let taken = tools_w + search_w + star_w + CRUMBS_MARGIN;
+            let room = (ui.available_width() - taken).max(CRUMBS_MIN);
             let shown = fit_crumbs(ui, &crumbs, room);
             let hidden: Vec<usize> = (0..crumbs.len())
                 .filter(|i| !shown.contains(&Some(*i)))
                 .collect();
             for (k, entry) in shown.iter().enumerate() {
                 if k > 0 {
-                    ui.label(style::muted(ui, "\u{203A}", 13.0));
+                    ui.label(style::muted(ui, icons::CRUMB, 13.0));
                 }
                 match entry {
                     Some(i) => {
@@ -858,7 +634,7 @@ impl App {
                         }
                     }
                     None => {
-                        let more = style::flat_button(ui, RichText::new("\u{2026}"))
+                        let more = style::flat_button(ui, RichText::new(icons::ELLIPSIS))
                             .on_hover_text(tr("The other parts of the path"));
                         egui::Popup::menu(&more).show(|ui| {
                             for i in &hidden {
@@ -876,9 +652,9 @@ impl App {
             }
             if star {
                 let (icon, label) = if marked {
-                    ("\u{2605}", tr("Remove the bookmark (Ctrl+B)"))
+                    (icons::STAR, tr("Remove the bookmark (Ctrl+B)"))
                 } else {
-                    ("\u{2606}", tr("Bookmark this (Ctrl+B)"))
+                    (icons::STAR_EMPTY, tr("Bookmark this (Ctrl+B)"))
                 };
                 if style::icon_button(ui, icon, label, true, Some(p.accent)).clicked() {
                     acts.push(Act::Marks(MarksAct::Toggle));
@@ -924,7 +700,7 @@ impl App {
             return;
         };
         if !search.open {
-            if style::icon_button(ui, "\u{1F50D}", tr(hint), true, None).clicked() {
+            if style::icon_button(ui, icons::FIND, tr(hint), true, None).clicked() {
                 search.open = true;
                 search.focus = true;
             }
@@ -933,7 +709,7 @@ impl App {
         let had_text = !search.text.trim().is_empty();
         let mut remember = None;
         if !history.is_empty() {
-            let more = style::icon_button(ui, "\u{25BE}", tr("Recent searches"), true, None);
+            let more = style::icon_button(ui, icons::UNFOLDED, tr("Recent searches"), true, None);
             egui::Popup::menu(&more).show(|ui| {
                 for h in &history {
                     if ui.button(h).clicked() {
@@ -956,7 +732,7 @@ impl App {
             ui.memory_mut(|m| m.request_focus(id));
             search.focus = false;
         }
-        let close = style::icon_button(ui, "\u{2715}", tr("Clear and close (Esc)"), true, None);
+        let close = style::icon_button(ui, icons::CLOSE, tr("Clear and close (Esc)"), true, None);
         let escaped = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Escape));
         if close.clicked() || escaped {
             search.text.clear();
@@ -994,7 +770,7 @@ impl App {
         let header = |ui: &mut egui::Ui, acts: &mut Vec<Act>| {
             ui.horizontal(|ui| {
                 let errors = validate::errors(&doc.issues);
-                let icon = if errors > 0 { "\u{26D4}" } else { "\u{26A0}" };
+                let icon = if errors > 0 { icons::ERROR } else { icons::WARNING };
                 ui.label(RichText::new(icon).color(p.msg_fg));
                 ui.label(RichText::new(validate::summary(&doc.issues)).color(p.msg_fg));
                 let toggle = if open { tr("Hide") } else { tr("Show") };
@@ -1004,7 +780,7 @@ impl App {
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if style::icon_button(
                         ui,
-                        "\u{2715}",
+                        icons::CLOSE,
                         tr("Hide the messages"),
                         true,
                         Some(p.msg_fg),

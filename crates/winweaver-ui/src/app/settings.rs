@@ -324,10 +324,9 @@ impl App {
             match theme.save(&path) {
                 Ok(()) => {
                     self.themes = themes::themes(&themes_dir());
-                    self.status = trf("Saved {path}", &[("path", &path.display())]);
-                    self.shown_file = Some((self.status.clone(), path.clone()));
+                    self.saved(&path);
                 }
-                Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+                Err(e) => self.save_failed(e),
             }
         }
         ui.label(style::muted(

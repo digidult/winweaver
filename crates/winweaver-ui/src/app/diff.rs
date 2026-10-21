@@ -15,10 +15,9 @@ impl App {
         match d.diff.save(&path) {
             Ok(()) => {
                 d.dirty = false;
-                self.status = trf("Saved {path}", &[("path", &path.display())]);
-                self.shown_file = Some((self.status.clone(), path.clone()));
+                self.saved(&path);
             }
-            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+            Err(e) => self.save_failed(e),
         }
     }
 
@@ -61,10 +60,9 @@ impl App {
                 self.docs
                     .push(Doc::Diff(Box::new(DiffDoc::new(diff, Some(path.clone())))));
                 self.active = self.docs.len() - 1;
-                self.status = trf("Opened {path}", &[("path", &path.display())]);
-                self.remember_recent(&path);
+                self.opened(&path);
             }
-            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+            Err(e) => self.open_failed(e),
         }
     }
 
@@ -155,8 +153,7 @@ impl App {
                     let profile = Profile::parse(text, name)
                         .unwrap_or_else(|_| Profile::from_defaults(name, &self.catalog));
                     let doc = ProfileDoc::new(profile, None, &self.catalog);
-                    self.docs.push(Doc::Profile(Box::new(doc)));
-                    self.active = self.docs.len() - 1;
+                    self.open_tab(Doc::Profile(Box::new(doc)));
                 }
                 None => {
                     self.status = trf(
@@ -222,11 +219,10 @@ impl App {
             Ok(()) => {
                 d.path = Some(path.clone());
                 d.dirty = false;
-                self.status = trf("Saved {path}", &[("path", &path.display())]);
-                self.shown_file = Some((self.status.clone(), path.clone()));
+                self.saved(&path);
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+            Err(e) => self.save_failed(e),
         }
     }
 

@@ -19,7 +19,10 @@ use winweaver_core::registry::{self, Data};
 use crate::i18n::{tr, trf};
 use crate::regview::value_title;
 use crate::views::{self, rtitle};
-use crate::{Act, ProfileAct, Question, RegFileAct, RegistryAct, Search, list, style, tree};
+use crate::{
+    Act, ProfileAct, Question, RegFileAct, RegistryAct, Search, icons, list, matches_words, style,
+    tree, widgets,
+};
 
 /// The types the editor of a value offers.
 const TYPES: [&str; 7] = [
@@ -584,9 +587,9 @@ fn outline_row(lines: &[Line], item: &Item, index: usize) -> tree::Row<Option<us
                 .filter(|&i| matches!(lines[i], Line::Value { .. }))
                 .count();
             if delete {
-                (path, String::new(), "\u{1F5D1}", true)
+                (path, String::new(), icons::DELETE, true)
             } else {
-                (path, values.to_string(), "\u{1F4C1}", false)
+                (path, values.to_string(), icons::FOLDER, false)
             }
         }
         Item::Notes { lines: range } => {
@@ -633,25 +636,21 @@ fn outline(ui: &mut egui::Ui, doc: &mut RegFileDoc, items: &[Item], selected: Op
         check: tree::Check::None,
         open: None,
         muted: false,
-        icon: Some("\u{1F4C4}"),
+        icon: Some(icons::NEW),
         switch: None,
     }];
     for (i, item) in items.iter().enumerate() {
         if !words.is_empty() {
             let text: Vec<String> = lines[item.lines()].iter().map(search_text).collect();
             let text = text.join("\n");
-            if !words.iter().all(|w| text.contains(w.as_str())) {
+            if !matches_words(&text, &words) {
                 continue;
             }
         }
         rows.push(outline_row(lines, item, i));
     }
     let shown_at = rows.iter().position(|r| r.key == selected);
-    let scroll = if doc.follow {
-        tree::Scroll::Near
-    } else {
-        tree::Scroll::None
-    };
+    let scroll = tree::Scroll::wanted(false, doc.follow);
     let id = egui::Id::new(("regfile-outline", doc.path.display().to_string()));
     let shown = tree::show(ui, id, &rows, shown_at, scroll);
     if shown.scrolled || shown_at.is_none() {
@@ -863,7 +862,7 @@ fn lines_list(
                 };
                 let button = key_path
                     .as_ref()
-                    .map(|_| ("\u{1F5C2}", tr("Open in the registry").to_owned()));
+                    .map(|_| (icons::REGISTRY, tr("Open in the registry").to_owned()));
                 (
                     vec![list::Cell::new(value_title(name)), kind, shown],
                     button,
@@ -872,7 +871,7 @@ fn lines_list(
             Line::Comment(t) => {
                 let button = rule_of_comment(t)
                     .filter(|id| catalog.rule(id).is_some())
-                    .map(|_| ("\u{27A1}", tr("Show in the profile").to_owned()));
+                    .map(|_| (icons::SHOW, tr("Show in the profile").to_owned()));
                 let text = t.strip_prefix(';').unwrap_or(t).trim();
                 let cells = vec![
                     list::Cell::new(";").muted(),
@@ -963,15 +962,9 @@ pub fn regfile_view(
     let items = items(&doc.file.lines);
     let selected = doc.item(&items);
     let p = style::palette(ui);
-    egui::Panel::left("regfile-outline")
-        .resizable(true)
-        .default_size(380.0)
-        .frame(
-            egui::Frame::new()
-                .fill(p.card)
-                .inner_margin(egui::Margin::symmetric(0, 4)),
-        )
-        .show(ui, |ui| outline(ui, doc, &items, selected));
+    widgets::side_panel(ui, "regfile-outline", 380.0, |ui| {
+        outline(ui, doc, &items, selected);
+    });
     egui::CentralPanel::default()
         .frame(egui::Frame::new().fill(p.bg))
         .show(ui, |ui| {
@@ -1026,12 +1019,9 @@ fn editor(ctx: &egui::Context, doc: &mut RegFileDoc) {
     };
     let mut close = false;
     let mut apply = false;
-    egui::Window::new(title)
-        .id(egui::Id::new("regfile-editor"))
-        .collapsible(false)
-        .resizable(true)
-        .default_width(560.0)
-        .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+    widgets::Modal::new(title)
+        .id("regfile-editor")
+        .width(560.0)
         .show(ctx, |ui| {
             egui::Grid::new("regfile-edit")
                 .num_columns(2)

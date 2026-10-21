@@ -37,19 +37,10 @@ impl App {
             self.status = trf("No page {name} in the documentation", &[("name", &name)]);
             return;
         };
-        let i = match self
-            .docs
-            .iter()
-            .position(|d| matches!(d, Doc::Markdown(m) if m.path.is_none() && m.title == title))
-        {
-            Some(i) => i,
-            None => {
-                self.docs
-                    .push(Doc::Markdown(Box::new(MdDoc::new(title, None, text))));
-                self.docs.len() - 1
-            }
-        };
-        self.active = i;
+        self.show_or_open(
+            |d| matches!(d, Doc::Markdown(m) if m.path.is_none() && m.title == title),
+            || Doc::Markdown(Box::new(MdDoc::new(title.clone(), None, text))),
+        );
         if let Some(Doc::Markdown(m)) = self.docs.get_mut(i) {
             m.jump = anchor.is_some();
             m.anchor = anchor;
@@ -121,20 +112,14 @@ impl App {
             self.open_md_path(path);
             return;
         }
-        if let Some(i) = self
-            .docs
-            .iter()
-            .position(|d| matches!(d, Doc::Profile(p) if p.path.as_ref() == Some(&path)))
-        {
-            self.active = i;
+        if self.focus_tab(|d| matches!(d, Doc::Profile(p) if p.path.as_ref() == Some(&path))) {
             return;
         }
         match Profile::load(&path) {
             Ok(mut profile) => {
                 let unknown = profile.split_unknown(&self.catalog);
                 let doc = ProfileDoc::new(profile, Some(path.clone()), &self.catalog);
-                self.docs.push(Doc::Profile(Box::new(doc)));
-                self.active = self.docs.len() - 1;
+                self.open_tab(Doc::Profile(Box::new(doc)));
                 self.status = if unknown.is_empty() {
                     trf("Opened {path}", &[("path", &path.display())])
                 } else {
@@ -145,7 +130,7 @@ impl App {
                 };
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+            Err(e) => self.open_failed(e),
         }
     }
 
@@ -182,40 +167,25 @@ impl App {
                 doc.path = Some(path.clone());
                 doc.dirty = false;
                 doc.changed = None;
-                self.status = trf("Saved {path}", &[("path", &path.display())]);
-                self.shown_file = Some((self.status.clone(), path.clone()));
+                self.saved(&path);
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
+            Err(e) => self.save_failed(e),
         }
     }
 
     pub(crate) fn open_license(&mut self) {
-        match self
-            .docs
-            .iter()
-            .position(|d| matches!(d, Doc::Markdown(m) if m.is_license()))
-        {
-            Some(i) => self.active = i,
-            None => {
-                self.docs.push(Doc::Markdown(Box::new(MdDoc::license())));
-                self.active = self.docs.len() - 1;
-            }
-        }
+        self.show_or_open(
+            |d| matches!(d, Doc::Markdown(m) if m.is_license()),
+            || Doc::Markdown(Box::new(MdDoc::license())),
+        );
     }
 
     pub(crate) fn open_guide(&mut self) {
-        match self
-            .docs
-            .iter()
-            .position(|d| matches!(d, Doc::Markdown(m) if m.is_guide()))
-        {
-            Some(i) => self.active = i,
-            None => {
-                self.docs.push(Doc::Markdown(Box::new(MdDoc::guide())));
-                self.active = self.docs.len() - 1;
-            }
-        }
+        self.show_or_open(
+            |d| matches!(d, Doc::Markdown(m) if m.is_guide()),
+            || Doc::Markdown(Box::new(MdDoc::guide())),
+        );
     }
 
     pub(crate) fn open_md_path(&mut self, path: PathBuf) {
@@ -231,10 +201,9 @@ impl App {
                     text,
                 ))));
                 self.active = self.docs.len() - 1;
-                self.status = trf("Opened {path}", &[("path", &path.display())]);
-                self.remember_recent(&path);
+                self.opened(&path);
             }
-            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+            Err(e) => self.open_failed(e),
         }
     }
 
@@ -245,7 +214,7 @@ impl App {
         let text = match jsonfile::read_text_bom(&path, jsonfile::MAX_BYTES) {
             Ok(t) => t,
             Err(e) => {
-                self.status = trf("Open failed: {e}", &[("e", &e)]);
+                self.open_failed(e);
                 return;
             }
         };
@@ -270,15 +239,14 @@ impl App {
                     target: Target::Profile,
                     text: trf("Open: {n}", &[("n", &n)]),
                 }));
-                self.docs.push(Doc::Profile(Box::new(doc)));
-                self.active = self.docs.len() - 1;
+                self.open_tab(Doc::Profile(Box::new(doc)));
                 self.status = trf(
                     "Opened the profile of {path}; save it as a .wwprofile file",
                     &[("path", &path.display())],
                 );
                 self.remember_recent(&path);
             }
-            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+            Err(e) => self.open_failed(e),
         }
     }
 
@@ -292,8 +260,7 @@ impl App {
                     None => Profile::new("New profile", self.catalog.version()),
                 };
                 let doc = ProfileDoc::new(profile, None, &self.catalog);
-                self.docs.push(Doc::Profile(Box::new(doc)));
-                self.active = self.docs.len() - 1;
+                self.open_tab(Doc::Profile(Box::new(doc)));
             }
             FileAct::Open => {
                 if let Some(path) = pick_any() {

@@ -83,7 +83,7 @@ impl App {
                 self.remember_recent(&path);
                 self.apply(vec![Act::Marks(MarksAct::Open)]);
             }
-            Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
+            Err(e) => self.open_failed(e),
         }
     }
 
