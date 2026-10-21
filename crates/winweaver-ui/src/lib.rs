@@ -16,27 +16,18 @@ mod diffview;
 mod doc;
 mod folders;
 mod forms;
-mod i18n;
-mod icons;
 mod importlist;
-mod list;
 mod marksview;
+mod pages;
 mod mcpview;
-mod mdview;
 mod question;
 mod regedit;
 mod regfileview;
 mod regview;
-mod renderer;
-mod session;
 mod settings;
-mod style;
-mod themes;
 mod themeview;
-mod tree;
 mod usersview;
 mod views;
-mod widgets;
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -70,16 +61,19 @@ pub(crate) use dialogs::{
     write_file,
 };
 pub use diffview::DiffDoc;
-pub use doc::{Doc, DocKind, SettingsDoc, SettingsSection, Tab};
+pub use doc::{Doc, DocKind, SettingsDoc, SettingsSection};
+pub use ww::doc::{Document as Tab, Search, matches_words, remember_search};
 pub use folders::{imports_dir, lang_dir, output_dir, profiles_dir, themes_dir};
 pub use forms::Form;
-pub use i18n::{tr, trf};
+pub use ww::i18n::{tr, trf};
+pub use ww::{i18n, icons, list, mdview, renderer, session, style, themes, tree, widgets};
 pub use importlist::{ImportEntry, import_files, loaded_import_ids, read_imports};
 pub(crate) use importlist::{import_entries, import_order, size_text, unknown_issues};
-pub use mdview::MdDoc;
+pub use ww::mdview::MdDoc;
 pub use question::Question;
-pub use renderer::Renderer;
-pub use settings::{Settings, ThemeChoice, exe_dir};
+pub use ww::renderer::Renderer;
+pub use settings::{DescSections, Extra, Settings, ThemeChoice};
+pub use ww::folders::exe_dir;
 
 /// The presets embedded in the executable: the name and the profile text.
 pub const PRESETS: [(&str, &str); 4] = [
@@ -98,9 +92,27 @@ pub const PRESETS: [(&str, &str); 4] = [
     ("Home", include_str!("../../../data/presets/home.wwprofile")),
 ];
 
-const SEARCH_HISTORY: usize = 20;
 /// Below this width of the window the command bar shows icons only, in the navigation row.
 const COMPACT_WIDTH: f32 = 1100.0;
+
+/// The translations of the interface embedded in the executable: the language code and the
+/// file. Every text of the interface has a translation in each of them.
+pub const LANGUAGES: [(&str, &str); 8] = [
+    ("uk", include_str!("../../../data/lang/uk/ui.json")),
+    ("ru", include_str!("../../../data/lang/ru/ui.json")),
+    ("de", include_str!("../../../data/lang/de/ui.json")),
+    ("es", include_str!("../../../data/lang/es/ui.json")),
+    ("fr", include_str!("../../../data/lang/fr/ui.json")),
+    ("id", include_str!("../../../data/lang/id/ui.json")),
+    ("it", include_str!("../../../data/lang/it/ui.json")),
+    ("tr", include_str!("../../../data/lang/tr/ui.json")),
+];
+
+/// The themes WinWeaver embeds besides Light and Dark of WW: the colours of the first version.
+pub const THEMES: [(&str, &str); 2] = [
+    ("latte", include_str!("../../../data/themes/latte.wwtheme")),
+    ("matrix", include_str!("../../../data/themes/matrix.wwtheme")),
+];
 /// The largest Markdown file a tab shows.
 pub(crate) const MARKDOWN_MAX_BYTES: u64 = 4 * 1024 * 1024;
 /// The size of the window at the first start, and the least size it takes.
@@ -203,42 +215,6 @@ impl ProfileDoc {
         self.dirty = true;
         self.changed = Some(std::time::Instant::now());
     }
-}
-
-/// The search of a tab, at the right end of its navigation row.
-#[derive(Default)]
-pub struct Search {
-    pub open: bool,
-    pub text: String,
-    focus: bool,
-}
-
-impl Search {
-    /// The lower case words of the search text.
-    pub fn words(&self) -> Vec<String> {
-        self.text
-            .split_whitespace()
-            .map(str::to_lowercase)
-            .collect()
-    }
-}
-
-/// Whether a text holds every word of a search, ignoring case.
-pub fn matches_words(hay: &str, words: &[String]) -> bool {
-    let hay = hay.to_lowercase();
-    words.iter().all(|w| hay.contains(w.as_str()))
-}
-
-/// Puts a search first in the history of the searches; `true` when the history changed.
-pub(crate) fn remember_search(history: &mut Vec<String>, text: &str) -> bool {
-    let text = text.trim().to_owned();
-    if text.is_empty() || history.first() == Some(&text) {
-        return false;
-    }
-    history.retain(|h| h != &text);
-    history.insert(0, text);
-    history.truncate(SEARCH_HISTORY);
-    true
 }
 
 /// The stand-alone scripts the window saves.
@@ -360,6 +336,8 @@ impl App {
     pub fn new(catalog: Catalog, texts: Vec<CatalogTexts>, settings: Settings) -> Self {
         // The input languages and layouts of this Windows, read at the first check of a profile.
         winweaver_core::resources::set_locale_reader(winweaver_win::locales);
+        ww::i18n::install(&LANGUAGES);
+        ww::themes::install(&THEMES);
         let profile = Profile::parse(PRESETS[0].1, PRESETS[0].0)
             .unwrap_or_else(|_| Profile::from_defaults(PRESETS[0].0, &catalog));
         let doc = ProfileDoc::new(profile, None, &catalog);
@@ -681,6 +659,7 @@ pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
             app.graphics = renderer::graphics_text(cc);
             session::log(
                 &app.logs_dir,
+                "winweaver",
                 "INFO",
                 &format!(
                     "WinWeaver {} started; graphics: {}",
@@ -702,9 +681,9 @@ pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
             }
             app.load_imports();
             app.restore_session();
-            if app.settings.show_guide_at_start {
+            if app.settings.extra.show_guide_at_start {
                 app.open_guide();
-                app.settings.show_guide_at_start = false;
+                app.settings.extra.show_guide_at_start = false;
                 app.settings_dirty = true;
             }
             if !failures.is_empty() {
@@ -724,3 +703,5 @@ pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod translations;

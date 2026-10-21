@@ -1,5 +1,5 @@
-//! Themes (`docs/spec/01-ui.md` section 14): the colours and the fonts of the window. Light, Dark,
-//! Latte and Matrix are embedded (the last two are the colours of the first version); a file
+//! Themes: the colours and the fonts of the window. Light and Dark are embedded in WW, a program
+//! embeds more (`install`); a file
 //! `themes/<id>.wwtheme` next to the executable adds a theme, or replaces the embedded one of its
 //! id. A theme names a light or dark base and the colours it changes; a colour it leaves out
 //! keeps the base. Files `<id>.json` of the first version are read too.
@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 
 use eframe::egui::Color32;
 use serde::{Deserialize, Serialize};
-use winweaver_core::jsonfile;
+use ww_base::jsonfile;
 
 use crate::style::{self, Fonts, Palette};
 
@@ -18,15 +18,28 @@ pub const VERSION: u32 = 1;
 pub const EXTENSION: &str = "wwtheme";
 const MAX_BYTES: u64 = 64 * 1024;
 
-pub const EMBEDDED: [(&str, &str); 4] = [
-    ("dark", include_str!("../../../data/themes/dark.wwtheme")),
-    ("latte", include_str!("../../../data/themes/latte.wwtheme")),
-    ("light", include_str!("../../../data/themes/light.wwtheme")),
-    (
-        "matrix",
-        include_str!("../../../data/themes/matrix.wwtheme"),
-    ),
+/// The themes of WW: Light and Dark.
+pub const EMBEDDED: [(&str, &str); 2] = [
+    ("dark", include_str!("../data/themes/dark.wwtheme")),
+    ("light", include_str!("../data/themes/light.wwtheme")),
 ];
+
+/// The themes the program embeds besides the ones of WW, set once at the start.
+static EXTRA: std::sync::RwLock<&'static [(&'static str, &'static str)]> =
+    std::sync::RwLock::new(&[]);
+
+/// Names the themes the program embeds besides Light and Dark: the id and the file.
+pub fn install(extra: &'static [(&'static str, &'static str)]) {
+    if let Ok(mut e) = EXTRA.write() {
+        *e = extra;
+    }
+}
+
+/// The embedded themes: the ones of WW and the ones of the program.
+fn embedded_list() -> Vec<(&'static str, &'static str)> {
+    let extra = EXTRA.read().map(|e| *e).unwrap_or(&[]);
+    EMBEDDED.iter().chain(extra.iter()).copied().collect()
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -130,9 +143,9 @@ impl Theme {
 
     /// The embedded theme of an id.
     pub fn embedded(id: &str) -> Option<Self> {
-        EMBEDDED.iter().find(|e| e.0 == id).and_then(|(id, text)| {
+        embedded_list().into_iter().find(|e| e.0 == id).and_then(|(id, text)| {
             Self::parse(text, id).ok().map(|mut t| {
-                t.id = (*id).to_owned();
+                t.id = id.to_owned();
                 t
             })
         })
@@ -163,8 +176,8 @@ impl Theme {
 /// The embedded themes and the files of the folder, by id; a file with the id of an embedded
 /// theme replaces it, a `.wwtheme` file a `.json` one of the same id.
 pub fn themes(dir: &Path) -> Vec<Theme> {
-    let mut out: Vec<Theme> = EMBEDDED
-        .iter()
+    let mut out: Vec<Theme> = embedded_list()
+        .into_iter()
         .filter_map(|(id, _)| Theme::embedded(id))
         .collect();
     if let Ok(entries) = std::fs::read_dir(dir) {

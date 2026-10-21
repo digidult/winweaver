@@ -144,7 +144,7 @@ impl App {
         }
         ui.add_space(8.0);
         if !self.settings.recent.is_empty() && ui.button(tr("Forget recent files")).clicked() {
-            self.pending_acts.push(Question::forget_recent().into());
+            self.pending_acts.push(crate::question::forget_recent().into());
         }
     }
 
@@ -160,12 +160,12 @@ impl App {
             style::section_title(ui, tr("Window"));
             ui.add_space(4.0);
             ui.checkbox(
-                &mut self.settings.desc_open,
+                &mut self.settings.extra.desc_open,
                 tr("Show the description panel (Ctrl+D)"),
             );
             ui.horizontal_wrapped(|ui| {
                 ui.label(tr("Open at first in the description:"));
-                let parts = &mut self.settings.desc_sections;
+                let parts = &mut self.settings.extra.desc_sections;
                 ui.checkbox(&mut parts.what, tr("What it does"));
                 ui.checkbox(&mut parts.risk, tr("Risk"));
                 ui.checkbox(&mut parts.writes, tr("What it writes"));
@@ -174,15 +174,15 @@ impl App {
                 ui.checkbox(&mut parts.reference, tr("Reference"));
             });
             ui.checkbox(
-                &mut self.settings.show_guide_at_start,
+                &mut self.settings.extra.show_guide_at_start,
                 tr("Open the guide at the next start"),
             );
             ui.checkbox(
-                &mut self.settings.inline_switches,
+                &mut self.settings.extra.inline_switches,
                 tr("Switches at the end of the rows of the selected group"),
             );
             ui.checkbox(
-                &mut self.settings.hide_unknown,
+                &mut self.settings.extra.hide_unknown,
                 tr("Hide the options of the profile whose catalog is not loaded"),
             );
             ui.add_space(4.0);

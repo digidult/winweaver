@@ -78,9 +78,9 @@ impl App {
     /// an earlier version load every import but the hidden ones, and name them from now on.
     pub(crate) fn load_imports(&mut self) {
         let ids = loaded_import_ids(&self.settings, &self.imports_dir);
-        if self.settings.loaded_imports.is_none() {
-            self.settings.loaded_imports = Some(ids.clone());
-            self.settings.hidden_imports.clear();
+        if self.settings.extra.loaded_imports.is_none() {
+            self.settings.extra.loaded_imports = Some(ids.clone());
+            self.settings.extra.hidden_imports.clear();
             self.settings_dirty = true;
         }
         let (files, broken) = read_imports(&self.imports_dir, &ids);
@@ -118,7 +118,7 @@ impl App {
 
     /// Names an import among the loaded ones of the settings.
     pub(crate) fn mark_loaded(&mut self, id: &str) {
-        let list = self.settings.loaded_imports.get_or_insert_with(Vec::new);
+        let list = self.settings.extra.loaded_imports.get_or_insert_with(Vec::new);
         if !list.iter().any(|x| x == id) {
             list.push(id.to_owned());
             self.settings_dirty = true;
@@ -128,7 +128,7 @@ impl App {
     /// Forgets an import: out of the settings, out of memory, and its tab closes.
     pub(crate) fn unload_import(&mut self, id: &str) {
         self.imports.retain(|f| f.id != id);
-        if let Some(list) = &mut self.settings.loaded_imports {
+        if let Some(list) = &mut self.settings.extra.loaded_imports {
             list.retain(|x| x != id);
         }
         self.settings_dirty = true;
@@ -491,7 +491,7 @@ impl App {
                     }
                 }
                 if ui.small_button(tr("Remove")).clicked() {
-                    acts.push(Question::remove_import(&entry.name, entry.id.clone()).into());
+                    acts.push(crate::question::remove_import(&entry.name, entry.id.clone()).into());
                 }
             });
             if let Some((id, name)) = &mut *renaming

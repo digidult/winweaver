@@ -288,8 +288,8 @@ pub(crate) fn rule_description(
     link: RuleLink,
     acts: &mut Vec<Act>,
 ) {
-    let open = settings.desc_open;
-    let parts = &settings.desc_sections;
+    let open = settings.extra.desc_open;
+    let parts = &settings.extra.desc_sections;
     ui.add_space(6.0);
     egui::Frame::new()
         .inner_margin(Margin {

@@ -118,8 +118,8 @@ impl App {
                 texts,
                 doc,
                 &doc.search,
-                settings.inline_switches,
-                !settings.hide_unknown,
+                settings.extra.inline_switches,
+                !settings.extra.hide_unknown,
                 acts,
             );
         });

@@ -34,12 +34,12 @@ pub fn import_files(dir: &Path) -> Vec<(String, PathBuf)> {
 /// The ids of the imports the settings load. Settings of an earlier version name the hidden
 /// ones instead: then every catalog file of the folder but those.
 pub fn loaded_import_ids(settings: &Settings, dir: &Path) -> Vec<String> {
-    match &settings.loaded_imports {
+    match &settings.extra.loaded_imports {
         Some(ids) => ids.clone(),
         None => import_files(dir)
             .into_iter()
             .map(|(id, _)| id)
-            .filter(|id| !settings.hidden_imports.contains(id))
+            .filter(|id| !settings.extra.hidden_imports.contains(id))
             .collect(),
     }
 }

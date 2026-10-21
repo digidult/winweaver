@@ -27,10 +27,10 @@ impl App {
             return;
         }
         let mut config = winweaver_mcp::config::Config::default();
-        if self.settings.mcp_port >= 1024 {
-            config.port = self.settings.mcp_port;
+        if self.settings.extra.mcp_port >= 1024 {
+            config.port = self.settings.extra.mcp_port;
         }
-        config.token = self.settings.mcp_token.clone();
+        config.token = self.settings.extra.mcp_token.clone();
         if config.check().is_err() {
             config.token.clear();
         }

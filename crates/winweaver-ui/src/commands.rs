@@ -1,68 +1,28 @@
 //! The commands of the command bar of each tab as data: the chrome draws them, the menu and the
 //! keyboard name their keys, and every key text lives here once.
 
-use eframe::egui::{Key, KeyboardShortcut, Modifiers};
 use winweaver_core::users::Operation;
 
 use crate::i18n::tr;
+use ww::keys::Keys;
 use crate::{
     Act, App, CatalogAct, CatalogRef, DiffAct, Doc, FileAct, ImportAct, McpAct, ProfileAct,
     RegFileAct, RegistryAct, ThemeAct, UsersAct, icons, regfileview, regview,
 };
 
-/// A keyboard shortcut with its text.
-pub struct Keys {
-    pub text: &'static str,
-    pub modifiers: Modifiers,
-    pub key: Key,
-}
-
-impl Keys {
-    pub const fn new(text: &'static str, modifiers: Modifiers, key: Key) -> Self {
-        Self {
-            text,
-            modifiers,
-            key,
-        }
-    }
-
-    pub fn shortcut(&self) -> KeyboardShortcut {
-        KeyboardShortcut::new(self.modifiers, self.key)
-    }
-}
-
-/// The keys of the commands, each named once.
+/// The keys of the commands of WinWeaver beyond the ones of WW, each named once.
 pub mod keys {
     use eframe::egui::{Key, Modifiers};
 
-    use super::Keys;
+    pub use ww::keys::*;
 
-    const CTRL_SHIFT: Modifiers = Modifiers {
-        alt: false,
-        ctrl: true,
-        shift: true,
-        mac_cmd: false,
-        command: false,
-    };
-
-    pub const NEW: Keys = Keys::new("Ctrl+N", Modifiers::CTRL, Key::N);
-    pub const OPEN: Keys = Keys::new("Ctrl+O", Modifiers::CTRL, Key::O);
-    pub const SAVE: Keys = Keys::new("Ctrl+S", Modifiers::CTRL, Key::S);
-    pub const SAVE_AS: Keys = Keys::new("Ctrl+Shift+S", CTRL_SHIFT, Key::S);
-    pub const CLOSE: Keys = Keys::new("Ctrl+W", Modifiers::CTRL, Key::W);
-    pub const SETTINGS: Keys = Keys::new("Ctrl+,", Modifiers::CTRL, Key::Comma);
     pub const GUIDE: Keys = Keys::new("F1", Modifiers::NONE, Key::F1);
     pub const CHECK: Keys = Keys::new("F7", Modifiers::NONE, Key::F7);
     pub const BUILD: Keys = Keys::new("F9", Modifiers::NONE, Key::F9);
     pub const BOOKMARK: Keys = Keys::new("Ctrl+B", Modifiers::CTRL, Key::B);
     pub const FOLD: Keys = Keys::new("Ctrl+D", Modifiers::CTRL, Key::D);
-    pub const FIND: Keys = Keys::new("Ctrl+F", Modifiers::CTRL, Key::F);
     pub const BACK: Keys = Keys::new("Alt+Left", Modifiers::ALT, Key::ArrowLeft);
     pub const FORWARD: Keys = Keys::new("Alt+Right", Modifiers::ALT, Key::ArrowRight);
-    pub const NEXT_TAB: Keys = Keys::new("Ctrl+Tab", Modifiers::CTRL, Key::Tab);
-    pub const PREVIOUS_TAB: Keys = Keys::new("Ctrl+Shift+Tab", CTRL_SHIFT, Key::Tab);
-    pub const TAB_LEFT: Keys = Keys::new("Ctrl+Shift+PgUp", CTRL_SHIFT, Key::PageUp);
-    pub const TAB_RIGHT: Keys = Keys::new("Ctrl+Shift+PgDn", CTRL_SHIFT, Key::PageDown);
 }
 
 /// An item of the command bar.

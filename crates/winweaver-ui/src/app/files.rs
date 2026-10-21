@@ -21,13 +21,13 @@ impl App {
         }
         let (title, text) = if name.eq_ignore_ascii_case("guide.md") {
             (
-                mdview::GUIDE_TITLE.to_owned(),
-                Some(mdview::guide_text(&i18n::current())),
+                pages::GUIDE_TITLE.to_owned(),
+                Some(pages::guide_text(&i18n::current())),
             )
         } else {
             (
                 name.to_owned(),
-                mdview::REFERENCE
+                pages::REFERENCE
                     .iter()
                     .find(|(n, _)| n.eq_ignore_ascii_case(name))
                     .map(|(_, t)| (*t).to_owned()),
@@ -197,15 +197,15 @@ impl App {
 
     pub(crate) fn open_license(&mut self) {
         self.show_or_open(
-            |d| matches!(d, Doc::Markdown(m) if m.is_license()),
-            || Doc::Markdown(Box::new(MdDoc::license())),
+            |d| matches!(d, Doc::Markdown(m) if m.page == Some(pages::LICENSE_ID)),
+            || Doc::Markdown(Box::new(pages::license())),
         );
     }
 
     pub(crate) fn open_guide(&mut self) {
         self.show_or_open(
-            |d| matches!(d, Doc::Markdown(m) if m.is_guide()),
-            || Doc::Markdown(Box::new(MdDoc::guide())),
+            |d| matches!(d, Doc::Markdown(m) if m.page == Some(pages::GUIDE_ID)),
+            || Doc::Markdown(Box::new(pages::guide())),
         );
     }
 

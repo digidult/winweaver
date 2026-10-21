@@ -141,7 +141,7 @@ impl App {
     /// The act of closing a tab discarding its changes: a question first when it has some.
     pub(crate) fn discard_act(&self, i: usize) -> Act {
         match self.docs.get(i) {
-            Some(d) if d.dirty() => Question::close_discard(&d.title(), i).into(),
+            Some(d) if d.dirty() => crate::question::close_discard(&d.title(), i).into(),
             _ => Act::Nav(NavAct::CloseTab(i, true)),
         }
     }
@@ -199,7 +199,7 @@ impl App {
                 }
             }
             NavAct::Fold => {
-                self.settings.desc_open = !self.settings.desc_open;
+                self.settings.extra.desc_open = !self.settings.extra.desc_open;
                 self.settings_dirty = true;
             }
             NavAct::ToggleMessages => self.messages_open = !self.messages_open,

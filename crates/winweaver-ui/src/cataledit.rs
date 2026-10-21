@@ -518,7 +518,7 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
             apply = true;
         }
         if ui.button(tr("Remove the policy")).clicked() {
-            acts.push(Question::remove_policy(form.id.clone()).into());
+            acts.push(crate::question::remove_policy(form.id.clone()).into());
         }
     });
     if apply {

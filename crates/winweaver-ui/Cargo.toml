@@ -12,19 +12,17 @@ authors.workspace = true
 default = ["glow", "wgpu"]
 # The renderers of the window (src/renderer.rs): OpenGL through glow, DirectX 12 through wgpu with that
 # backend only. At least one is needed; the settings and --renderer offer the ones built in.
-glow = ["eframe/glow"]
-wgpu = ["eframe/wgpu_no_default_features", "dep:wgpu"]
+glow = ["ww/glow"]
+wgpu = ["ww/wgpu"]
 
 [dependencies]
 winweaver-core = { path = "../winweaver-core" }
 winweaver-win = { path = "../winweaver-win" }
 winweaver-mcp = { path = "../winweaver-mcp" }
+ww = { path = "../ww", default-features = false }
 # The master password of a users file is wiped when the tab locks or closes.
 zeroize = "1"
 eframe = { version = "0.36", default-features = false, features = ["accesskit", "default_fonts", "links"] }
-# The DirectX 12 backend of wgpu alone: no Vulkan, no OpenGL through wgpu (glow draws OpenGL).
-wgpu = { version = "30", default-features = false, features = ["dx12"], optional = true }
-egui_commonmark = "0.25"
 rfd = "0.17"
 raw-window-handle = "0.6"
 serde.workspace = true

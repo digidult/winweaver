@@ -27,7 +27,7 @@ fn the_rights_of_a_key_change_after_a_question() {
     rights.add = "Users".to_owned();
     app.apply(vec![
         Act::Registry(RegistryAct::RightsAdd),
-        Question::change_rights(key).into(),
+        crate::question::change_rights(key).into(),
     ]);
     assert!(app.question.is_some(), "a change of the rights asks first");
     assert!(open(&app));

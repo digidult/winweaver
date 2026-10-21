@@ -347,7 +347,7 @@ fn server_card(ui: &mut egui::Ui, panel: &mut McpPanel, presets: &[&str], acts: 
                     .add_enabled(!running, egui::Button::new(tr("Renew")))
                     .clicked()
                 {
-                    acts.push(Question::renew_token().into());
+                    acts.push(crate::question::renew_token().into());
                 }
             });
             ui.end_row();

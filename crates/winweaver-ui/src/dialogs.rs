@@ -2,38 +2,11 @@
 
 use crate::*;
 
-/// Writes a file through a temporary neighbour that replaces the target.
-pub(crate) fn write_file(path: &Path, bytes: &[u8]) -> Result<(), String> {
-    let tmp = path.with_extension("tmp");
-    std::fs::write(&tmp, bytes).map_err(|e| format!("{}: {e}", path.display()))?;
-    std::fs::rename(&tmp, path).map_err(|e| format!("{}: {e}", path.display()))
-}
-
-/// A path as the files of the program keep it, in lower case: the name of an import made of a
-/// file or a folder inside the program folder stays when the folder moves.
-pub(crate) fn kept_name(path: &Path) -> String {
-    let kept = winweaver_core::paths::stored(path, &exe_dir());
-    kept.display().to_string().to_lowercase()
-}
+pub(crate) use ww::dialogs::{kept_name, write_file};
 
 /// A file name stem made of a profile name.
 pub fn file_stem(name: &str) -> String {
-    let stem: String = name
-        .chars()
-        .map(|c| {
-            if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' {
-                c
-            } else {
-                '_'
-            }
-        })
-        .collect();
-    let stem = stem.trim().to_owned();
-    if stem.is_empty() {
-        "profile".to_owned()
-    } else {
-        stem
-    }
+    ww::dialogs::file_stem(name, "profile")
 }
 
 /// The path with the profile extension when it has none.

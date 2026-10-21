@@ -96,7 +96,7 @@ impl App {
                                     }
                                     Target::Profile => (doc.profile.name.clone(), Sel::None),
                                     // Their group, unless the settings hide it from the tree.
-                                    Target::Unknown if self.settings.hide_unknown => {
+                                    Target::Unknown if self.settings.extra.hide_unknown => {
                                         (doc.profile.name.clone(), Sel::None)
                                     }
                                     Target::Unknown => (

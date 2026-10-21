@@ -15,42 +15,8 @@ use crate::regfileview::RegFileDoc;
 use crate::regview::RegistryDoc;
 use crate::themeview::ThemeDoc;
 use crate::usersview::UsersDoc;
-use crate::{ProfileDoc, Search, icons, themes};
+use crate::{ProfileDoc, Search, Tab, icons, themes};
 use winweaver_core::{diff, profile};
-
-/// What every tab answers, so the chrome draws it without knowing the document.
-pub trait Tab {
-    /// The title of the tab: the name of its file, else `name`.
-    fn title(&self) -> String {
-        match self.path() {
-            Some(p) => p
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default(),
-            None => self.name(),
-        }
-    }
-
-    /// The title of a document that has no file.
-    fn name(&self) -> String {
-        String::new()
-    }
-
-    /// Whether the document has changes its file does not.
-    fn dirty(&self) -> bool {
-        false
-    }
-
-    /// The file of the document: the hint of the tab, and opened again at the next start.
-    fn path(&self) -> Option<&Path> {
-        None
-    }
-
-    /// The search of the tab, for the tabs that have one.
-    fn search(&mut self) -> Option<&mut Search> {
-        None
-    }
-}
 
 /// The kind of a tab: what the chrome shows for it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

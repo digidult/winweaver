@@ -90,7 +90,7 @@ impl App {
                 &self.drafts_dir,
                 &d.draft_key,
                 d.path.as_deref(),
-                &d.profile,
+                &serde_json::to_value(&d.profile).unwrap_or_default(),
             ) {
                 Ok(()) => d.changed = None,
                 Err(e) => {
@@ -140,10 +140,17 @@ impl App {
             }
         }
         let restored_tabs = self.docs.len() - before;
-        let (drafts, broken) = session::read_drafts(&self.drafts_dir);
+        let (drafts, mut broken) = session::read_drafts(&self.drafts_dir);
         let mut restored = 0;
         for (key, draft) in drafts {
             let path = (!draft.path.is_empty()).then(|| PathBuf::from(&draft.path));
+            let profile: Profile = match serde_json::from_value(draft.document) {
+                Ok(p) => p,
+                Err(e) => {
+                    broken.push(format!("{key}: {e}"));
+                    continue;
+                }
+            };
             let open = path.as_ref().and_then(|p| {
                 self.docs
                     .iter()
@@ -153,13 +160,13 @@ impl App {
             let mut doc = match open {
                 Some(i) => match self.docs.remove(i) {
                     Doc::Profile(mut d) => {
-                        d.profile = draft.profile;
+                        d.profile = profile;
                         d
                     }
                     _ => continue,
                 },
                 None => Box::new(ProfileDoc::new(
-                    draft.profile,
+                    profile,
                     path.filter(|p| p.exists()),
                     catalog,
                 )),
@@ -209,7 +216,7 @@ impl App {
     /// Writes every new status line to the log.
     pub(crate) fn log_status(&mut self) {
         if self.status != self.last_logged {
-            session::log(&self.logs_dir, "INFO", &self.status);
+            session::log(&self.logs_dir, "winweaver", "INFO", &self.status);
             self.last_logged = self.status.clone();
         }
     }

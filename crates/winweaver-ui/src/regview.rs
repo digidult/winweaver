@@ -810,7 +810,7 @@ fn rights_window(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>
             ui.horizontal(|ui| {
                 let apply = ui.add_enabled(edit.changed, egui::Button::new(tr("Apply")));
                 if apply.clicked() {
-                    acts.push(Question::change_rights(&edit.path).into());
+                    acts.push(crate::question::change_rights(&edit.path).into());
                 }
                 if ui.button(tr("Cancel")).clicked()
                     || ui.input(|i| i.key_pressed(egui::Key::Escape))
