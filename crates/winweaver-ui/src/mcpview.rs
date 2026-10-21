@@ -16,7 +16,7 @@ use winweaver_mcp::http::HttpServer;
 use winweaver_mcp::{Entry, Mode, RegistryAccess, Server};
 
 use crate::i18n::{tr, trf};
-use crate::{Act, list, style, tree, views};
+use crate::{Act, CatalogAct, FileAct, McpAct, Question, RegistryAct, list, style, tree, views};
 
 /// A server the window runs.
 pub struct McpRun {
@@ -178,10 +178,10 @@ fn server_card(ui: &mut egui::Ui, panel: &mut McpPanel, presets: &[&str], acts: 
                     .add_enabled(!running, egui::Button::new(tr("Open...")))
                     .clicked()
                 {
-                    acts.push(Act::Open);
+                    acts.push(Act::File(FileAct::Open));
                 }
                 if ui.button(tr("Save as...")).clicked() {
-                    acts.push(Act::SaveAs);
+                    acts.push(Act::File(FileAct::SaveAs));
                 }
             });
             ui.end_row();
@@ -344,7 +344,7 @@ fn server_card(ui: &mut egui::Ui, panel: &mut McpPanel, presets: &[&str], acts: 
                     .add_enabled(!running, egui::Button::new(tr("Renew")))
                     .clicked()
                 {
-                    acts.push(Act::AskRenewToken);
+                    acts.push(Question::renew_token().into());
                 }
             });
             ui.end_row();
@@ -353,10 +353,10 @@ fn server_card(ui: &mut egui::Ui, panel: &mut McpPanel, presets: &[&str], acts: 
     ui.horizontal(|ui| {
         if running {
             if ui.button(tr("Stop")).clicked() {
-                acts.push(Act::McpStop);
+                acts.push(Act::Mcp(McpAct::Stop));
             }
         } else if ui.button(tr("Start")).clicked() {
-            acts.push(Act::McpStart);
+            acts.push(Act::Mcp(McpAct::Start));
         }
         if ui
             .button(tr("Copy the stdio configuration"))
@@ -401,7 +401,7 @@ fn workspace_card(ui: &mut egui::Ui, panel: &McpPanel, acts: &mut Vec<Act>) {
                 ui.weak(file);
             }
             if ui.small_button(tr("Open in a tab")).clicked() {
-                acts.push(Act::McpOpen(name.clone()));
+                acts.push(Act::Mcp(McpAct::OpenProfile(name.clone())));
             }
         });
     }
@@ -613,9 +613,9 @@ pub fn detail_view(
                                 }
                                 continue;
                             }
-                            Place::Profile(name) => (name.clone(), Act::McpOpen(name)),
-                            Place::Catalog(id) => (id.clone(), Act::OpenCatalog(id)),
-                            Place::Key(key) => (key.clone(), Act::OpenRegistry(key, None)),
+                            Place::Profile(name) => (name.clone(), Act::Mcp(McpAct::OpenProfile(name))),
+                            Place::Catalog(id) => (id.clone(), Act::Catalog(CatalogAct::Open(id))),
+                            Place::Key(key) => (key.clone(), Act::Registry(RegistryAct::Open(key, None))),
                         };
                         if ui.small_button(text).clicked() {
                             acts.push(act);

@@ -8,7 +8,7 @@ impl eframe::App for App {
         if self.exit {
             ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
         }
-        self.apply_theme(ui.ctx());
+        self.apply_visuals(ui.ctx());
         self.color_title_bar(ui, frame);
         let title = self.window_title();
         if title != self.last_title {
@@ -84,7 +84,7 @@ impl eframe::App for App {
             });
             found
         });
-        acts.extend(links.into_iter().map(Act::OpenDoc));
+        acts.extend(links.into_iter().map(|l| Act::Nav(NavAct::OpenDoc(l))));
         acts.append(&mut self.pending_acts);
         self.apply(acts);
         self.poll_running(ui.ctx());

@@ -5,6 +5,7 @@
 //! tree with the detail panel, the Settings tab and the status bar. Every change of the profile
 //! is collected as an [`Act`] while the frame is drawn and applied afterwards.
 
+mod act;
 mod app;
 mod cataledit;
 mod catalogview;
@@ -17,6 +18,7 @@ mod list;
 mod marksview;
 mod mcpview;
 mod mdview;
+mod question;
 mod regfileview;
 mod regview;
 mod renderer;
@@ -42,7 +44,7 @@ use winweaver_core::diff::{self, Diff};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::import;
 use winweaver_core::jsonfile;
-use winweaver_core::profile::{self, Account, Install, Languages, Profile};
+use winweaver_core::profile::{self, Install, Languages, Profile};
 use winweaver_core::regfile::{self, Line, RegFile};
 use winweaver_core::render;
 use winweaver_core::resolver::{self, Resolution};
@@ -51,11 +53,16 @@ use winweaver_core::thispc::{self, Report, Verdict};
 use winweaver_core::users::{self, UsersFile};
 use winweaver_core::validate::{self, Issue, Severity, Target};
 
+pub use act::{
+    Act, CatalogAct, DiffAct, FileAct, ImportAct, MarksAct, McpAct, NavAct, PcAct, ProfileAct,
+    RegFileAct, RegistryAct, SettingsAct, ThemeAct, UsersAct,
+};
 pub use diffview::DiffDoc;
 pub use doc::{Doc, DocKind, SettingsDoc, SettingsSection, Tab};
 pub use forms::Form;
 pub use i18n::{tr, trf};
 pub use mdview::MdDoc;
+pub use question::Question;
 pub use renderer::Renderer;
 pub use settings::{Settings, ThemeChoice, exe_dir};
 
@@ -188,14 +195,6 @@ impl ProfileDoc {
     }
 }
 
-/// A question over the window: its title, its text, the label of the yes and the act it runs.
-struct Ask {
-    title: String,
-    text: String,
-    yes: String,
-    act: Act,
-}
-
 /// The search of a tab, at the right end of its navigation row.
 #[derive(Default)]
 pub struct Search {
@@ -254,218 +253,6 @@ pub enum CatalogRef {
 /// The colours of the title bar: dark, caption, text, border.
 type TitleColors = (bool, [u8; 3], [u8; 3], [u8; 3]);
 
-/// A change requested while a frame was drawn, applied after it.
-pub enum Act {
-    Select(Sel),
-    /// Selects an item of the profile in front and opens its tree down to it: a link of a view.
-    Reveal(Sel),
-    Toggle(String, bool),
-    SetGroup(String, bool),
-    SetParam(String, String, Value),
-    Expand(String, bool),
-    Activate(usize),
-    /// Moves a tab from one place of the row to another.
-    MoveTab(usize, usize),
-    CloseTab(usize, bool),
-    NewProfile(Option<&'static str>),
-    Open,
-    OpenPath(PathBuf),
-    OpenSettings,
-    Save,
-    SaveAs,
-    Back,
-    Forward,
-    ToggleBookmark,
-    Fold,
-    /// Read every rule of this PC into a new profile tab.
-    ReadPc,
-    /// Read the selected rules of this PC into the open profile.
-    ReadSelection,
-    /// Compare the selected rules with this PC in the messages panel.
-    CheckOnPc,
-    SaveScript(ScriptKind),
-    /// Saves the registry steps of the apply (false) or the return (true) of the selection as a
-    /// registry file.
-    SaveRegFile(bool),
-    /// Edits the selected line of the registry file in front.
-    RegFileEdit,
-    /// Starts a new key or a new value in the registry file in front.
-    RegFileNew(regfileview::EditKind),
-    /// Asks before lines leave the registry file in front, then removes them.
-    AskRegFileRemove,
-    RegFileRemove(Vec<usize>),
-    /// A new users file, empty or of the accounts of this PC.
-    NewUsersFile,
-    UsersOfThisPc,
-    UsersAdd,
-    UsersDuplicate,
-    AskUsersRemove,
-    UsersRemove(usize),
-    /// Moves the selected account down (`true`) or up.
-    UsersMove(bool),
-    UsersUnlock,
-    UsersLock,
-    UsersSetMaster,
-    UsersSetPassword,
-    UsersCheck,
-    /// Adds the accounts of this PC the file lacks.
-    UsersReadPc,
-    /// Asks before an operation on this PC: of every account (`true`) or the selected one.
-    AskUsersRun(users::Operation, bool),
-    UsersRun(users::Operation, Vec<String>),
-    UsersScript,
-    /// The accounts of a users file into the profile in front.
-    UsersIntoProfile,
-    /// A users file of the accounts of the profile in front.
-    UsersFromProfile,
-    /// The differences of the profile in front from its file or its preset, as a diff tab.
-    DiffUnsaved,
-    /// Import the templates of this Windows (None), of a folder or a catalog file.
-    ImportTemplates(ImportSource),
-    /// Loads an import that is not loaded, or forgets one that is.
-    ToggleImport(String),
-    RemoveImport(String),
-    /// Asks before an import and its catalog file are removed.
-    AskRemoveImport(String),
-    /// Asks before a tab with unsaved changes is closed without them.
-    AskCloseDiscard(usize),
-    /// Asks before the list of the recent files is forgotten, then forgets it.
-    AskForgetRecent,
-    ForgetRecent,
-    /// Asks before the token of the MCP server is renewed.
-    AskRenewToken,
-    /// Selects an item of the tree of a profile in the group it is drawn under.
-    SelectIn(Sel, Option<String>),
-    /// Selects a rule of a profile in the tree of another import (the group) and shows it.
-    ShowIn(String, String),
-    /// Opens the tab of a loaded import, or brings it to the front, at a rule.
-    OpenCatalogAt(String, String),
-    /// Opens the registry tab, or brings it to the front, at a key and a value of it.
-    OpenRegistry(String, Option<String>),
-    /// Shows a key in the registry tab, and a value of it.
-    RegistryGo(String, Option<String>),
-    RegistryExpand(String, bool),
-    RegistryRefresh,
-    /// Edits the selected value of the registry tab.
-    RegistryEdit,
-    /// Starts a new key or a new value of a type in the registry tab.
-    RegistryNew(regview::EditKind, &'static str),
-    /// Writes what the editor of the registry tab holds.
-    RegistrySave,
-    /// Asks before the selected value, or the key without one, is deleted.
-    AskRegistryDelete,
-    RegistryDelete(String, Option<String>),
-    /// Bookmarks the key and the value of the registry tab.
-    BookmarkRegistry,
-    /// Shows or hides the search of the registry tab.
-    RegistrySearch,
-    /// Starts the search of the registry tab under its selected key.
-    RegistryFind,
-    /// Stops the search of the registry tab.
-    RegistryFindStop,
-    /// Opens the window of the rights of the selected key of the registry tab.
-    RegistryRights,
-    /// Adds an entry for the account typed in the window of the rights.
-    RegistryRightsAdd,
-    /// Asks before the rights of the key change, then writes them.
-    AskRegistryRights,
-    RegistryRightsSave,
-    /// Opens the editor of a loaded import or of the file of a catalog tab.
-    EditCatalog(CatalogRef),
-    /// Makes an empty catalog file among the imports and opens its editor.
-    NewCatalog,
-    /// Asks before a policy leaves the catalog of the editor in front.
-    AskCatalogEditRemove(String),
-    CatalogEditRemove(String),
-    /// Compares the catalog of the active tab with another one in a page.
-    CompareCatalog(CatalogRef),
-    /// Looks for the catalogs of the unknown options of the active profile among the imports
-    /// that are not loaded, and loads the ones that have them.
-    LoadCatalogs,
-    ExportImport(String),
-    /// Starts to rename an import: its id and its name now.
-    StartRename(String, String),
-    /// Opens the tab of an import.
-    OpenCatalog(String),
-    CatalogSelect(String),
-    /// Selects a group (`g:<id>`) or a policy of the catalog tab in front and opens its tree down
-    /// to it: a link of a view.
-    CatalogReveal(String),
-    CatalogExpand(String, bool),
-    /// Shows a policy of an import (the import, the rule) in the tree of a profile.
-    ShowInProfile(String, String),
-    /// Shows a group in the tree of the first profile tab.
-    ShowGroupInProfile(String),
-    CancelRename,
-    RenameImport(String, String),
-    /// Prepare the native apply (false) or the return to the defaults (true) of the selection.
-    PlanNative(bool),
-    PlanUndo,
-    ConfirmPlan,
-    CancelPlan,
-    OpenReport,
-    OpenGuide,
-    /// Opens the license, built into the executable, in a Markdown tab.
-    OpenLicense,
-    OpenMarks,
-    OpenMcp,
-    McpStart,
-    McpStop,
-    McpRenewToken,
-    McpOpen(String),
-    GoToMark(usize),
-    /// Selects a bookmark in the bookmark tab.
-    MarkSelect(usize),
-    SetMarkComment(usize, String),
-    RemoveMark(usize),
-    /// Removes a bookmark, asking first when it has a comment.
-    RemoveMarkAsk(usize),
-    /// The answer to the question over the window: yes runs its act.
-    AskYes,
-    AskNo,
-    Compare,
-    CompareWith(&'static str),
-    ApplyDiff,
-    SaveDiffAs,
-    /// Selects an item of the active diff by its key.
-    DiffSelect(String),
-    /// Sets the comment on an item of the active diff (empty removes it).
-    DiffComment(String, String),
-    /// Shows an item of the active diff in the profile of its base (false) or other side (true).
-    DiffGoTo(String, bool),
-    /// Sets one item of the active diff in the profile of its base.
-    DiffApplyItem(String),
-    SetInstall(Install),
-    SetAccounts(Vec<Account>),
-    SetLanguages(Languages),
-    Check,
-    Build,
-    ClearMessages,
-    /// Opens the list of the message bar or folds it to one line.
-    ToggleMessages,
-    /// The search of the active tab was cleared: the selection comes back into view.
-    SearchCleared,
-    /// The selected row was scrolled into view.
-    Revealed,
-    /// The selection moved with the keys: it follows into view.
-    Follow,
-    /// Opens a page of the documentation, `name.md#heading`.
-    OpenDoc(String),
-    /// Shows a file in its folder in Explorer, or opens a folder of the program, made first.
-    ShowInFolder(PathBuf),
-    /// Opens the settings at a section.
-    OpenSettingsSection(SettingsSection),
-    /// Imports the catalog file of the active tab.
-    ImportOpenCatalog,
-    /// Opens the editor of a theme by its id.
-    EditTheme(String),
-    /// Opens a theme file in its editor.
-    OpenThemeFile,
-    /// Makes a theme the theme of the window.
-    UseTheme(String),
-    Exit,
-    Message(String),
-}
 
 /// What a read of this PC does with its report. A profile tab is named by its draft key, so a tab
 /// moved meanwhile is found and a tab closed meanwhile is missed without harm.
@@ -514,7 +301,7 @@ pub struct App {
     /// The recent searches of every tab.
     search_history: Vec<String>,
     /// A question over the window and the act a yes runs.
-    ask: Option<Ask>,
+    question: Option<Question>,
     /// Whether the message bar shows its list or one line.
     messages_open: bool,
     status: String,
@@ -579,7 +366,7 @@ impl App {
             settings,
             settings_dirty: false,
             search_history,
-            ask: None,
+            question: None,
             messages_open: true,
             status: "Ready".to_owned(),
             marks: Bookmarks::default(),

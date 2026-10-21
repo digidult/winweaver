@@ -64,7 +64,7 @@ impl App {
                 self.mcp.path = path;
                 self.mcp.saved = Some(config);
                 self.mcp.error.clear();
-                self.apply(vec![Act::OpenMcp]);
+                self.apply(vec![Act::Mcp(McpAct::Open)]);
             }
             Err(e) => self.status = trf("Not opened: {e}", &[("e", &e)]),
         }
@@ -145,6 +145,35 @@ impl App {
             }
             Err(e) => {
                 self.mcp.error = trf("The server did not start: {e}", &[("e", &e)]);
+            }
+        }
+    }
+
+    /// Runs an act of the acts of the MCP server and its tab.
+    pub(crate) fn apply_mcp(&mut self, act: McpAct) {
+        match act {
+            McpAct::Open => self.open_mcp(),
+            McpAct::Start => self.start_mcp(),
+            McpAct::Stop => {
+                self.mcp.run = None;
+                self.status = tr("The MCP server stopped").to_owned();
+            }
+            McpAct::RenewToken => match winweaver_mcp::new_token() {
+                Ok(t) => self.mcp.token = t,
+                Err(e) => self.mcp.error = e,
+            },
+            McpAct::OpenProfile(name) => {
+                let profile = self
+                    .mcp
+                    .run
+                    .as_ref()
+                    .and_then(|r| r.server.workspace_profile(&name));
+                if let Some(profile) = profile {
+                    let mut doc = ProfileDoc::new(profile, None, &self.catalog);
+                    doc.dirty = true;
+                    self.docs.push(Doc::Profile(Box::new(doc)));
+                    self.active = self.docs.len() - 1;
+                }
             }
         }
     }

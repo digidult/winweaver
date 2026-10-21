@@ -281,4 +281,51 @@ impl App {
             Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
         }
     }
+
+    /// Runs an act of the acts of the files: new, open, save, the pages of the program.
+    pub(crate) fn apply_file(&mut self, act: FileAct) {
+        match act {
+            FileAct::NewProfile(preset) => {
+                let profile = match preset.and_then(|n| PRESETS.iter().find(|p| p.0 == n)) {
+                    Some((name, text)) => Profile::parse(text, name)
+                        .unwrap_or_else(|_| Profile::from_defaults(name, &self.catalog)),
+                    None => Profile::new("New profile", self.catalog.version()),
+                };
+                let doc = ProfileDoc::new(profile, None, &self.catalog);
+                self.docs.push(Doc::Profile(Box::new(doc)));
+                self.active = self.docs.len() - 1;
+            }
+            FileAct::Open => {
+                if let Some(path) = pick_any() {
+                    self.open_path(path);
+                }
+            }
+            FileAct::OpenPath(path) => self.open_path(path),
+            FileAct::Save => match self.docs.get(self.active) {
+                Some(Doc::Mcp(_)) => self.persist_mcp(),
+                Some(Doc::Diff(_)) => self.save_diff(),
+                Some(Doc::Theme(_)) => self.save_theme(false),
+                Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
+                Some(Doc::RegFile(_)) => self.save_reg_doc(false),
+                Some(Doc::Users(_)) => self.save_users_doc(false),
+                _ => self.save_active(false),
+            },
+            FileAct::SaveAs => match self.docs.get(self.active) {
+                Some(Doc::Mcp(_)) => self.save_mcp_as(),
+                Some(Doc::Diff(_)) => self.save_active_diff(),
+                Some(Doc::Theme(_)) => self.save_theme(true),
+                Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
+                Some(Doc::RegFile(_)) => self.save_reg_doc(true),
+                Some(Doc::Users(_)) => self.save_users_doc(true),
+                _ => self.save_active(true),
+            },
+            FileAct::OpenReport => self.open_report(),
+            FileAct::ForgetRecent => {
+                self.settings.recent.clear();
+                self.settings_dirty = true;
+            }
+            FileAct::OpenGuide => self.open_guide(),
+            FileAct::OpenLicense => self.open_license(),
+        }
+    }
 }

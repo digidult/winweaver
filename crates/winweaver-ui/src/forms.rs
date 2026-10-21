@@ -9,7 +9,7 @@ use winweaver_core::resources;
 use winweaver_core::validate;
 
 use crate::i18n::{tr, trf};
-use crate::{Act, ProfileDoc};
+use crate::{Act, ProfileAct, ProfileDoc, UsersAct};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Form {
@@ -50,21 +50,21 @@ pub fn form_view(
             let mut install = doc.profile.install.clone();
             install_form(ui, &mut install, language);
             if install != doc.profile.install {
-                acts.push(Act::SetInstall(install));
+                acts.push(Act::Profile(ProfileAct::SetInstall(Box::new(install))));
             }
         }
         Form::Accounts => {
             let mut accounts = doc.profile.accounts.clone();
             accounts_form(ui, &mut accounts, acts);
             if accounts != doc.profile.accounts {
-                acts.push(Act::SetAccounts(accounts));
+                acts.push(Act::Profile(ProfileAct::SetAccounts(accounts)));
             }
         }
         Form::Languages => {
             let mut languages = doc.profile.languages.clone();
             languages_form(ui, &mut languages);
             if languages != doc.profile.languages {
-                acts.push(Act::SetLanguages(languages));
+                acts.push(Act::Profile(ProfileAct::SetLanguages(languages)));
             }
         }
     }
@@ -348,14 +348,14 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>, acts: &mut Vec<
             .on_hover_text(tr("Replaces the accounts with the ones of a .wwusers file, with their passwords when its master password is given"))
             .clicked()
         {
-            acts.push(Act::UsersIntoProfile);
+            acts.push(Act::Users(UsersAct::IntoProfile));
         }
         if ui
             .button(tr("To a users file..."))
             .on_hover_text(tr("Makes a users file of these accounts; their passwords wait for a master password"))
             .clicked()
         {
-            acts.push(Act::UsersFromProfile);
+            acts.push(Act::Users(UsersAct::FromProfile));
         }
     });
 }

@@ -80,7 +80,7 @@ impl Search {
 }
 
 use crate::i18n::{tr, trf};
-use crate::{Act, style, tree, views};
+use crate::{Act, Question, RegistryAct, style, tree, views};
 
 /// The most rules the line above the values names.
 const WRITERS_MAX: usize = 12;
@@ -382,7 +382,7 @@ pub fn registry_view(
                 );
                 let enter = edit.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
                 if ui.button(tr("Go")).clicked() || enter {
-                    acts.push(Act::RegistryGo(doc.address.clone(), None));
+                    acts.push(Act::Registry(RegistryAct::Go(doc.address.clone(), None)));
                 }
             });
         });
@@ -424,8 +424,8 @@ pub fn registry_view(
             }
             for event in shown.events {
                 match event {
-                    tree::Event::Select(path) => acts.push(Act::RegistryGo(path, None)),
-                    tree::Event::Expand(path, open) => acts.push(Act::RegistryExpand(path, open)),
+                    tree::Event::Select(path) => acts.push(Act::Registry(RegistryAct::Go(path, None))),
+                    tree::Event::Expand(path, open) => acts.push(Act::Registry(RegistryAct::Expand(path, open))),
                     _ => {}
                 }
             }
@@ -489,10 +489,10 @@ fn search_panel(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
         ui.checkbox(&mut s.whole, tr("Match whole string only"));
         if s.running.is_some() {
             if ui.button(tr("Stop")).clicked() {
-                acts.push(Act::RegistryFindStop);
+                acts.push(Act::Registry(RegistryAct::FindStop));
             }
         } else if ui.button(tr("Find")).clicked() || enter {
-            acts.push(Act::RegistryFind);
+            acts.push(Act::Registry(RegistryAct::Find));
         }
     });
     let status = match (&s.running, &s.found) {
@@ -520,7 +520,7 @@ fn search_panel(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
                 };
                 let label = egui::RichText::new(text).monospace();
                 if ui.selectable_label(false, label).clicked() {
-                    acts.push(Act::RegistryGo(hit.path.clone(), hit.value.clone()));
+                    acts.push(Act::Registry(RegistryAct::Go(hit.path.clone(), hit.value.clone())));
                 }
             }
         });
@@ -577,7 +577,7 @@ fn values(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
         doc.value = Some(name);
     }
     if edit {
-        acts.push(Act::RegistryEdit);
+        acts.push(Act::Registry(RegistryAct::Edit));
     }
 }
 
@@ -657,7 +657,7 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
             ui.add_space(8.0);
             ui.horizontal(|ui| {
                 if ui.button(tr("OK")).clicked() {
-                    acts.push(Act::RegistrySave);
+                    acts.push(Act::Registry(RegistryAct::Save));
                 }
                 if ui.button(tr("Cancel")).clicked()
                     || ui.input(|i| i.key_pressed(egui::Key::Escape))
@@ -823,7 +823,7 @@ fn rights_window(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>
                         .desired_width(260.0),
                 );
                 if ui.button(tr("Add")).clicked() {
-                    acts.push(Act::RegistryRightsAdd);
+                    acts.push(Act::Registry(RegistryAct::RightsAdd));
                 }
             });
             if let Some(e) = &edit.error {
@@ -833,7 +833,7 @@ fn rights_window(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>
             ui.horizontal(|ui| {
                 let apply = ui.add_enabled(edit.changed, egui::Button::new(tr("Apply")));
                 if apply.clicked() {
-                    acts.push(Act::AskRegistryRights);
+                    acts.push(Question::change_rights(&edit.path).into());
                 }
                 if ui.button(tr("Cancel")).clicked()
                     || ui.input(|i| i.key_pressed(egui::Key::Escape))

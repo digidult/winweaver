@@ -13,7 +13,7 @@ use winweaver_core::catalog::{Action, Phase, ROOT_POLICIES, RegKind, Rule};
 use winweaver_core::registry;
 
 use crate::i18n::{tr, trf};
-use crate::{Act, style, tree};
+use crate::{Act, CatalogAct, ProfileAct, Question, RegistryAct, style, tree};
 
 /// The kinds of values the form writes.
 const KINDS: [(RegKind, &str); 4] = [
@@ -433,10 +433,10 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
         ui.horizontal_wrapped(|ui| {
             let text = trf("Show in the catalog {name}", &[("name", &name)]);
             if ui.link(text).clicked() {
-                acts.push(Act::OpenCatalogAt(id.clone(), form.id.clone()));
+                acts.push(Act::Catalog(CatalogAct::OpenAt(id.clone(), form.id.clone())));
             }
             if ui.link(tr("Show in the profile")).clicked() {
-                acts.push(Act::ShowInProfile(id.clone(), form.id.clone()));
+                acts.push(Act::Profile(ProfileAct::ShowInProfile(id.clone(), form.id.clone())));
             }
         });
     }
@@ -491,7 +491,7 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
                             .clicked()
                         {
                             let value = (!row.name.is_empty()).then(|| row.name.clone());
-                            acts.push(Act::OpenRegistry(row.key.clone(), value));
+                            acts.push(Act::Registry(RegistryAct::Open(row.key.clone(), value)));
                         }
                     });
                     ui.add(
@@ -557,7 +557,7 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
             apply = true;
         }
         if ui.button(tr("Remove the policy")).clicked() {
-            acts.push(Act::AskCatalogEditRemove(form.id.clone()));
+            acts.push(Question::remove_policy(form.id.clone()).into());
         }
     });
     if apply {

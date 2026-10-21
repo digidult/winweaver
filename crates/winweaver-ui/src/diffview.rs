@@ -13,7 +13,7 @@ use winweaver_core::profile::Choice;
 
 use crate::i18n::{tr, trf};
 use crate::views::{self, gtitle, rtitle};
-use crate::{Act, Settings, list, style, tree};
+use crate::{Act, DiffAct, FileAct, MarksAct, NavAct, ProfileAct, Settings, list, style, tree};
 
 pub struct DiffDoc {
     pub diff: Diff,
@@ -231,7 +231,7 @@ pub fn diff_view(
                 }
                 let text = trf("Open {name}", &[("name", name)]);
                 if ui.link(text).on_hover_text(path.as_str()).clicked() {
-                    acts.push(Act::OpenPath(std::path::PathBuf::from(path)));
+                    acts.push(Act::File(FileAct::OpenPath(std::path::PathBuf::from(path))));
                 }
             }
         });
@@ -295,17 +295,17 @@ pub fn diff_view(
     );
     for event in out.events {
         match event {
-            list::Event::Select(key) => acts.push(Act::DiffSelect(key)),
+            list::Event::Select(key) => acts.push(Act::Diff(DiffAct::Select(key))),
             list::Event::Open(key) | list::Event::Button(key) => {
-                acts.push(Act::DiffGoTo(key, false))
+                acts.push(Act::Diff(DiffAct::GoTo(key, false)))
             }
             list::Event::Delete(_) => {}
         }
     }
     if out.moved {
-        acts.push(Act::Follow);
+        acts.push(Act::Nav(NavAct::Follow));
     } else if out.scrolled {
-        acts.push(Act::Revealed);
+        acts.push(Act::Nav(NavAct::Revealed));
     }
 }
 
@@ -371,7 +371,7 @@ pub fn diff_detail(
                             ("\u{2606}", tr("Bookmark this (Ctrl+B)"))
                         };
                         if style::icon_button(ui, icon, hint, true, Some(p.accent)).clicked() {
-                            acts.push(Act::ToggleBookmark);
+                            acts.push(Act::Marks(MarksAct::Toggle));
                         }
                         views::id_line(ui, id);
                     });
@@ -381,7 +381,7 @@ pub fn diff_detail(
                         // The group of a rule leads to it in the profile.
                         Some(rule) => {
                             if ui.link(item.group.as_str()).clicked() {
-                                acts.push(Act::ShowGroupInProfile(rule.group.clone()));
+                                acts.push(Act::Profile(ProfileAct::ShowGroupInProfile(rule.group.clone())));
                             }
                         }
                         None => {
@@ -404,14 +404,14 @@ pub fn diff_detail(
                         .on_hover_text(tr("Selects it in the profile tab, opening the profile when needed"))
                         .clicked()
                     {
-                        acts.push(Act::DiffGoTo(item.key.clone(), false));
+                        acts.push(Act::Diff(DiffAct::GoTo(item.key.clone(), false)));
                     }
                     if ui
                         .button(trf("Show in {name}", &[("name", &d.other.name)]))
                         .on_hover_text(tr("Selects it in the profile tab, opening the profile when needed"))
                         .clicked()
                     {
-                        acts.push(Act::DiffGoTo(item.key.clone(), true));
+                        acts.push(Act::Diff(DiffAct::GoTo(item.key.clone(), true)));
                     }
                     if ui
                         .button(tr("Apply this difference"))
@@ -421,7 +421,7 @@ pub fn diff_detail(
                         ))
                         .clicked()
                     {
-                        acts.push(Act::DiffApplyItem(item.key.clone()));
+                        acts.push(Act::Diff(DiffAct::ApplyItem(item.key.clone())));
                     }
                 });
             });
@@ -437,7 +437,7 @@ pub fn diff_detail(
                         .desired_width(f32::INFINITY),
                 );
                 if edit.changed() {
-                    acts.push(Act::DiffComment(item.key.clone(), comment));
+                    acts.push(Act::Diff(DiffAct::Comment(item.key.clone(), comment)));
                 }
             });
             match item.rule {

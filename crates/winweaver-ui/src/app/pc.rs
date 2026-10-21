@@ -628,12 +628,27 @@ impl App {
                 ui.add_space(8.0);
                 ui.horizontal(|ui| {
                     if ui.button(tr("Change this PC")).clicked() {
-                        acts.push(Act::ConfirmPlan);
+                        acts.push(Act::Pc(PcAct::Confirm));
                     }
                     if ui.button(tr("Cancel")).clicked() {
-                        acts.push(Act::CancelPlan);
+                        acts.push(Act::Pc(PcAct::Cancel));
                     }
                 });
             });
+    }
+
+    /// Runs an act of the acts of This PC: the read, the check, the scripts, the native apply.
+    pub(crate) fn apply_pc(&mut self, act: PcAct) {
+        match act {
+            PcAct::Read => self.read_pc(false),
+            PcAct::ReadSelection => self.read_pc(true),
+            PcAct::Check => self.check_on_pc(),
+            PcAct::SaveScript(kind) => self.save_script(kind),
+            PcAct::SaveRegFile(revert) => self.save_plan_reg(revert),
+            PcAct::PlanNative(revert) => self.plan_native(revert),
+            PcAct::PlanUndo => self.plan_undo(),
+            PcAct::Confirm => self.run_plan(),
+            PcAct::Cancel => self.confirm = None,
+        }
     }
 }

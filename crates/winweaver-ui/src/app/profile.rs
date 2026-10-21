@@ -251,4 +251,133 @@ impl App {
             doc.reveal = true;
         }
     }
+
+    /// Runs an act of the acts of the profile tab.
+    pub(crate) fn apply_profile(&mut self, act: ProfileAct) {
+        match act {
+            ProfileAct::Select(sel) => {
+                if let Some(doc) = self.active_profile() {
+                    doc.select(sel);
+                    doc.focus = None;
+                }
+            }
+            ProfileAct::Reveal(sel) => {
+                if let Some(doc) = self.active_profile() {
+                    doc.select(sel);
+                    doc.focus = None;
+                }
+                self.reveal_selection();
+            }
+            ProfileAct::SelectIn(sel, group) => {
+                if let Some(doc) = self.active_profile() {
+                    doc.select(sel);
+                    doc.focus = group;
+                }
+            }
+            ProfileAct::ShowIn(rule, group) => {
+                if let Some(doc) = self.active_profile() {
+                    doc.select(Sel::Rule(rule));
+                    doc.focus = Some(group);
+                }
+                self.reveal_selection();
+            }
+            ProfileAct::Toggle(id, on) => {
+                if let Some(doc) = self.active_profile() {
+                    doc.profile.set_on(&id, on);
+                }
+                self.refresh_active();
+            }
+            ProfileAct::SetGroup(group, on) => {
+                let ids: Vec<String> = self
+                    .catalog
+                    .rules_under(&group)
+                    .iter()
+                    .filter(|r| !on || !r.id.starts_with("admx."))
+                    .map(|r| r.id.clone())
+                    .collect();
+                if let Some(doc) = self.active_profile() {
+                    for id in &ids {
+                        doc.profile.set_on(id, on);
+                    }
+                }
+                self.refresh_active();
+            }
+            ProfileAct::SetParam(id, name, value) => {
+                let default = self
+                    .catalog
+                    .rule(&id)
+                    .and_then(|r| r.params.get(&name))
+                    .map(|p| p.default_value());
+                if let Some(doc) = self.active_profile() {
+                    let choice = doc.profile.rules.entry(id).or_default();
+                    if default
+                        .as_ref()
+                        .is_some_and(|d| check::same_value(d, &value))
+                    {
+                        choice.params.shift_remove(&name);
+                    } else {
+                        choice.params.insert(name, value);
+                    }
+                }
+                self.refresh_active();
+            }
+            ProfileAct::Expand(group, open) => {
+                if let Some(doc) = self.active_profile() {
+                    if open {
+                        doc.expanded.insert(group);
+                    } else {
+                        doc.expanded.remove(&group);
+                    }
+                }
+            }
+            ProfileAct::Back => {
+                if let Some(doc) = self.active_profile() {
+                    doc.go(-1);
+                }
+            }
+            ProfileAct::Forward => {
+                if let Some(doc) = self.active_profile() {
+                    doc.go(1);
+                }
+            }
+            ProfileAct::Check => {
+                self.check_active();
+                self.messages_open = true;
+            }
+            ProfileAct::ShowInProfile(import, rule) => self.show_in_profile(&import, &rule),
+            ProfileAct::ShowGroupInProfile(group) => {
+                match self.docs.iter().position(|d| matches!(d, Doc::Profile(_))) {
+                    Some(index) => {
+                        self.active = index;
+                        self.apply(vec![Act::Profile(ProfileAct::Reveal(Sel::Group(group)))]);
+                    }
+                    None => self.status = tr("Open a profile first").to_owned(),
+                }
+            }
+            ProfileAct::Build => self.build_active(),
+            ProfileAct::SetInstall(install) => {
+                if let Some(doc) = self.active_profile() {
+                    doc.profile.install = *install;
+                }
+                self.refresh_active();
+            }
+            ProfileAct::SetAccounts(accounts) => {
+                if let Some(doc) = self.active_profile() {
+                    doc.profile.accounts = accounts;
+                }
+                self.refresh_active();
+            }
+            ProfileAct::SetLanguages(languages) => {
+                if let Some(doc) = self.active_profile() {
+                    doc.profile.languages = languages;
+                }
+                self.refresh_active();
+            }
+            ProfileAct::ClearMessages => {
+                if let Some(doc) = self.active_profile() {
+                    doc.issues.clear();
+                }
+            }
+        }
+    }
 }

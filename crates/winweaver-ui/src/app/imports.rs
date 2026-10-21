@@ -487,7 +487,7 @@ impl App {
             ui.horizontal(|ui| {
                 let mut loaded = file.is_some();
                 if ui.checkbox(&mut loaded, &entry.name).changed() {
-                    acts.push(Act::ToggleImport(entry.id.clone()));
+                    acts.push(Act::Import(ImportAct::Toggle(entry.id.clone())));
                 }
                 match file {
                     Some(f) => {
@@ -496,13 +496,13 @@ impl App {
                             &[("rules", &f.rules.len()), ("skipped", &f.skipped.len())],
                         ));
                         if ui.small_button(tr("Export...")).clicked() {
-                            acts.push(Act::ExportImport(f.id.clone()));
+                            acts.push(Act::Import(ImportAct::Export(f.id.clone())));
                         }
                         if ui.small_button(tr("Open")).clicked() {
-                            acts.push(Act::OpenCatalog(f.id.clone()));
+                            acts.push(Act::Catalog(CatalogAct::Open(f.id.clone())));
                         }
                         if ui.small_button(tr("Rename")).clicked() {
-                            acts.push(Act::StartRename(f.id.clone(), f.name.clone()));
+                            acts.push(Act::Settings(SettingsAct::StartRename(f.id.clone(), f.name.clone())));
                         }
                     }
                     None => {
@@ -513,7 +513,7 @@ impl App {
                     }
                 }
                 if ui.small_button(tr("Remove")).clicked() {
-                    acts.push(Act::AskRemoveImport(entry.id.clone()));
+                    acts.push(Question::remove_import(&entry.name, entry.id.clone()).into());
                 }
             });
             if let Some((id, name)) = &mut *renaming
@@ -523,10 +523,10 @@ impl App {
                     let edit = ui.text_edit_singleline(name);
                     let enter = edit.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
                     if ui.small_button(tr("OK")).clicked() || enter {
-                        acts.push(Act::RenameImport(id.clone(), name.clone()));
+                        acts.push(Act::Import(ImportAct::Rename(id.clone(), name.clone())));
                     }
                     if ui.small_button(tr("Cancel")).clicked() {
-                        acts.push(Act::CancelRename);
+                        acts.push(Act::Settings(SettingsAct::CancelRename));
                     }
                 });
             }
@@ -540,19 +540,19 @@ impl App {
                 )
                 .clicked()
             {
-                acts.push(Act::ImportTemplates(ImportSource::ThisWindows));
+                acts.push(Act::Import(ImportAct::Templates(ImportSource::ThisWindows)));
             }
             if ui
                 .add_enabled(!busy, egui::Button::new(tr("Import a folder...")))
                 .clicked()
             {
-                acts.push(Act::ImportTemplates(ImportSource::Folder));
+                acts.push(Act::Import(ImportAct::Templates(ImportSource::Folder)));
             }
             if ui
                 .add_enabled(!busy, egui::Button::new(tr("Import a catalog file...")))
                 .clicked()
             {
-                acts.push(Act::ImportTemplates(ImportSource::CatalogFile));
+                acts.push(Act::Import(ImportAct::Templates(ImportSource::CatalogFile)));
             }
             if ui
                 .add_enabled(!busy, egui::Button::new(tr("Import an archive...")))
@@ -561,7 +561,7 @@ impl App {
                 ))
                 .clicked()
             {
-                acts.push(Act::ImportTemplates(ImportSource::Archive));
+                acts.push(Act::Import(ImportAct::Templates(ImportSource::Archive)));
             }
         });
     }
@@ -694,5 +694,86 @@ impl App {
         self.docs
             .push(Doc::Markdown(Box::new(MdDoc::new(title, None, page))));
         self.active = self.docs.len() - 1;
+    }
+
+    /// Runs an act of the acts of the tab of an import or of a catalog file, and of its editor.
+    pub(crate) fn apply_catalog(&mut self, act: CatalogAct) {
+        match act {
+            CatalogAct::OpenAt(import, rule) => {
+                self.open_catalog(&import);
+                if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active)
+                    && c.id == import
+                {
+                    c.group = None;
+                    c.sel = Some(rule);
+                }
+                self.reveal_selection();
+            }
+            CatalogAct::ImportOpen => self.import_open_catalog(),
+            CatalogAct::Compare(other) => self.compare_catalog(other),
+            CatalogAct::Edit(which) => self.edit_catalog(which),
+            CatalogAct::New => self.new_catalog(),
+            CatalogAct::EditRemove(id) => {
+                if let Some(Doc::CatalogEdit(d)) = self.docs.get_mut(self.active) {
+                    d.remove(&id);
+                }
+            }
+            CatalogAct::Open(id) => self.open_catalog(&id),
+            CatalogAct::Select(key) => {
+                if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) {
+                    if let Some(group) = key.strip_prefix("g:") {
+                        c.group = Some(group.to_owned());
+                        c.sel = None;
+                    } else if key.is_empty() {
+                        c.group = None;
+                        c.sel = None;
+                    } else {
+                        c.group = None;
+                        c.sel = Some(key);
+                    }
+                }
+            }
+            CatalogAct::Reveal(key) => {
+                self.apply(vec![Act::Catalog(CatalogAct::Select(key))]);
+                self.reveal_selection();
+            }
+            CatalogAct::Expand(gid, open) => {
+                if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) {
+                    if open {
+                        c.expanded.insert(gid);
+                    } else {
+                        c.expanded.remove(&gid);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Runs an act of the acts of the imports of policy templates.
+    pub(crate) fn apply_import(&mut self, act: ImportAct) {
+        match act {
+            ImportAct::Templates(source) => self.start_import(source),
+            ImportAct::Toggle(id) => {
+                if self.imports.iter().any(|f| f.id == id) {
+                    self.unload_import(&id);
+                } else if let Err(e) = self.load_import(&id) {
+                    self.status = trf("The import was not loaded: {e}", &[("e", &e)]);
+                }
+                self.refresh_import_list();
+                self.rebuild_catalog();
+            }
+            ImportAct::Remove(id) => {
+                let _ = std::fs::remove_file(
+                    self.imports_dir
+                        .join(format!("{id}.{}", admx::CATALOG_EXTENSION)),
+                );
+                self.unload_import(&id);
+                self.refresh_import_list();
+                self.rebuild_catalog();
+            }
+            ImportAct::LoadCatalogs => self.load_catalogs_for_unknown(),
+            ImportAct::Export(id) => self.export_import(&id),
+            ImportAct::Rename(id, name) => self.rename_import(&id, &name),
+        }
     }
 }

@@ -12,7 +12,35 @@ use winweaver_core::i18n::CatalogTexts;
 
 use crate::i18n::{tr, trf};
 use crate::views::{self, gsummary, gtitle, rtitle};
-use crate::{Act, Form, Settings, list, style, tree};
+use crate::{
+    Act, CatalogAct, Form, MarksAct, NavAct, ProfileAct, Question, Settings, list, style, tree,
+};
+
+/// The question before the removal of a bookmark, naming its option and its comment.
+pub fn remove_question(
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    imports: &[CatalogFile],
+    marks: &Bookmarks,
+    i: usize,
+) -> Option<Question> {
+    let b = marks.items.get(i)?;
+    let t = target(catalog, texts, imports, b);
+    let text = if b.comment.trim().is_empty() {
+        trf("Remove the bookmark of {title}?", &[("title", &t.title)])
+    } else {
+        trf(
+            "The bookmark of {title} has a comment. Remove it with the comment?",
+            &[("title", &t.title)],
+        )
+    };
+    Some(Question::new(
+        tr("Remove the bookmark"),
+        text,
+        tr("Remove"),
+        MarksAct::Remove(i),
+    ))
+}
 
 /// The bookmark tab.
 #[derive(Default)]
@@ -223,15 +251,19 @@ pub fn marks_view(
     );
     for event in out.events {
         match event {
-            list::Event::Select(i) => acts.push(Act::MarkSelect(i)),
-            list::Event::Open(i) | list::Event::Button(i) => acts.push(Act::GoToMark(i)),
-            list::Event::Delete(i) => acts.push(Act::RemoveMarkAsk(i)),
+            list::Event::Select(i) => acts.push(Act::Marks(MarksAct::Select(i))),
+            list::Event::Open(i) | list::Event::Button(i) => {
+                acts.push(Act::Marks(MarksAct::GoTo(i)))
+            }
+            list::Event::Delete(i) => {
+                acts.extend(remove_question(catalog, texts, imports, marks, i).map(Act::from));
+            }
         }
     }
     if out.moved {
-        acts.push(Act::Follow);
+        acts.push(Act::Nav(NavAct::Follow));
     } else if out.scrolled {
-        acts.push(Act::Revealed);
+        acts.push(Act::Nav(NavAct::Revealed));
     }
 }
 
@@ -287,7 +319,9 @@ pub fn marks_detail(
                     )
                     .clicked()
                     {
-                        acts.push(Act::RemoveMarkAsk(i));
+                        acts.extend(
+                            remove_question(catalog, texts, imports, marks, i).map(Act::from),
+                        );
                     }
                     if !b.item.is_empty() {
                         views::id_line(ui, &b.item);
@@ -298,7 +332,9 @@ pub fn marks_detail(
                         // The group of an option leads to it in the profile.
                         Some(rule) if !t.group.is_empty() => {
                             if ui.link(t.group.as_str()).clicked() {
-                                acts.push(Act::ShowGroupInProfile(rule.group.clone()));
+                                acts.push(Act::Profile(ProfileAct::ShowGroupInProfile(
+                                    rule.group.clone(),
+                                )));
                             }
                         }
                         _ if !t.group.is_empty() => {
@@ -313,7 +349,10 @@ pub fn marks_detail(
                         match (file, t.rule) {
                             (Some(f), Some(rule)) => {
                                 if ui.link(text).clicked() {
-                                    acts.push(Act::OpenCatalogAt(f.id.clone(), rule.id.clone()));
+                                    acts.push(Act::Catalog(CatalogAct::OpenAt(
+                                        f.id.clone(),
+                                        rule.id.clone(),
+                                    )));
                                 }
                             }
                             _ => {
@@ -347,7 +386,7 @@ pub fn marks_detail(
                 }
                 ui.add_space(4.0);
                 if ui.button(open_hint(b)).clicked() {
-                    acts.push(Act::GoToMark(i));
+                    acts.push(Act::Marks(MarksAct::GoTo(i)));
                 }
             });
             if b.is_registry() {
@@ -362,7 +401,10 @@ pub fn marks_detail(
                     for rule in rules {
                         ui.horizontal_wrapped(|ui| {
                             if ui.link(rtitle(texts, rule)).clicked() {
-                                acts.push(Act::ShowInProfile(String::new(), rule.id.clone()));
+                                acts.push(Act::Profile(ProfileAct::ShowInProfile(
+                                    String::new(),
+                                    rule.id.clone(),
+                                )));
                             }
                             views::catalog_links(ui, imports, &rule.id, acts);
                         });
@@ -381,7 +423,7 @@ pub fn marks_detail(
                         .desired_width(f32::INFINITY),
                 );
                 if edit.changed() {
-                    acts.push(Act::SetMarkComment(i, comment));
+                    acts.push(Act::Marks(MarksAct::SetComment(i, comment)));
                 }
             });
             if let Some(rule) = t.rule

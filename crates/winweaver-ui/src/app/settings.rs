@@ -138,13 +138,13 @@ impl App {
             ui.horizontal_wrapped(|ui| {
                 ui.label(text);
                 if ui.small_button(tr("Open")).clicked() {
-                    self.pending_acts.push(Act::ShowInFolder(path));
+                    self.pending_acts.push(Act::Nav(NavAct::ShowInFolder(path)));
                 }
             });
         }
         ui.add_space(8.0);
         if !self.settings.recent.is_empty() && ui.button(tr("Forget recent files")).clicked() {
-            self.pending_acts.push(Act::AskForgetRecent);
+            self.pending_acts.push(Question::forget_recent().into());
         }
     }
 
@@ -300,10 +300,10 @@ impl App {
                 ))
                 .clicked()
             {
-                self.pending_acts.push(Act::EditTheme(shown.clone()));
+                self.pending_acts.push(Act::Theme(ThemeAct::Edit(shown.clone())));
             }
             if ui.button(tr("Open a theme file...")).clicked() {
-                self.pending_acts.push(Act::OpenThemeFile);
+                self.pending_acts.push(Act::Theme(ThemeAct::OpenFile));
             }
         });
     }
@@ -369,6 +369,20 @@ impl App {
         self.settings_dirty = false;
         if let Err(e) = self.settings.save_to(&Settings::path()) {
             self.status = trf("Settings not saved: {e}", &[("e", &e)]);
+        }
+    }
+
+    /// Runs an act of the acts of the settings tab.
+    pub(crate) fn apply_settings(&mut self, act: SettingsAct) {
+        match act {
+            SettingsAct::Open => {
+                self.themes = themes::themes(&themes_dir());
+                self.refresh_import_list();
+                self.open_settings();
+            }
+            SettingsAct::OpenSection(section) => self.open_settings().section = section,
+            SettingsAct::StartRename(id, name) => self.open_settings().renaming = Some((id, name)),
+            SettingsAct::CancelRename => self.open_settings().renaming = None,
         }
     }
 }

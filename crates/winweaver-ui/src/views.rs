@@ -11,7 +11,10 @@ use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::resolver::State;
 
 use crate::i18n::{tr, trf};
-use crate::{Act, Form, ProfileDoc, ScriptKind, Search, Sel, Settings, UNKNOWN_GROUP, style, tree};
+use crate::{
+    Act, CatalogAct, Form, ImportAct, NavAct, PcAct, ProfileAct, ProfileDoc, RegistryAct,
+    ScriptKind, Search, Sel, Settings, UNKNOWN_GROUP, style, tree,
+};
 
 pub fn rtitle<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule) -> &'a str {
     texts.map_or(rule.title.as_str(), |t| t.rule_title(rule))
@@ -46,11 +49,11 @@ impl RuleLink<'_> {
     pub(crate) fn act(self, id: &str) -> Act {
         let id = id.to_owned();
         match self {
-            RuleLink::Profile => Act::Reveal(Sel::Rule(id)),
+            RuleLink::Profile => Act::Profile(ProfileAct::Reveal(Sel::Rule(id))),
             RuleLink::Catalog(file) if file.rules.iter().any(|r| r.id == id) => {
-                Act::CatalogReveal(id)
+                Act::Catalog(CatalogAct::Reveal(id))
             }
-            RuleLink::Catalog(_) | RuleLink::Elsewhere => Act::ShowInProfile(String::new(), id),
+            RuleLink::Catalog(_) | RuleLink::Elsewhere => Act::Profile(ProfileAct::ShowInProfile(String::new(), id)),
         }
     }
 }
@@ -120,7 +123,7 @@ pub(crate) fn linked_text(
                 }
                 Piece::Key(path) => {
                     if ui.link(path.as_str()).clicked() {
-                        acts.push(Act::OpenRegistry(path.clone(), None));
+                        acts.push(Act::Registry(RegistryAct::Open(path.clone(), None)));
                     }
                 }
             }
@@ -464,32 +467,32 @@ pub fn tree_view(
         tree::Scroll::None
     };
     if selected.is_none() && scroll != tree::Scroll::None {
-        acts.push(Act::Revealed);
+        acts.push(Act::Nav(NavAct::Revealed));
     }
     let id = egui::Id::new(("profile-tree", doc.draft_key.as_str()));
     let out = tree::show(ui, id, &rows, selected, scroll);
     for event in out.events {
         match event {
-            tree::Event::Select((sel, group)) => acts.push(Act::SelectIn(sel, group)),
-            tree::Event::Expand((Sel::Group(g), _), open) => acts.push(Act::Expand(g, open)),
+            tree::Event::Select((sel, group)) => acts.push(Act::Profile(ProfileAct::SelectIn(sel, group))),
+            tree::Event::Expand((Sel::Group(g), _), open) => acts.push(Act::Profile(ProfileAct::Expand(g, open))),
             tree::Event::Toggle((Sel::Rule(id), _)) => {
                 let on = !doc.profile.is_on(&id);
-                acts.push(Act::Toggle(id, on));
+                acts.push(Act::Profile(ProfileAct::Toggle(id, on)));
             }
-            tree::Event::Switch((Sel::Rule(id), _), on) => acts.push(Act::Toggle(id, on)),
+            tree::Event::Switch((Sel::Rule(id), _), on) => acts.push(Act::Profile(ProfileAct::Toggle(id, on))),
             tree::Event::Toggle((Sel::Group(g), _)) => {
                 let rules = catalog.rules_under(&g);
                 let all = !rules.is_empty() && rules.iter().all(|r| doc.resolution.shown_on(&r.id));
-                acts.push(Act::SetGroup(g, !all));
+                acts.push(Act::Profile(ProfileAct::SetGroup(g, !all)));
             }
             _ => {}
         }
     }
     if out.moved {
-        acts.push(Act::Follow);
+        acts.push(Act::Nav(NavAct::Follow));
     }
     if out.scrolled {
-        acts.push(Act::Revealed);
+        acts.push(Act::Nav(NavAct::Revealed));
     }
 }
 
@@ -523,7 +526,7 @@ fn rule_checkbox(
     }
     let mut on = doc.profile.is_on(&rule.id);
     if ui.checkbox(&mut on, label).changed() {
-        acts.push(Act::Toggle(rule.id.clone(), on));
+        acts.push(Act::Profile(ProfileAct::Toggle(rule.id.clone(), on)));
     }
 }
 
@@ -668,7 +671,7 @@ fn load_catalogs_button(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         ))
         .clicked()
     {
-        acts.push(Act::LoadCatalogs);
+        acts.push(Act::Import(ImportAct::LoadCatalogs));
     }
 }
 
@@ -703,7 +706,7 @@ fn unknown_group_detail(ui: &mut egui::Ui, doc: &ProfileDoc, acts: &mut Vec<Act>
                     tr("off")
                 });
                 if ui.small_button(tr("open")).clicked() {
-                    acts.push(Act::Select(Sel::Unknown(id.clone())));
+                    acts.push(Act::Profile(ProfileAct::Select(Sel::Unknown(id.clone()))));
                 }
             });
         }
@@ -781,10 +784,10 @@ fn group_detail(
         ui.add_space(8.0);
         ui.horizontal(|ui| {
             if ui.button(tr("Turn all on")).clicked() {
-                acts.push(Act::SetGroup(id.to_owned(), true));
+                acts.push(Act::Profile(ProfileAct::SetGroup(id.to_owned(), true)));
             }
             if ui.button(tr("Turn all off")).clicked() {
-                acts.push(Act::SetGroup(id.to_owned(), false));
+                acts.push(Act::Profile(ProfileAct::SetGroup(id.to_owned(), false)));
             }
         });
     });
@@ -803,7 +806,7 @@ fn group_detail(
                 ui.horizontal_wrapped(|ui| {
                     ui.weak(tr("In the group"));
                     if ui.link(gtitle(texts, p)).clicked() {
-                        acts.push(Act::Reveal(Sel::Group(p.id.clone())));
+                        acts.push(Act::Profile(ProfileAct::Reveal(Sel::Group(p.id.clone()))));
                     }
                 });
             }
@@ -814,7 +817,7 @@ fn group_detail(
             for g in children {
                 ui.horizontal_wrapped(|ui| {
                     if ui.link(gtitle(texts, g)).clicked() {
-                        acts.push(Act::Reveal(Sel::Group(g.id.clone())));
+                        acts.push(Act::Profile(ProfileAct::Reveal(Sel::Group(g.id.clone()))));
                     }
                     let n = catalog.rules_under(&g.id).len();
                     ui.weak(trf("{n} rules", &[("n", &n)]));
@@ -835,7 +838,7 @@ fn group_detail(
                 if ui.small_button(tr("open")).clicked() {
                     // In this group, also for a policy another import holds first.
                     let sel = Sel::Rule(rule.id.clone());
-                    acts.push(Act::SelectIn(sel, Some(id.to_owned())));
+                    acts.push(Act::Profile(ProfileAct::SelectIn(sel, Some(id.to_owned()))));
                 }
             });
         }
@@ -846,22 +849,22 @@ fn group_detail(
 fn this_pc_buttons(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
     ui.horizontal_wrapped(|ui| {
         for (text, act) in [
-            (tr("Check on this PC"), Act::CheckOnPc),
-            (tr("Read into the profile"), Act::ReadSelection),
-            (tr("Apply to this PC..."), Act::PlanNative(false)),
-            (tr("Return to Windows defaults..."), Act::PlanNative(true)),
+            (tr("Check on this PC"), Act::Pc(PcAct::Check)),
+            (tr("Read into the profile"), Act::Pc(PcAct::ReadSelection)),
+            (tr("Apply to this PC..."), Act::Pc(PcAct::PlanNative(false))),
+            (tr("Return to Windows defaults..."), Act::Pc(PcAct::PlanNative(true))),
             (
                 tr("Save an apply script..."),
-                Act::SaveScript(ScriptKind::Apply),
+                Act::Pc(PcAct::SaveScript(ScriptKind::Apply)),
             ),
             (
                 tr("Save a return-to-defaults script..."),
-                Act::SaveScript(ScriptKind::Revert),
+                Act::Pc(PcAct::SaveScript(ScriptKind::Revert)),
             ),
-            (tr("Save a registry file..."), Act::SaveRegFile(false)),
+            (tr("Save a registry file..."), Act::Pc(PcAct::SaveRegFile(false))),
             (
                 tr("Save a return-to-defaults registry file..."),
-                Act::SaveRegFile(true),
+                Act::Pc(PcAct::SaveRegFile(true)),
             ),
         ] {
             if ui.button(text).clicked() {
@@ -1007,7 +1010,7 @@ fn writes(ui: &mut egui::Ui, rule: &Rule, acts: &mut Vec<Act>) {
                             .on_hover_text(tr("Open in the registry"));
                         if open.clicked() {
                             let value = (!name.is_empty()).then(|| name.clone());
-                            acts.push(Act::OpenRegistry((*path).to_owned(), value));
+                            acts.push(Act::Registry(RegistryAct::Open((*path).to_owned(), value)));
                         }
                     });
                     cell(ui, name, false, false, widths[1]);
@@ -1074,21 +1077,21 @@ fn other_catalogs(
             ui.horizontal_wrapped(|ui| {
                 ui.weak(tr("The same policy in"));
                 if ui.link(import_of(catalog, texts, group)).clicked() {
-                    acts.push(Act::ShowIn(rule.id.clone(), group.to_owned()));
+                    acts.push(Act::Profile(ProfileAct::ShowIn(rule.id.clone(), group.to_owned())));
                 }
             });
         }
         for other in similar {
             ui.horizontal_wrapped(|ui| {
                 if ui.link(rtitle(texts, other)).clicked() {
-                    acts.push(Act::Reveal(Sel::Rule(other.id.clone())));
+                    acts.push(Act::Profile(ProfileAct::Reveal(Sel::Rule(other.id.clone()))));
                 }
                 // The import, a link to its catalog tab at the policy.
                 let holds = |f: &&CatalogFile| f.rules.iter().any(|r| r.id == other.id);
                 match imports.iter().find(holds) {
                     Some(f) => {
                         if ui.link(import_of(catalog, texts, &other.group)).clicked() {
-                            acts.push(Act::OpenCatalogAt(f.id.clone(), other.id.clone()));
+                            acts.push(Act::Catalog(CatalogAct::OpenAt(f.id.clone(), other.id.clone())));
                         }
                     }
                     None => {
@@ -1115,7 +1118,7 @@ pub(crate) fn catalog_links(
             .link(trf("Show in the catalog {name}", &[("name", &f.name)]))
             .clicked()
         {
-            acts.push(Act::OpenCatalogAt(f.id.clone(), rule.to_owned()));
+            acts.push(Act::Catalog(CatalogAct::OpenAt(f.id.clone(), rule.to_owned())));
         }
     }
 }
@@ -1149,7 +1152,7 @@ fn rule_detail(
         ui.horizontal(|ui| {
             let mut on = doc.profile.is_on(&rule.id);
             if switch(ui, &mut on).changed() {
-                acts.push(Act::Toggle(rule.id.clone(), on));
+                acts.push(Act::Profile(ProfileAct::Toggle(rule.id.clone(), on)));
             }
             ui.label(if on { tr("On") } else { tr("Off") });
             ui.add_space(8.0);
@@ -1162,7 +1165,7 @@ fn rule_detail(
                         ui.label(style::muted(ui, tr("set by the built-in rule"), 12.0));
                         let title = catalog.rule(by).map_or(by, |r| rtitle(texts, r));
                         if ui.link(title).clicked() {
-                            acts.push(Act::Reveal(Sel::Rule(by.to_owned())));
+                            acts.push(Act::Profile(ProfileAct::Reveal(Sel::Rule(by.to_owned()))));
                         }
                     }
                     None => {
@@ -1173,7 +1176,7 @@ fn rule_detail(
                     ui.label(style::muted(ui, tr("blocked: needs"), 12.0));
                     let title = catalog.rule(by).map_or(by.as_str(), |r| rtitle(texts, r));
                     if ui.link(title).clicked() {
-                        acts.push(Act::Reveal(Sel::Rule(by.clone())));
+                        acts.push(Act::Profile(ProfileAct::Reveal(Sel::Rule(by.clone()))));
                     }
                 }
             }
@@ -1236,7 +1239,7 @@ pub(crate) fn rule_description(
                         ("\u{25B8}", tr("Show the description (Ctrl+D)"))
                     };
                     if style::icon_button(ui, icon, hint, true, None).clicked() {
-                        acts.push(Act::Fold);
+                        acts.push(Act::Nav(NavAct::Fold));
                     }
                 });
             });
@@ -1320,7 +1323,7 @@ pub(crate) fn rule_description(
     if !rule.doc.is_empty() {
         section(ui, "desc-ref", tr("Reference"), parts.reference, |ui| {
             if ui.link(rule.doc.as_str()).clicked() {
-                acts.push(Act::OpenDoc(rule.doc.clone()));
+                acts.push(Act::Nav(NavAct::OpenDoc(rule.doc.clone())));
             }
         });
     }
@@ -1355,11 +1358,11 @@ fn param_editor(
                     for v in values {
                         let chosen = check::same_value(&v.value, &current);
                         if ui.selectable_label(chosen, &v.title).clicked() && !chosen {
-                            acts.push(Act::SetParam(
+                            acts.push(Act::Profile(ProfileAct::SetParam(
                                 rule.id.clone(),
                                 name.to_owned(),
                                 v.value.clone(),
-                            ));
+                            )));
                         }
                     }
                 });
@@ -1370,11 +1373,11 @@ fn param_editor(
                 .add(egui::DragValue::new(&mut v).range(*min..=*max))
                 .changed()
             {
-                acts.push(Act::SetParam(
+                acts.push(Act::Profile(ProfileAct::SetParam(
                     rule.id.clone(),
                     name.to_owned(),
                     Value::from(v),
-                ));
+                )));
             }
         }
         Param::List { .. } => {
@@ -1413,11 +1416,11 @@ fn param_editor(
                         .map(|l| Value::from(l.trim_end_matches('\r')))
                         .collect()
                 };
-                acts.push(Act::SetParam(
+                acts.push(Act::Profile(ProfileAct::SetParam(
                     rule.id.clone(),
                     name.to_owned(),
                     Value::Array(items),
-                ));
+                )));
             }
         }
         Param::Text { .. } => {
@@ -1430,11 +1433,11 @@ fn param_editor(
                 )
                 .changed()
             {
-                acts.push(Act::SetParam(
+                acts.push(Act::Profile(ProfileAct::SetParam(
                     rule.id.clone(),
                     name.to_owned(),
                     Value::from(s),
-                ));
+                )));
             }
         }
     }

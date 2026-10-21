@@ -117,12 +117,12 @@ impl App {
                     return;
                 }
                 let text = d.question(operation, &names);
-                self.ask = Some(Ask {
-                    title: tr("Change this PC").to_owned(),
+                self.ask(Question::new(
+                    tr("Change this PC"),
                     text,
-                    yes: tr("Change this PC").to_owned(),
-                    act: Act::UsersRun(operation, names),
-                });
+                    tr("Change this PC"),
+                    UsersAct::Run(operation, names),
+                ));
             }
             Err(issues) => {
                 d.issues = issues;
@@ -240,7 +240,7 @@ impl App {
             }
             Ok(file) => {
                 let n = file.users.len();
-                self.apply(vec![Act::SetAccounts(file.accounts(None))]);
+                self.apply(vec![Act::Profile(ProfileAct::SetAccounts(file.accounts(None)))]);
                 self.status = trf("{n} accounts loaded without passwords", &[("n", &n)]);
             }
             Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
@@ -256,13 +256,80 @@ impl App {
             usersview::ImportDone::Open => {}
             usersview::ImportDone::Cancel => self.users_import = None,
             usersview::ImportDone::Without => {
-                acts.push(Act::SetAccounts(import.file.accounts(None)));
+                acts.push(Act::Profile(ProfileAct::SetAccounts(import.file.accounts(None))));
                 self.users_import = None;
             }
             usersview::ImportDone::With(passwords) => {
-                acts.push(Act::SetAccounts(import.file.accounts(Some(&passwords))));
+                acts.push(Act::Profile(ProfileAct::SetAccounts(import.file.accounts(Some(&passwords)))));
                 self.users_import = None;
             }
+        }
+    }
+
+    /// Runs an act of the acts of a users file.
+    pub(crate) fn apply_users(&mut self, act: UsersAct) {
+        match act {
+            UsersAct::New => self.new_users_doc(Vec::new()),
+            UsersAct::OfThisPc => match winweaver_win::users_of_this_pc() {
+                Ok(read) => self.new_users_doc(read),
+                Err(e) => self.status = trf("This PC was not read: {e}", &[("e", &e)]),
+            },
+            UsersAct::Add => {
+                if let Some(d) = self.active_users() {
+                    let n = d.file.users.len() + 1;
+                    d.add(users::User {
+                        name: format!("User{n}"),
+                        ..users::User::default()
+                    });
+                }
+            }
+            UsersAct::Duplicate => {
+                if let Some(d) = self.active_users() {
+                    d.duplicate();
+                }
+            }
+            UsersAct::Remove(i) => {
+                if let Some(d) = self.active_users() {
+                    d.remove(i);
+                }
+            }
+            UsersAct::Move(down) => {
+                if let Some(d) = self.active_users() {
+                    d.move_selected(down);
+                }
+            }
+            UsersAct::Unlock => self.users_unlock(false, false),
+            UsersAct::SetMaster => self.users_unlock(true, false),
+            UsersAct::SetPassword => self.users_unlock(false, true),
+            UsersAct::Lock => {
+                if let Some(d) = self.active_users() {
+                    d.lock();
+                }
+            }
+            UsersAct::Check => {
+                if let Some(d) = self.active_users() {
+                    d.check();
+                    let errors = d.issues.iter().filter(|i| i.error).count();
+                    self.status = trf(
+                        "Checked {n} accounts: {errors} errors",
+                        &[("n", &d.file.users.len()), ("errors", &errors)],
+                    );
+                }
+            }
+            UsersAct::ReadPc => match winweaver_win::users_of_this_pc() {
+                Ok(read) => {
+                    if let Some(d) = self.active_users() {
+                        let n = d.merge(read);
+                        self.status = trf("{n} accounts of this PC added", &[("n", &n)]);
+                    }
+                }
+                Err(e) => self.status = trf("This PC was not read: {e}", &[("e", &e)]),
+            },
+            UsersAct::AskRun(operation, all) => self.ask_users_run(operation, all),
+            UsersAct::Run(operation, names) => self.run_users(operation, &names),
+            UsersAct::Script => self.save_users_script(),
+            UsersAct::IntoProfile => self.users_into_profile(),
+            UsersAct::FromProfile => self.users_from_profile(),
         }
     }
 }

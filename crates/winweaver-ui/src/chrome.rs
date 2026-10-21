@@ -8,7 +8,9 @@ use eframe::egui::{self, Align, Align2, CornerRadius, Layout, Margin, RichText, 
 use crate::i18n::{tr, trf};
 use crate::style::{self, Palette};
 use crate::{
-    Act, App, Doc, Form, PRESETS, ScriptKind, Sel, Settings, SettingsSection, Tab, texts_for, views,
+    Act, App, CatalogAct, DiffAct, Doc, FileAct, Form, ImportAct, MarksAct, McpAct, NavAct, PRESETS,
+    PcAct, ProfileAct, RegFileAct, RegistryAct, ScriptKind, Sel, Settings, SettingsAct,
+    SettingsSection, Tab, ThemeAct, UsersAct, texts_for, views,
 };
 use winweaver_core::validate::{self, Severity, Target};
 
@@ -55,11 +57,11 @@ impl App {
             if let (Some(from), Some(pos)) = (tabs.iter().position(|r| r.drag_stopped()), pointer) {
                 let (to, _) = drop_place(&rects, from, pos.x);
                 if to != from {
-                    acts.push(Act::MoveTab(from, to));
+                    acts.push(Act::Nav(NavAct::MoveTab(from, to)));
                 }
             }
             if style::icon_button(ui, "+", tr("New profile (Ctrl+N)"), true, None).clicked() {
-                acts.push(Act::NewProfile(None));
+                acts.push(Act::File(FileAct::NewProfile(None)));
             }
         });
     }
@@ -151,12 +153,12 @@ impl App {
             egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tr("Close (Ctrl+W)"))
         });
         if close.clicked() {
-            acts.push(Act::CloseTab(i, false));
+            acts.push(Act::Nav(NavAct::CloseTab(i, false)));
         } else if response.clicked() {
-            acts.push(Act::Activate(i));
+            acts.push(Act::Nav(NavAct::Activate(i)));
         }
         if response.middle_clicked() {
-            acts.push(Act::CloseTab(i, false));
+            acts.push(Act::Nav(NavAct::CloseTab(i, false)));
         }
         let last = self.docs.len().saturating_sub(1);
         response.context_menu(|ui| {
@@ -167,7 +169,7 @@ impl App {
                 )
                 .clicked()
             {
-                acts.push(Act::MoveTab(i, i - 1));
+                acts.push(Act::Nav(NavAct::MoveTab(i, i - 1)));
                 ui.close();
             }
             if ui
@@ -177,12 +179,12 @@ impl App {
                 )
                 .clicked()
             {
-                acts.push(Act::MoveTab(i, i + 1));
+                acts.push(Act::Nav(NavAct::MoveTab(i, i + 1)));
                 ui.close();
             }
             ui.separator();
             if ui.button(tr("Close (Ctrl+W)")).clicked() {
-                acts.push(Act::CloseTab(i, false));
+                acts.push(Act::Nav(NavAct::CloseTab(i, false)));
                 ui.close();
             }
         });
@@ -206,26 +208,26 @@ impl App {
             }
         };
         ui.menu_button(tr("New"), |ui| {
-            item(ui, tr("Empty profile"), "Ctrl+N", Act::NewProfile(None));
+            item(ui, tr("Empty profile"), "Ctrl+N", Act::File(FileAct::NewProfile(None)));
             ui.separator();
             for (name, _) in PRESETS {
                 item(
                     ui,
                     &trf("Profile from the preset {name}", &[("name", &name)]),
                     "",
-                    Act::NewProfile(Some(name)),
+                    Act::File(FileAct::NewProfile(Some(name))),
                 );
             }
             ui.separator();
-            item(ui, tr("Users file"), "", Act::NewUsersFile);
+            item(ui, tr("Users file"), "", Act::Users(UsersAct::New));
             item(
                 ui,
                 tr("Users file of the accounts of this PC"),
                 "",
-                Act::UsersOfThisPc,
+                Act::Users(UsersAct::OfThisPc),
             );
         });
-        item(ui, tr("Open..."), "Ctrl+O", Act::Open);
+        item(ui, tr("Open..."), "Ctrl+O", Act::File(FileAct::Open));
         ui.add_enabled_ui(!self.settings.recent.is_empty(), |ui| {
             ui.menu_button(tr("Open recent"), |ui| {
                 for path in &self.settings.recent {
@@ -233,52 +235,52 @@ impl App {
                         ui,
                         &path.display().to_string(),
                         "",
-                        Act::OpenPath(path.clone()),
+                        Act::File(FileAct::OpenPath(path.clone())),
                     );
                 }
             });
         });
-        item(ui, tr("Save"), "Ctrl+S", Act::Save);
-        item(ui, tr("Save as..."), "Ctrl+Shift+S", Act::SaveAs);
+        item(ui, tr("Save"), "Ctrl+S", Act::File(FileAct::Save));
+        item(ui, tr("Save as..."), "Ctrl+Shift+S", Act::File(FileAct::SaveAs));
         item(
             ui,
             tr("Close tab"),
             "Ctrl+W",
-            Act::CloseTab(self.active, false),
+            Act::Nav(NavAct::CloseTab(self.active, false)),
         );
         item(
             ui,
             tr("Close tab, discard changes"),
             "",
-            Act::AskCloseDiscard(self.active),
+            self.discard_act(self.active),
         );
         ui.separator();
-        item(ui, tr("Guide"), "F1", Act::OpenGuide);
-        item(ui, tr("License"), "", Act::OpenLicense);
-        item(ui, tr("Bookmarks"), "", Act::OpenMarks);
+        item(ui, tr("Guide"), "F1", Act::File(FileAct::OpenGuide));
+        item(ui, tr("License"), "", Act::File(FileAct::OpenLicense));
+        item(ui, tr("Bookmarks"), "", Act::Marks(MarksAct::Open));
         item(
             ui,
             tr("Registry"),
             "",
-            Act::OpenRegistry("HKEY_LOCAL_MACHINE".to_owned(), None),
+            Act::Registry(RegistryAct::Open("HKEY_LOCAL_MACHINE".to_owned(), None)),
         );
-        item(ui, tr("MCP server"), "", Act::OpenMcp);
-        item(ui, tr("Settings"), "Ctrl+,", Act::OpenSettings);
+        item(ui, tr("MCP server"), "", Act::Mcp(McpAct::Open));
+        item(ui, tr("Settings"), "Ctrl+,", Act::Settings(SettingsAct::Open));
         ui.separator();
         item(
             ui,
             tr("About"),
             "",
-            Act::Message(trf(
+            Act::Nav(NavAct::Message(trf(
                 "WinWeaver {build}, catalog {catalog}, settings {path}",
                 &[
                     ("build", &winweaver_core::BUILD),
                     ("catalog", &self.catalog.version()),
                     ("path", &Settings::path().display()),
                 ],
-            )),
+            ))),
         );
-        item(ui, tr("Exit"), "", Act::Exit);
+        item(ui, tr("Exit"), "", Act::Nav(NavAct::Exit));
     }
 
     /// Whether the active tab has commands in the command bar.
@@ -309,20 +311,20 @@ impl App {
         match self.docs.get(self.active) {
             Some(Doc::Profile(_)) => {
                 if tool(ui, "\u{1F4C4}", tr("New"), "Ctrl+N", true) {
-                    acts.push(Act::NewProfile(None));
+                    acts.push(Act::File(FileAct::NewProfile(None)));
                 }
                 if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::Open);
+                    acts.push(Act::File(FileAct::Open));
                 }
                 if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
-                    acts.push(Act::Save);
+                    acts.push(Act::File(FileAct::Save));
                 }
                 sep(ui);
                 if tool(ui, "\u{2714}", tr("Check"), "F7", true) {
-                    acts.push(Act::Check);
+                    acts.push(Act::Profile(ProfileAct::Check));
                 }
                 if tool(ui, "\u{2699}", tr("Build"), "F9", true) {
-                    acts.push(Act::Build);
+                    acts.push(Act::Profile(ProfileAct::Build));
                 }
                 sep(ui);
                 let pc = split(ui, "\u{1F5A5}", tr("This PC"));
@@ -334,7 +336,7 @@ impl App {
                 egui::Popup::menu(&compare).show(|ui| {
                     ui.set_min_width(220.0);
                     if ui.button(tr("Compare with a file...")).clicked() {
-                        acts.push(Act::Compare);
+                        acts.push(Act::Diff(DiffAct::Compare));
                         ui.close();
                     }
                     ui.separator();
@@ -343,7 +345,7 @@ impl App {
                             .button(trf("With the preset {name}", &[("name", &name)]))
                             .clicked()
                         {
-                            acts.push(Act::CompareWith(name));
+                            acts.push(Act::Diff(DiffAct::CompareWith(name)));
                             ui.close();
                         }
                     }
@@ -351,7 +353,7 @@ impl App {
                     let dirty = self.docs.get(self.active).is_some_and(Doc::dirty);
                     let unsaved = egui::Button::new(tr("Unsaved changes"));
                     if ui.add_enabled(dirty, unsaved).clicked() {
-                        acts.push(Act::DiffUnsaved);
+                        acts.push(Act::Diff(DiffAct::Unsaved));
                         ui.close();
                     }
                 });
@@ -364,60 +366,60 @@ impl App {
             }
             Some(Doc::Diff(_)) => {
                 if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::Open);
+                    acts.push(Act::File(FileAct::Open));
                 }
                 if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
-                    acts.push(Act::Save);
+                    acts.push(Act::File(FileAct::Save));
                 }
                 if tool(ui, "\u{1F4BE}", tr("Save as"), "Ctrl+Shift+S", true) {
-                    acts.push(Act::SaveDiffAs);
+                    acts.push(Act::Diff(DiffAct::SaveAs));
                 }
                 sep(ui);
                 if tool(ui, "\u{2714}", tr("Apply"), "", true) {
-                    acts.push(Act::ApplyDiff);
+                    acts.push(Act::Diff(DiffAct::Apply));
                 }
             }
             Some(Doc::Markdown(_)) | Some(Doc::Bookmarks(_)) => {
                 if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::Open);
+                    acts.push(Act::File(FileAct::Open));
                 }
             }
             Some(Doc::Mcp(_)) => {
                 let running = self.mcp.run.is_some();
                 if tool(ui, "\u{25B6}", tr("Start"), "", !running) {
-                    acts.push(Act::McpStart);
+                    acts.push(Act::Mcp(McpAct::Start));
                 }
                 if tool(ui, "\u{25A0}", tr("Stop"), "", running) {
-                    acts.push(Act::McpStop);
+                    acts.push(Act::Mcp(McpAct::Stop));
                 }
             }
             Some(Doc::Theme(_)) => {
                 if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::OpenThemeFile);
+                    acts.push(Act::Theme(ThemeAct::OpenFile));
                 }
                 if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
-                    acts.push(Act::Save);
+                    acts.push(Act::File(FileAct::Save));
                 }
                 if tool(ui, "\u{1F4BE}", tr("Save as"), "Ctrl+Shift+S", true) {
-                    acts.push(Act::SaveAs);
+                    acts.push(Act::File(FileAct::SaveAs));
                 }
             }
             Some(Doc::Catalog(c)) if c.file.is_some() => {
                 if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::Open);
+                    acts.push(Act::File(FileAct::Open));
                 }
                 sep(ui);
                 if tool(ui, "\u{1F4E5}", tr("Import"), "", true) {
-                    acts.push(Act::ImportOpenCatalog);
+                    acts.push(Act::Catalog(CatalogAct::ImportOpen));
                 }
                 self.compare_tool(ui, acts, compact);
                 if tool(ui, "\u{270F}", tr("Edit"), "", true) {
-                    acts.push(Act::EditCatalog(crate::CatalogRef::Tab(self.active)));
+                    acts.push(Act::Catalog(CatalogAct::Edit(crate::CatalogRef::Tab(self.active))));
                 }
             }
             Some(Doc::Catalog(c)) => {
                 if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::Open);
+                    acts.push(Act::File(FileAct::Open));
                 }
                 sep(ui);
                 let selected = c.sel.clone();
@@ -429,44 +431,48 @@ impl App {
                     selected.is_some(),
                 ) && let Some(rule) = selected
                 {
-                    acts.push(Act::ShowInProfile(c.id.clone(), rule));
+                    acts.push(Act::Profile(ProfileAct::ShowInProfile(c.id.clone(), rule)));
                 }
                 if tool(ui, "\u{1F4E4}", tr("Export"), "", true) {
-                    acts.push(Act::ExportImport(c.id.clone()));
+                    acts.push(Act::Import(ImportAct::Export(c.id.clone())));
                 }
                 self.compare_tool(ui, acts, compact);
                 if tool(ui, "\u{270F}", tr("Edit"), "", true) {
-                    acts.push(Act::EditCatalog(crate::CatalogRef::Import(c.id.clone())));
+                    acts.push(Act::Catalog(CatalogAct::Edit(crate::CatalogRef::Import(
+                        c.id.clone(),
+                    ))));
                 }
             }
             Some(Doc::CatalogEdit(_)) => {
                 if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
-                    acts.push(Act::Save);
+                    acts.push(Act::File(FileAct::Save));
                 }
             }
             Some(Doc::RegFile(d)) => {
                 if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::Open);
+                    acts.push(Act::File(FileAct::Open));
                 }
                 if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
-                    acts.push(Act::Save);
+                    acts.push(Act::File(FileAct::Save));
                 }
                 if tool(ui, "\u{1F4BE}", tr("Save as"), "Ctrl+Shift+S", true) {
-                    acts.push(Act::SaveAs);
+                    acts.push(Act::File(FileAct::SaveAs));
                 }
                 sep(ui);
                 let key = d.selected_key();
                 if tool(ui, "\u{1F4C1}", tr("New key"), "", true) {
-                    acts.push(Act::RegFileNew(crate::regfileview::EditKind::Key));
+                    acts.push(Act::RegFile(RegFileAct::New(crate::regfileview::EditKind::Key)));
                 }
                 if tool(ui, "\u{2795}", tr("New value"), "", key.is_some()) {
-                    acts.push(Act::RegFileNew(crate::regfileview::EditKind::Value));
+                    acts.push(Act::RegFile(RegFileAct::New(crate::regfileview::EditKind::Value)));
                 }
                 if tool(ui, "\u{270F}", tr("Edit"), "", d.target().is_some()) {
-                    acts.push(Act::RegFileEdit);
+                    acts.push(Act::RegFile(RegFileAct::Edit));
                 }
-                if tool(ui, "\u{1F5D1}", tr("Delete"), "", d.removal().is_some()) {
-                    acts.push(Act::AskRegFileRemove);
+                if tool(ui, "\u{1F5D1}", tr("Delete"), "", d.removal().is_some())
+                    && let Some(question) = d.remove_question()
+                {
+                    acts.push(question.into());
                 }
                 sep(ui);
                 if tool(
@@ -477,106 +483,108 @@ impl App {
                     key.is_some(),
                 ) && let Some((_, path)) = key
                 {
-                    acts.push(Act::OpenRegistry(path, d.selected_value()));
+                    acts.push(Act::Registry(RegistryAct::Open(path, d.selected_value())));
                 }
             }
             Some(Doc::Users(d)) => {
                 use winweaver_core::users::Operation;
                 if tool(ui, "\u{1F4BE}", tr("Save"), "Ctrl+S", true) {
-                    acts.push(Act::Save);
+                    acts.push(Act::File(FileAct::Save));
                 }
                 if tool(ui, "\u{1F4BE}", tr("Save as"), "Ctrl+Shift+S", true) {
-                    acts.push(Act::SaveAs);
+                    acts.push(Act::File(FileAct::SaveAs));
                 }
                 sep(ui);
                 let one = d.selected_user().is_some();
                 if tool(ui, "\u{2795}", tr("Add"), "", true) {
-                    acts.push(Act::UsersAdd);
+                    acts.push(Act::Users(UsersAct::Add));
                 }
                 if tool(ui, "\u{29C9}", tr("Duplicate"), "", one) {
-                    acts.push(Act::UsersDuplicate);
+                    acts.push(Act::Users(UsersAct::Duplicate));
                 }
-                if tool(ui, "\u{1F5D1}", tr("Remove"), "", one) {
-                    acts.push(Act::AskUsersRemove);
+                if tool(ui, "\u{1F5D1}", tr("Remove"), "", one)
+                    && let Some(question) = d.remove_question()
+                {
+                    acts.push(question.into());
                 }
                 if tool(ui, "\u{2191}", tr("Up"), "", one) {
-                    acts.push(Act::UsersMove(false));
+                    acts.push(Act::Users(UsersAct::Move(false)));
                 }
                 if tool(ui, "\u{2193}", tr("Down"), "", one) {
-                    acts.push(Act::UsersMove(true));
+                    acts.push(Act::Users(UsersAct::Move(true)));
                 }
                 sep(ui);
                 if d.unlocked() {
                     if tool(ui, "\u{1F513}", tr("Lock"), "", true) {
-                        acts.push(Act::UsersLock);
+                        acts.push(Act::Users(UsersAct::Lock));
                     }
                     if tool(ui, "\u{1F511}", tr("Password"), "", one) {
-                        acts.push(Act::UsersSetPassword);
+                        acts.push(Act::Users(UsersAct::SetPassword));
                     }
                     if tool(ui, "\u{1F510}", tr("Master password"), "", true) {
-                        acts.push(Act::UsersSetMaster);
+                        acts.push(Act::Users(UsersAct::SetMaster));
                     }
                 } else if tool(ui, "\u{1F512}", tr("Unlock"), "", true) {
-                    acts.push(Act::UsersUnlock);
+                    acts.push(Act::Users(UsersAct::Unlock));
                 }
                 sep(ui);
                 if tool(ui, "\u{2714}", tr("Check"), "", true) {
-                    acts.push(Act::UsersCheck);
+                    acts.push(Act::Users(UsersAct::Check));
                 }
                 if tool(ui, "\u{1F5A5}", tr("Read this PC"), "", true) {
-                    acts.push(Act::UsersReadPc);
+                    acts.push(Act::Users(UsersAct::ReadPc));
                 }
                 let create = Operation::Create {
                     update_existing: false,
                 };
                 if tool(ui, "\u{25B6}", tr("Create on this PC"), "", d.unlocked()) {
-                    acts.push(Act::AskUsersRun(create, true));
+                    acts.push(Act::Users(UsersAct::AskRun(create, true)));
                 }
                 if tool(ui, "\u{1F511}", tr("Apply passwords"), "", d.unlocked()) {
-                    acts.push(Act::AskUsersRun(Operation::Passwords, true));
+                    acts.push(Act::Users(UsersAct::AskRun(Operation::Passwords, true)));
                 }
                 if tool(ui, "\u{1F4DC}", tr("Script"), "", true) {
-                    acts.push(Act::UsersScript);
+                    acts.push(Act::Users(UsersAct::Script));
                 }
             }
             Some(Doc::Registry(d)) => {
                 if tool(ui, "\u{21BB}", tr("Refresh"), "", true) {
-                    acts.push(Act::RegistryRefresh);
+                    acts.push(Act::Registry(RegistryAct::Refresh));
                 }
                 sep(ui);
                 if tool(ui, "\u{1F4C1}", tr("New key"), "", true) {
-                    acts.push(Act::RegistryNew(crate::regview::EditKind::NewKey, ""));
+                    acts.push(Act::Registry(RegistryAct::New(crate::regview::EditKind::NewKey, "")));
                 }
                 if tool(ui, "\u{2795}", tr("New value"), "", true) {
-                    acts.push(Act::RegistryNew(
+                    acts.push(Act::Registry(RegistryAct::New(
                         crate::regview::EditKind::NewValue,
                         "REG_SZ",
-                    ));
+                    )));
                 }
                 if tool(ui, "\u{270F}", tr("Edit"), "", d.selected().is_some()) {
-                    acts.push(Act::RegistryEdit);
+                    acts.push(Act::Registry(RegistryAct::Edit));
                 }
                 if tool(ui, "\u{1F5D1}", tr("Delete"), "", true) {
-                    acts.push(Act::AskRegistryDelete);
+                    acts.push(Act::Registry(RegistryAct::AskDelete));
                 }
                 sep(ui);
                 if tool(ui, "\u{2605}", tr("Bookmark"), "", true) {
-                    acts.push(Act::BookmarkRegistry);
+                    acts.push(Act::Registry(RegistryAct::Bookmark));
                 }
                 if tool(ui, "\u{1F50D}", tr("Find"), "", true) {
-                    acts.push(Act::RegistrySearch);
+                    acts.push(Act::Registry(RegistryAct::Search));
                 }
                 if tool(ui, "\u{1F512}", tr("Permissions"), "", true) {
-                    acts.push(Act::RegistryRights);
+                    acts.push(Act::Registry(RegistryAct::Rights));
                 }
             }
             Some(Doc::Settings(_)) => {}
             None => {
                 if tool(ui, "\u{1F4C4}", tr("New"), "Ctrl+N", true) {
-                    acts.push(Act::NewProfile(None));
+                    acts.push(Act::File(FileAct::NewProfile(None)));
                 }
                 if tool(ui, "\u{1F4C2}", tr("Open"), "Ctrl+O", true) {
-                    acts.push(Act::Open);
+                    acts.push(Act::File(FileAct::Open));
                 }
             }
         }
@@ -614,7 +622,7 @@ impl App {
             }
             for (name, other) in others {
                 if ui.button(name).clicked() {
-                    acts.push(Act::CompareCatalog(other));
+                    acts.push(Act::Catalog(CatalogAct::Compare(other)));
                     ui.close();
                 }
             }
@@ -628,7 +636,7 @@ impl App {
         }
         for f in &self.imports {
             if ui.button(&f.name).clicked() {
-                acts.push(Act::OpenCatalog(f.id.clone()));
+                acts.push(Act::Catalog(CatalogAct::Open(f.id.clone())));
                 ui.close();
             }
         }
@@ -646,17 +654,17 @@ impl App {
             (tr("Import an archive..."), crate::ImportSource::Archive),
         ] {
             if ui.button(text).clicked() {
-                acts.push(Act::ImportTemplates(source));
+                acts.push(Act::Import(ImportAct::Templates(source)));
                 ui.close();
             }
         }
         if ui.button(tr("New catalog")).clicked() {
-            acts.push(Act::NewCatalog);
+            acts.push(Act::Catalog(CatalogAct::New));
             ui.close();
         }
         ui.separator();
         if ui.button(tr("Settings of the policy templates")).clicked() {
-            acts.push(Act::OpenSettingsSection(SettingsSection::Templates));
+            acts.push(Act::Settings(SettingsAct::OpenSection(SettingsSection::Templates)));
             ui.close();
         }
     }
@@ -669,8 +677,8 @@ impl App {
                 .into_iter()
                 .map(|(label, sel)| {
                     let act = match sel {
-                        Sel::Rule(_) => Act::SelectIn(sel, doc.focus.clone()),
-                        _ => Act::Select(sel),
+                        Sel::Rule(_) => Act::Profile(ProfileAct::SelectIn(sel, doc.focus.clone())),
+                        _ => Act::Profile(ProfileAct::Select(sel)),
                     };
                     (label, Some(act))
                 })
@@ -679,7 +687,10 @@ impl App {
                 let Some(file) = c.catalog(&self.imports) else {
                     return Vec::new();
                 };
-                let mut out = vec![(file.name.clone(), Some(Act::CatalogSelect(String::new())))];
+                let mut out = vec![(
+                    file.name.clone(),
+                    Some(Act::Catalog(CatalogAct::Select(String::new()))),
+                )];
                 let lang = crate::i18n::current();
                 let rule = c
                     .sel
@@ -695,7 +706,7 @@ impl App {
                         break;
                     };
                     let title = crate::catalogview::group_title(file, &lang, found).to_owned();
-                    chain.push((title, Some(Act::CatalogSelect(format!("g:{g}")))));
+                    chain.push((title, Some(Act::Catalog(CatalogAct::Select(format!("g:{g}"))))));
                     group = found.parent.clone();
                 }
                 out.extend(chain.into_iter().rev());
@@ -760,21 +771,27 @@ impl App {
             34.0
         };
         let clone_act = |a: &Act| match a {
-            Act::Select(s) => Some(Act::Select(s.clone())),
-            Act::SelectIn(s, g) => Some(Act::SelectIn(s.clone(), g.clone())),
-            Act::CatalogSelect(s) => Some(Act::CatalogSelect(s.clone())),
+            Act::Profile(ProfileAct::Select(s)) => {
+                Some(Act::Profile(ProfileAct::Select(s.clone())))
+            }
+            Act::Profile(ProfileAct::SelectIn(s, g)) => {
+                Some(Act::Profile(ProfileAct::SelectIn(s.clone(), g.clone())))
+            }
+            Act::Catalog(CatalogAct::Select(s)) => {
+                Some(Act::Catalog(CatalogAct::Select(s.clone())))
+            }
             _ => None,
         };
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
             if let Some((back, forward)) = history {
                 if style::icon_button(ui, "\u{2190}", tr("Back (Alt+Left)"), back, None).clicked() {
-                    acts.push(Act::Back);
+                    acts.push(Act::Profile(ProfileAct::Back));
                 }
                 if style::icon_button(ui, "\u{2192}", tr("Forward (Alt+Right)"), forward, None)
                     .clicked()
                 {
-                    acts.push(Act::Forward);
+                    acts.push(Act::Profile(ProfileAct::Forward));
                 }
                 ui.add_space(6.0);
             }
@@ -835,7 +852,7 @@ impl App {
                     ("\u{2606}", tr("Bookmark this (Ctrl+B)"))
                 };
                 if style::icon_button(ui, icon, label, true, Some(p.accent)).clicked() {
-                    acts.push(Act::ToggleBookmark);
+                    acts.push(Act::Marks(MarksAct::Toggle));
                 }
             }
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
@@ -919,7 +936,7 @@ impl App {
             remember = Some(search.text.trim().to_owned());
         }
         if had_text && search.text.trim().is_empty() {
-            acts.push(Act::SearchCleared);
+            acts.push(Act::Nav(NavAct::SearchCleared));
         }
         if let Some(text) = remember
             && crate::remember_search(&mut self.search_history, &text)
@@ -953,7 +970,7 @@ impl App {
                 ui.label(RichText::new(validate::summary(&doc.issues)).color(p.msg_fg));
                 let toggle = if open { tr("Hide") } else { tr("Show") };
                 if ui.link(toggle).clicked() {
-                    acts.push(Act::ToggleMessages);
+                    acts.push(Act::Nav(NavAct::ToggleMessages));
                 }
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     if style::icon_button(
@@ -965,7 +982,7 @@ impl App {
                     )
                     .clicked()
                     {
-                        acts.push(Act::ClearMessages);
+                        acts.push(Act::Profile(ProfileAct::ClearMessages));
                     }
                 });
             });
@@ -1027,7 +1044,7 @@ impl App {
                                     ),
                                 };
                                 if ui.link(label).clicked() {
-                                    acts.push(Act::Reveal(sel));
+                                    acts.push(Act::Profile(ProfileAct::Reveal(sel)));
                                 }
                                 let link = views::RuleLink::Profile;
                                 let text = issue.text.as_str();
@@ -1091,7 +1108,7 @@ impl App {
                 {
                     let open = ui.small_button(tr("Open the folder"));
                     if open.on_hover_text(path.display().to_string()).clicked() {
-                        acts.push(Act::ShowInFolder(path.clone()));
+                        acts.push(Act::Nav(NavAct::ShowInFolder(path.clone())));
                     }
                 }
                 ui.label(style::muted(ui, self.status.as_str(), 11.0));
@@ -1129,53 +1146,53 @@ pub(crate) fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
             ui.close();
         }
     };
-    item(ui, tr("Read this PC into a new profile"), Act::ReadPc);
+    item(ui, tr("Read this PC into a new profile"), Act::Pc(PcAct::Read));
     item(
         ui,
         tr("Read the selection into this profile"),
-        Act::ReadSelection,
+        Act::Pc(PcAct::ReadSelection),
     );
-    item(ui, tr("Check the selection on this PC"), Act::CheckOnPc);
+    item(ui, tr("Check the selection on this PC"), Act::Pc(PcAct::Check));
     ui.separator();
     item(
         ui,
         tr("Save an apply script for the selection..."),
-        Act::SaveScript(ScriptKind::Apply),
+        Act::Pc(PcAct::SaveScript(ScriptKind::Apply)),
     );
     item(
         ui,
         tr("Save a return-to-defaults script for the selection..."),
-        Act::SaveScript(ScriptKind::Revert),
+        Act::Pc(PcAct::SaveScript(ScriptKind::Revert)),
     );
     item(
         ui,
         tr("Save a registry file for the selection..."),
-        Act::SaveRegFile(false),
+        Act::Pc(PcAct::SaveRegFile(false)),
     );
     item(
         ui,
         tr("Save a return-to-defaults registry file for the selection..."),
-        Act::SaveRegFile(true),
+        Act::Pc(PcAct::SaveRegFile(true)),
     );
     item(
         ui,
         tr("Save an audit script for the selection..."),
-        Act::SaveScript(ScriptKind::Audit),
+        Act::Pc(PcAct::SaveScript(ScriptKind::Audit)),
     );
     ui.separator();
     item(
         ui,
         tr("Apply the selection to this PC..."),
-        Act::PlanNative(false),
+        Act::Pc(PcAct::PlanNative(false)),
     );
     item(
         ui,
         tr("Return the selection to Windows defaults..."),
-        Act::PlanNative(true),
+        Act::Pc(PcAct::PlanNative(true)),
     );
-    item(ui, tr("Undo a change from its backup..."), Act::PlanUndo);
+    item(ui, tr("Undo a change from its backup..."), Act::Pc(PcAct::PlanUndo));
     ui.separator();
-    item(ui, tr("Open an audit report..."), Act::OpenReport);
+    item(ui, tr("Open an audit report..."), Act::File(FileAct::OpenReport));
 }
 
 /// The parts of the breadcrumb that fit a width: all of them, else the first, an ellipsis

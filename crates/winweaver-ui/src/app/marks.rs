@@ -17,30 +17,14 @@ impl App {
     }
 
     /// Asks before a bookmark is removed, naming its comment when it has one.
+    /// Asks before a bookmark is removed.
     pub(crate) fn ask_remove_mark(&mut self, i: usize) {
-        let Some(b) = self.marks.items.get(i) else {
-            return;
-        };
-        let t = marksview::target(
-            &self.catalog,
-            texts_for(&self.texts, &i18n::current()),
-            &self.imports,
-            b,
-        );
-        let text = if b.comment.trim().is_empty() {
-            trf("Remove the bookmark of {title}?", &[("title", &t.title)])
-        } else {
-            trf(
-                "The bookmark of {title} has a comment. Remove it with the comment?",
-                &[("title", &t.title)],
-            )
-        };
-        self.ask = Some(Ask {
-            title: tr("Remove the bookmark").to_owned(),
-            text,
-            yes: tr("Remove").to_owned(),
-            act: Act::RemoveMark(i),
-        });
+        let texts = texts_for(&self.texts, &i18n::current());
+        if let Some(q) =
+            marksview::remove_question(&self.catalog, texts, &self.imports, &self.marks, i)
+        {
+            self.ask(q);
+        }
     }
 
     /// The current position of the active tab as a bookmark, without a comment. The path of an
@@ -97,7 +81,7 @@ impl App {
                     &[("path", &path.display())],
                 );
                 self.remember_recent(&path);
-                self.apply(vec![Act::OpenMarks]);
+                self.apply(vec![Act::Marks(MarksAct::Open)]);
             }
             Err(e) => self.status = trf("Open failed: {e}", &[("e", &e)]),
         }
@@ -156,6 +140,60 @@ impl App {
                 doc.select(sel);
             }
             self.reveal_selection();
+        }
+    }
+
+    /// Runs an act of the acts of the bookmarks.
+    pub(crate) fn apply_marks(&mut self, act: MarksAct) {
+        match act {
+            MarksAct::Toggle => {
+                if let Some(mut mark) = self.current_bookmark() {
+                    if let Some(j) = self.marks.find(&mark)
+                        && !self.marks.items[j].comment.trim().is_empty()
+                    {
+                        self.ask_remove_mark(j);
+                        return;
+                    }
+                    mark.created = clock::now_utc_iso();
+                    let added = self.marks.toggle(mark);
+                    if self.save_marks() {
+                        let text = if added {
+                            tr("Bookmark added ({n} bookmarks in {path})")
+                        } else {
+                            tr("Bookmark removed ({n} bookmarks in {path})")
+                        };
+                        self.status = text
+                            .replace("{n}", &self.marks.items.len().to_string())
+                            .replace("{path}", &self.marks_path.display().to_string());
+                    }
+                }
+            }
+            MarksAct::Open => self.open_marks(),
+            MarksAct::GoTo(i) => self.go_to_mark(i),
+            MarksAct::SetComment(i, text) => {
+                if let Some(b) = self.marks.items.get_mut(i) {
+                    b.comment = text;
+                    self.save_marks();
+                }
+            }
+            MarksAct::Remove(i) => {
+                if i < self.marks.items.len() {
+                    self.marks.items.remove(i);
+                    if let Some(m) = self.marks_doc() {
+                        m.sel = match m.sel {
+                            Some(s) if s == i => None,
+                            Some(s) if s > i => Some(s - 1),
+                            other => other,
+                        };
+                    }
+                    self.save_marks();
+                }
+            }
+            MarksAct::Select(i) => {
+                if let Some(m) = self.marks_doc() {
+                    m.sel = Some(i);
+                }
+            }
         }
     }
 }

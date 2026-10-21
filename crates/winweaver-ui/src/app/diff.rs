@@ -229,4 +229,46 @@ impl App {
             Err(e) => self.status = trf("Save failed: {e}", &[("e", &e)]),
         }
     }
+
+    /// Runs an act of the acts of the comparison of profiles and of the diff tab.
+    pub(crate) fn apply_diff(&mut self, act: DiffAct) {
+        match act {
+            DiffAct::Unsaved => self.diff_unsaved(),
+            DiffAct::Compare => {
+                if let Some(path) = pick_profile() {
+                    match Profile::load(&path) {
+                        Ok(other) => self.compare_active(other, Some(&path)),
+                        Err(e) => self.status = trf("Compare: {e}", &[("e", &e)]),
+                    }
+                }
+            }
+            DiffAct::CompareWith(name) => {
+                if let Some((name, text)) = PRESETS.iter().find(|p| p.0 == name) {
+                    match Profile::parse(text, name) {
+                        Ok(other) => self.compare_active(other, None),
+                        Err(e) => self.status = trf("Compare: {e}", &[("e", &e)]),
+                    }
+                }
+            }
+            DiffAct::Apply => self.apply_active_diff(),
+            DiffAct::SaveAs => self.save_active_diff(),
+            DiffAct::Select(key) => {
+                if let Some(Doc::Diff(d)) = self.docs.get_mut(self.active) {
+                    d.sel = Some(key);
+                }
+            }
+            DiffAct::Comment(key, text) => {
+                if let Some(Doc::Diff(d)) = self.docs.get_mut(self.active) {
+                    if text.trim().is_empty() {
+                        d.diff.comments.shift_remove(&key);
+                    } else {
+                        d.diff.comments.insert(key, text);
+                    }
+                    d.dirty = true;
+                }
+            }
+            DiffAct::GoTo(key, other) => self.go_to_diff_item(&key, other),
+            DiffAct::ApplyItem(key) => self.apply_diff_item(&key),
+        }
+    }
 }

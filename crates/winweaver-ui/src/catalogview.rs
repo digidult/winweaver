@@ -11,7 +11,7 @@ use winweaver_core::admx::CatalogFile;
 use winweaver_core::catalog::{Group, Rule};
 
 use crate::i18n::{tr, trf};
-use crate::{Act, Search, style, tree};
+use crate::{Act, CatalogAct, NavAct, ProfileAct, Search, style, tree};
 
 /// An open tab of a catalog.
 pub struct CatalogDoc {
@@ -221,7 +221,7 @@ pub fn catalog_view(
         tree::Scroll::None
     };
     if selected.is_none() && scroll != tree::Scroll::None {
-        acts.push(Act::Revealed);
+        acts.push(Act::Nav(NavAct::Revealed));
     }
     let p = style::palette(ui);
     egui::Panel::left("catalog-tree")
@@ -242,21 +242,21 @@ pub fn catalog_view(
                 match event {
                     tree::Event::Select(k) => {
                         let key = k.strip_prefix("r:").map_or(k.clone(), str::to_owned);
-                        acts.push(Act::CatalogSelect(key));
+                        acts.push(Act::Catalog(CatalogAct::Select(key)));
                     }
                     tree::Event::Expand(k, open) => {
                         if let Some(g) = k.strip_prefix("g:") {
-                            acts.push(Act::CatalogExpand(g.to_owned(), open));
+                            acts.push(Act::Catalog(CatalogAct::Expand(g.to_owned(), open)));
                         }
                     }
                     tree::Event::Toggle(_) | tree::Event::Switch(..) => {}
                 }
             }
             if out.moved {
-                acts.push(Act::Follow);
+                acts.push(Act::Nav(NavAct::Follow));
             }
             if out.scrolled {
-                acts.push(Act::Revealed);
+                acts.push(Act::Nav(NavAct::Revealed));
             }
         });
     egui::CentralPanel::default().show(ui, |ui| {
@@ -336,7 +336,7 @@ fn detail(
         if doc.file.is_none() {
             ui.add_space(8.0);
             if ui.button(tr("Show in the profile tree")).clicked() {
-                acts.push(Act::ShowInProfile(file.id.clone(), rule.id.clone()));
+                acts.push(Act::Profile(ProfileAct::ShowInProfile(file.id.clone(), rule.id.clone())));
             }
         }
     });
@@ -369,7 +369,7 @@ fn detail(
             for f in others {
                 let text = trf("Show in the catalog {name}", &[("name", &f.name)]);
                 if ui.link(text).clicked() {
-                    acts.push(Act::OpenCatalogAt(f.id.clone(), rule.id.clone()));
+                    acts.push(Act::Catalog(CatalogAct::OpenAt(f.id.clone(), rule.id.clone())));
                 }
             }
         });
@@ -391,7 +391,7 @@ fn group_links(
         ui.horizontal_wrapped(|ui| {
             ui.weak(tr("In the group"));
             if ui.link(group_title(file, lang, parent)).clicked() {
-                acts.push(Act::CatalogReveal(format!("g:{}", parent.id)));
+                acts.push(Act::Catalog(CatalogAct::Reveal(format!("g:{}", parent.id))));
             }
         });
     }
@@ -409,7 +409,7 @@ fn group_links(
         ui.add_space(4.0);
         for g in children {
             if ui.link(group_title(file, lang, g)).clicked() {
-                acts.push(Act::CatalogReveal(format!("g:{}", g.id)));
+                acts.push(Act::Catalog(CatalogAct::Reveal(format!("g:{}", g.id))));
             }
         }
     }
@@ -419,7 +419,7 @@ fn group_links(
         ui.add_space(4.0);
         for r in policies {
             if ui.link(rule_texts(file, lang, r).0).clicked() {
-                acts.push(Act::CatalogReveal(r.id.clone()));
+                acts.push(Act::Catalog(CatalogAct::Reveal(r.id.clone())));
             }
         }
     }

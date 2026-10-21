@@ -34,7 +34,7 @@ impl App {
         }
     }
 
-    pub(crate) fn apply_theme(&mut self, ctx: &egui::Context) {
+    pub(crate) fn apply_visuals(&mut self, ctx: &egui::Context) {
         let wanted = self.wanted_theme();
         if self.applied_theme.as_ref() == Some(&wanted) {
             return;
@@ -142,6 +142,40 @@ impl App {
         {
             winweaver_win::color_title_bar(w.hwnd.get(), colors.0, colors.1, colors.2, colors.3);
             self.title_colors = Some(colors);
+        }
+    }
+
+    /// Runs an act of the acts of the themes.
+    pub(crate) fn apply_theme(&mut self, act: ThemeAct) {
+        match act {
+            ThemeAct::Edit(id) => {
+                let theme = themes::find(&self.themes, &id);
+                self.edit_theme(theme);
+            }
+            ThemeAct::OpenFile => {
+                let dir = themes_dir();
+                let dialog = rfd::FileDialog::new()
+                    .add_filter(tr("WinWeaver theme"), &[themes::EXTENSION, "json"])
+                    .set_title(tr("Open a theme file"));
+                let dialog = if dir.is_dir() {
+                    dialog.set_directory(dir)
+                } else {
+                    dialog
+                };
+                if let Some(path) = dialog.pick_file() {
+                    self.open_theme_path(path);
+                }
+            }
+            ThemeAct::Use(id) => {
+                let dark = themes::find(&self.themes, &id).dark;
+                self.settings.theme = if dark {
+                    ThemeChoice::Dark
+                } else {
+                    ThemeChoice::Light
+                };
+                self.settings.custom_theme = id;
+                self.settings_dirty = true;
+            }
         }
     }
 }

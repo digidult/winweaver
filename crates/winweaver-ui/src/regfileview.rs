@@ -19,7 +19,7 @@ use winweaver_core::registry::{self, Data};
 use crate::i18n::{tr, trf};
 use crate::regview::value_title;
 use crate::views::{self, rtitle};
-use crate::{Act, Search, list, style, tree};
+use crate::{Act, ProfileAct, Question, RegFileAct, RegistryAct, Search, list, style, tree};
 
 /// The types the editor of a value offers.
 const TYPES: [&str; 7] = [
@@ -262,6 +262,17 @@ impl RegFileDoc {
             follow_line: false,
             writers: None,
         }
+    }
+
+    /// The question before the removal of the selected key or line, with the act of a yes.
+    pub fn remove_question(&self) -> Option<Question> {
+        let (lines, text) = self.removal()?;
+        Some(Question::new(
+            tr("Remove from the file"),
+            text,
+            tr("Remove"),
+            RegFileAct::Remove(lines),
+        ))
     }
 
     pub fn title(&self) -> String {
@@ -672,7 +683,7 @@ fn rule_link(
     };
     ui.horizontal_wrapped(|ui| {
         if ui.link(rtitle(texts, rule)).clicked() {
-            acts.push(Act::ShowInProfile(String::new(), id.to_owned()));
+            acts.push(Act::Profile(ProfileAct::ShowInProfile(String::new(), id.to_owned())));
         }
         views::catalog_links(ui, imports, id, acts);
     });
@@ -716,7 +727,7 @@ fn key_head(
                 style::chip(ui, tr("Default user profile"), false);
             }
             if ui.link(tr("Open in the registry")).clicked() {
-                acts.push(Act::OpenRegistry(path.clone(), value.clone()));
+                acts.push(Act::Registry(RegistryAct::Open(path.clone(), value.clone())));
             }
         });
         if in_default_user(path) {
@@ -906,19 +917,22 @@ fn lines_list(
             list::Event::Button(i) => match &doc.file.lines[i] {
                 Line::Value { name, .. } => {
                     if let Some(k) = &key_path {
-                        acts.push(Act::OpenRegistry(k.clone(), Some(name.clone())));
+                        acts.push(Act::Registry(RegistryAct::Open(k.clone(), Some(name.clone()))));
                     }
                 }
                 Line::Comment(t) => {
                     if let Some(id) = rule_of_comment(t) {
-                        acts.push(Act::ShowInProfile(String::new(), id.to_owned()));
+                        acts.push(Act::Profile(ProfileAct::ShowInProfile(
+                            String::new(),
+                            id.to_owned(),
+                        )));
                     }
                 }
                 _ => {}
             },
             list::Event::Delete(i) => {
                 doc.line = Some(i);
-                acts.push(Act::AskRegFileRemove);
+                acts.extend(doc.remove_question().map(Act::from));
             }
         }
     }

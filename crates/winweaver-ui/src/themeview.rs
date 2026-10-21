@@ -7,7 +7,7 @@ use eframe::egui;
 use crate::i18n::{tr, trf};
 use crate::style;
 use crate::themes::{self, Theme};
-use crate::{Act, views};
+use crate::{Act, ThemeAct, views};
 
 pub struct ThemeDoc {
     pub theme: Theme,
@@ -198,7 +198,7 @@ pub fn theme_view(
                     .on_hover_text(tr("The window keeps this theme after the tab closes; save it first to keep the changes"))
                     .clicked()
                 {
-                    acts.push(Act::UseTheme(theme.id.clone()));
+                    acts.push(Act::Theme(ThemeAct::Use(theme.id.clone())));
                 }
             });
             views::block(ui, |ui| {

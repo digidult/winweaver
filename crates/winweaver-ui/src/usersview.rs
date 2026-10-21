@@ -11,7 +11,7 @@ use zeroize::Zeroizing;
 
 use crate::i18n::{tr, trf};
 use crate::tree::Scroll;
-use crate::{Act, Search, list, style};
+use crate::{Act, Question, Search, UsersAct, list, style};
 
 /// Why the master password is asked.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -84,6 +84,21 @@ impl UsersDoc {
             show_password: false,
             error: String::new(),
         }
+    }
+
+    /// The question before the removal of the selected account from the file.
+    pub fn remove_question(&self) -> Option<Question> {
+        let i = self.selected?;
+        let name = self.selected_user()?.name.clone();
+        Some(Question::new(
+            tr("Remove the account from the file"),
+            trf(
+                "Remove {name} from the file? An account of a PC stays.",
+                &[("name", &name)],
+            ),
+            tr("Remove"),
+            UsersAct::Remove(i),
+        ))
     }
 
     pub fn title(&self) -> String {
@@ -353,7 +368,7 @@ fn list_panel(ui: &mut egui::Ui, doc: &mut UsersDoc, acts: &mut Vec<Act>) {
     for event in out.events {
         match event {
             list::Event::Select(i) | list::Event::Open(i) => doc.selected = Some(i),
-            list::Event::Delete(_) => acts.push(Act::AskUsersRemove),
+            list::Event::Delete(_) => acts.extend(doc.remove_question().map(Act::from)),
             list::Event::Button(_) => {}
         }
     }
