@@ -1,11 +1,11 @@
 use super::*;
-use serde_json::Value;
 use crate::catalog::{Action, Catalog, ListNames, Param, Phase, ROOT_POLICIES, RegKind};
 use crate::i18n::CatalogTexts;
+use serde_json::Value;
 
-use super::xml::parse_xml;
-use super::templates::read_pair;
 use super::rules::safe_key;
+use super::templates::read_pair;
+use super::xml::parse_xml;
 
 const ADMX: &str = r#"<?xml version="1.0" encoding="utf-8"?>
 <policyDefinitions xmlns="http://schemas.microsoft.com/GroupPolicy/2006/07/PolicyDefinitions" revision="1.0" schemaVersion="1.0">
@@ -212,9 +212,7 @@ fn a_policy_of_two_imports_shows_in_both_trees_and_they_compare() {
         .count();
     let same = compare(&first, &second);
     assert_eq!(same.same, policies);
-    assert!(
-        same.only_first.is_empty() && same.only_second.is_empty() && same.changed.is_empty()
-    );
+    assert!(same.only_first.is_empty() && same.only_second.is_empty() && same.changed.is_empty());
     second
         .rules
         .retain(|r| r.id != "admx.sample.level" && r.id != "admx.sample.level.off");
@@ -554,8 +552,7 @@ fn lists_of_templates_are_built_applied_and_checked() {
     );
     let lines = catalog.rule("admx.sample.lines").unwrap();
     let params = crate::render::params_of(&catalog, &profile, lines);
-    let list =
-        crate::render::script_lines(lines, &lines.actions[0], &params, lines.phase).unwrap();
+    let list = crate::render::script_lines(lines, &lines.actions[0], &params, lines.phase).unwrap();
     assert_eq!(
         list[0],
         "Set-RegList -Path 'HKLM:\\Software\\Policies\\Test\\N' -Type String -Names @('1','2') -Values @('x','y')"
@@ -615,9 +612,7 @@ fn xml_without_dtd_or_unknown_entities() {
     let deep = format!("{}{}", "<a>".repeat(80), "</a>".repeat(80));
     assert!(parse_xml(&deep).is_err());
     assert!(
-        safe_key("Software\\Policies\\X")
-            && !safe_key("Software\\..\\X")
-            && !safe_key("A\\\\B")
+        safe_key("Software\\Policies\\X") && !safe_key("Software\\..\\X") && !safe_key("A\\\\B")
     );
 }
 
