@@ -14,7 +14,7 @@ use crate::regfileview::RegFileDoc;
 use crate::regview::RegistryDoc;
 use crate::themeview::ThemeDoc;
 use crate::usersview::UsersDoc;
-use crate::{ProfileDoc, Search, Tab, icons, themes};
+use crate::{MdDoc, ProfileDoc, Search, Tab, icons, themes};
 use winweaver_core::{diff, profile};
 
 /// The kind of a tab: what the chrome shows for it.
