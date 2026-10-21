@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 21.10.2026 (the refactoring plan `docs/refactoring.md`, the Linux job checks the whole workspace for Windows; 0.22.1: a profile named outside ASCII builds its answer file, the form names the sample values of the example of a name template, the script of a users file takes any name of the file; 0.22.0: a users file of the accounts of a profile, the password of an account shown and copied, the unsaved changes of a profile as a diff; 0.21.0: users files (.wwusers) with their passwords encrypted, read from this PC, made natively, as a script and into a profile; 0.20.0: every input language and keyboard layout of Windows in the form Languages, no embedded list; 0.19.1: the placeholders of the computer name template described in the form and the guide; 0.19.0: files inside the program folder kept relative to it in the settings, bookmarks, drafts and diffs; 0.18.3: the answer of the question that closes a tab no longer reads as Cancel in uk, ru and be, the release notes of 0.18.3; 0.18.2: the acceptance of 0.18.1 recorded, the release notes of 0.18.2; 0.18.1: the acceptance of 0.16.1 recorded, the messages of the status bar translated, Open the folder after every save, the release notes of 0.18.1; 0.18.0: Open the folder of a built or saved file and of the folders of the program; 0.17.0: the MCP tools of the permissions of registry keys; 0.16.2: the acceptance of 0.11.0 recorded, the release notes of 0.16.2; 0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
+Updated with every change of structure, commands or task status. Last update: 21.10.2026 (0.23.0: the refactoring of October 2026 done, the code by theme in folders, the same behaviour, pull request #59; the refactoring plan `docs/refactoring.md`, the Linux job checks the whole workspace for Windows; 0.22.1: a profile named outside ASCII builds its answer file, the form names the sample values of the example of a name template, the script of a users file takes any name of the file; 0.22.0: a users file of the accounts of a profile, the password of an account shown and copied, the unsaved changes of a profile as a diff; 0.21.0: users files (.wwusers) with their passwords encrypted, read from this PC, made natively, as a script and into a profile; 0.20.0: every input language and keyboard layout of Windows in the form Languages, no embedded list; 0.19.1: the placeholders of the computer name template described in the form and the guide; 0.19.0: files inside the program folder kept relative to it in the settings, bookmarks, drafts and diffs; 0.18.3: the answer of the question that closes a tab no longer reads as Cancel in uk, ru and be, the release notes of 0.18.3; 0.18.2: the acceptance of 0.18.1 recorded, the release notes of 0.18.2; 0.18.1: the acceptance of 0.16.1 recorded, the messages of the status bar translated, Open the folder after every save, the release notes of 0.18.1; 0.18.0: Open the folder of a built or saved file and of the folders of the program; 0.17.0: the MCP tools of the permissions of registry keys; 0.16.2: the acceptance of 0.11.0 recorded, the release notes of 0.16.2; 0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
 the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
@@ -44,7 +44,7 @@ functionality carry over; the file formats are new and no program code is ported
 | File types, formats, what lives next to the executable | `docs/spec/02-documents.md` |
 | What the program must do (feature inventory) | `docs/spec/03-features.md` |
 | Crates, modules, threads, build | `docs/spec/04-architecture.md` |
-| Use or change the MCP server | `crates/winweaver-mcp/src/lib.rs`, `tools.rs`, then `agents/skills/winweaver/SKILL.md` |
+| Use or change the MCP server | `crates/winweaver-mcp/src/lib.rs`, `tools/mod.rs` (the table of the tools), then `agents/skills/winweaver/SKILL.md` |
 | Change what an AI agent or the archive gets | `agents/README.md`, `package/README.md` |
 | Refactor the code (the plan of October 2026, its steps and its CI rules) | `docs/refactoring.md` |
 
@@ -64,55 +64,87 @@ functionality carry over; the file formats are new and no program code is ported
 │                          tests, the catalog check, the release build and the zip on Windows; a tag v<version>
 │                          publishes a release with docs/releases/v<version>.md
 ├── crates/
-│   ├── winweaver-core/    pure Rust, compiles everywhere: catalog (model, embedded data, checks), jsonfile
-│   │                      (strict reading), i18n (catalog translations), paths (a file inside the program
-│   │                      folder kept relative to it), profile (.wwprofile), resolver,
-│   │                      validate (the check of a profile), resources (time zones, editions with their keys,
-│   │                      the input languages and layouts Windows lists), diff (.wwdiff), bookmarks (.wwmarks), clock, render (autounattend.xml
-│   │                      from the templates), thispc (the plan of checks of a running Windows, the judgement
-│   │                      of the rules, the capture into a profile, the report of the audit script, an
-│   │                      in-memory machine), scripts (stand-alone Apply, Revert, Audit and Undo scripts),
-│   │                      import (an answer file or a WinKickOff profile as a profile), apply (the plan of a
-│   │                      native apply, return or undo, the backup format of the scripts), admx (ADMX and ADML to
-│   │                      rules, catalog files .wwcatalog, their check, merge), registry (keys and values in the types
-│   │                      of regedit, paths of regedit, the rules that write a key, a registry in memory), regfile (`.reg`
+│   ├── winweaver-core/    pure Rust, compiles everywhere: catalog/ (model, embedded data, checks, values: the
+│   │                      texts, numbers and items of the values of actions, read once), jsonfile (strict
+│   │                      reading, the trait Document: the parse with its format and version check, the load
+│   │                      and the atomic save of the four JSON documents, DocError), i18n (catalog
+│   │                      translations), paths (a file inside the program folder kept relative to it),
+│   │                      profile (.wwprofile, set_param and set_group of an edit), resolver, validate (the
+│   │                      check of a profile by what it checks), resources (time zones, editions with their
+│   │                      keys, the input languages and layouts Windows lists), diff (.wwdiff, ItemKey: the
+│   │                      keys of its items), bookmarks (.wwmarks), clock, render/ (autounattend.xml from the
+│   │                      templates: text, params, ps, xml, languages, name, accounts, answer: one function a
+│   │                      pass), thispc/ (plan, report, evaluate, judge, capture, memory: the checks of a
+│   │                      running Windows, the judgement of the rules, the capture into a profile, the report
+│   │                      of the audit script, an in-memory machine), scripts (stand-alone Apply, Revert,
+│   │                      Audit and Undo scripts), import (an answer file or a WinKickOff profile as a
+│   │                      profile), apply (the plan of a native apply, return or undo, the backup format of
+│   │                      the scripts), admx/ (xml, templates, rules, file, compare, archive, merge: ADMX and
+│   │                      ADML to rules, catalog files .wwcatalog, their check, merge), registry/ (data: the
+│   │                      one type of a value in the types of regedit, search, memory: keys and values, paths
+│   │                      of regedit, the rules that write a key, a registry in memory), regfile (`.reg`
 │   │                      files: every line kept, the registry steps of a plan as a file), security (the
-│   │                      owner and the access list of a key in SDDL), users (.wwusers files: the accounts, the
-│   │                      checks, the plan of an operation, the script), userstore (their passwords encrypted);
-│   │                      tests/ on the real data
-│   ├── winweaver-win/     the Windows API: native.rs (thispc::Machine: the registry, the elevation, the locale
-│   │                      names, the language of Windows, the local accounts and their groups), dism.rs
-│   │                      (the features and capabilities through dismapi.dll), apps.rs (the removal of
-│   │                      apps through the package API of Windows), execute.rs
-│   │                      (the executor of an apply plan with its backup, the start of the executable as
-│   │                      administrator), locales.rs (the input languages and layouts of Windows), users.rs
-│   │                      (the accounts of this PC read, created and changed for a users file)
-│   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal, token), config.rs (the
-│   │                      .wwmcp configuration files), log.rs (the JSON lines log, the crash handlers), tools.rs (the
-│   │                      36 tools and 3 resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and
-│   │                      Origin checks); tests/server.rs (both transports on a free loopback port)
-│   ├── winweaver-ui/      the window on eframe (variant A): lib.rs (tabs, menu, command bar, navigation,
-│   │                      search, shortcuts, file dialogs, This PC, build, session, the actions applied after
-│   │                      each frame), views.rs (tree, detail panel), forms.rs (Installation, Accounts,
-│   │                      Languages), diffview.rs, mdview.rs (Markdown tabs, the guide), marksview.rs,
-│   │                      mcpview.rs (the MCP tab), session.rs (drafts, the log), settings.rs (settings.json),
-│   │                      i18n.rs (tr and trf, the translations of the interface), themes.rs (theme files:
-│   │                      colours and fonts), themeview.rs (the editor of a theme as a tab),
-│   │                      catalogview.rs (the tab of an import or of a catalog file: its tree without check
-│   │                      boxes, a policy), chrome.rs (the tab row, the command bar of the active tab, the
-│   │                      navigation row with the search of the tab, the message bar, the status bar),
-│   │                      style.rs (the palette of light and dark, Segoe UI and Consolas, the painted buttons,
-│   │                      cards and chips), tree.rs (the painted tree of a profile and of a catalog tab: one
-│   │                      stop of Tab, the keys inside), list.rs (the painted list with columns of the
-│   │                      diff, the bookmarks and the MCP journal: widths by drag, the keys, a mini button),
-│   │                      renderer.rs (the renderers built in, the order Automatic tries, the start of a window),
-│   │                      regview.rs (the registry tab: the tree of keys, the values, the editor of a value),
+│   │                      owner and the access list of a key in SDDL), users (.wwusers files: the accounts,
+│   │                      the checks, the plan of an operation, the script), userstore (their passwords
+│   │                      encrypted); tests/ on the real data, src/<module>/tests.rs for the folders
+│   ├── winweaver-win/     the Windows API: ffi.rs (the wrappers once: wide strings, the NetApi buffer, a
+│   │                      SID, the accounts enumerated, the text of an error, a DACL set), native.rs
+│   │                      (thispc::Machine: the elevation, the locale names, the language of Windows, the
+│   │                      local accounts and their groups), registry.rs (NativeRegistry, the rights of a
+│   │                      key), accounts.rs (the flags of accounts), dism.rs (the features and capabilities
+│   │                      through dismapi.dll), apps.rs (the removal of apps through the package API of
+│   │                      Windows), execute/ (the executor of an apply plan with its backup, one function an
+│   │                      operation in ops.rs, the hive of the default user in hive.rs, the start of the
+│   │                      executable as administrator), locales.rs (the input languages and layouts of
+│   │                      Windows), users.rs (the accounts of this PC read, created and changed for a users
+│   │                      file)
+│   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal with Outcome, token),
+│   │                      config.rs (the .wwmcp configuration files), log.rs (the JSON lines log, the crash
+│   │                      handlers), tools/ (mod.rs: the table TOOLS of the 36 tools, each with its name,
+│   │                      description, schema, what it needs and its handler; Args, ToolError with its Kind;
+│   │                      profiles, rules, bookmarks, catalogs, registry: the handlers by theme; the 3
+│   │                      resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and Origin checks);
+│   │                      tests/server.rs (both transports on a free loopback port)
+│   ├── winweaver-ui/      the window on eframe (variant A): lib.rs (the types of the window: Sel, ProfileDoc,
+│   │                      Search, App and App::new, the helpers of the frame), app/ (the methods of App by
+│   │                      theme, one file one impl block: frame (eframe::App: the chrome, the active tab
+│   │                      drawn by its kind, the dialogs, the work after the frame), apply (the keyboard, the
+│   │                      question over the window, apply: the dispatcher to the apply_* of each subsystem),
+│   │                      profile, files (open_file, the recent files), pc, users, diff, imports, registry,
+│   │                      marks, session (one tab of a kind, the status helpers saved and opened, the drafts,
+│   │                      the tabs remembered, the log), mcp, settings, themes), act.rs (Act: one variant a
+│   │                      subsystem, ProfileAct, NavAct, FileAct, SettingsAct, ThemeAct, PcAct, UsersAct,
+│   │                      DiffAct, MarksAct, McpAct, CatalogAct, ImportAct, RegistryAct, RegFileAct, Ask and
+│   │                      Answer), question.rs (Question: a question over the window and its constructors),
+│   │                      doc.rs (Doc: every tab a boxed document, the trait Tab: title, dirty, path, search;
+│   │                      DocKind: icon, search hint, what the chrome shows; SettingsDoc, SettingsSection),
+│   │                      commands.rs (the command bar of each tab as data: Command, Separator, Menu; the keys
+│   │                      of the commands with their texts, once), icons.rs (every icon named once),
+│   │                      widgets.rs (Modal, side_panel, list_split, in_folder), folders.rs (the folders next
+│   │                      to the executable), importlist.rs (the catalog files of the imports), dialogs.rs
+│   │                      (the file dialogs, file_stem), views/ (mod: the titles, the links, the cards;
+│   │                      profile_tree: the tree of a profile; detail: the detail panel; rule: the detail of a
+│   │                      rule), forms.rs (Installation, Accounts, Languages), diffview.rs, mdview.rs
+│   │                      (Markdown tabs, the guide), marksview.rs (MarksDoc), mcpview.rs (McpDoc, the MCP
+│   │                      tab), session.rs (drafts, the log), settings.rs (settings.json), i18n.rs (tr and
+│   │                      trf, the translations of the interface), themes.rs (theme files: colours and
+│   │                      fonts), themeview.rs (the editor of a theme as a tab), catalogview.rs (the tab of
+│   │                      an import or of a catalog file: TreeKey, the rows of a catalog tree shared with
+│   │                      the editor), chrome/ (mod: what the chrome shows; tabs: the tab row and the menu;
+│   │                      bar: the command bar and its menus; nav: the navigation row and the search;
+│   │                      status: the message bar and the status bar), style.rs (the palette of light and
+│   │                      dark, Segoe UI and Consolas, the painted buttons, cards and chips), tree.rs (the
+│   │                      painted tree: one stop of Tab, the keys inside, Scroll::wanted), list.rs (the
+│   │                      painted list with columns of the diff, the bookmarks and the MCP journal: widths
+│   │                      by drag, the keys, a mini button), renderer.rs (the renderers built in, the order
+│   │                      Automatic tries, the start of a window), regview.rs (the registry tab: the tree of
+│   │                      keys, the values, the editor of a value, Writers: the rules that write a key),
+│   │                      regedit.rs (the type and data fields of a value, shared by the two editors),
 │   │                      cataledit.rs (the editor of a catalog file: its tree, the form of a policy),
-│   │                      regfileview.rs (the tab of a `.reg` file: the outline, the values of a key),
-│   │                      usersview.rs (the tab of a users file: the list, the form, the master password)
-│   └── winweaver/         the executable: the window, --renderer, --mcp stdio, --mcp http, --elevated-apply
-│                          <plan> <digest> (the helper: only a plan-*.json of output/ with that SHA-256),
-│                          --version, --check-catalog, --smoke-window (CI)
+│   │                      regfileview/ (the tab of a `.reg` file: mod: the document and its outline items;
+│   │                      view: the outline and the values of a key; editor; tests), usersview.rs (the tab
+│   │                      of a users file: the list, the form, the master password), tests/ (the window
+│   │                      tests by theme: window, files, catalogs, registry, pc)
 ├── data/                  embedded into the executable at build time
 │   ├── reference/         the parameter reference of the predecessor (00-20 and README), carried over with the
 │   │                      catalog data; the `doc` field of a rule links into it with a heading anchor
@@ -407,7 +439,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   `delete_registry_value`, `create_registry_key`, `delete_registry_key`, `read_registry_rights` (read) and
   `set_registry_rights` (write: replaces the entries of the key itself; an account is a name `account_sid`
   knows, a checked `S-1-` identifier or an alias of two capitals, so no text of the caller reaches the SDDL).
-- Registry files (`winweaver_core::regfile`, `Doc::RegFile`, `regfileview.rs`): `RegFile::parse` keeps every
+- Registry files (`winweaver_core::regfile`, `Doc::RegFile`, `regfileview/`): `RegFile::parse` keeps every
   line (`Line::Blank`, `Comment`, `Key` with its deletion, `Value` with `None` for a deletion, `Other` for a
   line it does not read), joins the values continued by `\`, and `to_text` writes them back with CR LF;
   `save` writes UTF-16 LE with its mark for version 5 and the text as it is for REGEDIT4. A text of several
@@ -596,6 +628,23 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   separator. The ids of imports made of a folder, an archive or an ADMX file hash the kept form too
   (`kept_name` of the window). A new file that keeps a path converts the same way.
 
+- The structure of 0.23.0 (the refactoring, `docs/refactoring.md`): a change of the window is an `Act`
+  of one subsystem (`act.rs`), run by the `apply_<subsystem>` method in `app/<theme>.rs`; a question before
+  a removal is `Act::Ask(Question)` built where the data is (`question.rs`, `remove_question` of a users
+  file, a registry file and the bookmarks) and answered by `Act::Answer`; the only acts that still ask by
+  themselves are `UsersAct::AskRun` and `RegistryAct::AskDelete`, since they check first. Every tab is a
+  boxed document in `Doc` that answers `Tab` (`doc.rs`); the frame draws it by `DocKind`. The command bar
+  is `App::commands` (`commands.rs`): a new button is one `Item`, its key one `Keys` constant, its icon one
+  constant of `icons.rs`. A new left panel, modal window or file dialog uses `widgets.rs`; a new search
+  filter `matches_words`; a tree or list that reveals its selection `tree::Scroll::wanted`. In the core a
+  new JSON document implements `jsonfile::Document`; a new value of an action is read through
+  `catalog::values`; in the Windows crate a new API call takes its wrappers from `ffi.rs`; in the MCP
+  server a new tool is one row of `TOOLS` with its handler in `tools/<theme>.rs`.
+- The CI way of the refactoring: the Linux job checks the whole workspace for Windows (clippy on the
+  target `x86_64-pc-windows-gnu`), so `gh workflow run ci.yml --ref <branch> -f windows=false` is the
+  cheap check of a change of any crate; the Windows job runs when the tests of the window, the runner's
+  registry or the archive are needed.
+
 ## 7. Work status
 
 | Area | State | Date |
@@ -613,7 +662,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Native apply | The script steps of the catalog applied natively (0.15.0): media, services, keys, accounts, the copies of the answer file | 18.10.2026 |
 | Registry | The permissions of keys: owner, access list, own entries changed after a question (0.16.0) | 18.10.2026 |
 | Users files | `.wwusers`: the accounts of a PC with their passwords encrypted, the tab, read from this PC, created natively, the stand-alone script, into a profile (0.21.0) | 20.10.2026 |
-| Refactoring | Started 21.10.2026 on the branch `refactor` after the customer's review of the code: the plan in `docs/refactoring.md` (the core, the Windows crate, the MCP server, the window; then the framework W# in a plan of its own). Group 0 done: the Linux job checks the whole workspace for Windows (`-f windows=false` stops after it), `Cargo.lock` locked | 21.10.2026 |
+| Refactoring | Part 1 done 21.10.2026 on the branch `refactor`, pull request #59 (0.23.0): the plan `docs/refactoring.md`, its section 10 for what was done and what was left (fourteen functions over 120 lines, the save of a document by its trait). Part 2, the framework W# with the editor `wedit`, gets its own plan after the merge | 21.10.2026 |
 | Not yet | Nothing of the plan; what comes next comes from the use | |
 | Acceptance | Build 0.11.0 accepted by the customer in a VM on 18.10.2026: all 31 steps of the scenario passed, the four stand-alone scripts (apply, undo, return to defaults, audit) checked for the first time, with the native apply and undo, This PC, the registry search and the catalog editor; earlier the answer file and a `.wwdiff` of a real PC. Build 0.16.1 accepted on 19.10.2026: all 16 steps of parts G, E and F of the same page (the links, registry files and their save from This PC, the script steps applied natively, the permissions of keys). Build 0.18.1 accepted on 19.10.2026: all 19 steps of parts H, I and J (the build, Open the folder, the permissions of a key through MCP from PowerShell 5.1 with a refused SDDL text, the translated messages of the status bar); every step of the page passed. Build 0.20.0 accepted on 20.10.2026: the 23 steps of parts K to P (paths inside the program folder, the help of the name template, the languages and layouts of Windows, a VM installed with that answer file; three steps of the VM skipped, the name checked before), with two notes answered on the page of 0.22.1 (the sample serial number of the example; a `Setup-User.ps1` of three languages, checked again in part R). Parts Q to V of 0.22.1 wait: a profile named outside ASCII, users files in a VM | 20.10.2026 |
 

@@ -284,3 +284,54 @@ a day of the way the work went before.
 - `tree::show` (184 lines) and `list::show` (249 lines) are one painted widget each; they split only
   if the W# work asks for it.
 - Performance: nothing here is measured as slow; the goal is navigation and one copy of each thing.
+
+## 10. What was done (21.10.2026)
+
+Part 1 is on the branch `refactor`, pull request #59, version 0.23.0: twelve Linux runs of the cross check
+and the Windows run of the window tests, as section 8 planned; the acceptance build is the archive of
+that run.
+
+Done as planned: A1 to A8 (the folders `admx/`, `render/`, `thispc/`, `registry/`; the trait `Document`;
+`catalog::values`; `validate` by what it checks; `ffi.rs` and `execute/`; `registry::Data` as the one
+value type, `RegData` gone), B1 to B3 (the table `TOOLS`, `Args` and `Kind`, the edits of a profile in
+the core), C1 to C7 (`app/` by theme; `MarksDoc`, `McpDoc`, `SettingsDoc`, the trait `Tab` and
+`DocKind`, the frame by kind; the acts by subsystem and `Question`; `commands.rs`, `icons.rs`, the keys
+once, the layout constants; `widgets.rs`, `Scroll::wanted`, `matches_words`, the status helpers,
+`show_or_open`, `focus_tab`, `open_tab`, `in_folder`; `regedit.rs`, the password fields, one `Writers`,
+one `catalog_rows` with `TreeKey`, `open_file`, the title of a tab from its path; `ItemKey`,
+`RegKind::type_name`, `NEW_TYPES`, `Outcome`, the named sizes and delays), and D. Beyond the plan the
+files still over a thousand lines became folders: `views/`, `regfileview/`, `chrome/`, the window tests
+in `tests/` by theme, `execute/`; the free functions of the window's `lib.rs` went to `folders.rs`,
+`importlist.rs` and `dialogs.rs`.
+
+Settled behaviour, as section 5 and the release notes say: `set_group` of the server skips the imported
+policies; `null` is absent for every tool; a DWORD or QWORD with a fraction is refused; the errors of
+the Windows API print the text of Windows; a button of the command bar with nothing to do is disabled.
+
+Not done, and why:
+
+- The save of a document through the trait (C6, `save_doc`): the six `save_*` functions differ in
+  their dialogs, their steps before the save (the seal of a users file, the check of a catalog, the
+  timestamps and draft of a profile) and after it (the themes read again, an import reloaded). They
+  become one when the trait of the document is the framework's (part 2), not twice.
+- Two acts still ask by themselves (C3): `UsersAct::AskRun` checks the elevation, the passwords and the
+  plan before it asks, `RegistryAct::AskDelete` refuses a hive; both report in the status bar. The other
+  ten pairs are `Act::Ask(Question)`.
+- `table` (C5) and `view()` per document (C2): the five list tabs already draw through `list::show`;
+  the frame draws a tab by its kind in one method each, which W# will turn into the method of the
+  document.
+- Fourteen functions are over 120 lines (the painted widgets `tree::show` and `list::show`, named in
+  section 9; `App::commands`, a table of data; `mcpview::server_card`, `marksview::marks_detail`,
+  `cataledit::form_view`, `forms::install_form`, `diffview::diff_detail`, `chrome::nav_row`,
+  `chrome::tab`, `thispc::evaluate`, `apply_profile`, `admx::rules::to_catalog_file`, `profile::check`).
+  They are forms and views of one piece each; the survey script counted some wrongly (`reg_of`,
+  `policy_rules`, braces inside strings), so the next pass measures with `cargo clippy`'s
+  `too_many_lines` instead.
+- Files over 800 lines without their tests: `regview.rs` (830) and the window's `lib.rs` (726 with the
+  types of the window) are under a thousand; the rest are at or under 800.
+
+What part 2 starts from: `widgets.rs`, `tree.rs`, `list.rs`, `style.rs`, `themes.rs`, `i18n.rs`,
+`session.rs`, `settings.rs`, `renderer.rs`, `mdview.rs`, `chrome/`, `doc.rs`, `commands.rs`,
+`icons.rs`, `question.rs` and the dispatch of `app/apply.rs` know nothing of profiles, catalogs or the
+registry; they are the window W# takes, with `Tab`, `DocKind` and the acts of the chrome (`NavAct`,
+`FileAct`, `SettingsAct`, `ThemeAct`) as its first interface.

@@ -6,15 +6,24 @@ Draft 0.1, 14.10.2026.
 
 ```
 crates/
-├── winweaver-core/      catalog, resolver, profile, diff, validation, answer file rendering and checking,
-│                        answer file import, script generation, catalog files, templates (ADMX) parsing,
-│                        i18n, settings, drafts, bookmarks: pure Rust, no Windows API, fully unit tested
-├── winweaver-win/       Windows API: registry read and write, services, scheduled tasks, the audit, the
-│                        apply and the revert plans run natively, elevation of the helper process
-├── winweaver-mcp/       the MCP server: JSON-RPC, protocol, tools, resources, stdio and HTTP transports,
-│                        the workspace of documents, the journal
-├── winweaver-ui/        eframe application: tabs, toolbar, navigation, search, tree, detail panel, forms,
-│                        diff view, Markdown view, bookmarks, MCP tab, settings, themes, dialogs
+├── winweaver-core/      catalog/ (model, values), jsonfile (the trait Document), profile, resolver, diff,
+│                        validate, render/ (the answer file, one file a pass), thispc/ (plan, evaluate, judge,
+│                        capture, report), scripts, import, apply, admx/ (templates, rules, file, compare,
+│                        archive, merge), registry/ (data, search, memory), regfile, security, users,
+│                        userstore, i18n, paths, bookmarks: pure Rust, no Windows API, tested on any runner
+├── winweaver-win/       Windows API: ffi (the wrappers once), native, registry, accounts, dism, apps,
+│                        locales, users, execute/ (the plan run natively, one function an operation, the
+│                        hive of the default user), the start of the helper process elevated
+├── winweaver-mcp/       the MCP server: JSON-RPC, protocol, the table of tools and their handlers by theme
+│                        (tools/), resources, stdio and HTTP transports, the workspace of documents, the
+│                        journal (Outcome)
+├── winweaver-ui/        eframe application: lib (the types of the window), app/ (the methods of the window
+│                        by theme, the frame, apply as a dispatcher), act (the acts by subsystem), question,
+│                        doc (every tab a document, the trait Tab), commands and icons (the command bar as
+│                        data), widgets, chrome/ (the tab row, the command bar, the navigation row, the
+│                        status bar), views/ (the tree and the detail panel of a profile), the views of the
+│                        other tabs (diff, Markdown, bookmarks, MCP, catalog, its editor, the registry,
+│                        registry files, users files, themes), forms, settings, themes, style, tree, list
 └── winweaver/           the binary: argument parsing (window, --mcp stdio, --mcp http, --elevated-apply),
                          embedding of the data folder, logging setup
 data/
