@@ -12,7 +12,7 @@ use winweaver_core::resolver::State;
 
 use crate::i18n::{tr, trf};
 use crate::{
-    Act, CatalogAct, Form, ImportAct, NavAct, PcAct, ProfileAct, ProfileDoc, RegistryAct,
+    Act, CatalogAct, Form, ImportAct, PcAct, ProfileAct, ProfileDoc, RegistryAct,
     ScriptKind, Search, Sel, Settings, TreeKey, UNKNOWN_GROUP, icons, matches_words, style, tree,
 };
 
@@ -23,6 +23,7 @@ mod rule;
 mod tests;
 
 pub(crate) use detail::*;
+pub(crate) use ww::style::{block, header};
 pub(crate) use profile_tree::*;
 pub(crate) use rule::*;
 
@@ -268,42 +269,6 @@ fn form_icon(form: Form) -> &'static str {
         Form::Accounts => icons::PERSON,
         Form::Languages => icons::GLOBE,
     }
-}
-
-/// The head of the detail panel: the card colour across the width.
-pub(crate) fn header(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
-    let p = style::palette(ui);
-    egui::Frame::new()
-        .fill(p.card)
-        .inner_margin(Margin {
-            left: 18,
-            right: 18,
-            top: 14,
-            bottom: 12,
-        })
-        .show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            add(ui);
-        });
-    ui.painter().hline(
-        ui.min_rect().x_range(),
-        ui.cursor().top(),
-        Stroke::new(1.0, p.border),
-    );
-}
-
-/// A card of the detail panel, with its margins.
-pub(crate) fn block(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
-    egui::Frame::new()
-        .outer_margin(Margin {
-            left: 18,
-            right: 18,
-            top: 10,
-            bottom: 0,
-        })
-        .show(ui, |ui| {
-            style::card(ui, add);
-        });
 }
 
 /// A part of the description: a card that folds.

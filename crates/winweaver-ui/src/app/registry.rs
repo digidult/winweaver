@@ -2,10 +2,10 @@
 
 use crate::*;
 
-impl App {
+impl WinWeaver {
     /// Opens a registry file in a tab of its own, or brings its tab to the front.
-    pub(crate) fn open_reg_path(&mut self, path: PathBuf) {
-        self.open_file(
+    pub(crate) fn open_reg_path(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf) {
+        shell.open_file(
             &path,
             |d| matches!(d, Doc::RegFile(r) if r.path == path),
             RegFile::load,
@@ -14,8 +14,8 @@ impl App {
     }
 
     /// Saves the registry file in front at its place, or at one the user picks.
-    pub(crate) fn save_reg_doc(&mut self, ask: bool) {
-        let Some(Doc::RegFile(d)) = self.docs.get(self.active) else {
+    pub(crate) fn save_reg_doc(&mut self, shell: &mut Shell<WinWeaver>, ask: bool) {
+        let Some(Doc::RegFile(d)) = shell.docs.get(shell.active) else {
             return;
         };
         let path = if ask {
@@ -35,26 +35,26 @@ impl App {
         } else {
             d.path.clone()
         };
-        let Some(Doc::RegFile(d)) = self.docs.get_mut(self.active) else {
+        let Some(Doc::RegFile(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
         match d.file.save(&path) {
             Ok(()) => {
                 d.path = path.clone();
                 d.dirty = false;
-                self.saved(&path);
-                self.remember_recent(&path);
+                shell.saved(&path);
+                shell.remember_recent(&path);
             }
-            Err(e) => self.save_failed(e),
+            Err(e) => shell.save_failed(e),
         }
     }
 
     /// Opens the window of the rights of the selected key of the registry tab in front: its owner
     /// and its access list with the names of the accounts.
-    pub(crate) fn registry_rights(&mut self) {
+    pub(crate) fn registry_rights(&mut self, shell: &mut Shell<WinWeaver>) {
         use winweaver_core::security::{self, Rights};
         let reg = self.registry.clone();
-        let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
+        let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
         let path = d.path.clone();
@@ -88,10 +88,10 @@ impl App {
     }
 
     /// Adds an entry that lets the account typed in the window of the rights read the key.
-    pub(crate) fn registry_rights_add(&mut self) {
+    pub(crate) fn registry_rights_add(&mut self, shell: &mut Shell<WinWeaver>) {
         use winweaver_core::security::{Entry, Scope};
         let reg = self.registry.clone();
-        let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
+        let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
         let Some(edit) = &mut d.rights else {
@@ -119,9 +119,9 @@ impl App {
     }
 
     /// Writes the access list of the window of the rights to its key.
-    pub(crate) fn registry_rights_save(&mut self) {
+    pub(crate) fn registry_rights_save(&mut self, shell: &mut Shell<WinWeaver>) {
         let reg = self.registry.clone();
-        let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
+        let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
         let Some(edit) = &mut d.rights else {
@@ -130,7 +130,7 @@ impl App {
         let dacl = edit.rights.dacl();
         match reg.set_security(&edit.path, &dacl, edit.rights.protected) {
             Ok(()) => {
-                self.status = trf("The rights of {path} changed", &[("path", &edit.path)]);
+                shell.status = trf("The rights of {path} changed", &[("path", &edit.path)]);
                 d.rights = None;
             }
             Err(e) => edit.error = Some(e),
@@ -139,9 +139,9 @@ impl App {
 
     /// Starts the search of the registry tab in front under its selected key, in a thread of its
     /// own; `poll_registry_search` takes the result.
-    pub(crate) fn registry_find(&mut self) {
+    pub(crate) fn registry_find(&mut self, shell: &mut Shell<WinWeaver>) {
         let reg = self.registry.clone();
-        let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
+        let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
         let query = d.search.query();
@@ -149,7 +149,7 @@ impl App {
             return;
         }
         if query.text.is_empty() || !(query.keys || query.values || query.data) {
-            self.status =
+            shell.status =
                 tr("Search the registry: type a text and choose what to look at").to_owned();
             return;
         }
@@ -174,7 +174,7 @@ impl App {
                 let _ = tx.send(found);
             });
         if let Err(e) = started {
-            self.status = trf("The search did not start: {e}", &[("e", &e)]);
+            shell.status = trf("The search did not start: {e}", &[("e", &e)]);
             return;
         }
         d.search.root = root;
@@ -187,8 +187,8 @@ impl App {
     }
 
     /// Takes the result of a finished search of a registry tab.
-    pub(crate) fn poll_registry_search(&mut self, ctx: &egui::Context) {
-        for doc in &mut self.docs {
+    pub(crate) fn poll_registry_search(&mut self, shell: &mut Shell<WinWeaver>, ctx: &egui::Context) {
+        for doc in &mut shell.docs {
             let Doc::Registry(d) = doc else {
                 continue;
             };
@@ -205,7 +205,7 @@ impl App {
                 }
                 Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                     d.search.running = None;
-                    self.status =
+                    shell.status =
                         tr("The search of the registry failed; the log names the error").to_owned();
                 }
             }
@@ -213,28 +213,28 @@ impl App {
     }
 
     /// Opens the registry tab, or brings it to the front, at a key and a value of it.
-    pub(crate) fn open_registry(&mut self, path: &str, value: Option<&str>) {
+    pub(crate) fn open_registry(&mut self, shell: &mut Shell<WinWeaver>, path: &str, value: Option<&str>) {
         let reg = self.registry.clone();
-        match self.docs.iter().position(|d| matches!(d, Doc::Registry(_))) {
+        match shell.docs.iter().position(|d| matches!(d, Doc::Registry(_))) {
             Some(i) => {
-                self.active = i;
-                if let Some(Doc::Registry(d)) = self.docs.get_mut(i) {
+                shell.active = i;
+                if let Some(Doc::Registry(d)) = shell.docs.get_mut(i) {
                     d.go(&*reg, path, value);
                 }
             }
             None => {
                 let doc = regview::RegistryDoc::new(&*reg, path, value);
-                self.open_tab(Doc::Registry(Box::new(doc)));
+                shell.open_tab(Doc::Registry(Box::new(doc)));
             }
         }
     }
 
     /// Writes the value or makes the key of the editor of the registry tab; an error stays in
     /// the editor.
-    pub(crate) fn registry_save(&mut self) {
+    pub(crate) fn registry_save(&mut self, shell: &mut Shell<WinWeaver>) {
         use regview::EditKind;
         let reg = self.registry.clone();
-        let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) else {
+        let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
         let Some(edit) = &d.edit else {
@@ -286,8 +286,8 @@ impl App {
     }
 
     /// Asks before the selected value of the registry tab, or its key without one, is deleted.
-    pub(crate) fn ask_registry_delete(&mut self) {
-        let Some(Doc::Registry(d)) = self.docs.get(self.active) else {
+    pub(crate) fn ask_registry_delete(&mut self, shell: &mut Shell<WinWeaver>) {
+        let Some(Doc::Registry(d)) = shell.docs.get(shell.active) else {
             return;
         };
         let path = d.path.clone();
@@ -300,7 +300,7 @@ impl App {
                 Act::Registry(RegistryAct::Delete(path.clone(), Some(v.name.clone()))),
             ),
             None if winweaver_core::registry::parent(&path).is_none() => {
-                self.status = tr("A hive is not deleted").to_owned();
+                shell.status = tr("A hive is not deleted").to_owned();
                 return;
             }
             None => (
@@ -311,7 +311,7 @@ impl App {
                 Act::Registry(RegistryAct::Delete(path.clone(), None)),
             ),
         };
-        self.ask(Question::new(
+        shell.ask(Question::new(
             tr("Delete from the registry"),
             text,
             tr("Delete"),
@@ -319,13 +319,13 @@ impl App {
         ));
     }
 
-    pub(crate) fn registry_delete(&mut self, path: &str, value: Option<&str>) {
+    pub(crate) fn registry_delete(&mut self, shell: &mut Shell<WinWeaver>, path: &str, value: Option<&str>) {
         let reg = self.registry.clone();
         let result = match value {
             Some(v) => reg.delete_value(path, v),
             None => reg.delete_key(path),
         };
-        if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+        if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) {
             if value.is_none() && result.is_ok() {
                 let up = winweaver_core::registry::parent(path)
                     .unwrap_or(path)
@@ -335,70 +335,70 @@ impl App {
                 d.refresh(&*reg);
             }
         }
-        self.status = match result {
+        shell.status = match result {
             Ok(()) => tr("Deleted").to_owned(),
             Err(e) => e,
         };
     }
 
     /// Bookmarks the key of the registry tab and its selected value.
-    pub(crate) fn bookmark_registry(&mut self) {
-        let Some(Doc::Registry(d)) = self.docs.get(self.active) else {
+    pub(crate) fn bookmark_registry(&mut self, shell: &mut Shell<WinWeaver>) {
+        let Some(Doc::Registry(d)) = shell.docs.get(shell.active) else {
             return;
         };
         let mut mark = Bookmark::registry(&d.path, d.value.as_deref().unwrap_or(""));
         if self.marks.find(&mark).is_some() {
-            self.status = tr("This is bookmarked already").to_owned();
+            shell.status = tr("This is bookmarked already").to_owned();
             return;
         }
         mark.created = clock::now_utc_iso();
         self.marks.items.push(mark);
-        self.save_marks();
-        self.status = tr("Bookmarked").to_owned();
+        self.save_marks(shell);
+        shell.status = tr("Bookmarked").to_owned();
     }
 
     /// Runs an act of the acts of the registry tab.
-    pub(crate) fn apply_registry(&mut self, act: RegistryAct) {
+    pub(crate) fn apply_registry(&mut self, shell: &mut Shell<WinWeaver>, act: RegistryAct) {
         match act {
-            RegistryAct::Open(path, value) => self.open_registry(&path, value.as_deref()),
+            RegistryAct::Open(path, value) => self.open_registry(shell, &path, value.as_deref()),
             RegistryAct::Go(path, value) => {
                 let reg = self.registry.clone();
-                if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+                if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) {
                     d.go(&*reg, &path, value.as_deref());
                 }
             }
             RegistryAct::Expand(path, open) => {
                 let reg = self.registry.clone();
-                if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+                if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) {
                     d.expand(&*reg, &path, open);
                 }
             }
             RegistryAct::Refresh => {
                 let reg = self.registry.clone();
-                if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+                if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) {
                     d.refresh(&*reg);
                 }
             }
             RegistryAct::Edit => {
-                if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+                if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) {
                     d.start_edit(regview::EditKind::Value, "");
                 }
             }
             RegistryAct::New(kind, type_name) => {
-                if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+                if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) {
                     d.start_edit(kind, type_name);
                 }
             }
-            RegistryAct::Save => self.registry_save(),
+            RegistryAct::Save => self.registry_save(shell),
             RegistryAct::Search => {
-                if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active) {
+                if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) {
                     d.search.open = !d.search.open;
                     d.search.focus = d.search.open;
                 }
             }
-            RegistryAct::Find => self.registry_find(),
+            RegistryAct::Find => self.registry_find(shell),
             RegistryAct::FindStop => {
-                if let Some(Doc::Registry(d)) = self.docs.get_mut(self.active)
+                if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active)
                     && let Some(running) = &d.search.running
                 {
                     running
@@ -406,32 +406,32 @@ impl App {
                         .store(true, std::sync::atomic::Ordering::Relaxed);
                 }
             }
-            RegistryAct::AskDelete => self.ask_registry_delete(),
-            RegistryAct::Rights => self.registry_rights(),
-            RegistryAct::RightsAdd => self.registry_rights_add(),
-            RegistryAct::RightsSave => self.registry_rights_save(),
-            RegistryAct::Delete(path, value) => self.registry_delete(&path, value.as_deref()),
-            RegistryAct::Bookmark => self.bookmark_registry(),
+            RegistryAct::AskDelete => self.ask_registry_delete(shell),
+            RegistryAct::Rights => self.registry_rights(shell),
+            RegistryAct::RightsAdd => self.registry_rights_add(shell),
+            RegistryAct::RightsSave => self.registry_rights_save(shell),
+            RegistryAct::Delete(path, value) => self.registry_delete(shell, &path, value.as_deref()),
+            RegistryAct::Bookmark => self.bookmark_registry(shell),
         }
     }
 
     /// Runs an act of the acts of the tab of a registry file.
-    pub(crate) fn apply_reg_file(&mut self, act: RegFileAct) {
+    pub(crate) fn apply_reg_file(&mut self, shell: &mut Shell<WinWeaver>, act: RegFileAct) {
         match act {
             RegFileAct::Edit => {
-                if let Some(Doc::RegFile(d)) = self.docs.get_mut(self.active)
+                if let Some(Doc::RegFile(d)) = shell.docs.get_mut(shell.active)
                     && let Some(line) = d.target()
                 {
                     d.start_edit(line);
                 }
             }
             RegFileAct::New(kind) => {
-                if let Some(Doc::RegFile(d)) = self.docs.get_mut(self.active) {
+                if let Some(Doc::RegFile(d)) = shell.docs.get_mut(shell.active) {
                     d.start_new(kind);
                 }
             }
             RegFileAct::Remove(lines) => {
-                if let Some(Doc::RegFile(d)) = self.docs.get_mut(self.active) {
+                if let Some(Doc::RegFile(d)) = shell.docs.get_mut(shell.active) {
                     d.remove_lines(&lines);
                 }
             }

@@ -161,7 +161,7 @@ fn every_text_of_the_interface_is_translated() {
 }
 
 /// A dialog shows its answer beside Cancel, so no translation of an answer may read as Cancel:
-/// the Ukrainian Discard once said Cancel too. The answers of `App::ask`, of the confirmation of
+/// the Ukrainian Discard once said Cancel too. The answers of `WinWeaver::ask`, of the confirmation of
 /// an apply, of the editors and of the permissions.
 #[test]
 fn the_answers_of_a_dialog_do_not_read_as_cancel() {

@@ -2,24 +2,19 @@
 
 use crate::*;
 
-impl App {
-    pub(crate) fn active_profile(&mut self) -> Option<&mut ProfileDoc> {
-        match self.docs.get_mut(self.active) {
+impl WinWeaver {
+    pub(crate) fn active_profile(&mut self, shell: &mut Shell<WinWeaver>) -> Option<&mut ProfileDoc> {
+        match shell.docs.get_mut(shell.active) {
             Some(Doc::Profile(doc)) => Some(doc),
             _ => None,
         }
     }
 
-    /// The search of the active tab, `None` for a tab without one.
-    pub(crate) fn active_search(&mut self) -> Option<&mut Search> {
-        self.docs.get_mut(self.active)?.search()
-    }
-
     /// After the search of a tab is cleared, the selected item stays in view: the groups above
     /// it open and its row is scrolled to at the next frame.
-    pub(crate) fn reveal_selection(&mut self) {
+    pub(crate) fn reveal_selection(&mut self, shell: &mut Shell<WinWeaver>) {
         let catalog = &self.catalog;
-        match self.docs.get_mut(self.active) {
+        match shell.docs.get_mut(shell.active) {
             Some(Doc::Profile(doc)) => {
                 let mut next = match &doc.sel {
                     Sel::Rule(id) => doc
@@ -69,15 +64,15 @@ impl App {
         }
     }
 
-    pub(crate) fn refresh_active(&mut self) {
+    pub(crate) fn refresh_active(&mut self, shell: &mut Shell<WinWeaver>) {
         let catalog = &self.catalog;
-        if let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) {
+        if let Some(Doc::Profile(doc)) = shell.docs.get_mut(shell.active) {
             doc.refresh(catalog);
         }
     }
 
-    pub(crate) fn crumbs(&self) -> Vec<(String, Sel)> {
-        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+    pub(crate) fn crumbs(&self, shell: &Shell<WinWeaver>) -> Vec<(String, Sel)> {
+        let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
             return Vec::new();
         };
         let texts = texts_for(&self.texts, &i18n::current());
@@ -126,27 +121,27 @@ impl App {
         crumbs
     }
 
-    pub(crate) fn check_active(&mut self) {
+    pub(crate) fn check_active(&mut self, shell: &mut Shell<WinWeaver>) {
         let catalog = &self.catalog;
-        let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
-            self.status = tr("Nothing to check: the active tab is not a profile").to_owned();
+        let Some(Doc::Profile(doc)) = shell.docs.get_mut(shell.active) else {
+            shell.status = tr("Nothing to check: the active tab is not a profile").to_owned();
             return;
         };
         doc.issues = validate::check(catalog, &doc.profile, &doc.resolution);
-        self.status = validate::summary(&doc.issues);
+        shell.status = validate::summary(&doc.issues);
     }
 
     /// Checks the profile, builds the answer file and writes it with its scripts into the
     /// output folder; errors and warnings go to the messages panel.
-    pub(crate) fn build_active(&mut self) {
-        self.check_active();
+    pub(crate) fn build_active(&mut self, shell: &mut Shell<WinWeaver>) {
+        self.check_active(shell);
         let catalog = &self.catalog;
-        let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
+        let Some(Doc::Profile(doc)) = shell.docs.get_mut(shell.active) else {
             return;
         };
         let errors = validate::errors(&doc.issues);
         if errors > 0 {
-            self.status = trf("Fix the errors before the build: {n}", &[("n", &errors)]);
+            shell.status = trf("Fix the errors before the build: {n}", &[("n", &errors)]);
             return;
         }
         let build = match render::build(catalog, &doc.profile, winweaver_core::BUILD) {
@@ -160,7 +155,7 @@ impl App {
                         text: trf("Build: {e}", &[("e", &e)]),
                     },
                 );
-                self.status = trf("Build failed: {e}", &[("e", &e)]);
+                shell.status = trf("Build failed: {e}", &[("e", &e)]);
                 return;
             }
         };
@@ -173,7 +168,7 @@ impl App {
         }
         let dir = output_dir();
         if let Err(e) = std::fs::create_dir_all(&dir) {
-            self.status = trf(
+            shell.status = trf(
                 "Build: cannot create {path}: {e}",
                 &[("path", &dir.display()), ("e", &e)],
             );
@@ -181,17 +176,17 @@ impl App {
         }
         let xml_path = dir.join("autounattend.xml");
         if let Err(e) = write_file(&xml_path, build.xml.as_bytes()) {
-            self.status = trf("Build: {e}", &[("e", &e)]);
+            shell.status = trf("Build: {e}", &[("e", &e)]);
             return;
         }
         for (name, text) in &build.scripts {
             let text = text.replace("\r\n", "\n").replace('\n', "\r\n");
             if let Err(e) = write_file(&dir.join(name), text.as_bytes()) {
-                self.status = trf("Build: {e}", &[("e", &e)]);
+                shell.status = trf("Build: {e}", &[("e", &e)]);
                 return;
             }
         }
-        self.status = trf(
+        shell.status = trf(
             "Built {path} ({rules} rules, {scripts} scripts, {warnings} warnings)",
             &[
                 ("path", &xml_path.display()),
@@ -200,13 +195,13 @@ impl App {
                 ("warnings", &build.warnings.len()),
             ],
         );
-        self.shown_file = Some((self.status.clone(), xml_path.clone()));
+        shell.shown_file = Some((shell.status.clone(), xml_path.clone()));
     }
 
     /// The rule ids of the selection of the active profile: a rule, the rules of a group, or every
     /// rule when nothing (or a form) is selected.
-    pub(crate) fn selection_ids(&self) -> Vec<String> {
-        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+    pub(crate) fn selection_ids(&self, shell: &Shell<WinWeaver>) -> Vec<String> {
+        let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
             return Vec::new();
         };
         match &doc.sel {
@@ -224,17 +219,17 @@ impl App {
 
     /// Shows a policy of an import in the tree of a profile: an import that is not loaded is, the
     /// first profile tab comes to the front, the groups above the policy open and it is selected.
-    pub(crate) fn show_in_profile(&mut self, import: &str, rule: &str) {
+    pub(crate) fn show_in_profile(&mut self, shell: &mut Shell<WinWeaver>, import: &str, rule: &str) {
         if !import.is_empty() && !self.imports.iter().any(|f| f.id == import) {
-            if let Err(e) = self.load_import(import) {
-                self.status = trf("The import was not loaded: {e}", &[("e", &e)]);
+            if let Err(e) = self.load_import(shell, import) {
+                shell.status = trf("The import was not loaded: {e}", &[("e", &e)]);
                 return;
             }
             self.refresh_import_list();
-            self.rebuild_catalog();
+            self.rebuild_catalog(shell);
         }
-        let Some(index) = self.docs.iter().position(|d| matches!(d, Doc::Profile(_))) else {
-            self.status = tr("Open a profile first").to_owned();
+        let Some(index) = shell.docs.iter().position(|d| matches!(d, Doc::Profile(_))) else {
+            shell.status = tr("Open a profile first").to_owned();
             return;
         };
         let mut groups = Vec::new();
@@ -243,8 +238,8 @@ impl App {
             group = self.catalog.group(&g).and_then(|x| x.parent.clone());
             groups.push(g);
         }
-        self.active = index;
-        if let Some(Doc::Profile(doc)) = self.docs.get_mut(index) {
+        shell.active = index;
+        if let Some(Doc::Profile(doc)) = shell.docs.get_mut(index) {
             doc.expanded.extend(groups);
             doc.select(Sel::Rule(rule.to_owned()));
             doc.focus = None;
@@ -253,39 +248,39 @@ impl App {
     }
 
     /// Runs an act of the acts of the profile tab.
-    pub(crate) fn apply_profile(&mut self, act: ProfileAct) {
+    pub(crate) fn apply_profile(&mut self, shell: &mut Shell<WinWeaver>, act: ProfileAct) {
         match act {
             ProfileAct::Select(sel) => {
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     doc.select(sel);
                     doc.focus = None;
                 }
             }
             ProfileAct::Reveal(sel) => {
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     doc.select(sel);
                     doc.focus = None;
                 }
-                self.reveal_selection();
+                self.reveal_selection(shell);
             }
             ProfileAct::SelectIn(sel, group) => {
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     doc.select(sel);
                     doc.focus = group;
                 }
             }
             ProfileAct::ShowIn(rule, group) => {
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     doc.select(Sel::Rule(rule));
                     doc.focus = Some(group);
                 }
-                self.reveal_selection();
+                self.reveal_selection(shell);
             }
             ProfileAct::Toggle(id, on) => {
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     doc.profile.set_on(&id, on);
                 }
-                self.refresh_active();
+                self.refresh_active(shell);
             }
             ProfileAct::SetGroup(group, on) => {
                 let ids: Vec<String> = self
@@ -295,12 +290,12 @@ impl App {
                     .filter(|r| !on || !r.id.starts_with("admx."))
                     .map(|r| r.id.clone())
                     .collect();
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     for id in &ids {
                         doc.profile.set_on(id, on);
                     }
                 }
-                self.refresh_active();
+                self.refresh_active(shell);
             }
             ProfileAct::SetParam(id, name, value) => {
                 let default = self
@@ -308,7 +303,7 @@ impl App {
                     .rule(&id)
                     .and_then(|r| r.params.get(&name))
                     .map(|p| p.default_value());
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     let choice = doc.profile.rules.entry(id).or_default();
                     if default
                         .as_ref()
@@ -319,10 +314,10 @@ impl App {
                         choice.params.insert(name, value);
                     }
                 }
-                self.refresh_active();
+                self.refresh_active(shell);
             }
             ProfileAct::Expand(group, open) => {
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     if open {
                         doc.expanded.insert(group);
                     } else {
@@ -331,50 +326,54 @@ impl App {
                 }
             }
             ProfileAct::Back => {
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     doc.go(-1);
                 }
             }
             ProfileAct::Forward => {
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     doc.go(1);
                 }
             }
             ProfileAct::Check => {
-                self.check_active();
-                self.messages_open = true;
+                self.check_active(shell);
+                shell.messages_open = true;
             }
-            ProfileAct::ShowInProfile(import, rule) => self.show_in_profile(&import, &rule),
+            ProfileAct::ShowInProfile(import, rule) => self.show_in_profile(shell, &import, &rule),
             ProfileAct::ShowGroupInProfile(group) => {
-                match self.docs.iter().position(|d| matches!(d, Doc::Profile(_))) {
+                match shell.docs.iter().position(|d| matches!(d, Doc::Profile(_))) {
                     Some(index) => {
-                        self.active = index;
-                        self.apply(vec![Act::Profile(ProfileAct::Reveal(Sel::Group(group)))]);
+                        shell.active = index;
+                        self.apply(shell, Act::Profile(ProfileAct::Reveal(Sel::Group(group))));
                     }
-                    None => self.status = tr("Open a profile first").to_owned(),
+                    None => shell.status = tr("Open a profile first").to_owned(),
                 }
             }
-            ProfileAct::Build => self.build_active(),
+            ProfileAct::Build => self.build_active(shell),
             ProfileAct::SetInstall(install) => {
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     doc.profile.install = *install;
                 }
-                self.refresh_active();
+                self.refresh_active(shell);
             }
             ProfileAct::SetAccounts(accounts) => {
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     doc.profile.accounts = accounts;
                 }
-                self.refresh_active();
+                self.refresh_active(shell);
             }
             ProfileAct::SetLanguages(languages) => {
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     doc.profile.languages = languages;
                 }
-                self.refresh_active();
+                self.refresh_active(shell);
+            }
+            ProfileAct::Fold => {
+                shell.settings.extra.desc_open = !shell.settings.extra.desc_open;
+                shell.settings_dirty = true;
             }
             ProfileAct::ClearMessages => {
-                if let Some(doc) = self.active_profile() {
+                if let Some(doc) = self.active_profile(shell) {
                     doc.issues.clear();
                 }
             }

@@ -3,7 +3,7 @@
 //! types of regedit and a search under the selected key at the bottom, which runs in a thread of
 //! its own, the rules that write the selection above the values, and the permissions of the key in
 //! a window. Reading and writing go through acts applied after the frame, with the registry of the
-//! window (`App::registry`).
+//! window (`WinWeaver::registry`).
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;

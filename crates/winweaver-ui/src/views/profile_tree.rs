@@ -1,6 +1,7 @@
 //! The tree of a profile: its rows (groups, rules, the forms, the unknown options) and the view that paints them.
 
 use super::*;
+use crate::ShellAct;
 
 /// The key of a row of the profile tree: what it selects and, for a rule, the group it is drawn
 /// under, since a policy of two imports shows in both trees.
@@ -201,7 +202,7 @@ pub fn tree_view(
         .or_else(|| rows.iter().position(|r| r.key.0 == doc.sel));
     let scroll = tree::Scroll::wanted(doc.reveal, doc.follow);
     if selected.is_none() && scroll != tree::Scroll::None {
-        acts.push(Act::Nav(NavAct::Revealed));
+        acts.push(Act::Shell(ShellAct::Revealed));
     }
     let id = egui::Id::new(("profile-tree", doc.draft_key.as_str()));
     let out = tree::show(ui, id, &rows, selected, scroll);
@@ -229,10 +230,10 @@ pub fn tree_view(
         }
     }
     if out.moved {
-        acts.push(Act::Nav(NavAct::Follow));
+        acts.push(Act::Shell(ShellAct::Follow));
     }
     if out.scrolled {
-        acts.push(Act::Nav(NavAct::Revealed));
+        acts.push(Act::Shell(ShellAct::Revealed));
     }
 }
 

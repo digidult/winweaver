@@ -1,24 +1,22 @@
 //! The acts of the window: a change requested while a frame was drawn, applied after it by
-//! the subsystem it belongs to (`App::apply` hands each one to its `apply_*` method).
+//! the subsystem it belongs to (`WinWeaver::apply` hands each one to its `apply_*` method); the
+//! acts of the window itself (the tabs, the files, the settings, the themes, a question) are
+//! `ShellAct` of WW in the variant `Shell`.
 
 use std::path::PathBuf;
 
 use serde_json::Value;
 use winweaver_core::profile::{Account, Install, Languages};
 use winweaver_core::users;
+use ww::ShellAct;
 
-use crate::{
-    CatalogRef, ImportSource, Question, ScriptKind, Sel, SettingsSection, TreeKey, regfileview,
-    regview,
-};
+use crate::{CatalogRef, ImportSource, ScriptKind, Sel, TreeKey, WinWeaver, regfileview, regview};
 
 /// A change requested while a frame was drawn, applied after it.
 pub enum Act {
     Profile(ProfileAct),
-    Nav(NavAct),
     File(FileAct),
     Settings(SettingsAct),
-    Theme(ThemeAct),
     Pc(PcAct),
     Users(UsersAct),
     Diff(DiffAct),
@@ -28,21 +26,19 @@ pub enum Act {
     Import(ImportAct),
     Registry(RegistryAct),
     RegFile(RegFileAct),
-    /// A question over the window; a yes runs its act.
-    Ask(Box<Question>),
-    /// The answer to the question over the window: yes or no.
-    Answer(bool),
+    /// An act of the window itself, run by the shell.
+    Shell(ShellAct<WinWeaver>),
+}
+
+impl From<ShellAct<WinWeaver>> for Act {
+    fn from(act: ShellAct<WinWeaver>) -> Self {
+        Act::Shell(act)
+    }
 }
 
 impl From<ProfileAct> for Act {
     fn from(act: ProfileAct) -> Self {
         Act::Profile(act)
-    }
-}
-
-impl From<NavAct> for Act {
-    fn from(act: NavAct) -> Self {
-        Act::Nav(act)
     }
 }
 
@@ -55,12 +51,6 @@ impl From<FileAct> for Act {
 impl From<SettingsAct> for Act {
     fn from(act: SettingsAct) -> Self {
         Act::Settings(act)
-    }
-}
-
-impl From<ThemeAct> for Act {
-    fn from(act: ThemeAct) -> Self {
-        Act::Theme(act)
     }
 }
 
@@ -143,39 +133,13 @@ pub enum ProfileAct {
     Check,
     Build,
     ClearMessages,
-}
-
-/// The acts of the chrome: the tabs, the panels, the view of a tab, a message.
-pub enum NavAct {
-    Activate(usize),
-    /// Moves a tab from one place of the row to another.
-    MoveTab(usize, usize),
-    CloseTab(usize, bool),
+    /// Shows or hides the description panel.
     Fold,
-    /// Opens the list of the message bar or folds it to one line.
-    ToggleMessages,
-    /// The search of the active tab was cleared: the selection comes back into view.
-    SearchCleared,
-    /// The selected row was scrolled into view.
-    Revealed,
-    /// The selection moved with the keys: it follows into view.
-    Follow,
-    /// Opens a page of the documentation, `name.md#heading`.
-    OpenDoc(String),
-    /// Shows a file in its folder in Explorer, or opens a folder of the program, made first.
-    ShowInFolder(PathBuf),
-    Exit,
-    Message(String),
 }
 
-/// The acts of the files: new, open, save, the pages of the program.
+/// The acts of the files of WinWeaver: a new profile, the pages of the program.
 pub enum FileAct {
     NewProfile(Option<&'static str>),
-    Open,
-    OpenPath(PathBuf),
-    Save,
-    SaveAs,
-    ForgetRecent,
     OpenReport,
     OpenGuide,
     /// Opens the license, built into the executable, in a Markdown tab.
@@ -184,22 +148,9 @@ pub enum FileAct {
 
 /// The acts of the settings tab.
 pub enum SettingsAct {
-    Open,
     /// Starts to rename an import: its id and its name now.
     StartRename(String, String),
     CancelRename,
-    /// Opens the settings at a section.
-    OpenSection(SettingsSection),
-}
-
-/// The acts of the themes.
-pub enum ThemeAct {
-    /// Opens the editor of a theme by its id.
-    Edit(String),
-    /// Opens a theme file in its editor.
-    OpenFile,
-    /// Makes a theme the theme of the window.
-    Use(String),
 }
 
 /// The acts of This PC: the read, the check, the scripts, the native apply.

@@ -62,8 +62,12 @@ impl<A: App> Window<A> {
             ShellAct::OpenSettings => {
                 shell.themes = crate::themes::themes(&crate::folders::dir("themes"));
                 shell.open_settings();
+                self.app.settings_opened(shell);
             }
-            ShellAct::OpenSection(section) => shell.open_settings().section = section,
+            ShellAct::OpenSection(section) => {
+                shell.open_settings().section = section;
+                self.app.settings_opened(shell);
+            }
             ShellAct::EditTheme(id) => {
                 let theme = crate::themes::find(&shell.themes, &id);
                 shell.edit_theme(theme);

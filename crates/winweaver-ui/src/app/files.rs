@@ -2,18 +2,18 @@
 
 use crate::*;
 
-impl App {
+impl WinWeaver {
     /// Opens a page of the documentation a link names, such as
     /// `docs/technical/reference/18-browsers.md#microsoft-edge`, at the heading of its anchor; a
     /// link `#heading` goes to a heading of the Markdown tab that is open.
-    pub(crate) fn open_doc(&mut self, link: &str) {
+    pub(crate) fn open_doc(&mut self, shell: &mut Shell<WinWeaver>, link: &str) {
         let (file, anchor) = match link.split_once('#') {
             Some((f, a)) => (f, Some(a.to_owned())),
             None => (link, None),
         };
         let name = file.rsplit(['/', '\\']).next().unwrap_or(file);
         if name.is_empty() {
-            if let Some(Doc::Markdown(m)) = self.docs.get_mut(self.active) {
+            if let Some(Doc::Markdown(m)) = shell.docs.get_mut(shell.active) {
                 m.jump = anchor.is_some();
                 m.anchor = anchor;
             }
@@ -34,88 +34,62 @@ impl App {
             )
         };
         let Some(text) = text else {
-            self.status = trf("No page {name} in the documentation", &[("name", &name)]);
+            shell.status = trf("No page {name} in the documentation", &[("name", &name)]);
             return;
         };
-        let i = self.show_or_open(
+        let i = shell.show_or_open(
             |d| matches!(d, Doc::Markdown(m) if m.path.is_none() && m.title == title),
             || Doc::Markdown(Box::new(MdDoc::new(title.clone(), None, text))),
         );
-        if let Some(Doc::Markdown(m)) = self.docs.get_mut(i) {
+        if let Some(Doc::Markdown(m)) = shell.docs.get_mut(i) {
             m.jump = anchor.is_some();
             m.anchor = anchor;
         }
     }
 
-    /// Opens a file in a new tab in front, unless a tab has it: `same` finds that tab, `load`
-    /// reads the file and `make` wraps what it read.
-    pub(crate) fn open_file<T, E: std::fmt::Display>(
-        &mut self,
-        path: &Path,
-        same: impl Fn(&Doc) -> bool,
-        load: impl FnOnce(&Path) -> Result<T, E>,
-        make: impl FnOnce(T, PathBuf) -> Doc,
-    ) {
-        if self.focus_tab(same) {
-            return;
-        }
-        match load(path) {
-            Ok(file) => {
-                self.open_tab(make(file, path.to_path_buf()));
-                self.opened(path);
-            }
-            Err(e) => self.open_failed(e),
-        }
-    }
-
-    pub(crate) fn remember_recent(&mut self, path: &Path) {
-        self.settings.remember(path);
-        self.settings_dirty = true;
-    }
-
-    pub(crate) fn open_path(&mut self, path: PathBuf) {
+    pub(crate) fn open_any(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf) {
         if path.extension().is_some_and(|e| e == diff::EXTENSION) {
-            self.open_diff_path(path);
+            self.open_diff_path(shell, path);
             return;
         }
         if path.extension().is_some_and(|e| e == bookmarks::EXTENSION) {
-            self.open_marks_path(path);
+            self.open_marks_path(shell, path);
             return;
         }
         if path
             .extension()
             .is_some_and(|e| e == admx::CATALOG_EXTENSION)
         {
-            self.open_catalog_path(path);
+            self.open_catalog_path(shell, path);
             return;
         }
         if path
             .extension()
             .is_some_and(|e| e.eq_ignore_ascii_case("admx"))
         {
-            self.open_admx_path(path);
+            self.open_admx_path(shell, path);
             return;
         }
         if path.extension().is_some_and(|e| e == users::EXTENSION) {
-            self.open_users_path(path);
+            self.open_users_path(shell, path);
             return;
         }
         if path.extension().is_some_and(|e| e == themes::EXTENSION) {
-            self.open_theme_path(path);
+            shell.open_theme_path(path);
             return;
         }
         if path
             .extension()
             .is_some_and(|e| e == winweaver_mcp::config::EXTENSION)
         {
-            self.open_mcp_config(path);
+            self.open_mcp_config(shell, path);
             return;
         }
         if path
             .extension()
             .is_some_and(|e| e.eq_ignore_ascii_case(regfile::EXTENSION))
         {
-            self.open_reg_path(path);
+            self.open_reg_path(shell, path);
             return;
         }
         let ext = path
@@ -123,25 +97,25 @@ impl App {
             .map(|e| e.to_string_lossy().to_ascii_lowercase())
             .unwrap_or_default();
         if ext == "xml" || ext == "json" {
-            self.open_foreign(path, &ext);
+            self.open_foreign(shell, path, &ext);
             return;
         }
         if path
             .extension()
             .is_some_and(|e| e.eq_ignore_ascii_case("md"))
         {
-            self.open_md_path(path);
+            self.open_md_path(shell, path);
             return;
         }
-        if self.focus_tab(|d| matches!(d, Doc::Profile(p) if p.path.as_ref() == Some(&path))) {
+        if shell.focus_tab(|d| matches!(d, Doc::Profile(p) if p.path.as_ref() == Some(&path))) {
             return;
         }
         match Profile::load(&path) {
             Ok(mut profile) => {
                 let unknown = profile.split_unknown(&self.catalog);
                 let doc = ProfileDoc::new(profile, Some(path.clone()), &self.catalog);
-                self.open_tab(Doc::Profile(Box::new(doc)));
-                self.status = if unknown.is_empty() {
+                shell.open_tab(Doc::Profile(Box::new(doc)));
+                shell.status = if unknown.is_empty() {
                     trf("Opened {path}", &[("path", &path.display())])
                 } else {
                     trf(
@@ -149,15 +123,15 @@ impl App {
                         &[("path", &path.display()), ("n", &unknown.len())],
                     )
                 };
-                self.remember_recent(&path);
+                shell.remember_recent(&path);
             }
-            Err(e) => self.open_failed(e),
+            Err(e) => shell.open_failed(e),
         }
     }
 
-    pub(crate) fn save_active(&mut self, ask: bool) {
-        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
-            self.status = tr("Nothing to save: the active tab is not a profile").to_owned();
+    pub(crate) fn save_active(&mut self, shell: &mut Shell<WinWeaver>, ask: bool) {
+        let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
+            shell.status = tr("Nothing to save: the active tab is not a profile").to_owned();
             return;
         };
         let path = match (&doc.path, ask) {
@@ -173,7 +147,7 @@ impl App {
         if let Some(parent) = path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) else {
+        let Some(Doc::Profile(doc)) = shell.docs.get_mut(shell.active) else {
             return;
         };
         if doc.profile.created.is_empty() {
@@ -182,39 +156,39 @@ impl App {
         doc.profile.modified = clock::now_utc_iso();
         match doc.profile.save(&path) {
             Ok(()) => {
-                session::remove_draft(&self.drafts_dir, &doc.draft_key);
+                session::remove_draft(&shell.drafts_dir, &doc.draft_key);
                 doc.draft_key = session::key_for_path(&path);
-                session::remove_draft(&self.drafts_dir, &doc.draft_key);
+                session::remove_draft(&shell.drafts_dir, &doc.draft_key);
                 doc.path = Some(path.clone());
                 doc.dirty = false;
                 doc.changed = None;
-                self.saved(&path);
-                self.remember_recent(&path);
+                shell.saved(&path);
+                shell.remember_recent(&path);
             }
-            Err(e) => self.save_failed(e),
+            Err(e) => shell.save_failed(e),
         }
     }
 
-    pub(crate) fn open_license(&mut self) {
-        self.show_or_open(
+    pub(crate) fn open_license(&mut self, shell: &mut Shell<WinWeaver>) {
+        shell.show_or_open(
             |d| matches!(d, Doc::Markdown(m) if m.page == Some(pages::LICENSE_ID)),
             || Doc::Markdown(Box::new(pages::license())),
         );
     }
 
-    pub(crate) fn open_guide(&mut self) {
-        self.show_or_open(
+    pub(crate) fn open_guide(&mut self, shell: &mut Shell<WinWeaver>) {
+        shell.show_or_open(
             |d| matches!(d, Doc::Markdown(m) if m.page == Some(pages::GUIDE_ID)),
             || Doc::Markdown(Box::new(pages::guide())),
         );
     }
 
-    pub(crate) fn open_md_path(&mut self, path: PathBuf) {
+    pub(crate) fn open_md_path(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf) {
         let title = path
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "page.md".to_owned());
-        self.open_file(
+        shell.open_file(
             &path,
             |_| false,
             |p| winweaver_core::jsonfile::read_text(p, MARKDOWN_MAX_BYTES),
@@ -224,19 +198,19 @@ impl App {
 
     /// Opens an answer file (its embedded profile), a WinKickOff profile or an audit report as a
     /// new, unsaved profile.
-    pub(crate) fn open_foreign(&mut self, path: PathBuf, ext: &str) {
+    pub(crate) fn open_foreign(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf, ext: &str) {
         let name = jsonfile::display_name(&path);
         let text = match jsonfile::read_text_bom(&path, jsonfile::MAX_BYTES) {
             Ok(t) => t,
             Err(e) => {
-                self.open_failed(e);
+                shell.open_failed(e);
                 return;
             }
         };
         if ext == "json"
             && let Ok(report) = Report::parse(&text, &name)
         {
-            self.open_report_from(report, &path);
+            self.open_report_from(shell, report, &path);
             return;
         }
         let opened = if ext == "xml" {
@@ -254,19 +228,19 @@ impl App {
                     target: Target::Profile,
                     text: trf("Open: {n}", &[("n", &n)]),
                 }));
-                self.open_tab(Doc::Profile(Box::new(doc)));
-                self.status = trf(
+                shell.open_tab(Doc::Profile(Box::new(doc)));
+                shell.status = trf(
                     "Opened the profile of {path}; save it as a .wwprofile file",
                     &[("path", &path.display())],
                 );
-                self.remember_recent(&path);
+                shell.remember_recent(&path);
             }
-            Err(e) => self.open_failed(e),
+            Err(e) => shell.open_failed(e),
         }
     }
 
-    /// Runs an act of the acts of the files: new, open, save, the pages of the program.
-    pub(crate) fn apply_file(&mut self, act: FileAct) {
+    /// Runs an act of the acts of the files: a new profile, the pages of the program.
+    pub(crate) fn apply_file(&mut self, shell: &mut Shell<WinWeaver>, act: FileAct) {
         match act {
             FileAct::NewProfile(preset) => {
                 let profile = match preset.and_then(|n| PRESETS.iter().find(|p| p.0 == n)) {
@@ -275,39 +249,11 @@ impl App {
                     None => Profile::new("New profile", self.catalog.version()),
                 };
                 let doc = ProfileDoc::new(profile, None, &self.catalog);
-                self.open_tab(Doc::Profile(Box::new(doc)));
+                shell.open_tab(Doc::Profile(Box::new(doc)));
             }
-            FileAct::Open => {
-                if let Some(path) = pick_any() {
-                    self.open_path(path);
-                }
-            }
-            FileAct::OpenPath(path) => self.open_path(path),
-            FileAct::Save => match self.docs.get(self.active) {
-                Some(Doc::Mcp(_)) => self.persist_mcp(),
-                Some(Doc::Diff(_)) => self.save_diff(),
-                Some(Doc::Theme(_)) => self.save_theme(false),
-                Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
-                Some(Doc::RegFile(_)) => self.save_reg_doc(false),
-                Some(Doc::Users(_)) => self.save_users_doc(false),
-                _ => self.save_active(false),
-            },
-            FileAct::SaveAs => match self.docs.get(self.active) {
-                Some(Doc::Mcp(_)) => self.save_mcp_as(),
-                Some(Doc::Diff(_)) => self.save_active_diff(),
-                Some(Doc::Theme(_)) => self.save_theme(true),
-                Some(Doc::CatalogEdit(_)) => self.save_catalog_edit(),
-                Some(Doc::RegFile(_)) => self.save_reg_doc(true),
-                Some(Doc::Users(_)) => self.save_users_doc(true),
-                _ => self.save_active(true),
-            },
-            FileAct::OpenReport => self.open_report(),
-            FileAct::ForgetRecent => {
-                self.settings.recent.clear();
-                self.settings_dirty = true;
-            }
-            FileAct::OpenGuide => self.open_guide(),
-            FileAct::OpenLicense => self.open_license(),
+            FileAct::OpenReport => self.open_report(shell),
+            FileAct::OpenGuide => self.open_guide(shell),
+            FileAct::OpenLicense => self.open_license(shell),
         }
     }
 }

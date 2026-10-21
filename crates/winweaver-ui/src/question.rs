@@ -1,8 +1,10 @@
-//! The questions of WinWeaver over the window before an act that is hard to take back. `App::ask`
-//! shows one; a yes runs its act, a no (or Escape) drops it.
+//! The questions of WinWeaver over the window before an act that is hard to take back. The
+//! shell shows one (`ShellAct::Ask`); a yes runs its act, a no (or Escape) drops it. The
+//! questions of the window itself (a tab closed with its changes, the recent files forgotten)
+//! come from the shell.
 
 use crate::i18n::{tr, trf};
-use crate::{Act, CatalogAct, FileAct, ImportAct, McpAct, NavAct, RegistryAct};
+use crate::{Act, CatalogAct, ImportAct, McpAct, RegistryAct, ShellAct};
 
 /// A question over the window with an act of WinWeaver.
 pub type Question = ww::Question<Act>;
@@ -17,29 +19,6 @@ pub fn remove_import(name: &str, id: String) -> Question {
         ),
         tr("Remove"),
         ImportAct::Remove(id),
-    )
-}
-
-/// Before a tab with unsaved changes is closed.
-pub fn close_discard(title: &str, tab: usize) -> Question {
-    Question::new(
-        tr("Discard the changes"),
-        trf(
-            "Close {title} and discard its unsaved changes?",
-            &[("title", &title)],
-        ),
-        tr("Discard"),
-        NavAct::CloseTab(tab, true),
-    )
-}
-
-/// Before the list of the recent files is cleared.
-pub fn forget_recent() -> Question {
-    Question::new(
-        tr("Forget the recent files"),
-        tr("Forget the list of the recent files? The files stay where they are."),
-        tr("Forget"),
-        FileAct::ForgetRecent,
     )
 }
 
@@ -83,6 +62,6 @@ pub fn remove_policy(id: String) -> Question {
 
 impl From<Question> for Act {
     fn from(question: Question) -> Self {
-        Act::Ask(Box::new(question))
+        Act::Shell(ShellAct::Ask(Box::new(question)))
     }
 }

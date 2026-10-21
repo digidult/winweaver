@@ -11,7 +11,8 @@ use winweaver_core::admx::CatalogFile;
 use winweaver_core::catalog::{Group, Rule};
 
 use crate::i18n::{tr, trf};
-use crate::{Act, CatalogAct, NavAct, ProfileAct, Search, matches_words, style, tree, widgets};
+use crate::{Act, CatalogAct, ProfileAct, Search, matches_words, style, tree, widgets};
+use crate::ShellAct;
 
 /// An open tab of a catalog.
 pub struct CatalogDoc {
@@ -244,7 +245,7 @@ pub fn catalog_view(
     let selected = key.and_then(|k| rows.iter().position(|r| r.key == k));
     let scroll = tree::Scroll::wanted(doc.reveal, doc.follow);
     if selected.is_none() && scroll != tree::Scroll::None {
-        acts.push(Act::Nav(NavAct::Revealed));
+        acts.push(Act::Shell(ShellAct::Revealed));
     }
     widgets::side_panel(ui, "catalog-tree", 380.0, |ui| {
         if filter.words && filter.rules.is_empty() {
@@ -262,10 +263,10 @@ pub fn catalog_view(
             }
         }
         if out.moved {
-            acts.push(Act::Nav(NavAct::Follow));
+            acts.push(Act::Shell(ShellAct::Follow));
         }
         if out.scrolled {
-            acts.push(Act::Nav(NavAct::Revealed));
+            acts.push(Act::Shell(ShellAct::Revealed));
         }
     });
     egui::CentralPanel::default().show(ui, |ui| {

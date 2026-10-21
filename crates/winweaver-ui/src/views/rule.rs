@@ -1,6 +1,7 @@
 //! The detail of a rule: its cards, its parameters, its description with the links to what it writes and to other catalogs.
 
 use super::*;
+use crate::ShellAct;
 
 /// What a rule writes: the registry values as a table of key, name, value and the default of
 /// Windows; the other actions as one line each under it.
@@ -308,7 +309,7 @@ pub(crate) fn rule_description(
                         (icons::FOLDED, tr("Show the description (Ctrl+D)"))
                     };
                     if style::icon_button(ui, icon, hint, true, None).clicked() {
-                        acts.push(Act::Nav(NavAct::Fold));
+                        acts.push(Act::Profile(ProfileAct::Fold));
                     }
                 });
             });
@@ -392,7 +393,7 @@ pub(crate) fn rule_description(
     if !rule.doc.is_empty() {
         section(ui, "desc-ref", tr("Reference"), parts.reference, |ui| {
             if ui.link(rule.doc.as_str()).clicked() {
-                acts.push(Act::Nav(NavAct::OpenDoc(rule.doc.clone())));
+                acts.push(Act::Shell(ShellAct::OpenLink(rule.doc.clone())));
             }
         });
     }

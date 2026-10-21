@@ -2,10 +2,10 @@
 
 use crate::*;
 
-impl App {
+impl WinWeaver {
     /// Opens a catalog file in a tab of its own, without importing it.
-    pub(crate) fn open_catalog_path(&mut self, path: PathBuf) {
-        self.open_file(
+    pub(crate) fn open_catalog_path(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf) {
+        shell.open_file(
             &path,
             |d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path)),
             CatalogFile::load,
@@ -15,8 +15,8 @@ impl App {
 
     /// Opens an ADMX file as a catalog tab without importing it: its policies with the texts of
     /// the ADML next to it; the command bar of the tab offers Import.
-    pub(crate) fn open_admx_path(&mut self, path: PathBuf) {
-        if self.focus_tab(|d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path))) {
+    pub(crate) fn open_admx_path(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf) {
+        if shell.focus_tab(|d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path))) {
             return;
         }
         let templates = admx::read_file(&path);
@@ -26,7 +26,7 @@ impl App {
                 .first()
                 .map(|s| s.1.clone())
                 .unwrap_or_else(|| tr("no policies").to_owned());
-            self.open_failed(why);
+            shell.open_failed(why);
             return;
         }
         let name = path
@@ -36,14 +36,14 @@ impl App {
         let id = format!("file-{:08x}", session::fnv(&kept_name(&path)) as u32);
         let file = admx::to_catalog_file(&templates, &id, &name, "", &clock::now_utc_iso());
         let doc = catalogview::CatalogDoc::from_file(file, path.clone());
-        self.open_tab(Doc::Catalog(Box::new(doc)));
-        self.opened(&path);
+        shell.open_tab(Doc::Catalog(Box::new(doc)));
+        shell.opened(&path);
     }
 
     /// Imports the catalog file of the active tab: it is saved next to the executable, merged
     /// into the catalog, and the tab shows the import from now on.
-    pub(crate) fn import_open_catalog(&mut self) {
-        let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) else {
+    pub(crate) fn import_open_catalog(&mut self, shell: &mut Shell<WinWeaver>) {
+        let Some(Doc::Catalog(c)) = shell.docs.get_mut(shell.active) else {
             return;
         };
         let Some(mut file) = c.file.take() else {
@@ -64,10 +64,10 @@ impl App {
         self.imports.retain(|f| f.id != id);
         self.imports.push(*file);
         self.imports.sort_by_key(|f| import_order(&f.id));
-        self.mark_loaded(&id);
+        self.mark_loaded(shell, &id);
         self.refresh_import_list();
-        self.rebuild_catalog();
-        self.status = match saved {
+        self.rebuild_catalog(shell);
+        shell.status = match saved {
             Ok(()) => trf("Imported: {rules} rules", &[("rules", &rules)]),
             Err(e) => trf("Imported, but not saved: {e}", &[("e", &e)]),
         };
@@ -76,23 +76,23 @@ impl App {
     /// Reads the catalog files of the imports the settings load, and no other file; the
     /// templates of this Windows first, so that they win a policy two imports hold. Settings of
     /// an earlier version load every import but the hidden ones, and name them from now on.
-    pub(crate) fn load_imports(&mut self) {
-        let ids = loaded_import_ids(&self.settings, &self.imports_dir);
-        if self.settings.extra.loaded_imports.is_none() {
-            self.settings.extra.loaded_imports = Some(ids.clone());
-            self.settings.extra.hidden_imports.clear();
-            self.settings_dirty = true;
+    pub(crate) fn load_imports(&mut self, shell: &mut Shell<WinWeaver>) {
+        let ids = loaded_import_ids(&shell.settings, &self.imports_dir);
+        if shell.settings.extra.loaded_imports.is_none() {
+            shell.settings.extra.loaded_imports = Some(ids.clone());
+            shell.settings.extra.hidden_imports.clear();
+            shell.settings_dirty = true;
         }
         let (files, broken) = read_imports(&self.imports_dir, &ids);
         self.imports = files;
         if !broken.is_empty() {
-            self.status = trf(
+            shell.status = trf(
                 "{n} imports of policy templates could not be read",
                 &[("n", &broken.len())],
             );
         }
         self.refresh_import_list();
-        self.rebuild_catalog();
+        self.rebuild_catalog(shell);
     }
 
     /// Lists the catalog files of the imports folder for the settings; of a file that is not
@@ -102,7 +102,7 @@ impl App {
     }
 
     /// Reads the catalog file of an import, unless it is loaded, and marks it in the settings.
-    pub(crate) fn load_import(&mut self, id: &str) -> Result<(), String> {
+    pub(crate) fn load_import(&mut self, shell: &mut Shell<WinWeaver>, id: &str) -> Result<(), String> {
         if !self.imports.iter().any(|f| f.id == id) {
             let path = self
                 .imports_dir
@@ -112,12 +112,12 @@ impl App {
             self.imports.push(file);
             self.imports.sort_by_key(|f| import_order(&f.id));
         }
-        self.mark_loaded(id);
+        self.mark_loaded(shell, id);
         Ok(())
     }
 
     /// Names an import among the loaded ones of the settings.
-    pub(crate) fn mark_loaded(&mut self, id: &str) {
+    pub(crate) fn mark_loaded(&mut self, shell: &mut Shell<WinWeaver>, id: &str) {
         let list = self
             .settings
             .extra
@@ -125,21 +125,21 @@ impl App {
             .get_or_insert_with(Vec::new);
         if !list.iter().any(|x| x == id) {
             list.push(id.to_owned());
-            self.settings_dirty = true;
+            shell.settings_dirty = true;
         }
     }
 
     /// Forgets an import: out of the settings, out of memory, and its tab closes.
-    pub(crate) fn unload_import(&mut self, id: &str) {
+    pub(crate) fn unload_import(&mut self, shell: &mut Shell<WinWeaver>, id: &str) {
         self.imports.retain(|f| f.id != id);
-        if let Some(list) = &mut self.settings.extra.loaded_imports {
+        if let Some(list) = &mut shell.settings.extra.loaded_imports {
             list.retain(|x| x != id);
         }
-        self.settings_dirty = true;
-        let active = self.active;
+        shell.settings_dirty = true;
+        let active = shell.active;
         let mut index = 0;
         let mut removed_before = 0;
-        self.docs.retain(|d| {
+        shell.docs.retain(|d| {
             let keep = !matches!(d, Doc::Catalog(c) if c.file.is_none() && c.id == id);
             if !keep && index < active {
                 removed_before += 1;
@@ -147,17 +147,17 @@ impl App {
             index += 1;
             keep
         });
-        self.active = active
+        shell.active = active
             .saturating_sub(removed_before)
-            .min(self.docs.len().saturating_sub(1));
+            .min(shell.docs.len().saturating_sub(1));
     }
 
     /// Looks for the options of the active profile whose catalog is not loaded in the catalog
     /// files of the imports that are not loaded, reading only the ids of their rules, and loads
     /// the files that have some of them: the templates of this Windows first, no file more than
     /// needed.
-    pub(crate) fn load_catalogs_for_unknown(&mut self) {
-        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+    pub(crate) fn load_catalogs_for_unknown(&mut self, shell: &mut Shell<WinWeaver>) {
+        let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
             return;
         };
         let mut wanted: HashSet<String> = doc.profile.unknown.keys().cloned().collect();
@@ -182,23 +182,23 @@ impl App {
             }
         }
         if found.is_empty() {
-            self.status = tr("No imported catalog has these options: import their policy templates in the settings").to_owned();
+            shell.status = tr("No imported catalog has these options: import their policy templates in the settings").to_owned();
             return;
         }
         let mut failed = Vec::new();
         for id in &found {
-            if let Err(e) = self.load_import(id) {
+            if let Err(e) = self.load_import(shell, id) {
                 failed.push(e);
             }
         }
         self.refresh_import_list();
-        self.rebuild_catalog();
-        self.check_active();
-        let left = match self.docs.get(self.active) {
+        self.rebuild_catalog(shell);
+        self.check_active(shell);
+        let left = match shell.docs.get(shell.active) {
             Some(Doc::Profile(d)) => d.profile.unknown.len(),
             _ => 0,
         };
-        self.status = match failed.first() {
+        shell.status = match failed.first() {
             Some(e) => trf("A catalog was not loaded: {e}", &[("e", e)]),
             None => trf(
                 "Loaded {n} catalogs; {left} options are still unknown",
@@ -209,16 +209,16 @@ impl App {
 
     /// Merges the loaded imports into the catalog and brings the choices of the open profiles in
     /// line with it.
-    pub(crate) fn rebuild_catalog(&mut self) {
+    pub(crate) fn rebuild_catalog(&mut self, shell: &mut Shell<WinWeaver>) {
         match admx::merge(&self.base_catalog, &self.imports) {
             Ok((catalog, notes)) => {
                 self.catalog = catalog;
                 if !notes.is_empty() {
-                    self.status = notes.join("; ");
+                    shell.status = notes.join("; ");
                 }
             }
             Err(e) => {
-                self.status = trf("The imports were not merged: {e}", &[("e", &e)]);
+                shell.status = trf("The imports were not merged: {e}", &[("e", &e)]);
                 self.catalog = self.base_catalog.clone();
             }
         }
@@ -226,7 +226,7 @@ impl App {
         admx::merge_texts(&mut texts, &self.imports);
         self.texts = texts;
         let catalog = &self.catalog;
-        for doc in &mut self.docs {
+        for doc in &mut shell.docs {
             if let Doc::Profile(d) = doc {
                 d.profile.take_known(catalog);
                 d.profile.split_unknown(catalog);
@@ -248,7 +248,7 @@ impl App {
     }
 
     /// Starts an import in a thread: the templates of this Windows, a folder or a catalog file.
-    pub(crate) fn start_import(&mut self, source: ImportSource) {
+    pub(crate) fn start_import(&mut self, shell: &mut Shell<WinWeaver>, source: ImportSource) {
         if self.importing.is_some() {
             return;
         }
@@ -334,11 +334,11 @@ impl App {
             let _ = tx.send(result);
         });
         self.importing = Some(rx);
-        self.status = tr("The policy templates are being read").to_owned();
+        shell.status = tr("The policy templates are being read").to_owned();
     }
 
     /// Takes the result of a finished import: saved next to the executable, merged.
-    pub(crate) fn poll_import(&mut self, ctx: &egui::Context) {
+    pub(crate) fn poll_import(&mut self, shell: &mut Shell<WinWeaver>, ctx: &egui::Context) {
         let Some(rx) = &self.importing else {
             return;
         };
@@ -358,10 +358,10 @@ impl App {
                         self.imports.retain(|f| f.id != id);
                         self.imports.push(file);
                         self.imports.sort_by_key(|f| import_order(&f.id));
-                        self.mark_loaded(&id);
+                        self.mark_loaded(shell, &id);
                         self.refresh_import_list();
-                        self.rebuild_catalog();
-                        self.status = match saved {
+                        self.rebuild_catalog(shell);
+                        shell.status = match saved {
                             Ok(()) => trf(
                                 "Imported: {rules} rules, {skipped} policies skipped",
                                 &[("rules", &rules), ("skipped", &skipped)],
@@ -369,7 +369,7 @@ impl App {
                             Err(e) => trf("Imported, but not saved: {e}", &[("e", &e)]),
                         };
                     }
-                    Err(e) => self.status = trf("The import failed: {e}", &[("e", &e)]),
+                    Err(e) => shell.status = trf("The import failed: {e}", &[("e", &e)]),
                 }
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => {
@@ -380,24 +380,24 @@ impl App {
     }
 
     /// Opens the tab of an import, or brings it to the front.
-    pub(crate) fn open_catalog(&mut self, id: &str) {
-        if self.focus_tab(|d| matches!(d, Doc::Catalog(c) if c.id == id)) {
+    pub(crate) fn open_catalog(&mut self, shell: &mut Shell<WinWeaver>, id: &str) {
+        if shell.focus_tab(|d| matches!(d, Doc::Catalog(c) if c.id == id)) {
             return;
         }
         let Some(file) = self.imports.iter().find(|f| f.id == id) else {
             return;
         };
-        self.docs
+        shell.docs
             .push(Doc::Catalog(Box::new(catalogview::CatalogDoc::new(file))));
-        self.active = self.docs.len() - 1;
+        shell.active = shell.docs.len() - 1;
     }
 
     /// Gives an import another name, in the settings and as the title of its tree.
-    pub(crate) fn rename_import(&mut self, id: &str, name: &str) {
-        self.open_settings().renaming = None;
+    pub(crate) fn rename_import(&mut self, shell: &mut Shell<WinWeaver>, id: &str, name: &str) {
+        self.renaming = None;
         let name = name.trim();
         if name.is_empty() || name.chars().count() > 120 || name.chars().any(char::is_control) {
-            self.status =
+            shell.status =
                 tr("A name of 1 to 120 characters without control characters is needed").to_owned();
             return;
         }
@@ -417,7 +417,7 @@ impl App {
             .imports_dir
             .join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
         let saved = file.save(&path);
-        for doc in &mut self.docs {
+        for doc in &mut shell.docs {
             if let Doc::Catalog(c) = doc
                 && c.id == id
             {
@@ -425,14 +425,14 @@ impl App {
             }
         }
         self.refresh_import_list();
-        self.rebuild_catalog();
-        self.status = match saved {
+        self.rebuild_catalog(shell);
+        shell.status = match saved {
             Ok(()) => trf("Renamed to {name}", &[("name", &name)]),
             Err(e) => trf("Renamed, but not saved: {e}", &[("e", &e)]),
         };
     }
 
-    pub(crate) fn export_import(&mut self, id: &str) {
+    pub(crate) fn export_import(&mut self, shell: &mut Shell<WinWeaver>, id: &str) {
         let Some(file) = self.imports.iter().find(|f| f.id == id) else {
             return;
         };
@@ -446,9 +446,9 @@ impl App {
         };
         match file.save(&path) {
             Ok(()) => {
-                self.saved(&path);
+                shell.saved(&path);
             }
-            Err(e) => self.save_failed(e),
+            Err(e) => shell.save_failed(e),
         }
     }
 
@@ -456,11 +456,7 @@ impl App {
     pub(crate) fn imports_view(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         style::section_title(ui, tr("Policy templates"));
         ui.weak(tr("Imported ADMX templates become rules under Standard policies. Only the checked catalogs are read and loaded; when two of them hold a policy, the templates of this Windows win."));
-        let mut none = None;
-        let renaming = match self.docs.get_mut(self.active) {
-            Some(Doc::Settings(d)) => &mut d.renaming,
-            _ => &mut none,
-        };
+        let mut renaming = self.renaming.take();
         for entry in &self.import_list {
             let file = self.imports.iter().find(|f| f.id == entry.id);
             ui.horizontal(|ui| {
@@ -498,7 +494,7 @@ impl App {
                     acts.push(crate::question::remove_import(&entry.name, entry.id.clone()).into());
                 }
             });
-            if let Some((id, name)) = &mut *renaming
+            if let Some((id, name)) = &mut renaming
                 && id == &entry.id
             {
                 ui.horizontal(|ui| {
@@ -546,11 +542,12 @@ impl App {
                 acts.push(Act::Import(ImportAct::Templates(ImportSource::Archive)));
             }
         });
+        self.renaming = renaming;
     }
 
     /// Opens the editor of a loaded import or of the file of a catalog tab; an editor of the same
     /// file comes to the front.
-    pub(crate) fn edit_catalog(&mut self, which: CatalogRef) {
+    pub(crate) fn edit_catalog(&mut self, shell: &mut Shell<WinWeaver>, which: CatalogRef) {
         let import_path =
             |dir: &Path, id: &str| dir.join(format!("{id}.{}", admx::CATALOG_EXTENSION));
         let (file, path, import) = match &which {
@@ -558,7 +555,7 @@ impl App {
                 Some(f) => (f.clone(), import_path(&self.imports_dir, &f.id), true),
                 None => return,
             },
-            CatalogRef::Tab(i) => match self.docs.get(*i) {
+            CatalogRef::Tab(i) => match shell.docs.get(*i) {
                 Some(Doc::Catalog(c)) => match (&c.file, &c.path) {
                     (Some(f), Some(p)) => ((**f).clone(), p.clone(), false),
                     (None, _) => match c.catalog(&self.imports) {
@@ -570,15 +567,15 @@ impl App {
                 _ => return,
             },
         };
-        if self.focus_tab(|d| matches!(d, Doc::CatalogEdit(e) if e.path == path)) {
+        if shell.focus_tab(|d| matches!(d, Doc::CatalogEdit(e) if e.path == path)) {
             return;
         }
         let doc = cataledit::EditorDoc::new(file, path, import);
-        self.open_tab(Doc::CatalogEdit(Box::new(doc)));
+        shell.open_tab(Doc::CatalogEdit(Box::new(doc)));
     }
 
     /// An empty catalog file among the imports, loaded, in its editor.
-    pub(crate) fn new_catalog(&mut self) {
+    pub(crate) fn new_catalog(&mut self, shell: &mut Shell<WinWeaver>) {
         let mut n = 1;
         let id = loop {
             let id = format!("custom-{n}");
@@ -603,21 +600,21 @@ impl App {
             .join(format!("{id}.{}", admx::CATALOG_EXTENSION));
         let _ = std::fs::create_dir_all(&self.imports_dir);
         if let Err(e) = file.save(&path) {
-            self.save_failed(e);
+            shell.save_failed(e);
             return;
         }
         self.imports.push(file.clone());
         self.imports.sort_by_key(|f| import_order(&f.id));
-        self.mark_loaded(&id);
+        self.mark_loaded(shell, &id);
         self.refresh_import_list();
-        self.rebuild_catalog();
+        self.rebuild_catalog(shell);
         let doc = cataledit::EditorDoc::new(file, path, true);
-        self.open_tab(Doc::CatalogEdit(Box::new(doc)));
+        shell.open_tab(Doc::CatalogEdit(Box::new(doc)));
     }
 
     /// Saves the file of the editor in front after a check; a loaded import is read again.
-    pub(crate) fn save_catalog_edit(&mut self) {
-        let Some(Doc::CatalogEdit(d)) = self.docs.get_mut(self.active) else {
+    pub(crate) fn save_catalog_edit(&mut self, shell: &mut Shell<WinWeaver>) {
+        let Some(Doc::CatalogEdit(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
         if let Some(parent) = d.path.parent() {
@@ -625,25 +622,25 @@ impl App {
         }
         let result = d.file.check().and_then(|()| d.file.save(&d.path));
         if let Err(e) = result {
-            self.save_failed(e);
+            shell.save_failed(e);
             return;
         }
         d.dirty = false;
         let path = d.path.clone();
         let reload = d.import.then(|| d.file.clone());
-        self.saved(&path);
+        shell.saved(&path);
         if let Some(file) = reload {
             if let Some(slot) = self.imports.iter_mut().find(|f| f.id == file.id) {
                 *slot = file;
             }
             self.refresh_import_list();
-            self.rebuild_catalog();
+            self.rebuild_catalog(shell);
         }
     }
 
     /// The catalog of the active tab and the other one, side by side in a Markdown page.
-    pub(crate) fn compare_catalog(&mut self, other: CatalogRef) {
-        let Some(Doc::Catalog(c)) = self.docs.get(self.active) else {
+    pub(crate) fn compare_catalog(&mut self, shell: &mut Shell<WinWeaver>, other: CatalogRef) {
+        let Some(Doc::Catalog(c)) = shell.docs.get(shell.active) else {
             return;
         };
         let Some(first) = c.catalog(&self.imports) else {
@@ -651,13 +648,13 @@ impl App {
         };
         let second = match &other {
             CatalogRef::Import(id) => self.imports.iter().find(|f| &f.id == id),
-            CatalogRef::Tab(i) => match self.docs.get(*i) {
+            CatalogRef::Tab(i) => match shell.docs.get(*i) {
                 Some(Doc::Catalog(o)) => o.catalog(&self.imports),
                 _ => None,
             },
         };
         let Some(second) = second else {
-            self.status = tr("The other catalog is not open any more").to_owned();
+            shell.status = tr("The other catalog is not open any more").to_owned();
             return;
         };
         let title = trf(
@@ -665,36 +662,36 @@ impl App {
             &[("first", &first.name), ("second", &second.name)],
         );
         let page = comparison_page(first, second);
-        self.docs
+        shell.docs
             .push(Doc::Markdown(Box::new(MdDoc::new(title, None, page))));
-        self.active = self.docs.len() - 1;
+        shell.active = shell.docs.len() - 1;
     }
 
     /// Runs an act of the acts of the tab of an import or of a catalog file, and of its editor.
-    pub(crate) fn apply_catalog(&mut self, act: CatalogAct) {
+    pub(crate) fn apply_catalog(&mut self, shell: &mut Shell<WinWeaver>, act: CatalogAct) {
         match act {
             CatalogAct::OpenAt(import, rule) => {
-                self.open_catalog(&import);
-                if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active)
+                self.open_catalog(shell, &import);
+                if let Some(Doc::Catalog(c)) = shell.docs.get_mut(shell.active)
                     && c.id == import
                 {
                     c.group = None;
                     c.sel = Some(rule);
                 }
-                self.reveal_selection();
+                self.reveal_selection(shell);
             }
-            CatalogAct::ImportOpen => self.import_open_catalog(),
-            CatalogAct::Compare(other) => self.compare_catalog(other),
-            CatalogAct::Edit(which) => self.edit_catalog(which),
-            CatalogAct::New => self.new_catalog(),
+            CatalogAct::ImportOpen => self.import_open_catalog(shell),
+            CatalogAct::Compare(other) => self.compare_catalog(shell, other),
+            CatalogAct::Edit(which) => self.edit_catalog(shell, which),
+            CatalogAct::New => self.new_catalog(shell),
             CatalogAct::EditRemove(id) => {
-                if let Some(Doc::CatalogEdit(d)) = self.docs.get_mut(self.active) {
+                if let Some(Doc::CatalogEdit(d)) = shell.docs.get_mut(shell.active) {
                     d.remove(&id);
                 }
             }
-            CatalogAct::Open(id) => self.open_catalog(&id),
+            CatalogAct::Open(id) => self.open_catalog(shell, &id),
             CatalogAct::Select(key) => {
-                if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) {
+                if let Some(Doc::Catalog(c)) = shell.docs.get_mut(shell.active) {
                     let (group, sel) = match key {
                         Some(TreeKey::Group(g)) => (Some(g), None),
                         Some(TreeKey::Rule(r)) => (None, Some(r)),
@@ -705,11 +702,11 @@ impl App {
                 }
             }
             CatalogAct::Reveal(key) => {
-                self.apply(vec![Act::Catalog(CatalogAct::Select(Some(key)))]);
-                self.reveal_selection();
+                self.apply(shell, Act::Catalog(CatalogAct::Select(Some(key))));
+                self.reveal_selection(shell);
             }
             CatalogAct::Expand(gid, open) => {
-                if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) {
+                if let Some(Doc::Catalog(c)) = shell.docs.get_mut(shell.active) {
                     if open {
                         c.expanded.insert(gid);
                     } else {
@@ -721,30 +718,30 @@ impl App {
     }
 
     /// Runs an act of the acts of the imports of policy templates.
-    pub(crate) fn apply_import(&mut self, act: ImportAct) {
+    pub(crate) fn apply_import(&mut self, shell: &mut Shell<WinWeaver>, act: ImportAct) {
         match act {
-            ImportAct::Templates(source) => self.start_import(source),
+            ImportAct::Templates(source) => self.start_import(shell, source),
             ImportAct::Toggle(id) => {
                 if self.imports.iter().any(|f| f.id == id) {
-                    self.unload_import(&id);
-                } else if let Err(e) = self.load_import(&id) {
-                    self.status = trf("The import was not loaded: {e}", &[("e", &e)]);
+                    self.unload_import(shell, &id);
+                } else if let Err(e) = self.load_import(shell, &id) {
+                    shell.status = trf("The import was not loaded: {e}", &[("e", &e)]);
                 }
                 self.refresh_import_list();
-                self.rebuild_catalog();
+                self.rebuild_catalog(shell);
             }
             ImportAct::Remove(id) => {
                 let _ = std::fs::remove_file(
                     self.imports_dir
                         .join(format!("{id}.{}", admx::CATALOG_EXTENSION)),
                 );
-                self.unload_import(&id);
+                self.unload_import(shell, &id);
                 self.refresh_import_list();
-                self.rebuild_catalog();
+                self.rebuild_catalog(shell);
             }
-            ImportAct::LoadCatalogs => self.load_catalogs_for_unknown(),
-            ImportAct::Export(id) => self.export_import(&id),
-            ImportAct::Rename(id, name) => self.rename_import(&id, &name),
+            ImportAct::LoadCatalogs => self.load_catalogs_for_unknown(shell),
+            ImportAct::Export(id) => self.export_import(shell, &id),
+            ImportAct::Rename(id, name) => self.rename_import(shell, &id, &name),
         }
     }
 }

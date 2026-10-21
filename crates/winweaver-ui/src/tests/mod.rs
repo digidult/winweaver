@@ -8,8 +8,8 @@ mod registry;
 mod window;
 
 /// The key of the first rule of the diff in the last tab.
-pub(super) fn first_rule_key(app: &App) -> Option<String> {
-    match app.docs.last() {
+pub(super) fn first_rule_key(app: &Window<WinWeaver>) -> Option<String> {
+    match app.shell.docs.last() {
         Some(Doc::Diff(d)) => d
             .diff
             .keys()
@@ -69,12 +69,12 @@ pub(super) fn sample_import(dir: &Path) {
 }
 
 /// Waits for a read of this PC as the frames do.
-pub(super) fn wait_pc_read(app: &mut App) {
+pub(super) fn wait_pc_read(app: &mut Window<WinWeaver>) {
     let ctx = egui::Context::default();
     let started = std::time::Instant::now();
-    while app.pc_read.is_some() {
+    while app.app.pc_read.is_some() {
         assert!(started.elapsed() < std::time::Duration::from_secs(60));
         std::thread::sleep(std::time::Duration::from_millis(10));
-        app.poll_pc_read(&ctx);
+        app.app.poll_pc_read(&mut app.shell, &ctx);
     }
 }

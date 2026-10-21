@@ -1,110 +1,44 @@
-//! The settings tab and the settings that take effect at once.
+//! The settings of WinWeaver: its lines in the General section of the window, the section Files,
+//! the rename of an import.
 
 use crate::*;
+use crate::ShellAct;
 
-impl App {
-    /// Brings the settings tab to the front, opening it when there is none, and gives it.
-    pub(crate) fn open_settings(&mut self) -> &mut SettingsDoc {
-        let i = self.show_single(DocKind::Settings, || Doc::Settings(Box::default()));
-        let Doc::Settings(doc) = &mut self.docs[i] else {
-            unreachable!("the tab at {i} is the settings");
-        };
-        doc
-    }
-
-    pub(crate) fn settings_view(&mut self, ui: &mut egui::Ui) {
-        let before = self.settings.clone();
-        let p = style::palette(ui);
-        let mut section = match self.docs.get(self.active) {
-            Some(Doc::Settings(d)) => d.section,
-            _ => SettingsSection::General,
-        };
-        views::header(ui, |ui| {
-            ui.label(style::strong(ui, tr("Settings"), 18.0));
+impl WinWeaver {
+    /// The lines of WinWeaver in the card Window of the General section.
+    pub(crate) fn general_settings(&self, shell: &mut Shell<WinWeaver>, ui: &mut egui::Ui) {
+        let extra = &mut shell.settings.extra;
+        ui.checkbox(
+            &mut extra.desc_open,
+            tr("Show the description panel (Ctrl+D)"),
+        );
+        ui.horizontal_wrapped(|ui| {
+            ui.label(tr("Open at first in the description:"));
+            let parts = &mut extra.desc_sections;
+            ui.checkbox(&mut parts.what, tr("What it does"));
+            ui.checkbox(&mut parts.risk, tr("Risk"));
+            ui.checkbox(&mut parts.writes, tr("What it writes"));
+            ui.checkbox(&mut parts.deps, tr("Dependencies and conflicts"));
+            ui.checkbox(&mut parts.more, tr("Versions, check and rollback"));
+            ui.checkbox(&mut parts.reference, tr("Reference"));
         });
-        ui.horizontal_top(|ui| {
-            egui::Frame::new()
-                .inner_margin(egui::Margin {
-                    left: 8,
-                    right: 0,
-                    top: 10,
-                    bottom: 0,
-                })
-                .show(ui, |ui| {
-                    ui.vertical(|ui| {
-                        ui.set_width(200.0);
-                        ui.spacing_mut().item_spacing.y = 2.0;
-                        for s in SettingsSection::ALL {
-                            let title = s.title();
-                            let selected = section == s;
-                            let (rect, response) = ui.allocate_exact_size(
-                                egui::vec2(200.0, style::row_height(ui)),
-                                egui::Sense::click(),
-                            );
-                            if selected {
-                                ui.painter()
-                                    .rect_filled(rect, egui::CornerRadius::same(6), p.sel);
-                            } else if response.hovered() {
-                                ui.painter().rect_filled(
-                                    rect,
-                                    egui::CornerRadius::same(6),
-                                    p.hover,
-                                );
-                            }
-                            ui.painter().text(
-                                egui::pos2(rect.left() + 12.0, rect.center().y),
-                                egui::Align2::LEFT_CENTER,
-                                title,
-                                style::font(ui, 13.0),
-                                if selected { p.sel_text } else { p.text },
-                            );
-                            response.widget_info(|| {
-                                egui::WidgetInfo::selected(
-                                    egui::WidgetType::SelectableLabel,
-                                    true,
-                                    selected,
-                                    title,
-                                )
-                            });
-                            if response.clicked() {
-                                section = s;
-                            }
-                        }
-                    });
-                });
-            ui.vertical(|ui| {
-                egui::ScrollArea::vertical()
-                    .id_salt("settings-page")
-                    .auto_shrink(false)
-                    .show(ui, |ui| {
-                        match section {
-                            SettingsSection::Templates => {
-                                let mut acts = Vec::new();
-                                views::block(ui, |ui| self.imports_view(ui, &mut acts));
-                                self.pending_acts.extend(acts);
-                            }
-                            SettingsSection::Files => {
-                                views::block(ui, |ui| self.files_settings(ui));
-                            }
-                            SettingsSection::General => self.general_settings(ui),
-                        }
-                        ui.add_space(12.0);
-                    });
-            });
-        });
-        if let Some(Doc::Settings(d)) = self.docs.get_mut(self.active) {
-            d.section = section;
-        }
-        if before != self.settings {
-            self.settings_dirty = true;
-            if before.language != self.settings.language {
-                self.apply_language();
-            }
-        }
+        ui.checkbox(
+            &mut extra.show_guide_at_start,
+            tr("Open the guide at the next start"),
+        );
+        ui.checkbox(
+            &mut extra.inline_switches,
+            tr("Switches at the end of the rows of the selected group"),
+        );
+        ui.checkbox(
+            &mut extra.hide_unknown,
+            tr("Hide the options of the profile whose catalog is not loaded"),
+        );
+        ui.add_space(4.0);
     }
 
     /// The folders next to the executable and the recent files.
-    pub(crate) fn files_settings(&mut self, ui: &mut egui::Ui) {
+    pub(crate) fn files_settings(&self, shell: &mut Shell<WinWeaver>, ui: &mut egui::Ui) {
         style::section_title(ui, tr("Files"));
         ui.add_space(4.0);
         ui.label(trf(
@@ -138,252 +72,24 @@ impl App {
             ui.horizontal_wrapped(|ui| {
                 ui.label(text);
                 if ui.small_button(tr("Open")).clicked() {
-                    self.pending_acts.push(Act::Nav(NavAct::ShowInFolder(path)));
+                    shell
+                        .pending
+                        .push(Act::Shell(ShellAct::ShowInFolder(path)));
                 }
             });
         }
         ui.add_space(8.0);
-        if !self.settings.recent.is_empty() && ui.button(tr("Forget recent files")).clicked() {
-            self.pending_acts
-                .push(crate::question::forget_recent().into());
-        }
-    }
-
-    /// Language, theme, the fonts of the theme and the behaviour of the window, in cards.
-    pub(crate) fn general_settings(&mut self, ui: &mut egui::Ui) {
-        views::block(ui, |ui| {
-            style::section_title(ui, tr("Language and theme"));
-            ui.add_space(4.0);
-            self.language_and_theme(ui);
-        });
-        views::block(ui, |ui| self.theme_fonts(ui));
-        views::block(ui, |ui| {
-            style::section_title(ui, tr("Window"));
-            ui.add_space(4.0);
-            ui.checkbox(
-                &mut self.settings.extra.desc_open,
-                tr("Show the description panel (Ctrl+D)"),
-            );
-            ui.horizontal_wrapped(|ui| {
-                ui.label(tr("Open at first in the description:"));
-                let parts = &mut self.settings.extra.desc_sections;
-                ui.checkbox(&mut parts.what, tr("What it does"));
-                ui.checkbox(&mut parts.risk, tr("Risk"));
-                ui.checkbox(&mut parts.writes, tr("What it writes"));
-                ui.checkbox(&mut parts.deps, tr("Dependencies and conflicts"));
-                ui.checkbox(&mut parts.more, tr("Versions, check and rollback"));
-                ui.checkbox(&mut parts.reference, tr("Reference"));
-            });
-            ui.checkbox(
-                &mut self.settings.extra.show_guide_at_start,
-                tr("Open the guide at the next start"),
-            );
-            ui.checkbox(
-                &mut self.settings.extra.inline_switches,
-                tr("Switches at the end of the rows of the selected group"),
-            );
-            ui.checkbox(
-                &mut self.settings.extra.hide_unknown,
-                tr("Hide the options of the profile whose catalog is not loaded"),
-            );
-            ui.add_space(4.0);
-            self.renderer_choice(ui);
-            ui.checkbox(
-                &mut self.settings.restore_tabs,
-                tr("Open the tabs of the last session at the start"),
-            );
-        });
-    }
-
-    /// The renderer of the next start, among the ones of this executable.
-    pub(crate) fn renderer_choice(&mut self, ui: &mut egui::Ui) {
-        let current = Renderer::parse(&self.settings.renderer);
-        ui.horizontal(|ui| {
-            ui.label(tr("Renderer"));
-            egui::ComboBox::from_id_salt("renderer")
-                .selected_text(current.map_or(tr("Automatic"), Renderer::title))
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        &mut self.settings.renderer,
-                        String::new(),
-                        tr("Automatic"),
-                    );
-                    for &r in Renderer::ALL {
-                        ui.selectable_value(
-                            &mut self.settings.renderer,
-                            r.id().to_owned(),
-                            r.title(),
-                        );
-                    }
-                });
-        });
-        let order: Vec<&str> = Renderer::ALL.iter().map(|r| r.title()).collect();
-        ui.weak(trf("A change takes effect at the next start. Automatic tries {order} in this order and takes the first that starts; OpenGL takes less memory, DirectX 12 also draws without a driver of the graphics card.", &[("order", &order.join(", "))]));
-        if !self.graphics.is_empty() {
-            ui.weak(trf(
-                "Draws now with {graphics}",
-                &[("graphics", &self.graphics)],
-            ));
-        }
-    }
-
-    pub(crate) fn language_and_theme(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            ui.label(tr("Language"));
-            let langs = i18n::languages(&lang_dir());
-            let current = if self.settings.language.is_empty() {
-                tr("Follow Windows").to_owned()
-            } else {
-                langs
-                    .iter()
-                    .find(|l| l.code == self.settings.language)
-                    .map_or_else(|| self.settings.language.clone(), |l| l.name.clone())
-            };
-            egui::ComboBox::from_id_salt("language")
-                .selected_text(current)
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        &mut self.settings.language,
-                        String::new(),
-                        tr("Follow Windows"),
-                    );
-                    for l in &langs {
-                        ui.selectable_value(&mut self.settings.language, l.code.clone(), &l.name);
-                    }
-                });
-        });
-        let shown = self.shown_theme_id(ui.visuals().dark_mode);
-        ui.horizontal(|ui| {
-            ui.label(tr("Theme"));
-            let current = if self.settings.custom_theme.is_empty()
-                && self.settings.theme == ThemeChoice::System
-            {
-                tr("Follow Windows").to_owned()
-            } else {
-                themes::find(&self.themes, &shown).name
-            };
-            let mut choice = if self.settings.theme == ThemeChoice::System
-                && self.settings.custom_theme.is_empty()
-            {
-                String::new()
-            } else {
-                shown.clone()
-            };
-            let before = choice.clone();
-            egui::ComboBox::from_id_salt("theme")
-                .selected_text(current)
-                .width(200.0)
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(&mut choice, String::new(), tr("Follow Windows"))
-                        .on_hover_text(tr("Light or Dark, as Windows shows its apps"));
-                    for t in &self.themes {
-                        ui.selectable_value(&mut choice, t.id.clone(), &t.name);
-                    }
-                });
-            if choice != before {
-                if choice.is_empty() {
-                    self.settings.theme = ThemeChoice::System;
-                    self.settings.custom_theme.clear();
-                } else {
-                    let dark = themes::find(&self.themes, &choice).dark;
-                    self.settings.theme = if dark {
-                        ThemeChoice::Dark
-                    } else {
-                        ThemeChoice::Light
-                    };
-                    self.settings.custom_theme = choice;
-                }
-            }
-            if ui
-                .button(tr("Edit the theme"))
-                .on_hover_text(tr(
-                    "Opens the theme file in its editor: colours, fonts, Save as",
-                ))
-                .clicked()
-            {
-                self.pending_acts
-                    .push(Act::Theme(ThemeAct::Edit(shown.clone())));
-            }
-            if ui.button(tr("Open a theme file...")).clicked() {
-                self.pending_acts.push(Act::Theme(ThemeAct::OpenFile));
-            }
-        });
-    }
-
-    /// The fonts of the theme the window shows, saved in its file when one changes.
-    pub(crate) fn theme_fonts(&mut self, ui: &mut egui::Ui) {
-        let shown = self.shown_theme_id(ui.visuals().dark_mode);
-        let mut theme = themes::find(&self.themes, &shown);
-        style::section_title(
-            ui,
-            &trf("Fonts of the theme {name}", &[("name", &theme.name)]),
-        );
-        let families = style::installed_families();
-        ui.add_space(4.0);
-        if themeview::fonts_grid(ui, "settings-fonts", &mut theme, &families) {
-            let path = theme.file_in(&themes_dir());
-            match theme.save(&path) {
-                Ok(()) => {
-                    self.themes = themes::themes(&themes_dir());
-                    self.saved(&path);
-                }
-                Err(e) => self.save_failed(e),
-            }
-        }
-        ui.label(style::muted(
-            ui,
-            trf(
-                "The fonts belong to the theme {name}: a change is saved in its file in the themes folder.",
-                &[("name", &theme.name)],
-            ),
-            12.0,
-        ));
-    }
-
-    /// The language the window shows: the setting, or the language of Windows when it says to
-    /// follow Windows, English when there is no file for it.
-    pub(crate) fn effective_language(&self) -> String {
-        let wanted = if self.settings.language.is_empty() {
-            winweaver_win::ui_language().unwrap_or_else(|| "en".to_owned())
-        } else {
-            self.settings.language.clone()
-        };
-        if i18n::languages(&lang_dir())
-            .iter()
-            .any(|l| l.code == wanted)
-        {
-            wanted
-        } else {
-            "en".to_owned()
-        }
-    }
-
-    pub(crate) fn apply_language(&mut self) {
-        let code = self.effective_language();
-        i18n::set_language(&code, &lang_dir());
-    }
-
-    pub(crate) fn persist_settings(&mut self) {
-        if !self.settings_dirty {
-            return;
-        }
-        self.settings_dirty = false;
-        if let Err(e) = self.settings.save_to(&Settings::path()) {
-            self.status = trf("Settings not saved: {e}", &[("e", &e)]);
+        if !shell.settings.recent.is_empty() && ui.button(tr("Forget recent files")).clicked() {
+            let question = shell.forget_recent_act();
+            shell.pending.push(question);
         }
     }
 
     /// Runs an act of the acts of the settings tab.
     pub(crate) fn apply_settings(&mut self, act: SettingsAct) {
         match act {
-            SettingsAct::Open => {
-                self.themes = themes::themes(&themes_dir());
-                self.refresh_import_list();
-                self.open_settings();
-            }
-            SettingsAct::OpenSection(section) => self.open_settings().section = section,
-            SettingsAct::StartRename(id, name) => self.open_settings().renaming = Some((id, name)),
-            SettingsAct::CancelRename => self.open_settings().renaming = None,
+            SettingsAct::StartRename(id, name) => self.renaming = Some((id, name)),
+            SettingsAct::CancelRename => self.renaming = None,
         }
     }
 }

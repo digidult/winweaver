@@ -13,8 +13,9 @@ use winweaver_core::profile::Choice;
 
 use crate::i18n::{tr, trf};
 use crate::views::{self, gtitle, rtitle};
+use crate::ShellAct;
 use crate::{
-    Act, DiffAct, FileAct, MarksAct, NavAct, ProfileAct, Settings, icons, list, matches_words,
+    Act, DiffAct, MarksAct, ProfileAct, Settings, icons, list, matches_words,
     style, tree,
 };
 
@@ -218,7 +219,7 @@ pub fn diff_view(
                 }
                 let text = trf("Open {name}", &[("name", name)]);
                 if ui.link(text).on_hover_text(path.as_str()).clicked() {
-                    acts.push(Act::File(FileAct::OpenPath(std::path::PathBuf::from(path))));
+                    acts.push(Act::Shell(ShellAct::OpenPath(std::path::PathBuf::from(path))));
                 }
             }
         });
@@ -284,9 +285,9 @@ pub fn diff_view(
         }
     }
     if out.moved {
-        acts.push(Act::Nav(NavAct::Follow));
+        acts.push(Act::Shell(ShellAct::Follow));
     } else if out.scrolled {
-        acts.push(Act::Nav(NavAct::Revealed));
+        acts.push(Act::Shell(ShellAct::Revealed));
     }
 }
 

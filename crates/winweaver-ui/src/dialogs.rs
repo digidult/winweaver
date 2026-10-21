@@ -42,7 +42,7 @@ pub(crate) fn pick_profile() -> Option<PathBuf> {
 }
 
 /// The open dialog for every kind of file the program opens.
-pub(crate) fn pick_any() -> Option<PathBuf> {
+pub(crate) fn open_dialog() -> rfd::FileDialog {
     let dir = profiles_dir();
     let dialog = rfd::FileDialog::new()
         .set_title(tr("Open"))
@@ -63,7 +63,7 @@ pub(crate) fn pick_any() -> Option<PathBuf> {
         .add_filter(tr("Answer files (the profile they embed)"), &["xml"])
         .add_filter(tr("WinKickOff profiles and audit reports"), &["json"])
         .add_filter(tr("Markdown pages"), &["md"]);
-    widgets::in_folder(dialog, &dir).pick_file()
+    widgets::in_folder(dialog, &dir)
 }
 
 pub(crate) fn ask_save_path(proposed: &str) -> Option<PathBuf> {

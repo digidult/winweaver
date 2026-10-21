@@ -8,23 +8,23 @@ use super::*;
 fn this_pc_is_read_in_the_background() {
     let catalog = Catalog::embedded().unwrap();
     let profile = Profile::from_defaults("Office", &catalog);
-    let mut app = App::new(catalog.clone(), Vec::new(), Settings::default());
-    app.docs = vec![
+    let mut app = Window::new(WinWeaver::new(catalog.clone(), Vec::new()), Settings::default());
+    app.shell.docs = vec![
         Doc::Profile(Box::new(ProfileDoc::new(profile.clone(), None, &catalog))),
         Doc::Profile(Box::new(ProfileDoc::new(profile, None, &catalog))),
     ];
-    app.active = 0;
-    app.pc = Some(std::sync::Arc::new(thispc::MemoryMachine::default()));
+    app.shell.active = 0;
+    app.app.pc = Some(std::sync::Arc::new(thispc::MemoryMachine::default()));
     app.apply(vec![Act::Pc(PcAct::Check)]);
-    assert!(app.pc_read.is_some());
+    assert!(app.app.pc_read.is_some());
     app.apply(vec![Act::Pc(PcAct::Read)]);
     assert_eq!(
-        app.status,
+        app.shell.status,
         tr("This PC is being read; wait until the read ends")
     );
-    app.active = 1;
+    app.shell.active = 1;
     wait_pc_read(&mut app);
-    let issues = |app: &App, i: usize| match app.docs.get(i) {
+    let issues = |app: &Window<WinWeaver>, i: usize| match app.shell.docs.get(i) {
         Some(Doc::Profile(d)) => d.issues.clone(),
         _ => panic!("profile tab {i}"),
     };
@@ -38,22 +38,22 @@ fn this_pc_is_read_in_the_background() {
 
     app.apply(vec![Act::Pc(PcAct::Read)]);
     wait_pc_read(&mut app);
-    assert_eq!(app.docs.len(), 3);
-    assert_eq!(app.active, 2);
-    let Some(Doc::Profile(read)) = app.docs.get(2) else {
+    assert_eq!(app.shell.docs.len(), 3);
+    assert_eq!(app.shell.active, 2);
+    let Some(Doc::Profile(read)) = app.shell.docs.get(2) else {
         panic!("the profile read from this PC");
     };
     assert_eq!(read.profile.name, "MEMORY");
 
     // A tab closed during the read is missed without harm.
-    app.active = 0;
+    app.shell.active = 0;
     app.apply(vec![Act::Pc(PcAct::Check)]);
-    app.docs.remove(0);
-    app.active = 0;
+    app.shell.docs.remove(0);
+    app.shell.active = 0;
     wait_pc_read(&mut app);
     assert_eq!(
-        app.status,
+        app.shell.status,
         tr("Check on this PC: the tab of the profile was closed")
     );
-    assert_eq!(app.docs.len(), 2);
+    assert_eq!(app.shell.docs.len(), 2);
 }

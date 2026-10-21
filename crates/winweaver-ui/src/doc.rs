@@ -1,8 +1,10 @@
-//! The tabs of the window: the enum of every document, the trait every document answers, and
-//! the documents that are a state of the window alone (the bookmarks, the MCP server, the
-//! settings).
+//! The tabs of the window: the enum of every document, what each answers to the window
+//! (`ww::Document`, named `Tab` here), the kinds the chrome knows and the sections of the
+//! settings.
 
 use std::path::Path;
+
+use ww::{Draft, Scrolled, ShellDoc};
 
 use crate::cataledit::EditorDoc;
 use crate::catalogview::CatalogDoc;
@@ -12,10 +14,12 @@ use crate::marksview::MarksDoc;
 use crate::mcpview::McpDoc;
 use crate::regfileview::RegFileDoc;
 use crate::regview::RegistryDoc;
-use crate::themeview::ThemeDoc;
 use crate::usersview::UsersDoc;
-use crate::{MdDoc, ProfileDoc, Search, Tab, icons, themes};
+use crate::{MdDoc, ProfileDoc, Search, Tab, icons};
 use winweaver_core::{diff, profile};
+
+/// A draft is written this long after the last change.
+const DRAFT_DELAY: std::time::Duration = std::time::Duration::from_secs(2);
 
 /// The kind of a tab: what the chrome shows for it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -83,11 +87,9 @@ impl DocKind {
     }
 }
 
-/// A section of the settings tab.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// A section of the settings tab after General, the one of the window.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SettingsSection {
-    #[default]
-    General,
     /// The policy templates: the imports.
     Templates,
     /// The folders of the program and the recent files.
@@ -95,24 +97,21 @@ pub enum SettingsSection {
 }
 
 impl SettingsSection {
-    pub const ALL: [SettingsSection; 3] = [Self::General, Self::Templates, Self::Files];
+    /// The sections in their order after General.
+    pub const ALL: [SettingsSection; 2] = [Self::Templates, Self::Files];
 
     /// The title of the section.
     pub fn title(self) -> &'static str {
         match self {
-            Self::General => tr("General"),
             Self::Templates => tr("Policy templates"),
             Self::Files => tr("Files"),
         }
     }
-}
 
-/// The settings tab.
-#[derive(Default)]
-pub struct SettingsDoc {
-    pub section: SettingsSection,
-    /// The import being renamed and the name typed so far.
-    pub renaming: Option<(String, String)>,
+    /// The number of the section in the settings tab, where General is 0.
+    pub fn index(self) -> usize {
+        Self::ALL.iter().position(|s| *s == self).map_or(0, |i| i + 1)
+    }
 }
 
 /// A tab of the window.
@@ -122,11 +121,8 @@ pub enum Doc {
     Markdown(Box<MdDoc>),
     Bookmarks(Box<MarksDoc>),
     Mcp(Box<McpDoc>),
-    Settings(Box<SettingsDoc>),
     /// The tree of an import of policy templates.
     Catalog(Box<CatalogDoc>),
-    /// The editor of a theme.
-    Theme(Box<ThemeDoc>),
     /// The registry of this PC.
     Registry(Box<RegistryDoc>),
     /// The editor of a catalog file.
@@ -135,6 +131,8 @@ pub enum Doc {
     RegFile(Box<RegFileDoc>),
     /// A users file (`.wwusers`).
     Users(Box<UsersDoc>),
+    /// A document of the window itself: the settings, the editor of a theme.
+    Shell(ShellDoc),
 }
 
 impl Doc {
@@ -145,13 +143,13 @@ impl Doc {
             Doc::Markdown(_) => DocKind::Markdown,
             Doc::Bookmarks(_) => DocKind::Bookmarks,
             Doc::Mcp(_) => DocKind::Mcp,
-            Doc::Settings(_) => DocKind::Settings,
             Doc::Catalog(_) => DocKind::Catalog,
-            Doc::Theme(_) => DocKind::Theme,
             Doc::Registry(_) => DocKind::Registry,
             Doc::CatalogEdit(_) => DocKind::CatalogEdit,
             Doc::RegFile(_) => DocKind::RegFile,
             Doc::Users(_) => DocKind::Users,
+            Doc::Shell(ShellDoc::Settings(_)) => DocKind::Settings,
+            Doc::Shell(ShellDoc::Theme(_)) => DocKind::Theme,
         }
     }
 
@@ -163,13 +161,12 @@ impl Doc {
             Doc::Markdown(d) => &**d,
             Doc::Bookmarks(d) => &**d,
             Doc::Mcp(d) => &**d,
-            Doc::Settings(d) => &**d,
             Doc::Catalog(d) => &**d,
-            Doc::Theme(d) => &**d,
             Doc::Registry(d) => &**d,
             Doc::CatalogEdit(d) => &**d,
             Doc::RegFile(d) => &**d,
             Doc::Users(d) => &**d,
+            Doc::Shell(d) => d,
         }
     }
 
@@ -180,13 +177,12 @@ impl Doc {
             Doc::Markdown(d) => &mut **d,
             Doc::Bookmarks(d) => &mut **d,
             Doc::Mcp(d) => &mut **d,
-            Doc::Settings(d) => &mut **d,
             Doc::Catalog(d) => &mut **d,
-            Doc::Theme(d) => &mut **d,
             Doc::Registry(d) => &mut **d,
             Doc::CatalogEdit(d) => &mut **d,
             Doc::RegFile(d) => &mut **d,
             Doc::Users(d) => &mut **d,
+            Doc::Shell(d) => d,
         }
     }
 }
@@ -206,6 +202,84 @@ impl Tab for Doc {
 
     fn search(&mut self) -> Option<&mut Search> {
         self.tab_mut().search()
+    }
+
+    fn icon(&self) -> &'static str {
+        self.kind().icon()
+    }
+
+    fn search_hint(&self) -> &'static str {
+        self.kind().search_hint()
+    }
+
+    fn has_tools(&self) -> bool {
+        self.kind().has_tools()
+    }
+
+    fn has_nav(&self) -> bool {
+        self.kind().has_nav()
+    }
+
+    /// The tabs with a tree or a list: a move with the keys makes the selection follow into
+    /// view, and a row scrolled to stops asking.
+    fn scrolled(&mut self, how: Scrolled) {
+        let follow = how == Scrolled::Follow;
+        let (reveal, follow_flag) = match self {
+            Doc::Profile(d) => (&mut d.reveal, &mut d.follow),
+            Doc::Catalog(c) => (&mut c.reveal, &mut c.follow),
+            Doc::Diff(d) => (&mut d.reveal, &mut d.follow),
+            Doc::Bookmarks(d) => (&mut d.reveal, &mut d.follow),
+            _ => return,
+        };
+        *follow_flag = follow;
+        if !follow {
+            *reveal = false;
+        }
+    }
+
+    fn draft_key(&self) -> Option<String> {
+        match self {
+            Doc::Profile(d) => Some(d.draft_key.clone()),
+            _ => None,
+        }
+    }
+
+    /// The draft of a modified profile: two seconds after the last change, or at once when the
+    /// window closes.
+    fn draft_due(&mut self, all: bool) -> Option<Draft> {
+        let Doc::Profile(d) = self else {
+            return None;
+        };
+        if !d.dirty {
+            return None;
+        }
+        let due = match d.changed {
+            Some(t) => all || t.elapsed() >= DRAFT_DELAY,
+            None => false,
+        };
+        if !due {
+            return None;
+        }
+        d.changed = None;
+        Some(Draft {
+            key: d.draft_key.clone(),
+            path: d.path.clone(),
+            document: serde_json::to_value(&d.profile).unwrap_or_default(),
+        })
+    }
+
+    fn shell_doc(&self) -> Option<&ShellDoc> {
+        match self {
+            Doc::Shell(d) => Some(d),
+            _ => None,
+        }
+    }
+
+    fn shell_doc_mut(&mut self) -> Option<&mut ShellDoc> {
+        match self {
+            Doc::Shell(d) => Some(d),
+            _ => None,
+        }
     }
 }
 
@@ -270,12 +344,6 @@ impl Tab for McpDoc {
     }
 }
 
-impl Tab for SettingsDoc {
-    fn title(&self) -> String {
-        tr("Settings").to_owned()
-    }
-}
-
 impl Tab for CatalogDoc {
     fn title(&self) -> String {
         self.name.clone()
@@ -287,20 +355,6 @@ impl Tab for CatalogDoc {
 
     fn search(&mut self) -> Option<&mut Search> {
         Some(&mut self.search)
-    }
-}
-
-impl Tab for ThemeDoc {
-    fn name(&self) -> String {
-        format!("{}.{}", self.theme.id, themes::EXTENSION)
-    }
-
-    fn dirty(&self) -> bool {
-        self.dirty
-    }
-
-    fn path(&self) -> Option<&Path> {
-        self.theme.path.as_deref()
     }
 }
 

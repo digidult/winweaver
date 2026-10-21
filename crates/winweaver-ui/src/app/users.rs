@@ -2,11 +2,11 @@
 
 use crate::*;
 
-impl App {
+impl WinWeaver {
     /// Unlocks the passwords of the users file in front, sets or changes their master password
     /// (`set`), or sets the password of the selected account (`password`) once unlocked.
-    pub(crate) fn users_unlock(&mut self, set: bool, password: bool) {
-        let Some(d) = self.active_users() else {
+    pub(crate) fn users_unlock(&mut self, shell: &mut Shell<WinWeaver>, set: bool, password: bool) {
+        let Some(d) = self.active_users(shell) else {
             return;
         };
         if password && d.unlocked() {
@@ -18,26 +18,26 @@ impl App {
         }
     }
 
-    pub(crate) fn active_users(&mut self) -> Option<&mut usersview::UsersDoc> {
-        match self.docs.get_mut(self.active) {
+    pub(crate) fn active_users(&mut self, shell: &mut Shell<WinWeaver>) -> Option<&mut usersview::UsersDoc> {
+        match shell.docs.get_mut(shell.active) {
             Some(Doc::Users(d)) => Some(d),
             _ => None,
         }
     }
 
     /// A new users file in a tab of its own, empty or of the accounts of this PC.
-    pub(crate) fn new_users_doc(&mut self, read: Vec<users::User>) {
+    pub(crate) fn new_users_doc(&mut self, shell: &mut Shell<WinWeaver>, read: Vec<users::User>) {
         let mut file = UsersFile::new(tr("Users"));
         file.users = read;
         let mut doc = usersview::UsersDoc::new(file, None);
         doc.dirty = !doc.file.users.is_empty();
         doc.check();
-        self.open_tab(Doc::Users(Box::new(doc)));
+        shell.open_tab(Doc::Users(Box::new(doc)));
     }
 
     /// Opens a users file in a tab of its own, or brings its tab to the front.
-    pub(crate) fn open_users_path(&mut self, path: PathBuf) {
-        self.open_file(
+    pub(crate) fn open_users_path(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf) {
+        shell.open_file(
             &path,
             |d| matches!(d, Doc::Users(u) if u.path.as_ref() == Some(&path)),
             UsersFile::load,
@@ -51,8 +51,8 @@ impl App {
 
     /// Saves the users file in front, with its passwords encrypted again, at its place or at
     /// one the user picks.
-    pub(crate) fn save_users_doc(&mut self, ask: bool) {
-        let Some(Doc::Users(d)) = self.docs.get(self.active) else {
+    pub(crate) fn save_users_doc(&mut self, shell: &mut Shell<WinWeaver>, ask: bool) {
+        let Some(Doc::Users(d)) = shell.docs.get(shell.active) else {
             return;
         };
         let path = match (&d.path, ask) {
@@ -69,47 +69,47 @@ impl App {
                 }
             }
         };
-        let Some(Doc::Users(d)) = self.docs.get_mut(self.active) else {
+        let Some(Doc::Users(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
         if let Err(e) = d.seal() {
-            self.save_failed(e);
+            shell.save_failed(e);
             return;
         }
         match d.file.save(&path) {
             Ok(()) => {
                 d.path = Some(path.clone());
                 d.dirty = false;
-                self.saved(&path);
-                self.remember_recent(&path);
+                shell.saved(&path);
+                shell.remember_recent(&path);
             }
-            Err(e) => self.save_failed(e),
+            Err(e) => shell.save_failed(e),
         }
     }
 
     /// Asks before an operation of the users file in front on this PC, once its plan is sound.
-    pub(crate) fn ask_users_run(&mut self, operation: users::Operation, all: bool) {
+    pub(crate) fn ask_users_run(&mut self, shell: &mut Shell<WinWeaver>, operation: users::Operation, all: bool) {
         if !winweaver_win::elevated() {
-            self.status =
+            shell.status =
                 tr("Run WinWeaver as administrator to change the accounts of this PC").to_owned();
             return;
         }
-        let Some(d) = self.active_users() else {
+        let Some(d) = self.active_users(shell) else {
             return;
         };
         let Some(passwords) = &d.passwords else {
-            self.status = tr("Unlock the passwords first").to_owned();
+            shell.status = tr("Unlock the passwords first").to_owned();
             return;
         };
         let names = d.chosen(all);
         match users::Plan::new(operation, &d.file.users, &names, passwords) {
             Ok(plan) => {
                 if plan.users.is_empty() {
-                    self.status = tr("The file holds no accounts").to_owned();
+                    shell.status = tr("The file holds no accounts").to_owned();
                     return;
                 }
                 let text = d.question(operation, &names);
-                self.ask(Question::new(
+                shell.ask(Question::new(
                     tr("Change this PC"),
                     text,
                     tr("Change this PC"),
@@ -118,14 +118,14 @@ impl App {
             }
             Err(issues) => {
                 d.issues = issues;
-                self.status = tr("The operation was not started: see the messages").to_owned();
+                shell.status = tr("The operation was not started: see the messages").to_owned();
             }
         }
     }
 
     /// Runs a confirmed operation on this PC and shows its outcomes in the tab.
-    pub(crate) fn run_users(&mut self, operation: users::Operation, names: &[String]) {
-        let Some(d) = self.active_users() else {
+    pub(crate) fn run_users(&mut self, shell: &mut Shell<WinWeaver>, operation: users::Operation, names: &[String]) {
+        let Some(d) = self.active_users(shell) else {
             return;
         };
         let Some(passwords) = &d.passwords else {
@@ -142,19 +142,19 @@ impl App {
         let failed = outcomes.iter().filter(|o| o.status.failed()).count();
         let n = outcomes.len();
         d.outcomes = outcomes;
-        self.status = trf(
+        shell.status = trf(
             "This PC changed: {n} accounts, {failed} failed",
             &[("n", &n), ("failed", &failed)],
         );
     }
 
     /// Saves the stand-alone script of the users file in front next to the file it reads.
-    pub(crate) fn save_users_script(&mut self) {
-        let Some(Doc::Users(d)) = self.docs.get(self.active) else {
+    pub(crate) fn save_users_script(&mut self, shell: &mut Shell<WinWeaver>) {
+        let Some(Doc::Users(d)) = shell.docs.get(shell.active) else {
             return;
         };
         let Some(path) = d.path.clone() else {
-            self.status =
+            shell.status =
                 tr("Save the users file first: the script reads it next to itself").to_owned();
             return;
         };
@@ -165,7 +165,7 @@ impl App {
         let text = match users::script(&file_name, winweaver_core::BUILD) {
             Ok(text) => text.replace("\r\n", "\n").replace('\n', "\r\n"),
             Err(e) => {
-                self.status = trf("Script not made: {e}", &[("e", &e)]);
+                shell.status = trf("Script not made: {e}", &[("e", &e)]);
                 return;
             }
         };
@@ -182,20 +182,20 @@ impl App {
         };
         match write_file(&target, text.as_bytes()) {
             Ok(()) => {
-                self.status = trf(
+                shell.status = trf(
                     "Saved {path}; keep {file} next to it and run it as administrator",
                     &[("path", &target.display()), ("file", &file_name)],
                 );
-                self.shown_file = Some((self.status.clone(), target));
+                shell.shown_file = Some((shell.status.clone(), target));
             }
-            Err(e) => self.save_failed(e),
+            Err(e) => shell.save_failed(e),
         }
     }
 
     /// A users file of the accounts of the profile in front, in a tab of its own; the passwords
     /// of the profile wait for a master password before the first save.
-    pub(crate) fn users_from_profile(&mut self) {
-        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+    pub(crate) fn users_from_profile(&mut self, shell: &mut Shell<WinWeaver>) {
+        let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
             return;
         };
         let (users, passwords) = users::from_accounts(&doc.profile.accounts);
@@ -209,13 +209,13 @@ impl App {
             tab.ask.open(usersview::Purpose::Set);
         }
         tab.check();
-        self.open_tab(Doc::Users(Box::new(tab)));
+        shell.open_tab(Doc::Users(Box::new(tab)));
     }
 
     /// Loads the accounts of a users file into the profile in front, asking the master password
     /// for their passwords when the file holds some.
-    pub(crate) fn users_into_profile(&mut self) {
-        if self.active_profile().is_none() {
+    pub(crate) fn users_into_profile(&mut self, shell: &mut Shell<WinWeaver>) {
+        if self.active_profile(shell).is_none() {
             return;
         }
         let dialog = file_dialog(tr("Users files"), users::EXTENSION)
@@ -231,12 +231,12 @@ impl App {
             }
             Ok(file) => {
                 let n = file.users.len();
-                self.apply(vec![Act::Profile(ProfileAct::SetAccounts(
+                self.apply(shell, Act::Profile(ProfileAct::SetAccounts(
                     file.accounts(None),
-                ))]);
-                self.status = trf("{n} accounts loaded without passwords", &[("n", &n)]);
+                )));
+                shell.status = trf("{n} accounts loaded without passwords", &[("n", &n)]);
             }
-            Err(e) => self.open_failed(e),
+            Err(e) => shell.open_failed(e),
         }
     }
 
@@ -264,15 +264,15 @@ impl App {
     }
 
     /// Runs an act of the acts of a users file.
-    pub(crate) fn apply_users(&mut self, act: UsersAct) {
+    pub(crate) fn apply_users(&mut self, shell: &mut Shell<WinWeaver>, act: UsersAct) {
         match act {
-            UsersAct::New => self.new_users_doc(Vec::new()),
+            UsersAct::New => self.new_users_doc(shell, Vec::new()),
             UsersAct::OfThisPc => match winweaver_win::users_of_this_pc() {
-                Ok(read) => self.new_users_doc(read),
-                Err(e) => self.status = trf("This PC was not read: {e}", &[("e", &e)]),
+                Ok(read) => self.new_users_doc(shell, read),
+                Err(e) => shell.status = trf("This PC was not read: {e}", &[("e", &e)]),
             },
             UsersAct::Add => {
-                if let Some(d) = self.active_users() {
+                if let Some(d) = self.active_users(shell) {
                     let n = d.file.users.len() + 1;
                     d.add(users::User {
                         name: format!("User{n}"),
@@ -281,33 +281,33 @@ impl App {
                 }
             }
             UsersAct::Duplicate => {
-                if let Some(d) = self.active_users() {
+                if let Some(d) = self.active_users(shell) {
                     d.duplicate();
                 }
             }
             UsersAct::Remove(i) => {
-                if let Some(d) = self.active_users() {
+                if let Some(d) = self.active_users(shell) {
                     d.remove(i);
                 }
             }
             UsersAct::Move(down) => {
-                if let Some(d) = self.active_users() {
+                if let Some(d) = self.active_users(shell) {
                     d.move_selected(down);
                 }
             }
-            UsersAct::Unlock => self.users_unlock(false, false),
-            UsersAct::SetMaster => self.users_unlock(true, false),
-            UsersAct::SetPassword => self.users_unlock(false, true),
+            UsersAct::Unlock => self.users_unlock(shell, false, false),
+            UsersAct::SetMaster => self.users_unlock(shell, true, false),
+            UsersAct::SetPassword => self.users_unlock(shell, false, true),
             UsersAct::Lock => {
-                if let Some(d) = self.active_users() {
+                if let Some(d) = self.active_users(shell) {
                     d.lock();
                 }
             }
             UsersAct::Check => {
-                if let Some(d) = self.active_users() {
+                if let Some(d) = self.active_users(shell) {
                     d.check();
                     let errors = d.issues.iter().filter(|i| i.error).count();
-                    self.status = trf(
+                    shell.status = trf(
                         "Checked {n} accounts: {errors} errors",
                         &[("n", &d.file.users.len()), ("errors", &errors)],
                     );
@@ -315,18 +315,18 @@ impl App {
             }
             UsersAct::ReadPc => match winweaver_win::users_of_this_pc() {
                 Ok(read) => {
-                    if let Some(d) = self.active_users() {
+                    if let Some(d) = self.active_users(shell) {
                         let n = d.merge(read);
-                        self.status = trf("{n} accounts of this PC added", &[("n", &n)]);
+                        shell.status = trf("{n} accounts of this PC added", &[("n", &n)]);
                     }
                 }
-                Err(e) => self.status = trf("This PC was not read: {e}", &[("e", &e)]),
+                Err(e) => shell.status = trf("This PC was not read: {e}", &[("e", &e)]),
             },
-            UsersAct::AskRun(operation, all) => self.ask_users_run(operation, all),
-            UsersAct::Run(operation, names) => self.run_users(operation, &names),
-            UsersAct::Script => self.save_users_script(),
-            UsersAct::IntoProfile => self.users_into_profile(),
-            UsersAct::FromProfile => self.users_from_profile(),
+            UsersAct::AskRun(operation, all) => self.ask_users_run(shell, operation, all),
+            UsersAct::Run(operation, names) => self.run_users(shell, operation, &names),
+            UsersAct::Script => self.save_users_script(shell),
+            UsersAct::IntoProfile => self.users_into_profile(shell),
+            UsersAct::FromProfile => self.users_from_profile(shell),
         }
     }
 }

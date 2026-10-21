@@ -26,6 +26,7 @@ use crate::themes::{self, Theme};
 use crate::themeview::ThemeDoc;
 use crate::{icons, session};
 
+pub use tabs::menu_item;
 pub use window::{COMPACT_WIDTH, Window};
 
 /// The height of a tab.
@@ -246,6 +247,10 @@ pub trait App: Sized + 'static {
 
     /// The search of the active tab was cleared.
     fn search_cleared(&mut self, _shell: &mut Shell<Self>) {}
+
+    /// The settings tab was opened or brought to the front: what its sections list is read
+    /// again.
+    fn settings_opened(&mut self, _shell: &mut Shell<Self>) {}
 
     /// Draws the active document (the window draws its own).
     fn draw(&mut self, shell: &mut Shell<Self>, ui: &mut egui::Ui, acts: &mut Vec<Self::Act>);

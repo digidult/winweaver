@@ -16,8 +16,9 @@ use winweaver_mcp::http::HttpServer;
 use winweaver_mcp::{Entry, Mode, RegistryAccess, Server};
 
 use crate::i18n::{tr, trf};
+use crate::ShellAct;
 use crate::{
-    Act, CatalogAct, FileAct, McpAct, RegistryAct, list, matches_words, style, tree, views,
+    Act, CatalogAct, McpAct, RegistryAct, list, matches_words, style, tree, views,
 };
 
 /// A server the window runs.
@@ -180,10 +181,10 @@ fn server_card(ui: &mut egui::Ui, panel: &mut McpPanel, presets: &[&str], acts: 
                     .add_enabled(!running, egui::Button::new(tr("Open...")))
                     .clicked()
                 {
-                    acts.push(Act::File(FileAct::Open));
+                    acts.push(Act::Shell(ShellAct::Open));
                 }
                 if ui.button(tr("Save as...")).clicked() {
-                    acts.push(Act::File(FileAct::SaveAs));
+                    acts.push(Act::Shell(ShellAct::SaveAs));
                 }
             });
             ui.end_row();

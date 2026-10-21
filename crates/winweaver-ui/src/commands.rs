@@ -1,14 +1,15 @@
-//! The commands of the command bar of each tab as data: the chrome draws them, the menu and the
-//! keyboard name their keys, and every key text lives here once.
+//! The command bar of each tab as data: the window draws the items, the menu and the keyboard
+//! name their keys, and every key text lives here once.
 
 use winweaver_core::users::Operation;
+use ww::commands::{cmd, cmd_if, keyed, when};
+use ww::keys::Keys;
 
 use crate::i18n::tr;
 use crate::{
-    Act, App, CatalogAct, CatalogRef, DiffAct, Doc, FileAct, ImportAct, McpAct, ProfileAct,
-    RegFileAct, RegistryAct, ThemeAct, UsersAct, icons, regfileview, regview,
+    Act, CatalogAct, CatalogRef, Doc, FileAct, ImportAct, McpAct, ProfileAct, RegFileAct,
+    RegistryAct, Shell, ShellAct, ShellDoc, UsersAct, WinWeaver, icons, regfileview, regview,
 };
-use ww::keys::Keys;
 
 /// The keys of the commands of WinWeaver beyond the ones of WW, each named once.
 pub mod keys {
@@ -25,24 +26,8 @@ pub mod keys {
     pub const FORWARD: Keys = Keys::new("Alt+Right", Modifiers::ALT, Key::ArrowRight);
 }
 
-/// An item of the command bar.
-pub enum Item {
-    /// A button; without an act it is disabled.
-    Command(Command),
-    Separator,
-    /// A button that opens a menu the chrome draws.
-    Menu(Menu),
-}
-
-/// A button of the command bar.
-pub struct Command {
-    pub icon: &'static str,
-    /// The label, translated.
-    pub label: &'static str,
-    pub keys: Option<&'static Keys>,
-    /// What a click does; `None` disables the button.
-    pub act: Option<Act>,
-}
+/// An item of the command bar of WinWeaver.
+pub type Item = ww::commands::Item<Act>;
 
 /// The menus of the command bar.
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -54,66 +39,28 @@ pub enum Menu {
 }
 
 impl Menu {
-    pub fn icon(self) -> &'static str {
-        match self {
-            Menu::ThisPc => icons::THIS_PC,
-            Menu::CompareProfile | Menu::CompareCatalog => icons::COMPARE,
-            Menu::Catalogs => icons::PACKAGE,
-        }
+    const ALL: [Menu; 4] = [
+        Menu::ThisPc,
+        Menu::CompareProfile,
+        Menu::Catalogs,
+        Menu::CompareCatalog,
+    ];
+
+    /// The menu by the number of its button.
+    pub fn from_id(id: usize) -> Option<Menu> {
+        Self::ALL.get(id).copied()
     }
 
-    pub fn label(self) -> &'static str {
-        match self {
-            Menu::ThisPc => tr("This PC"),
-            Menu::CompareProfile | Menu::CompareCatalog => tr("Compare"),
-            Menu::Catalogs => tr("Catalogs"),
-        }
+    /// The button of the command bar that opens the menu, with the least width of the menu.
+    pub fn item(self) -> Item {
+        let (icon, label, width) = match self {
+            Menu::ThisPc => (icons::THIS_PC, tr("This PC"), 300.0),
+            Menu::CompareProfile => (icons::COMPARE, tr("Compare"), 220.0),
+            Menu::Catalogs => (icons::PACKAGE, tr("Catalogs"), 300.0),
+            Menu::CompareCatalog => (icons::COMPARE, tr("Compare"), 300.0),
+        };
+        ww::commands::menu(icon, label, width, self as usize)
     }
-
-    /// The least width of the menu.
-    pub fn width(self) -> f32 {
-        match self {
-            Menu::CompareProfile => 220.0,
-            Menu::ThisPc | Menu::Catalogs | Menu::CompareCatalog => 300.0,
-        }
-    }
-}
-
-fn cmd(icon: &'static str, label: &'static str, act: impl Into<Act>) -> Item {
-    Item::Command(Command {
-        icon,
-        label,
-        keys: None,
-        act: Some(act.into()),
-    })
-}
-
-/// A command that is disabled without an act.
-fn cmd_if(icon: &'static str, label: &'static str, act: Option<Act>) -> Item {
-    Item::Command(Command {
-        icon,
-        label,
-        keys: None,
-        act,
-    })
-}
-
-fn when(icon: &'static str, label: &'static str, enabled: bool, act: impl Into<Act>) -> Item {
-    cmd_if(icon, label, enabled.then(|| act.into()))
-}
-
-fn keyed(
-    icon: &'static str,
-    label: &'static str,
-    keys: &'static Keys,
-    act: impl Into<Act>,
-) -> Item {
-    Item::Command(Command {
-        icon,
-        label,
-        keys: Some(keys),
-        act: Some(act.into()),
-    })
 }
 
 fn new_profile() -> Item {
@@ -121,21 +68,21 @@ fn new_profile() -> Item {
 }
 
 fn open() -> Item {
-    keyed(icons::OPEN, tr("Open"), &keys::OPEN, FileAct::Open)
+    keyed(icons::OPEN, tr("Open"), &keys::OPEN, ShellAct::Open)
 }
 
 fn save() -> Item {
-    keyed(icons::SAVE, tr("Save"), &keys::SAVE, FileAct::Save)
+    keyed(icons::SAVE, tr("Save"), &keys::SAVE, ShellAct::Save)
 }
 
 fn save_as() -> Item {
-    keyed(icons::SAVE, tr("Save as"), &keys::SAVE_AS, FileAct::SaveAs)
+    keyed(icons::SAVE, tr("Save as"), &keys::SAVE_AS, ShellAct::SaveAs)
 }
 
-impl App {
+impl WinWeaver {
     /// The command bar of the active tab, in its order.
-    pub(crate) fn commands(&self) -> Vec<Item> {
-        match self.docs.get(self.active) {
+    pub(crate) fn tab_commands(&self, shell: &Shell<WinWeaver>) -> Vec<Item> {
+        match shell.docs.get(shell.active) {
             Some(Doc::Profile(_)) => vec![
                 new_profile(),
                 open(),
@@ -144,10 +91,10 @@ impl App {
                 keyed(icons::CHECK, tr("Check"), &keys::CHECK, ProfileAct::Check),
                 keyed(icons::GEAR, tr("Build"), &keys::BUILD, ProfileAct::Build),
                 Item::Separator,
-                Item::Menu(Menu::ThisPc),
-                Item::Menu(Menu::CompareProfile),
+                Menu::ThisPc.item(),
+                Menu::CompareProfile.item(),
                 Item::Separator,
-                Item::Menu(Menu::Catalogs),
+                Menu::Catalogs.item(),
             ],
             Some(Doc::Diff(_)) => vec![
                 open(),
@@ -164,8 +111,8 @@ impl App {
                     when(icons::STOP, tr("Stop"), running, McpAct::Stop),
                 ]
             }
-            Some(Doc::Theme(_)) => vec![
-                keyed(icons::OPEN, tr("Open"), &keys::OPEN, ThemeAct::OpenFile),
+            Some(Doc::Shell(ShellDoc::Theme(_))) => vec![
+                keyed(icons::OPEN, tr("Open"), &keys::OPEN, ShellAct::OpenThemeFile),
                 save(),
                 save_as(),
             ],
@@ -173,11 +120,11 @@ impl App {
                 open(),
                 Item::Separator,
                 cmd(icons::IMPORT, tr("Import"), CatalogAct::ImportOpen),
-                Item::Menu(Menu::CompareCatalog),
+                Menu::CompareCatalog.item(),
                 cmd(
                     icons::EDIT,
                     tr("Edit"),
-                    CatalogAct::Edit(CatalogRef::Tab(self.active)),
+                    CatalogAct::Edit(CatalogRef::Tab(shell.active)),
                 ),
             ],
             Some(Doc::Catalog(c)) => vec![
@@ -191,7 +138,7 @@ impl App {
                         .map(|rule| ProfileAct::ShowInProfile(c.id.clone(), rule).into()),
                 ),
                 cmd(icons::EXPORT, tr("Export"), ImportAct::Export(c.id.clone())),
-                Item::Menu(Menu::CompareCatalog),
+                Menu::CompareCatalog.item(),
                 cmd(
                     icons::EDIT,
                     tr("Edit"),
@@ -315,7 +262,7 @@ impl App {
                 cmd(icons::FIND, tr("Find"), RegistryAct::Search),
                 cmd(icons::LOCKED, tr("Permissions"), RegistryAct::Rights),
             ],
-            Some(Doc::Settings(_)) => Vec::new(),
+            Some(Doc::Shell(ShellDoc::Settings(_))) => Vec::new(),
             None => vec![new_profile(), open()],
         }
     }

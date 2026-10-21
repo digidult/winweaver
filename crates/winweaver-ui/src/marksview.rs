@@ -12,8 +12,9 @@ use winweaver_core::i18n::CatalogTexts;
 
 use crate::i18n::{tr, trf};
 use crate::views::{self, gsummary, gtitle, rtitle};
+use crate::ShellAct;
 use crate::{
-    Act, CatalogAct, Form, MarksAct, NavAct, ProfileAct, Question, Settings, icons, list,
+    Act, CatalogAct, Form, MarksAct, ProfileAct, Question, Settings, icons, list,
     matches_words, style, tree,
 };
 
@@ -255,9 +256,9 @@ pub fn marks_view(
         }
     }
     if out.moved {
-        acts.push(Act::Nav(NavAct::Follow));
+        acts.push(Act::Shell(ShellAct::Follow));
     } else if out.scrolled {
-        acts.push(Act::Nav(NavAct::Revealed));
+        acts.push(Act::Shell(ShellAct::Revealed));
     }
 }
 

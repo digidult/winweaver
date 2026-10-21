@@ -2,17 +2,17 @@
 
 use crate::*;
 
-impl App {
+impl WinWeaver {
     /// Reads this PC: every rule into a new profile tab, or the selection into the open profile.
-    pub(crate) fn read_pc(&mut self, only_selection: bool) {
-        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
-            self.status =
+    pub(crate) fn read_pc(&mut self, shell: &mut Shell<WinWeaver>, only_selection: bool) {
+        let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
+            shell.status =
                 tr("Read this PC: open a profile first; its rules and forms are the base")
                     .to_owned();
             return;
         };
         let ids = if only_selection {
-            self.selection_ids()
+            self.selection_ids(shell)
         } else {
             self.catalog
                 .rules()
@@ -31,31 +31,31 @@ impl App {
         } else {
             PcJob::NewProfile { base }
         };
-        self.start_pc_read(job, plan, !only_selection);
+        self.start_pc_read(shell, job, plan, !only_selection);
     }
 
     /// Compares the selected rules of the profile with this PC.
-    pub(crate) fn check_on_pc(&mut self) {
-        let ids = self.selection_ids();
-        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
+    pub(crate) fn check_on_pc(&mut self, shell: &mut Shell<WinWeaver>) {
+        let ids = self.selection_ids(shell);
+        let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
             return;
         };
         let plan = thispc::plan(&self.catalog, &doc.profile, &ids);
         let job = PcJob::Check {
             doc: doc.draft_key.clone(),
         };
-        self.start_pc_read(job, plan, false);
+        self.start_pc_read(shell, job, plan, false);
     }
 
     /// Starts a read of this PC in a thread of its own, one at a time; `poll_pc_read` takes its
     /// report.
-    pub(crate) fn start_pc_read(&mut self, job: PcJob, plan: thispc::Plan, read_system: bool) {
+    pub(crate) fn start_pc_read(&mut self, shell: &mut Shell<WinWeaver>, job: PcJob, plan: thispc::Plan, read_system: bool) {
         if self.pc_read.is_some() {
-            self.status = tr("This PC is being read; wait until the read ends").to_owned();
+            shell.status = tr("This PC is being read; wait until the read ends").to_owned();
             return;
         }
         let Some(machine) = self.pc.clone() else {
-            self.status = tr("This PC can be read on Windows only").to_owned();
+            shell.status = tr("This PC can be read on Windows only").to_owned();
             return;
         };
         let checks = plan.clone();
@@ -67,7 +67,7 @@ impl App {
                 let _ = tx.send(thispc::run(&*machine, &checks, read_system, &time));
             });
         if let Err(e) = started {
-            self.status = trf("This PC could not be read: {e}", &[("e", &e)]);
+            shell.status = trf("This PC could not be read: {e}", &[("e", &e)]);
             return;
         }
         self.pc_read = Some(PcRead {
@@ -75,18 +75,18 @@ impl App {
             plan,
             report: rx,
         });
-        self.status = tr("This PC is being read").to_owned();
+        shell.status = tr("This PC is being read").to_owned();
     }
 
     /// Takes the report of a finished read of this PC.
-    pub(crate) fn poll_pc_read(&mut self, ctx: &egui::Context) {
+    pub(crate) fn poll_pc_read(&mut self, shell: &mut Shell<WinWeaver>, ctx: &egui::Context) {
         let Some(read) = &self.pc_read else {
             return;
         };
         match read.report.try_recv() {
             Ok(report) => {
                 if let Some(read) = self.pc_read.take() {
-                    self.finish_pc_read(read.job, &read.plan, &report);
+                    self.finish_pc_read(shell, read.job, &read.plan, &report);
                 }
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => {
@@ -94,26 +94,26 @@ impl App {
             }
             Err(std::sync::mpsc::TryRecvError::Disconnected) => {
                 self.pc_read = None;
-                self.status = tr("The read of this PC failed; the log names the error").to_owned();
+                shell.status = tr("The read of this PC failed; the log names the error").to_owned();
             }
         }
     }
 
     /// Puts the report of a read of this PC where its job wants it.
-    pub(crate) fn finish_pc_read(&mut self, job: PcJob, plan: &thispc::Plan, report: &Report) {
+    pub(crate) fn finish_pc_read(&mut self, shell: &mut Shell<WinWeaver>, job: PcJob, plan: &thispc::Plan, report: &Report) {
         let readings = thispc::judge(&self.catalog, plan, &report.results);
         match job {
-            PcJob::Check { doc } => self.finish_check(&doc, plan, report, &readings),
-            PcJob::NewProfile { base } => self.finish_capture(None, &base, plan, report, &readings),
+            PcJob::Check { doc } => self.finish_check(shell, &doc, plan, report, &readings),
+            PcJob::NewProfile { base } => self.finish_capture(shell, None, &base, plan, report, &readings),
             PcJob::Selection { doc, base } => {
-                self.finish_capture(Some(&doc), &base, plan, report, &readings)
+                self.finish_capture(shell, Some(&doc), &base, plan, report, &readings)
             }
         }
     }
 
     /// The capture of a read: a new profile tab, or the profile of the tab named by `target`.
     pub(crate) fn finish_capture(
-        &mut self,
+        &mut self, shell: &mut Shell<WinWeaver>,
         target: Option<&str>,
         base: &Profile,
         plan: &thispc::Plan,
@@ -138,14 +138,14 @@ impl App {
         }
         let catalog = &self.catalog;
         if let Some(key) = target {
-            let Some(doc) = profile_doc(&mut self.docs, key) else {
-                self.status = tr("Read this PC: the tab of the profile was closed").to_owned();
+            let Some(doc) = profile_doc(&mut shell.docs, key) else {
+                shell.status = tr("Read this PC: the tab of the profile was closed").to_owned();
                 return;
             };
             doc.profile = profile;
             doc.refresh(catalog);
             doc.issues = issues;
-            self.status = format!("Read the selection on this PC: {}", summary.line());
+            shell.status = format!("Read the selection on this PC: {}", summary.line());
         } else {
             let computer = if report.computer.is_empty() {
                 "This PC".to_owned()
@@ -158,19 +158,19 @@ impl App {
             let mut doc = ProfileDoc::new(profile, None, catalog);
             doc.dirty = true;
             doc.issues = issues;
-            self.open_tab(Doc::Profile(Box::new(doc)));
+            shell.open_tab(Doc::Profile(Box::new(doc)));
             let forms = if summary.forms.is_empty() {
                 String::new()
             } else {
                 format!("; forms: {}", summary.forms.join(", "))
             };
-            self.status = format!("Read this PC: {}{forms}", summary.line());
+            shell.status = format!("Read this PC: {}{forms}", summary.line());
         }
     }
 
     /// The result of a check of the rules of the tab named by `key`, listed in its messages.
     pub(crate) fn finish_check(
-        &mut self,
+        &mut self, shell: &mut Shell<WinWeaver>,
         key: &str,
         plan: &thispc::Plan,
         report: &Report,
@@ -180,8 +180,8 @@ impl App {
         if !report.admin && plan.admin_checks() > 0 {
             issues.push(admin_issue());
         }
-        let Some(doc) = profile_doc(&mut self.docs, key) else {
-            self.status = tr("Check on this PC: the tab of the profile was closed").to_owned();
+        let Some(doc) = profile_doc(&mut shell.docs, key) else {
+            shell.status = tr("Check on this PC: the tab of the profile was closed").to_owned();
             return;
         };
         let mut differ = 0;
@@ -211,7 +211,7 @@ impl App {
         }
         issues.sort_by_key(|i| i.severity);
         doc.issues = issues;
-        self.status = trf(
+        shell.status = trf(
             "Checked {n} rules on this PC: {differ} differ from the profile",
             &[("n", &readings.len()), ("differ", &differ)],
         );
@@ -219,10 +219,10 @@ impl App {
 
     /// Saves a stand-alone script for the selection into a folder the user picks; an apply or
     /// return script gets the undo script next to it.
-    pub(crate) fn save_script(&mut self, kind: ScriptKind) {
-        let ids = self.selection_ids();
-        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
-            self.status = tr("Save a script: the active tab is not a profile").to_owned();
+    pub(crate) fn save_script(&mut self, shell: &mut Shell<WinWeaver>, kind: ScriptKind) {
+        let ids = self.selection_ids(shell);
+        let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
+            shell.status = tr("Save a script: the active tab is not a profile").to_owned();
             return;
         };
         let version = winweaver_core::BUILD;
@@ -247,7 +247,7 @@ impl App {
         let (text, summary, name, with_undo) = match made {
             Ok(m) => m,
             Err(e) => {
-                self.status = trf("Script not made: {e}", &[("e", &e)]);
+                shell.status = trf("Script not made: {e}", &[("e", &e)]);
                 return;
             }
         };
@@ -255,7 +255,7 @@ impl App {
             match scripts::undo_script(&doc.profile, version) {
                 Ok(u) => Some(u),
                 Err(e) => {
-                    self.status = trf("Script not made: {e}", &[("e", &e)]);
+                    shell.status = trf("Script not made: {e}", &[("e", &e)]);
                     return;
                 }
             }
@@ -270,28 +270,28 @@ impl App {
         };
         let path = dir.join(&name);
         if let Err(e) = write_file(&path, &scripts::file_bytes(&text)) {
-            self.status = trf("Script not saved: {e}", &[("e", &e)]);
+            shell.status = trf("Script not saved: {e}", &[("e", &e)]);
             return;
         }
         if let Some(u) = undo
             && let Err(e) = write_file(&dir.join(scripts::UNDO_NAME), &scripts::file_bytes(&u))
         {
-            self.status = trf("Undo script not saved: {e}", &[("e", &e)]);
+            shell.status = trf("Undo script not saved: {e}", &[("e", &e)]);
             return;
         }
-        self.status = trf(
+        shell.status = trf(
             "Saved {path} ({summary}); run it as administrator, first on a test PC",
             &[("path", &path.display()), ("summary", &summary)],
         );
-        self.shown_file = Some((self.status.clone(), path));
+        shell.shown_file = Some((shell.status.clone(), path));
     }
 
     /// Saves the registry steps of the apply or the return of the selection as a registry file, as
     /// the scripts are saved; the steps a registry file cannot hold are comments in it.
-    pub(crate) fn save_plan_reg(&mut self, revert: bool) {
-        let ids = self.selection_ids();
-        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
-            self.status = tr("Save a registry file: the active tab is not a profile").to_owned();
+    pub(crate) fn save_plan_reg(&mut self, shell: &mut Shell<WinWeaver>, revert: bool) {
+        let ids = self.selection_ids(shell);
+        let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
+            shell.status = tr("Save a registry file: the active tab is not a profile").to_owned();
             return;
         };
         let stem = file_stem(&doc.profile.name);
@@ -317,7 +317,7 @@ impl App {
             .count();
         if values == 0 {
             let text = tr("Nothing for a registry file: the selection writes no registry value");
-            self.status = text.to_owned();
+            shell.status = text.to_owned();
             return;
         }
         let start = output_dir();
@@ -331,18 +331,18 @@ impl App {
         };
         let path = reg_extension(path);
         if let Err(e) = file.save(&path) {
-            self.status = trf("Registry file not saved: {e}", &[("e", &e)]);
+            shell.status = trf("Registry file not saved: {e}", &[("e", &e)]);
             return;
         }
-        self.status = trf(
+        shell.status = trf(
             "Saved {path} ({n} values); import it as administrator, first on a test PC",
             &[("path", &path.display()), ("n", &values)],
         );
-        self.shown_file = Some((self.status.clone(), path));
+        shell.shown_file = Some((shell.status.clone(), path));
     }
 
     /// Opens the report of an audit script made on another PC and reads it into a new profile.
-    pub(crate) fn open_report(&mut self) {
+    pub(crate) fn open_report(&mut self, shell: &mut Shell<WinWeaver>) {
         let Some(path) = rfd::FileDialog::new()
             .set_title(tr("Open an audit report"))
             .add_filter(tr("Audit report"), &["json"])
@@ -351,14 +351,14 @@ impl App {
             return;
         };
         match Report::load(&path) {
-            Ok(report) => self.open_report_from(report, &path),
-            Err(e) => self.status = trf("Report not read: {e}", &[("e", &e)]),
+            Ok(report) => self.open_report_from(shell, report, &path),
+            Err(e) => shell.status = trf("Report not read: {e}", &[("e", &e)]),
         }
     }
 
     /// Reads an audit report into a new profile, on the base of the open profile.
-    pub(crate) fn open_report_from(&mut self, report: Report, path: &Path) {
-        let base = match self.docs.get(self.active) {
+    pub(crate) fn open_report_from(&mut self, shell: &mut Shell<WinWeaver>, report: Report, path: &Path) {
+        let base = match shell.docs.get(shell.active) {
             Some(Doc::Profile(doc)) => doc.profile.clone(),
             _ => Profile::parse(PRESETS[0].1, PRESETS[0].0)
                 .unwrap_or_else(|_| Profile::from_defaults(PRESETS[0].0, &self.catalog)),
@@ -381,25 +381,25 @@ impl App {
         let mut doc = ProfileDoc::new(profile, None, &self.catalog);
         doc.dirty = true;
         doc.issues = capture_issues(&summary);
-        self.open_tab(Doc::Profile(Box::new(doc)));
-        self.status = format!("Read the report {}: {}", path.display(), summary.line());
+        shell.open_tab(Doc::Profile(Box::new(doc)));
+        shell.status = format!("Read the report {}: {}", path.display(), summary.line());
     }
 
     /// Prepares the native apply or return of the selection and asks for the confirmation.
-    pub(crate) fn plan_native(&mut self, revert: bool) {
+    pub(crate) fn plan_native(&mut self, shell: &mut Shell<WinWeaver>, revert: bool) {
         if self.running.is_some() {
-            self.status = tr("A change of this PC is running; wait for its report").to_owned();
+            shell.status = tr("A change of this PC is running; wait for its report").to_owned();
             return;
         }
-        let ids = self.selection_ids();
-        let Some(Doc::Profile(doc)) = self.docs.get(self.active) else {
-            self.status = tr("Open a profile first").to_owned();
+        let ids = self.selection_ids(shell);
+        let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
+            shell.status = tr("Open a profile first").to_owned();
             return;
         };
         let nonce = match winweaver_mcp::new_token() {
             Ok(n) => n,
             Err(e) => {
-                self.status = e;
+                shell.status = e;
                 return;
             }
         };
@@ -409,7 +409,7 @@ impl App {
             winweaver_core::apply::plan_apply(&self.catalog, &doc.profile, &ids, &nonce)
         };
         if plan.steps.is_empty() {
-            self.status = trf(
+            shell.status = trf(
                 "Nothing to change natively; {n} steps are left to the stand-alone script",
                 &[("n", &plan.skipped.len())],
             );
@@ -419,7 +419,7 @@ impl App {
     }
 
     /// Prepares the undo of a backup file the user picks.
-    pub(crate) fn plan_undo(&mut self) {
+    pub(crate) fn plan_undo(&mut self, shell: &mut Shell<WinWeaver>) {
         let start = output_dir();
         let dialog = rfd::FileDialog::new()
             .set_title(tr("Choose the backup to restore"))
@@ -431,20 +431,20 @@ impl App {
         let entries = match winweaver_core::apply::read_backup(&path) {
             Ok(e) => e,
             Err(e) => {
-                self.status = trf("Backup not read: {e}", &[("e", &e)]);
+                shell.status = trf("Backup not read: {e}", &[("e", &e)]);
                 return;
             }
         };
         let nonce = match winweaver_mcp::new_token() {
             Ok(n) => n,
             Err(e) => {
-                self.status = e;
+                shell.status = e;
                 return;
             }
         };
         let plan = winweaver_core::apply::plan_undo(&entries, &nonce);
         if plan.steps.is_empty() {
-            self.status = tr("The backup holds nothing to restore").to_owned();
+            shell.status = tr("The backup holds nothing to restore").to_owned();
             return;
         }
         self.confirm = Some(plan);
@@ -452,13 +452,13 @@ impl App {
 
     /// Writes the confirmed plan into the output folder and runs the elevated helper on it in a
     /// thread; the report comes back through a channel.
-    pub(crate) fn run_plan(&mut self) {
+    pub(crate) fn run_plan(&mut self, shell: &mut Shell<WinWeaver>) {
         let Some(plan) = self.confirm.take() else {
             return;
         };
         let dir = output_dir();
         if let Err(e) = std::fs::create_dir_all(&dir) {
-            self.status = trf("The plan was not written: {e}", &[("e", &e)]);
+            shell.status = trf("The plan was not written: {e}", &[("e", &e)]);
             return;
         }
         let stamp = clock::now_utc_iso()
@@ -470,13 +470,13 @@ impl App {
         let text = plan.to_json();
         let digest = winweaver_core::apply::digest(text.as_bytes());
         if let Err(e) = write_file(&path, text.as_bytes()) {
-            self.status = trf("The plan was not written: {e}", &[("e", &e)]);
+            shell.status = trf("The plan was not written: {e}", &[("e", &e)]);
             return;
         }
         let exe = match std::env::current_exe() {
             Ok(p) => p,
             Err(e) => {
-                self.status = e.to_string();
+                shell.status = e.to_string();
                 return;
             }
         };
@@ -507,11 +507,11 @@ impl App {
             let _ = tx.send(result);
         });
         self.running = Some(rx);
-        self.status = tr("Windows asks for the permission; the change of this PC runs").to_owned();
+        shell.status = tr("Windows asks for the permission; the change of this PC runs").to_owned();
     }
 
     /// Takes the report of a finished helper.
-    pub(crate) fn poll_running(&mut self, ctx: &egui::Context) {
+    pub(crate) fn poll_running(&mut self, shell: &mut Shell<WinWeaver>, ctx: &egui::Context) {
         let Some(rx) = &self.running else {
             return;
         };
@@ -540,10 +540,10 @@ impl App {
                             target: Target::Rule(rule),
                             text: trf("Left to the stand-alone script: {why}", &[("why", &why)]),
                         }));
-                        if let Some(Doc::Profile(doc)) = self.docs.get_mut(self.active) {
+                        if let Some(Doc::Profile(doc)) = shell.docs.get_mut(shell.active) {
                             doc.issues = issues;
                         }
-                        self.status = trf(
+                        shell.status = trf(
                             "This PC changed: {ok} done, {failed} failed, {skipped} skipped; backup {backup}",
                             &[
                                 ("ok", &report.count("ok")),
@@ -560,7 +560,7 @@ impl App {
                             ],
                         );
                     }
-                    Err(e) => self.status = trf("This PC was not changed: {e}", &[("e", &e)]),
+                    Err(e) => shell.status = trf("This PC was not changed: {e}", &[("e", &e)]),
                 }
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => {
@@ -620,16 +620,16 @@ impl App {
     }
 
     /// Runs an act of the acts of This PC: the read, the check, the scripts, the native apply.
-    pub(crate) fn apply_pc(&mut self, act: PcAct) {
+    pub(crate) fn apply_pc(&mut self, shell: &mut Shell<WinWeaver>, act: PcAct) {
         match act {
-            PcAct::Read => self.read_pc(false),
-            PcAct::ReadSelection => self.read_pc(true),
-            PcAct::Check => self.check_on_pc(),
-            PcAct::SaveScript(kind) => self.save_script(kind),
-            PcAct::SaveRegFile(revert) => self.save_plan_reg(revert),
-            PcAct::PlanNative(revert) => self.plan_native(revert),
-            PcAct::PlanUndo => self.plan_undo(),
-            PcAct::Confirm => self.run_plan(),
+            PcAct::Read => self.read_pc(shell, false),
+            PcAct::ReadSelection => self.read_pc(shell, true),
+            PcAct::Check => self.check_on_pc(shell),
+            PcAct::SaveScript(kind) => self.save_script(shell, kind),
+            PcAct::SaveRegFile(revert) => self.save_plan_reg(shell, revert),
+            PcAct::PlanNative(revert) => self.plan_native(shell, revert),
+            PcAct::PlanUndo => self.plan_undo(shell),
+            PcAct::Confirm => self.run_plan(shell),
             PcAct::Cancel => self.confirm = None,
         }
     }

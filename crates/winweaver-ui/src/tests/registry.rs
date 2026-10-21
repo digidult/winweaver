@@ -1,23 +1,24 @@
 //! The registry tab: edits, questions, bookmarks, the rights, the search.
 
 use super::*;
+use crate::ShellAct;
 
 #[test]
 fn the_rights_of_a_key_change_after_a_question() {
     use winweaver_core::registry::{MemoryRegistry, Registry};
     let catalog = Catalog::embedded().unwrap();
-    let mut app = App::new(catalog, Vec::new(), Settings::default());
+    let mut app = Window::new(WinWeaver::new(catalog, Vec::new()), Settings::default());
     let reg = std::sync::Arc::new(MemoryRegistry::default());
     let key = "HKEY_CURRENT_USER\\Software\\WinWeaverRights";
     reg.create_key(key).unwrap();
-    app.registry = reg.clone();
+    app.app.registry = reg.clone();
     app.apply(vec![Act::Registry(RegistryAct::Open(key.to_owned(), None))]);
     app.apply(vec![Act::Registry(RegistryAct::Rights)]);
-    let open = |app: &App| match app.docs.get(app.active) {
+    let open = |app: &Window<WinWeaver>| match app.shell.docs.get(app.shell.active) {
         Some(Doc::Registry(d)) => d.rights.is_some(),
         _ => false,
     };
-    let Some(Doc::Registry(d)) = app.docs.get_mut(app.active) else {
+    let Some(Doc::Registry(d)) = app.shell.docs.get_mut(app.shell.active) else {
         panic!("the registry tab");
     };
     let rights = d.rights.as_mut().expect("the window of the rights");
@@ -29,9 +30,9 @@ fn the_rights_of_a_key_change_after_a_question() {
         Act::Registry(RegistryAct::RightsAdd),
         crate::question::change_rights(key).into(),
     ]);
-    assert!(app.question.is_some(), "a change of the rights asks first");
+    assert!(app.shell.question.is_some(), "a change of the rights asks first");
     assert!(open(&app));
-    app.apply(vec![Act::Answer(true)]);
+    app.apply(vec![Act::Shell(ShellAct::Answer(true))]);
     let text = reg.security(key).unwrap();
     assert!(text.contains("(A;CI;KR;;;BU)"), "{text}");
     assert!(!open(&app), "the window closes");
@@ -46,17 +47,17 @@ fn the_registry_tab_edits_asks_and_bookmarks() {
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     let catalog = Catalog::embedded().unwrap();
-    let mut app = App::new(catalog, Vec::new(), Settings::default());
-    app.marks_path = dir.join("marks.wwmarks");
+    let mut app = Window::new(WinWeaver::new(catalog, Vec::new()), Settings::default());
+    app.app.marks_path = dir.join("marks.wwmarks");
     let reg = std::sync::Arc::new(MemoryRegistry::default());
     let key = "HKEY_CURRENT_USER\\Software\\WinWeaverTest";
     reg.create_key(key).unwrap();
-    app.registry = reg.clone();
+    app.app.registry = reg.clone();
     app.apply(vec![Act::Registry(RegistryAct::Open(
         "HKCU:\\Software\\WinWeaverTest".to_owned(),
         None,
     ))]);
-    let Some(Doc::Registry(d)) = app.docs.get(app.active) else {
+    let Some(Doc::Registry(d)) = app.shell.docs.get(app.shell.active) else {
         panic!("the registry tab");
     };
     assert_eq!(d.path, key);
@@ -64,7 +65,7 @@ fn the_registry_tab_edits_asks_and_bookmarks() {
         regview::EditKind::NewValue,
         "REG_DWORD",
     ))]);
-    if let Some(Doc::Registry(d)) = app.docs.get_mut(app.active)
+    if let Some(Doc::Registry(d)) = app.shell.docs.get_mut(app.shell.active)
         && let Some(edit) = &mut d.edit
     {
         edit.name = "N".to_owned();
@@ -73,21 +74,21 @@ fn the_registry_tab_edits_asks_and_bookmarks() {
     app.apply(vec![Act::Registry(RegistryAct::Save)]);
     assert_eq!(reg.read(key).unwrap().values[0].data, Data::Dword(16));
     app.apply(vec![Act::Registry(RegistryAct::AskDelete)]);
-    assert!(app.question.is_some(), "a deletion asks");
+    assert!(app.shell.question.is_some(), "a deletion asks");
     app.apply(vec![
-        Act::Answer(false),
+        Act::Shell(ShellAct::Answer(false)),
         Act::Registry(RegistryAct::Bookmark),
     ]);
     assert_eq!(reg.read(key).unwrap().values.len(), 1);
     assert!(
-        app.marks
+        app.app.marks
             .items
             .iter()
             .any(|b| b.is_registry() && b.path == key && b.item == "N")
     );
     app.apply(vec![
         Act::Registry(RegistryAct::AskDelete),
-        Act::Answer(true),
+        Act::Shell(ShellAct::Answer(true)),
     ]);
     assert!(reg.read(key).unwrap().values.is_empty());
     std::fs::remove_dir_all(&dir).unwrap();
@@ -98,21 +99,21 @@ fn the_registry_tab_edits_asks_and_bookmarks() {
 #[test]
 fn the_registry_tab_searches_under_its_key() {
     use winweaver_core::registry::{Data, MemoryRegistry, Registry};
-    fn search(app: &mut App) -> &mut regview::Search {
-        match app.docs.get_mut(app.active) {
+    fn search(app: &mut Window<WinWeaver>) -> &mut regview::Search {
+        match app.shell.docs.get_mut(app.shell.active) {
             Some(Doc::Registry(d)) => &mut d.search,
             _ => panic!("the registry tab"),
         }
     }
     let catalog = Catalog::embedded().unwrap();
-    let mut app = App::new(catalog, Vec::new(), Settings::default());
+    let mut app = Window::new(WinWeaver::new(catalog, Vec::new()), Settings::default());
     let reg = std::sync::Arc::new(MemoryRegistry::default());
     let key = "HKEY_CURRENT_USER\\Software\\WinWeaverSearch";
     let inner = format!("{key}\\Inner");
     let blue = Data::Sz("dark blue".to_owned());
     reg.create_key(&inner).unwrap();
     reg.set(&inner, "Colour", &blue).unwrap();
-    app.registry = reg;
+    app.app.registry = reg;
     app.apply(vec![Act::Registry(RegistryAct::Open(key.to_owned(), None))]);
     app.apply(vec![Act::Registry(RegistryAct::Search)]);
     assert!(search(&mut app).open);
@@ -127,7 +128,7 @@ fn the_registry_tab_searches_under_its_key() {
     while search(&mut app).running.is_some() {
         assert!(started.elapsed() < std::time::Duration::from_secs(30));
         std::thread::sleep(std::time::Duration::from_millis(10));
-        app.poll_registry_search(&ctx);
+        app.app.poll_registry_search(&mut app.shell, &ctx);
     }
     let found = search(&mut app).found.clone().expect("a result");
     assert!(found.complete);
@@ -136,7 +137,7 @@ fn the_registry_tab_searches_under_its_key() {
     assert_eq!(found.hits[0].value.as_deref(), Some("Colour"));
     let hit = found.hits[0].clone();
     app.apply(vec![Act::Registry(RegistryAct::Go(hit.path, hit.value))]);
-    let Some(Doc::Registry(d)) = app.docs.get(app.active) else {
+    let Some(Doc::Registry(d)) = app.shell.docs.get(app.shell.active) else {
         panic!("the registry tab");
     };
     assert_eq!(d.value.as_deref(), Some("Colour"));

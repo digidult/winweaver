@@ -1,15 +1,13 @@
-//! The WinWeaver window: one window with document tabs (`docs/spec/01-ui.md`), built on eframe.
-//!
-//! This is the skeleton of variant A (the command bar): the tab row with the menu button, the
-//! command bar, the navigation row (back, forward, breadcrumb, bookmark, search), the profile
-//! tree with the detail panel, the Settings tab and the status bar. Every change of the profile
-//! is collected as an [`Act`] while the frame is drawn and applied afterwards.
+//! The WinWeaver window: one window with document tabs (`docs/spec/01-ui.md`) on the shell of
+//! WW (`ww`). The shell owns the tabs, the settings, the themes and the session and draws the
+//! chrome; WinWeaver (`app/shell.rs`) answers with its documents, its command bars, its menus
+//! and its acts. Every change is collected as an [`Act`] while the frame is drawn and applied
+//! afterwards.
 
 mod act;
 mod app;
 mod cataledit;
 mod catalogview;
-mod chrome;
 mod commands;
 mod dialogs;
 mod diffview;
@@ -25,14 +23,12 @@ mod regedit;
 mod regfileview;
 mod regview;
 mod settings;
-mod themeview;
 mod usersview;
 mod views;
 
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-use eframe::egui;
 use winweaver_core::admx::{self, CatalogFile};
 use winweaver_core::bookmarks::{self, Bookmark, Bookmarks};
 use winweaver_core::catalog::{Catalog, TREE_ROOTS, check};
@@ -51,17 +47,17 @@ use winweaver_core::users::{self, UsersFile};
 use winweaver_core::validate::{self, Issue, Severity, Target};
 
 pub use act::{
-    Act, CatalogAct, DiffAct, FileAct, ImportAct, MarksAct, McpAct, NavAct, PcAct, ProfileAct,
-    RegFileAct, RegistryAct, SettingsAct, ThemeAct, UsersAct,
+    Act, CatalogAct, DiffAct, FileAct, ImportAct, MarksAct, McpAct, PcAct, ProfileAct, RegFileAct,
+    RegistryAct, SettingsAct, UsersAct,
 };
 pub use catalogview::TreeKey;
 pub use dialogs::file_stem;
 pub(crate) use dialogs::{
-    ask_save_path, file_dialog, kept_name, pick_any, pick_profile, reg_extension, with_extension,
+    ask_save_path, file_dialog, kept_name, open_dialog, pick_profile, reg_extension, with_extension,
     write_file,
 };
 pub use diffview::DiffDoc;
-pub use doc::{Doc, DocKind, SettingsDoc, SettingsSection};
+pub use doc::{Doc, DocKind, SettingsSection};
 pub use folders::{imports_dir, lang_dir, output_dir, profiles_dir, themes_dir};
 pub use forms::Form;
 pub use importlist::{ImportEntry, import_files, loaded_import_ids, read_imports};
@@ -73,6 +69,7 @@ pub use ww::folders::exe_dir;
 pub use ww::i18n::{tr, trf};
 pub use ww::mdview::MdDoc;
 pub use ww::renderer::Renderer;
+pub use ww::{App, Shell, ShellAct, ShellDoc, Window};
 pub use ww::{i18n, icons, list, mdview, renderer, session, style, themes, tree, widgets};
 
 /// The presets embedded in the executable: the name and the profile text.
@@ -92,8 +89,6 @@ pub const PRESETS: [(&str, &str); 4] = [
     ("Home", include_str!("../../../data/presets/home.wwprofile")),
 ];
 
-/// Below this width of the window the command bar shows icons only, in the navigation row.
-const COMPACT_WIDTH: f32 = 1100.0;
 
 /// The translations of the interface embedded in the executable: the language code and the
 /// file. Every text of the interface has a translation in each of them.
@@ -118,11 +113,6 @@ pub const THEMES: [(&str, &str); 2] = [
 ];
 /// The largest Markdown file a tab shows.
 pub(crate) const MARKDOWN_MAX_BYTES: u64 = 4 * 1024 * 1024;
-/// The size of the window at the first start, and the least size it takes.
-const WINDOW_SIZE: [f32; 2] = [1280.0, 800.0];
-const WINDOW_MIN_SIZE: [f32; 2] = [900.0, 560.0];
-/// The size of the window of the smoke test.
-const SMOKE_WINDOW_SIZE: [f32; 2] = [400.0, 300.0];
 
 /// The key of the group of the profile tree that lists the options of catalogs that are not
 /// loaded; no catalog can have it as an id.
@@ -245,9 +235,6 @@ pub enum CatalogRef {
     Tab(usize),
 }
 
-/// The colours of the title bar: dark, caption, text, border.
-type TitleColors = (bool, [u8; 3], [u8; 3], [u8; 3]);
-
 /// What a read of this PC does with its report. A profile tab is named by its draft key, so a tab
 /// moved meanwhile is found and a tab closed meanwhile is missed without harm.
 enum PcJob {
@@ -267,7 +254,7 @@ struct PcRead {
     report: std::sync::mpsc::Receiver<Report>,
 }
 
-pub struct App {
+pub struct WinWeaver {
     catalog: Catalog,
     texts: Vec<CatalogTexts>,
     /// The embedded catalog and its translations, before the imports are merged.
@@ -288,46 +275,18 @@ pub struct App {
     /// Every catalog file of that folder, loaded or not, for the settings: listed at the start,
     /// when the settings open and after a change of the imports.
     import_list: Vec<ImportEntry>,
-    docs: Vec<Doc>,
-    active: usize,
-    settings: Settings,
-    settings_dirty: bool,
-    /// The recent searches of every tab.
-    search_history: Vec<String>,
-    /// A question over the window and the act a yes runs.
-    question: Option<Question>,
-    /// Whether the message bar shows its list or one line.
-    messages_open: bool,
-    status: String,
     marks: Bookmarks,
     marks_path: PathBuf,
-    /// The themes of the folder and the embedded ones, read at the start, when the settings
-    /// open and after a theme is saved.
-    themes: Vec<themes::Theme>,
-    /// The themes the window shows now: light, dark and the preference.
-    applied_theme: Option<(themes::Theme, themes::Theme, egui::ThemePreference)>,
-    /// The colours given to the title bar last.
-    title_colors: Option<TitleColors>,
-    last_title: String,
-    exit: bool,
-    drafts_dir: PathBuf,
-    logs_dir: PathBuf,
-    /// What the window draws with (`renderer::graphics_text`), empty without a window.
-    graphics: String,
     mcp: mcpview::McpPanel,
-    /// Actions requested by views that run without the list of the frame.
-    pending_acts: Vec<Act>,
     /// A plan waiting for the confirmation of the user.
     confirm: Option<winweaver_core::apply::Plan>,
     /// The helper that runs a confirmed plan, and what the plan left out.
     running: Option<std::sync::mpsc::Receiver<Result<winweaver_core::apply::Report, String>>>,
     running_skipped: Vec<(String, String)>,
-    last_logged: String,
-    /// The file the message of the status bar names, which its button shows in its folder while
-    /// the message stays.
-    shown_file: Option<(String, PathBuf)>,
     /// The accounts of a users file on their way into a profile, with their master password asked.
     users_import: Option<usersview::UsersImport>,
+    /// The import being renamed in the settings and the name typed so far.
+    renaming: Option<(String, String)>,
 }
 
 /// The translation for a language code, `None` for English.
@@ -335,16 +294,10 @@ pub fn texts_for<'a>(texts: &'a [CatalogTexts], code: &str) -> Option<&'a Catalo
     texts.iter().find(|t| t.code == code)
 }
 
-impl App {
-    pub fn new(catalog: Catalog, texts: Vec<CatalogTexts>, settings: Settings) -> Self {
+impl WinWeaver {
+    pub fn new(catalog: Catalog, texts: Vec<CatalogTexts>) -> Self {
         // The input languages and layouts of this Windows, read at the first check of a profile.
         winweaver_core::resources::set_locale_reader(winweaver_win::locales);
-        ww::i18n::install(&LANGUAGES);
-        ww::themes::install(&THEMES);
-        let profile = Profile::parse(PRESETS[0].1, PRESETS[0].0)
-            .unwrap_or_else(|_| Profile::from_defaults(PRESETS[0].0, &catalog));
-        let doc = ProfileDoc::new(profile, None, &catalog);
-        let search_history = settings.search_history.clone();
         Self {
             base_catalog: catalog.clone(),
             base_texts: texts.clone(),
@@ -357,43 +310,16 @@ impl App {
             import_list: Vec::new(),
             catalog,
             texts,
-            docs: vec![Doc::Profile(Box::new(doc))],
-            active: 0,
-            settings,
-            settings_dirty: false,
-            search_history,
-            question: None,
-            messages_open: true,
-            status: "Ready".to_owned(),
             marks: Bookmarks::default(),
             marks_path: exe_dir().join(bookmarks::DEFAULT_FILE),
-            themes: themes::themes(&themes_dir()),
-            applied_theme: None,
-            title_colors: None,
-            last_title: String::new(),
-            exit: false,
-            drafts_dir: exe_dir().join("drafts"),
-            logs_dir: exe_dir().join("logs"),
-            graphics: String::new(),
+            mcp: mcpview::McpPanel::new(winweaver_mcp::config::Config::default_path(&exe_dir())),
             confirm: None,
-            pending_acts: Vec::new(),
             running: None,
             running_skipped: Vec::new(),
-            mcp: mcpview::McpPanel::new(winweaver_mcp::config::Config::default_path(&exe_dir())),
-            last_logged: String::new(),
-            shown_file: None,
             users_import: None,
+            renaming: None,
         }
     }
-}
-
-/// Whether a link points into the documentation of the program (a Markdown page or a heading)
-/// rather than to the web.
-fn is_doc_link(url: &str) -> bool {
-    !url.contains("://")
-        && (url.starts_with('#')
-            || url.to_ascii_lowercase().ends_with(".md")
-            || url.to_ascii_lowercase().contains(".md#"))
 }
 
 /// The profile tab with this draft key.
@@ -581,127 +507,19 @@ fn summary_of(plan: &scripts::ScriptPlan) -> String {
     }
 }
 
-/// The renderer of `--renderer` (an error for a name this executable lacks), else of the settings
-/// (Automatic for a name it lacks); `None` is Automatic.
-fn chosen_renderer(cli: Option<&str>, settings: &Settings) -> Result<Option<Renderer>, String> {
-    match cli.map(str::trim) {
-        Some("auto") => Ok(None),
-        Some(name) => Renderer::parse(name).map(Some).ok_or_else(|| {
-            let names: Vec<&str> = Renderer::ALL.iter().map(|r| r.id()).collect();
-            format!(
-                "unknown renderer {name}: this executable has auto, {}",
-                names.join(", ")
-            )
-        }),
-        None => Ok(Renderer::parse(&settings.renderer)),
-    }
-}
-
-/// Opens a small window with the renderers of `--renderer` or the settings, draws two frames and
-/// closes it: what it drew with and the renderers that did not start before. For CI
-/// (`--smoke-window`).
-pub fn smoke_window(cli_renderer: Option<&str>) -> Result<String, String> {
-    struct Smoke {
-        frames: u32,
-    }
-    impl eframe::App for Smoke {
-        fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-            egui::CentralPanel::default().show(ui, |ui| ui.label("WinWeaver"));
-            self.frames += 1;
-            if self.frames >= 2 {
-                ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
-            } else {
-                ui.ctx().request_repaint();
-            }
-        }
-    }
-    let settings = Settings::load_from(&Settings::path()).unwrap_or_default();
-    let order = renderer::order(chosen_renderer(cli_renderer, &settings)?);
-    let info = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
-    let viewport = egui::ViewportBuilder::default()
-        .with_title("WinWeaver smoke test")
-        .with_inner_size(SMOKE_WINDOW_SIZE);
-    let (_, failures) = renderer::start("WinWeaver smoke test", &viewport, &order, |_, _| {
-        let seen = info.clone();
-        Box::new(move |cc| {
-            *seen.lock().unwrap_or_else(|e| e.into_inner()) = renderer::graphics_text(cc);
-            Ok(Box::new(Smoke { frames: 0 }))
-        })
-    })?;
-    let mut text = info.lock().unwrap_or_else(|e| e.into_inner()).clone();
-    for failure in failures {
-        text.push_str("; ");
-        text.push_str(&failure);
-    }
-    Ok(text)
-}
-
 /// Opens the window with the renderer of `--renderer` or of the settings first; returns the
 /// error text when the catalog or the window cannot start.
 pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
     let catalog = Catalog::embedded().map_err(|e| format!("catalog: {e}"))?;
     let texts = CatalogTexts::embedded().map_err(|e| format!("translations: {e}"))?;
-    let (settings, warning) = match Settings::load_from(&Settings::path()) {
-        Ok(s) => (s, None),
-        Err(e) => (Settings::default(), Some(e)),
-    };
-    let order = renderer::order(chosen_renderer(cli_renderer, &settings)?);
-    let viewport = egui::ViewportBuilder::default()
-        .with_title("WinWeaver")
-        .with_inner_size(WINDOW_SIZE)
-        .with_min_inner_size(WINDOW_MIN_SIZE);
-    renderer::start("WinWeaver", &viewport, &order, |drawn, failures| {
-        let catalog = catalog.clone();
-        let texts = texts.clone();
-        let settings = settings.clone();
-        let warning = warning.clone();
-        let failures = failures.to_vec();
-        Box::new(move |cc| {
-            style::install_fonts(&cc.egui_ctx);
-            let mut app = App::new(catalog, texts, settings);
-            app.graphics = renderer::graphics_text(cc);
-            session::log(
-                &app.logs_dir,
-                "winweaver",
-                "INFO",
-                &format!(
-                    "WinWeaver {} started; graphics: {}",
-                    winweaver_core::BUILD,
-                    app.graphics
-                ),
-            );
-            app.load_mcp_config();
-            app.apply_language();
-            if let Some(w) = warning {
-                app.status = trf(
-                    "Settings not read, the defaults are used: {w}",
-                    &[("w", &w)],
-                );
-            }
-            match Bookmarks::load_or_default(&app.marks_path) {
-                Ok(marks) => app.marks = marks,
-                Err(e) => app.status = trf("Bookmarks not read: {e}", &[("e", &e)]),
-            }
-            app.load_imports();
-            app.restore_session();
-            if app.settings.extra.show_guide_at_start {
-                app.open_guide();
-                app.settings.extra.show_guide_at_start = false;
-                app.settings_dirty = true;
-            }
-            if !failures.is_empty() {
-                app.status = trf(
-                    "{failed}; the window draws with {renderer}",
-                    &[
-                        ("failed", &failures.join("; ")),
-                        ("renderer", &drawn.title()),
-                    ],
-                );
-            }
-            Ok(Box::new(app))
-        })
+    ww::run::<WinWeaver>(cli_renderer, move |_| {
+        WinWeaver::new(catalog.clone(), texts.clone())
     })
-    .map(|_| ())
+}
+
+/// The smoke test of the renderers for CI (`--smoke-window`): a small window drawn twice.
+pub fn smoke_window(cli_renderer: Option<&str>) -> Result<String, String> {
+    ww::smoke_window::<WinWeaver>(cli_renderer)
 }
 
 #[cfg(test)]
