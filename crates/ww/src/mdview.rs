@@ -1,7 +1,7 @@
 //! Markdown tabs: a page of the program or any `.md` file, rendered with egui_commonmark, with
 //! the search of the tab and the anchors of the headings.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::doc::{Document, Search, matches_words};
 use eframe::egui;
