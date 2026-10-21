@@ -757,5 +757,6 @@
   "Unsaved changes": "Незахаваныя змены",
   "none": "няма",
   "{name} users": "Карыстальнікі {name}",
-  "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.": "Прыклад бярэ серыйны нумар {serial} і MAC-адрас {mac}; камп'ютар дае свае."
+  "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.": "Прыклад бярэ серыйны нумар {serial} і MAC-адрас {mac}; камп'ютар дае свае.",
+  "Theme files": "Файлы тэм"
 }

@@ -18,8 +18,8 @@ mod folders;
 mod forms;
 mod importlist;
 mod marksview;
-mod pages;
 mod mcpview;
+mod pages;
 mod question;
 mod regedit;
 mod regfileview;
@@ -62,18 +62,18 @@ pub(crate) use dialogs::{
 };
 pub use diffview::DiffDoc;
 pub use doc::{Doc, DocKind, SettingsDoc, SettingsSection};
-pub use ww::doc::{Document as Tab, Search, matches_words, remember_search};
 pub use folders::{imports_dir, lang_dir, output_dir, profiles_dir, themes_dir};
 pub use forms::Form;
-pub use ww::i18n::{tr, trf};
-pub use ww::{i18n, icons, list, mdview, renderer, session, style, themes, tree, widgets};
 pub use importlist::{ImportEntry, import_files, loaded_import_ids, read_imports};
 pub(crate) use importlist::{import_entries, import_order, size_text, unknown_issues};
-pub use ww::mdview::MdDoc;
 pub use question::Question;
-pub use ww::renderer::Renderer;
 pub use settings::{DescSections, Extra, Settings, ThemeChoice};
+pub use ww::doc::{Document as Tab, Search, matches_words, remember_search};
 pub use ww::folders::exe_dir;
+pub use ww::i18n::{tr, trf};
+pub use ww::mdview::MdDoc;
+pub use ww::renderer::Renderer;
+pub use ww::{i18n, icons, list, mdview, renderer, session, style, themes, tree, widgets};
 
 /// The presets embedded in the executable: the name and the profile text.
 pub const PRESETS: [(&str, &str); 4] = [
@@ -111,7 +111,10 @@ pub const LANGUAGES: [(&str, &str); 8] = [
 /// The themes WinWeaver embeds besides Light and Dark of WW: the colours of the first version.
 pub const THEMES: [(&str, &str); 2] = [
     ("latte", include_str!("../../../data/themes/latte.wwtheme")),
-    ("matrix", include_str!("../../../data/themes/matrix.wwtheme")),
+    (
+        "matrix",
+        include_str!("../../../data/themes/matrix.wwtheme"),
+    ),
 ];
 /// The largest Markdown file a tab shows.
 pub(crate) const MARKDOWN_MAX_BYTES: u64 = 4 * 1024 * 1024;

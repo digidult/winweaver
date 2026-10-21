@@ -143,12 +143,15 @@ impl Theme {
 
     /// The embedded theme of an id.
     pub fn embedded(id: &str) -> Option<Self> {
-        embedded_list().into_iter().find(|e| e.0 == id).and_then(|(id, text)| {
-            Self::parse(text, id).ok().map(|mut t| {
-                t.id = id.to_owned();
-                t
+        embedded_list()
+            .into_iter()
+            .find(|e| e.0 == id)
+            .and_then(|(id, text)| {
+                Self::parse(text, id).ok().map(|mut t| {
+                    t.id = id.to_owned();
+                    t
+                })
             })
-        })
     }
 
     pub fn palette(&self) -> Palette {

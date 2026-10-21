@@ -4,11 +4,11 @@
 use winweaver_core::users::Operation;
 
 use crate::i18n::tr;
-use ww::keys::Keys;
 use crate::{
     Act, App, CatalogAct, CatalogRef, DiffAct, Doc, FileAct, ImportAct, McpAct, ProfileAct,
     RegFileAct, RegistryAct, ThemeAct, UsersAct, icons, regfileview, regview,
 };
+use ww::keys::Keys;
 
 /// The keys of the commands of WinWeaver beyond the ones of WW, each named once.
 pub mod keys {

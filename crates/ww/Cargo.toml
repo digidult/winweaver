@@ -22,5 +22,10 @@ eframe = { version = "0.36", default-features = false, features = ["accesskit", 
 wgpu = { version = "30", default-features = false, features = ["dx12"], optional = true }
 egui_commonmark = "0.25"
 rfd = "0.17"
+raw-window-handle = "0.6"
 serde.workspace = true
 serde_json.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+# The colours of the title bar (src/shell/themes.rs).
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm"] }

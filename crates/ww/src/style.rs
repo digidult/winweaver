@@ -678,6 +678,42 @@ pub fn card<R>(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
         .inner
 }
 
+/// The head of a page: the card colour across the width, a line under it.
+pub fn header(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
+    let p = palette(ui);
+    egui::Frame::new()
+        .fill(p.card)
+        .inner_margin(Margin {
+            left: 18,
+            right: 18,
+            top: 14,
+            bottom: 12,
+        })
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            add(ui);
+        });
+    ui.painter().hline(
+        ui.min_rect().x_range(),
+        ui.cursor().top(),
+        Stroke::new(1.0, p.border),
+    );
+}
+
+/// A card of a page, with its margins.
+pub fn block(ui: &mut egui::Ui, add: impl FnOnce(&mut egui::Ui)) {
+    egui::Frame::new()
+        .outer_margin(Margin {
+            left: 18,
+            right: 18,
+            top: 10,
+            bottom: 0,
+        })
+        .show(ui, |ui| {
+            card(ui, add);
+        });
+}
+
 /// The title of a section in capitals, small and muted.
 pub fn section_title(ui: &mut egui::Ui, text: &str) {
     let p = palette(ui);

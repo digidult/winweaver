@@ -757,5 +757,6 @@
   "Unsaved changes": "Perubahan belum disimpan",
   "none": "tidak ada",
   "{name} users": "Pengguna {name}",
-  "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.": "Contoh ini memakai nomor seri {serial} dan alamat MAC {mac}; setiap komputer memberi miliknya sendiri."
+  "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.": "Contoh ini memakai nomor seri {serial} dan alamat MAC {mac}; setiap komputer memberi miliknya sendiri.",
+  "Theme files": "Berkas tema"
 }

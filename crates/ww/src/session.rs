@@ -161,7 +161,13 @@ mod tests {
         let document = serde_json::json!({ "name": "Draft", "text": "a line" });
         let key = key_for_path(Path::new("C:\\Notes\\Today.txt"));
         assert_eq!(key, key_for_path(Path::new("c:\\notes\\today.txt")));
-        write_draft(&dir, &key, Some(Path::new("C:\\Notes\\Today.txt")), &document).unwrap();
+        write_draft(
+            &dir,
+            &key,
+            Some(Path::new("C:\\Notes\\Today.txt")),
+            &document,
+        )
+        .unwrap();
         let other = new_key();
         assert_ne!(other, new_key());
         write_draft(&dir, &other, None, &document).unwrap();

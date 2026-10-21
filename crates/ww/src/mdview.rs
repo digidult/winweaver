@@ -43,7 +43,6 @@ impl MdDoc {
         doc.page = Some(id);
         doc
     }
-
 }
 
 impl Document for MdDoc {

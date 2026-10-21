@@ -158,13 +158,20 @@ mod tests {
 
     #[test]
     fn english_is_the_fallback_and_a_file_parses() {
-        assert_eq!(tr("A text nobody translated"), "A text nobody translated");
+        // Texts of no interface, so named apart from the calls that the test of the
+        // translations reads.
+        const UNTRANSLATED: &str = "A text nobody translated";
+        const WITH_PLACES: &str = "{n} files for {name}";
+        assert_eq!(tr(UNTRANSLATED), UNTRANSLATED);
         assert_eq!(
-            trf("{n} files for {name}", &[("n", &3), ("name", &"PC")]),
+            trf(WITH_PLACES, &[("n", &3), ("name", &"PC")]),
             "3 files for PC"
         );
-        let (name, table) =
-            parse("{\"_language\": \"Test\", \"Save\": \"Saved\"}", "t/ui.json").unwrap();
+        let (name, table) = parse(
+            "{\"_language\": \"Test\", \"Save\": \"Saved\"}",
+            "t/ui.json",
+        )
+        .unwrap();
         assert_eq!(name, "Test");
         assert_eq!(table["Save"], "Saved");
         assert!(parse("{\"Save\": 1}", "t/ui.json").is_err());

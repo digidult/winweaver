@@ -1,6 +1,8 @@
 //! A document in a tab: what the window asks of it, and the search of a tab.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
+
+use crate::shell::ShellDoc;
 
 /// The searches a tab remembers.
 pub const SEARCH_HISTORY: usize = 20;
@@ -43,6 +45,23 @@ pub fn remember_search(history: &mut Vec<String>, text: &str) -> bool {
     history.insert(0, text.to_owned());
     history.truncate(SEARCH_HISTORY);
     true
+}
+
+/// How the selection of a tab came into view.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Scrolled {
+    /// The row was scrolled to (or there was none): the tab stops asking.
+    Revealed,
+    /// The selection moved with the keys: the row comes into view at the next frame.
+    Follow,
+}
+
+/// What a draft of a document holds: its key (the name of the file of the draft), the file the
+/// document belongs to and the document as JSON.
+pub struct Draft {
+    pub key: String,
+    pub path: Option<PathBuf>,
+    pub document: serde_json::Value,
 }
 
 /// What every tab answers, so the window draws it without knowing the document.
@@ -96,5 +115,28 @@ pub trait Document {
     /// Whether the tab has a navigation row: a history, a breadcrumb and the star.
     fn has_nav(&self) -> bool {
         false
+    }
+
+    /// The selection of the tab came into view, or should at the next frame.
+    fn scrolled(&mut self, _how: Scrolled) {}
+
+    /// The key of the draft of the document, removed when the tab closes.
+    fn draft_key(&self) -> Option<String> {
+        None
+    }
+
+    /// The draft to write now: a document with unsaved changes gives it a while after the last
+    /// change, or at once when `all` (the window closes), and then not again until a change.
+    fn draft_due(&mut self, _all: bool) -> Option<Draft> {
+        None
+    }
+
+    /// The document of the window itself a tab holds (the settings, the editor of a theme).
+    fn shell_doc(&self) -> Option<&ShellDoc> {
+        None
+    }
+
+    fn shell_doc_mut(&mut self) -> Option<&mut ShellDoc> {
+        None
     }
 }

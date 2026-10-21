@@ -757,5 +757,6 @@
   "Unsaved changes": "Несохранённые изменения",
   "none": "нет",
   "{name} users": "Пользователи {name}",
-  "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.": "Пример берёт серийный номер {serial} и MAC-адрес {mac}; компьютер даёт свои."
+  "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.": "Пример берёт серийный номер {serial} и MAC-адрес {mac}; компьютер даёт свои.",
+  "Theme files": "Файлы тем"
 }

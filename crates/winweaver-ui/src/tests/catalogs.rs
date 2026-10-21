@@ -11,13 +11,13 @@ fn only_the_checked_imports_load_and_unknown_options_find_their_catalog() {
     sample_import(&dir);
     let catalog = Catalog::embedded().unwrap();
     let earlier = Settings {
-     extra: Extra {
-         loaded_imports: None,
-         hidden_imports: vec!["test".to_owned()],
-         ..Extra::default()
-     },
-     ..Settings::default()
- };
+        extra: Extra {
+            loaded_imports: None,
+            hidden_imports: vec!["test".to_owned()],
+            ..Extra::default()
+        },
+        ..Settings::default()
+    };
     let mut app = App::new(catalog.clone(), Vec::new(), earlier);
     app.imports_dir = dir.join("imports");
     app.load_imports();
@@ -54,7 +54,10 @@ fn only_the_checked_imports_load_and_unknown_options_find_their_catalog() {
     )))]);
     app.apply(vec![Act::Import(ImportAct::LoadCatalogs)]);
     assert_eq!(app.imports.len(), 1, "{}", app.status);
-    assert_eq!(app.settings.extra.loaded_imports, Some(vec!["test".to_owned()]));
+    assert_eq!(
+        app.settings.extra.loaded_imports,
+        Some(vec!["test".to_owned()])
+    );
     let (unknown, on, _, sel) = state(&app);
     assert_eq!((unknown, on), (0, true), "the option is known and on again");
     assert_eq!(sel, Sel::Rule(id.to_owned()), "the selection follows it");
@@ -84,7 +87,10 @@ fn only_the_checked_imports_load_and_unknown_options_find_their_catalog() {
         1,
         "settings of an earlier version load what was not hidden"
     );
-    assert_eq!(next.settings.extra.loaded_imports, Some(vec!["test".to_owned()]));
+    assert_eq!(
+        next.settings.extra.loaded_imports,
+        Some(vec!["test".to_owned()])
+    );
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
@@ -137,12 +143,12 @@ fn a_new_catalog_is_edited_checked_and_saved() {
     let _ = std::fs::remove_dir_all(&dir);
     let catalog = Catalog::embedded().unwrap();
     let settings = Settings {
-     extra: Extra {
-         loaded_imports: Some(Vec::new()),
-         ..Extra::default()
-     },
-     ..Settings::default()
- };
+        extra: Extra {
+            loaded_imports: Some(Vec::new()),
+            ..Extra::default()
+        },
+        ..Settings::default()
+    };
     let mut app = App::new(catalog, Vec::new(), settings);
     app.imports_dir = dir.join("imports");
     app.apply(vec![Act::Catalog(CatalogAct::New)]);
@@ -200,12 +206,12 @@ fn links_open_the_catalog_at_a_policy_and_select_it_in_another_tree() {
         .unwrap();
     let catalog = Catalog::embedded().unwrap();
     let settings = Settings {
-     extra: Extra {
-         loaded_imports: Some(vec!["test".to_owned(), "again".to_owned()]),
-         ..Extra::default()
-     },
-     ..Settings::default()
- };
+        extra: Extra {
+            loaded_imports: Some(vec!["test".to_owned(), "again".to_owned()]),
+            ..Extra::default()
+        },
+        ..Settings::default()
+    };
     let mut app = App::new(catalog, Vec::new(), settings);
     app.imports_dir = dir.join("imports");
     app.load_imports();
@@ -252,13 +258,13 @@ fn removals_ask_first_and_two_catalogs_compare() {
         .unwrap();
     let catalog = Catalog::embedded().unwrap();
     let settings = Settings {
-     extra: Extra {
-         loaded_imports: Some(vec!["test".to_owned()]),
-         ..Extra::default()
-     },
-     recent: vec![PathBuf::from("a.wwprofile")],
-     ..Settings::default()
- };
+        extra: Extra {
+            loaded_imports: Some(vec!["test".to_owned()]),
+            ..Extra::default()
+        },
+        recent: vec![PathBuf::from("a.wwprofile")],
+        ..Settings::default()
+    };
     let mut app = App::new(catalog, Vec::new(), settings);
     app.imports_dir = dir.join("imports");
     app.load_imports();
@@ -278,7 +284,10 @@ fn removals_ask_first_and_two_catalogs_compare() {
     assert!(app.question.is_some(), "a tab with changes asks");
     app.apply(vec![Act::Answer(false)]);
     assert_eq!(app.docs.len(), 1);
-    app.apply(vec![crate::question::forget_recent().into(), Act::Answer(true)]);
+    app.apply(vec![
+        crate::question::forget_recent().into(),
+        Act::Answer(true),
+    ]);
     assert!(app.settings.recent.is_empty());
     app.apply(vec![crate::question::renew_token().into()]);
     assert!(app.question.is_some());

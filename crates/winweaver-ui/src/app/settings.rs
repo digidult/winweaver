@@ -144,7 +144,8 @@ impl App {
         }
         ui.add_space(8.0);
         if !self.settings.recent.is_empty() && ui.button(tr("Forget recent files")).clicked() {
-            self.pending_acts.push(crate::question::forget_recent().into());
+            self.pending_acts
+                .push(crate::question::forget_recent().into());
         }
     }
 

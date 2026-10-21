@@ -118,7 +118,11 @@ impl App {
 
     /// Names an import among the loaded ones of the settings.
     pub(crate) fn mark_loaded(&mut self, id: &str) {
-        let list = self.settings.extra.loaded_imports.get_or_insert_with(Vec::new);
+        let list = self
+            .settings
+            .extra
+            .loaded_imports
+            .get_or_insert_with(Vec::new);
         if !list.iter().any(|x| x == id) {
             list.push(id.to_owned());
             self.settings_dirty = true;
