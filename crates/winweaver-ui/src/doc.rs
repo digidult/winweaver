@@ -10,7 +10,6 @@ use crate::diffview::DiffDoc;
 use crate::i18n::tr;
 use crate::marksview::MarksDoc;
 use crate::mcpview::McpDoc;
-use crate::mdview::MdDoc;
 use crate::regfileview::RegFileDoc;
 use crate::regview::RegistryDoc;
 use crate::themeview::ThemeDoc;
@@ -240,20 +239,6 @@ impl Tab for DiffDoc {
 
     fn dirty(&self) -> bool {
         self.dirty
-    }
-
-    fn path(&self) -> Option<&Path> {
-        self.path.as_deref()
-    }
-
-    fn search(&mut self) -> Option<&mut Search> {
-        Some(&mut self.search)
-    }
-}
-
-impl Tab for MdDoc {
-    fn title(&self) -> String {
-        self.title.clone()
     }
 
     fn path(&self) -> Option<&Path> {

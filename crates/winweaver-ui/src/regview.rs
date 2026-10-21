@@ -80,7 +80,7 @@ impl Search {
 }
 
 use crate::i18n::{tr, trf};
-use crate::{Act, Question, RegistryAct, icons, regedit, style, tree, views, widgets};
+use crate::{Act, RegistryAct, icons, regedit, style, tree, views, widgets};
 
 /// The most rules the line above the values names.
 const WRITERS_MAX: usize = 12;

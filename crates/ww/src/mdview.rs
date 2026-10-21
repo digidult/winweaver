@@ -3,7 +3,7 @@
 
 use std::path::PathBuf;
 
-use crate::doc::{Search, matches_words};
+use crate::doc::{Document, Search, matches_words};
 use eframe::egui;
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 
@@ -44,6 +44,20 @@ impl MdDoc {
         doc
     }
 
+}
+
+impl Document for MdDoc {
+    fn title(&self) -> String {
+        self.title.clone()
+    }
+
+    fn path(&self) -> Option<&Path> {
+        self.path.as_deref()
+    }
+
+    fn search(&mut self) -> Option<&mut Search> {
+        Some(&mut self.search)
+    }
 }
 
 /// The anchor of a heading as GitHub writes it: lower case, spaces as hyphens, other punctuation

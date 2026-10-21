@@ -14,9 +14,7 @@ use winweaver_core::registry;
 
 use crate::catalogview;
 use crate::i18n::{tr, trf};
-use crate::{
-    Act, CatalogAct, ProfileAct, Question, RegistryAct, TreeKey, icons, style, tree, widgets,
-};
+use crate::{Act, CatalogAct, ProfileAct, RegistryAct, TreeKey, icons, style, tree, widgets};
 
 /// The kinds of values the form writes.
 const KINDS: [RegKind; 4] = [
