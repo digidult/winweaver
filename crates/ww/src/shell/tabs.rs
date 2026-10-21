@@ -31,7 +31,7 @@ impl<A: App> Window<A> {
                 .docs
                 .iter()
                 .enumerate()
-                .map(|(i, doc)| tab(ui, &p, i, i == active, last, doc, acts))
+                .map(|(i, doc)| tab::<A>(ui, &p, i, i == active, last, doc, acts))
                 .collect();
             let rects: Vec<egui::Rect> = tabs.iter().map(|r| r.rect).collect();
             let pointer = ui.ctx().pointer_interact_pos();

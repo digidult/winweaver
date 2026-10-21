@@ -9,7 +9,7 @@ mod nav;
 mod settings;
 mod status;
 mod tabs;
-mod themes;
+mod theme;
 mod window;
 
 use std::path::{Path, PathBuf};
