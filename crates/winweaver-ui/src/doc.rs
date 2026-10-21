@@ -15,12 +15,26 @@ use crate::regfileview::RegFileDoc;
 use crate::regview::RegistryDoc;
 use crate::themeview::ThemeDoc;
 use crate::usersview::UsersDoc;
-use crate::{ProfileDoc, Search, icons};
+use crate::{ProfileDoc, Search, icons, themes};
+use winweaver_core::{diff, profile};
 
 /// What every tab answers, so the chrome draws it without knowing the document.
 pub trait Tab {
-    /// The title of the tab.
-    fn title(&self) -> String;
+    /// The title of the tab: the name of its file, else `name`.
+    fn title(&self) -> String {
+        match self.path() {
+            Some(p) => p
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default(),
+            None => self.name(),
+        }
+    }
+
+    /// The title of a document that has no file.
+    fn name(&self) -> String {
+        String::new()
+    }
 
     /// Whether the document has changes its file does not.
     fn dirty(&self) -> bool {
@@ -231,8 +245,8 @@ impl Tab for Doc {
 }
 
 impl Tab for ProfileDoc {
-    fn title(&self) -> String {
-        ProfileDoc::title(self)
+    fn name(&self) -> String {
+        format!("{}.{}", self.profile.name, profile::EXTENSION)
     }
 
     fn dirty(&self) -> bool {
@@ -249,8 +263,12 @@ impl Tab for ProfileDoc {
 }
 
 impl Tab for DiffDoc {
-    fn title(&self) -> String {
-        DiffDoc::title(self)
+    fn name(&self) -> String {
+        format!(
+            "{} vs {}.{}",
+            self.diff.base.name, self.diff.other.name,
+            diff::EXTENSION
+        )
     }
 
     fn dirty(&self) -> bool {
@@ -321,8 +339,8 @@ impl Tab for CatalogDoc {
 }
 
 impl Tab for ThemeDoc {
-    fn title(&self) -> String {
-        ThemeDoc::title(self)
+    fn name(&self) -> String {
+        format!("{}.{}", self.theme.id, themes::EXTENSION)
     }
 
     fn dirty(&self) -> bool {
@@ -353,10 +371,6 @@ impl Tab for EditorDoc {
 }
 
 impl Tab for RegFileDoc {
-    fn title(&self) -> String {
-        RegFileDoc::title(self)
-    }
-
     fn dirty(&self) -> bool {
         self.dirty
     }

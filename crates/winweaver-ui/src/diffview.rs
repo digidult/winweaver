@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use eframe::egui::{self, Margin, RichText};
 use serde_json::Value;
 use winweaver_core::catalog::{Catalog, Rule};
-use winweaver_core::diff::{self, Diff};
+use winweaver_core::diff::{Diff, ItemKey, self};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::profile::Choice;
 
@@ -44,20 +44,7 @@ impl DiffDoc {
         }
     }
 
-    pub fn title(&self) -> String {
-        match &self.path {
-            Some(p) => p
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default(),
-            None => format!(
-                "{} vs {}.{}",
-                self.diff.base.name,
-                self.diff.other.name,
-                diff::EXTENSION
-            ),
-        }
-    }
+
 }
 
 /// The state of a rule in one profile as lines: on or off, then the parameters.
@@ -110,7 +97,7 @@ pub fn items<'a>(catalog: &'a Catalog, texts: Option<&CatalogTexts>, d: &Diff) -
     let mut items = Vec::new();
     for (k, f) in &d.install {
         items.push(Item {
-            key: format!("install:{k}"),
+            key: ItemKey::Install(k.clone()).to_string(),
             title: k.clone(),
             group: tr("Installation").to_owned(),
             base: vec![value_text(&f.base)],
@@ -120,7 +107,7 @@ pub fn items<'a>(catalog: &'a Catalog, texts: Option<&CatalogTexts>, d: &Diff) -
     }
     for (k, f) in &d.languages {
         items.push(Item {
-            key: format!("languages:{k}"),
+            key: ItemKey::Languages(k.clone()).to_string(),
             title: k.clone(),
             group: tr("Languages").to_owned(),
             base: vec![value_text(&f.base)],
@@ -130,7 +117,7 @@ pub fn items<'a>(catalog: &'a Catalog, texts: Option<&CatalogTexts>, d: &Diff) -
     }
     if let Some(f) = &d.accounts {
         items.push(Item {
-            key: "accounts".to_owned(),
+            key: ItemKey::Accounts.to_string(),
             title: tr("Accounts").to_owned(),
             group: tr("Accounts").to_owned(),
             base: vec![value_text(&f.base)],
@@ -143,7 +130,7 @@ pub fn items<'a>(catalog: &'a Catalog, texts: Option<&CatalogTexts>, d: &Diff) -
             continue;
         };
         items.push(Item {
-            key: format!("rule:{}", rule.id),
+            key: ItemKey::Rule(rule.id.clone()).to_string(),
             title: rtitle(texts, rule).to_owned(),
             group: catalog
                 .group(&rule.group)
@@ -158,7 +145,7 @@ pub fn items<'a>(catalog: &'a Catalog, texts: Option<&CatalogTexts>, d: &Diff) -
             continue;
         }
         items.push(Item {
-            key: format!("rule:{id}"),
+            key: ItemKey::Rule(id.clone()).to_string(),
             title: trf("{id} (not in this catalog)", &[("id", id)]),
             group: String::new(),
             base: choice_lines(&r.base),
@@ -251,7 +238,7 @@ pub fn diff_view(
         .map(|item| list::Row {
             key: item.key.clone(),
             cells: vec![
-                if item.rule.is_some() || !item.key.starts_with("rule:") {
+                if item.rule.is_some() || ItemKey::rule(&item.key).is_none() {
                     list::Cell::new(&item.title)
                 } else {
                     list::Cell::new(&item.title).muted()
@@ -358,7 +345,7 @@ pub fn diff_detail(
         .show(ui, |ui| {
             views::header(ui, |ui| {
                 ui.label(style::strong(ui, &item.title, 18.0));
-                if let Some(id) = item.key.strip_prefix("rule:") {
+                if let Some(id) = ItemKey::rule(&item.key) {
                     ui.horizontal(|ui| {
                         let p = style::palette(ui);
                         let (icon, hint) = if marked {
@@ -441,7 +428,7 @@ pub fn diff_detail(
                     let link = views::RuleLink::Elsewhere;
                     views::rule_description(ui, catalog, texts, rule, settings, link, acts)
                 }
-                None if item.key.starts_with("rule:") => {
+                None if ItemKey::rule(&item.key).is_some() => {
                     views::block(ui, |ui| {
                         ui.label(RichText::new(tr(
                             "This rule is not in the catalog of this program, so it has no description here.",

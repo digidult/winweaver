@@ -13,6 +13,8 @@ pub mod log;
 pub mod stdio;
 mod tools;
 
+pub use tools::Kind;
+
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -130,13 +132,40 @@ pub struct Entry {
     pub method: String,
     /// The arguments that are identifiers, numbers or switches; other texts are not shown.
     pub detail: String,
-    pub result: String,
+    pub result: Outcome,
     /// The whole arguments and the answer, without passwords, keys and tokens, for the panel of
     /// the MCP tab; a long answer is cut to its first characters.
     pub arguments: Value,
     pub answer: Value,
     /// How long the call took, in milliseconds.
     pub ms: u64,
+}
+
+/// How a call ended: well, or with the kind of its error.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Outcome {
+    Ok,
+    Error(Kind),
+}
+
+impl Outcome {
+    pub fn is_ok(self) -> bool {
+        self == Outcome::Ok
+    }
+
+    /// `ok`, or the name of the kind of the error.
+    pub fn name(self) -> &'static str {
+        match self {
+            Outcome::Ok => "ok",
+            Outcome::Error(kind) => kind.name(),
+        }
+    }
+}
+
+impl std::fmt::Display for Outcome {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.name())
+    }
 }
 
 /// A copy of a value without the values of the secret fields (passwords, the product key, tokens).
@@ -280,7 +309,7 @@ impl Server {
                 client: e.client.clone(),
                 method: e.method.clone(),
                 detail: e.detail.clone(),
-                result: e.result.clone(),
+                result: e.result,
                 arguments: Value::Null,
                 answer: Value::Null,
                 ms: e.ms,
@@ -441,7 +470,7 @@ impl Server {
         self.record(Call {
             method: "initialize",
             detail: String::new(),
-            result: "ok",
+            result: Outcome::Ok,
             arguments: params,
             answer: &Value::Null,
             ms: 0,
@@ -481,8 +510,8 @@ impl Server {
             Err(e) => Value::from(format!("{}: {}", e.kind.name(), e.message)),
         };
         let result = match &outcome {
-            Ok(_) => "ok",
-            Err(e) => e.kind.name(),
+            Ok(_) => Outcome::Ok,
+            Err(e) => Outcome::Error(e.kind),
         };
         self.record(Call {
             method: name,
@@ -521,7 +550,7 @@ impl Server {
                 self.record(Call {
                     method: "resources/read",
                     detail: uri.chars().take(80).collect(),
-                    result: "ok",
+                    result: Outcome::Ok,
                     arguments: params,
                     answer: &Value::from(format!("{} characters", text.chars().count())),
                     ms: 0,
@@ -546,7 +575,7 @@ impl Server {
             client,
             method: call.method.to_owned(),
             detail: call.detail,
-            result: call.result.to_owned(),
+            result: call.result,
             arguments: redact(call.arguments),
             answer: kept(call.answer),
             ms: call.ms,
@@ -557,7 +586,7 @@ impl Server {
                 json!({
                     "client": entry.client,
                     "call": entry.method,
-                    "result": entry.result,
+                    "result": entry.result.name(),
                     "ms": entry.ms,
                     "arguments": entry.arguments,
                     "answer": entry.answer,
@@ -574,7 +603,7 @@ impl Server {
 struct Call<'a> {
     method: &'a str,
     detail: String,
-    result: &'a str,
+    result: Outcome,
     arguments: &'a Value,
     answer: &'a Value,
     ms: u64,

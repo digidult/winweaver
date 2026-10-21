@@ -175,7 +175,7 @@ pub fn license_text() -> String {
 pub fn guide_text(code: &str) -> String {
     let file = crate::lang_dir().join(code).join("guide.md");
     if code != "en"
-        && let Ok(text) = winweaver_core::jsonfile::read_text_bom(&file, 4 * 1024 * 1024)
+        && let Ok(text) = winweaver_core::jsonfile::read_text_bom(&file, crate::MARKDOWN_MAX_BYTES)
     {
         return text;
     }

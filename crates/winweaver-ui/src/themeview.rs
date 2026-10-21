@@ -23,15 +23,7 @@ impl ThemeDoc {
     }
 
     /// The name of the file of the theme.
-    pub fn title(&self) -> String {
-        match &self.theme.path {
-            Some(p) => p
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default(),
-            None => format!("{}.{}", self.theme.id, themes::EXTENSION),
-        }
-    }
+
 }
 
 /// What a colour of the theme paints.

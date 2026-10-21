@@ -37,20 +37,16 @@ impl App {
 
     /// Opens a users file in a tab of its own, or brings its tab to the front.
     pub(crate) fn open_users_path(&mut self, path: PathBuf) {
-        let same = |d: &Doc| matches!(d, Doc::Users(u) if u.path.as_ref() == Some(&path));
-        if let Some(i) = self.docs.iter().position(same) {
-            self.active = i;
-            return;
-        }
-        match UsersFile::load(&path) {
-            Ok(file) => {
-                let mut doc = usersview::UsersDoc::new(file, Some(path.clone()));
+        self.open_file(
+            &path,
+            |d| matches!(d, Doc::Users(u) if u.path.as_ref() == Some(&path)),
+            UsersFile::load,
+            |file, path| {
+                let mut doc = usersview::UsersDoc::new(file, Some(path));
                 doc.check();
-                self.open_tab(Doc::Users(Box::new(doc)));
-                self.opened(&path);
-            }
-            Err(e) => self.open_failed(e),
-        }
+                Doc::Users(Box::new(doc))
+            },
+        );
     }
 
     /// Saves the users file in front, with its passwords encrypted again, at its place or at

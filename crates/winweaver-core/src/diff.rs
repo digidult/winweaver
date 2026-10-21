@@ -1,6 +1,7 @@
 //! Diff files (`.wwdiff`): the differences between two profiles, applied to a profile as a
 //! merge (`docs/spec/02-documents.md` section 4). A diff holds only what differs.
 
+use std::fmt;
 use std::path::Path;
 
 use indexmap::IndexMap;
@@ -135,6 +136,53 @@ impl Document for Diff {
     }
 }
 
+/// The key of an item of a diff, what its comment is kept by: `install:<field>`,
+/// `languages:<field>`, `accounts` or `rule:<id>`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ItemKey {
+    Install(String),
+    Languages(String),
+    Accounts,
+    Rule(String),
+}
+
+impl ItemKey {
+    const INSTALL: &str = "install:";
+    const LANGUAGES: &str = "languages:";
+    const ACCOUNTS: &str = "accounts";
+    const RULE: &str = "rule:";
+
+    pub fn parse(key: &str) -> Option<Self> {
+        if let Some(id) = key.strip_prefix(Self::RULE) {
+            Some(Self::Rule(id.to_owned()))
+        } else if let Some(field) = key.strip_prefix(Self::INSTALL) {
+            Some(Self::Install(field.to_owned()))
+        } else if let Some(field) = key.strip_prefix(Self::LANGUAGES) {
+            Some(Self::Languages(field.to_owned()))
+        } else if key == Self::ACCOUNTS {
+            Some(Self::Accounts)
+        } else {
+            None
+        }
+    }
+
+    /// The id of the rule a key names, for the keys of rules.
+    pub fn rule(key: &str) -> Option<&str> {
+        key.strip_prefix(Self::RULE)
+    }
+}
+
+impl fmt::Display for ItemKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Install(field) => write!(f, "{}{field}", Self::INSTALL),
+            Self::Languages(field) => write!(f, "{}{field}", Self::LANGUAGES),
+            Self::Accounts => f.write_str(Self::ACCOUNTS),
+            Self::Rule(id) => write!(f, "{}{id}", Self::RULE),
+        }
+    }
+}
+
 impl Diff {
     /// The differences from `base` to `other`.
     pub fn between(base: &Profile, other: &Profile, base_side: Side, other_side: Side) -> Self {
@@ -168,54 +216,64 @@ impl Diff {
         }
     }
 
-    /// The keys of the items in their order: `install:<field>`, `languages:<field>`, `accounts`
-    /// and `rule:<id>`.
+    /// The keys of the items in their order (`ItemKey`).
     pub fn keys(&self) -> Vec<String> {
         let mut keys: Vec<String> = self
             .install
             .keys()
-            .map(|k| format!("install:{k}"))
+            .map(|k| ItemKey::Install(k.clone()).to_string())
             .collect();
-        keys.extend(self.languages.keys().map(|k| format!("languages:{k}")));
+        keys.extend(
+            self.languages
+                .keys()
+                .map(|k| ItemKey::Languages(k.clone()).to_string()),
+        );
         if self.accounts.is_some() {
-            keys.push("accounts".to_owned());
+            keys.push(ItemKey::Accounts.to_string());
         }
-        keys.extend(self.rules.keys().map(|k| format!("rule:{k}")));
+        keys.extend(self.rules.keys().map(|k| ItemKey::Rule(k.clone()).to_string()));
         keys
     }
 
     /// Sets one item of a profile to the value of the other side.
     pub fn apply_item(&self, key: &str, profile: &mut Profile) {
-        if let Some(id) = key.strip_prefix("rule:") {
-            if let Some(d) = self.rules.get(id) {
-                match &d.other {
-                    Some(c) => {
-                        profile.rules.insert(id.to_owned(), c.clone());
+        match ItemKey::parse(key) {
+            Some(ItemKey::Rule(id)) => {
+                if let Some(d) = self.rules.get(&id) {
+                    match &d.other {
+                        Some(c) => {
+                            profile.rules.insert(id, c.clone());
+                        }
+                        None => {
+                            profile.rules.shift_remove(&id);
+                        }
                     }
-                    None => {
-                        profile.rules.shift_remove(id);
+                }
+            }
+            Some(ItemKey::Install(field)) => {
+                if let Some(f) = self.install.get(&field) {
+                    let one: IndexMap<String, FieldDiff> = [(field, f.clone())].into();
+                    if let Some(install) = merged(&profile.install, &one) {
+                        profile.install = install;
                     }
                 }
             }
-        } else if let Some(field) = key.strip_prefix("install:") {
-            if let Some(f) = self.install.get(field) {
-                let one: IndexMap<String, FieldDiff> = [(field.to_owned(), f.clone())].into();
-                if let Some(install) = merged(&profile.install, &one) {
-                    profile.install = install;
+            Some(ItemKey::Languages(field)) => {
+                if let Some(f) = self.languages.get(&field) {
+                    let one: IndexMap<String, FieldDiff> = [(field, f.clone())].into();
+                    if let Some(languages) = merged(&profile.languages, &one) {
+                        profile.languages = languages;
+                    }
                 }
             }
-        } else if let Some(field) = key.strip_prefix("languages:") {
-            if let Some(f) = self.languages.get(field) {
-                let one: IndexMap<String, FieldDiff> = [(field.to_owned(), f.clone())].into();
-                if let Some(languages) = merged(&profile.languages, &one) {
-                    profile.languages = languages;
+            Some(ItemKey::Accounts) => {
+                if let Some(d) = &self.accounts
+                    && let Ok(accounts) = serde_json::from_value(d.other.clone())
+                {
+                    profile.accounts = accounts;
                 }
             }
-        } else if key == "accounts"
-            && let Some(d) = &self.accounts
-            && let Ok(accounts) = serde_json::from_value(d.other.clone())
-        {
-            profile.accounts = accounts;
+            None => {}
         }
     }
 

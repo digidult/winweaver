@@ -12,15 +12,18 @@ use winweaver_core::admx::{self, CatalogFile};
 use winweaver_core::catalog::{Action, Phase, ROOT_POLICIES, RegKind, Rule};
 use winweaver_core::registry;
 
+use crate::catalogview;
 use crate::i18n::{tr, trf};
-use crate::{Act, CatalogAct, ProfileAct, Question, RegistryAct, icons, style, tree, widgets};
+use crate::{
+    Act, CatalogAct, ProfileAct, Question, RegistryAct, TreeKey, icons, style, tree, widgets,
+};
 
 /// The kinds of values the form writes.
-const KINDS: [(RegKind, &str); 4] = [
-    (RegKind::DWord, "REG_DWORD"),
-    (RegKind::QWord, "REG_QWORD"),
-    (RegKind::String, "REG_SZ"),
-    (RegKind::ExpandString, "REG_EXPAND_SZ"),
+const KINDS: [RegKind; 4] = [
+    RegKind::DWord,
+    RegKind::QWord,
+    RegKind::String,
+    RegKind::ExpandString,
 ];
 
 /// A registry action of the form: a value written or removed, or another action kept as it is.
@@ -77,7 +80,7 @@ impl ActionRow {
                 kind,
                 value,
                 ..
-            } if KINDS.iter().any(|(k, _)| k == kind) => Self {
+            } if KINDS.contains(kind) => Self {
                 remove: false,
                 key: shown(path),
                 name: name.clone(),
@@ -169,15 +172,18 @@ impl EditorDoc {
         trf("{name}: editor", &[("name", &self.file.name)]) + star
     }
 
-    /// Selects a group (`g:<id>`) or a policy, whose form starts from the file.
-    pub fn select(&mut self, key: &str) {
+    /// Selects a group or a policy, whose form starts from the file.
+    pub fn select(&mut self, key: &TreeKey) {
         self.error = None;
-        if let Some(g) = key.strip_prefix("g:") {
-            self.group = Some(g.to_owned());
-            self.form = None;
-            return;
-        }
-        let Some(rule) = self.file.rules.iter().find(|r| r.id == key) else {
+        let id = match key {
+            TreeKey::Group(g) => {
+                self.group = Some(g.clone());
+                self.form = None;
+                return;
+            }
+            TreeKey::Rule(id) => id,
+        };
+        let Some(rule) = self.file.rules.iter().find(|r| r.id == *id) else {
             return;
         };
         self.group = Some(rule.group.clone());
@@ -250,7 +256,7 @@ impl EditorDoc {
                 self.dirty = true;
                 self.new_name.clear();
                 self.expanded.insert(group);
-                self.select(&id);
+                self.select(&TreeKey::Rule(id));
             }
             Err(e) => self.error = Some(e),
         }
@@ -270,7 +276,7 @@ impl EditorDoc {
                 self.dirty = true;
                 self.new_name.clear();
                 self.expanded.insert(parent);
-                self.select(&format!("g:{id}"));
+                self.select(&TreeKey::Group(id));
             }
             Err(e) => self.error = Some(e),
         }
@@ -289,49 +295,7 @@ impl EditorDoc {
 }
 
 /// The rows of the tree under a group of the file.
-fn rows(doc: &EditorDoc, out: &mut Vec<tree::Row<String>>, group: &str, depth: usize) {
-    let Some(g) = doc.file.groups.iter().find(|g| g.id == group) else {
-        return;
-    };
-    let open = doc.expanded.contains(group);
-    out.push(tree::Row {
-        key: format!("g:{group}"),
-        depth,
-        title: g.title.clone(),
-        right: String::new(),
-        check: tree::Check::None,
-        open: Some(open),
-        muted: false,
-        icon: None,
-        switch: None,
-    });
-    if !open {
-        return;
-    }
-    let children: Vec<String> = doc
-        .file
-        .groups
-        .iter()
-        .filter(|c| c.parent.as_deref() == Some(group))
-        .map(|c| c.id.clone())
-        .collect();
-    for child in children {
-        rows(doc, out, &child, depth + 1);
-    }
-    for r in doc.file.rules.iter().filter(|r| r.group == group) {
-        out.push(tree::Row {
-            key: r.id.clone(),
-            depth: depth + 1,
-            title: r.title.clone(),
-            right: String::new(),
-            check: tree::Check::None,
-            open: None,
-            muted: r.id.ends_with(".off"),
-            icon: None,
-            switch: None,
-        });
-    }
-}
+
 
 /// The tab: the tree on the left, the form on the right.
 pub fn editor_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
@@ -345,12 +309,20 @@ pub fn editor_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) 
             .filter(|g| g.parent.as_deref() == Some(ROOT_POLICIES))
             .map(|g| g.id.clone())
             .collect();
+        let style = catalogview::RowStyle {
+            lang: "",
+            filter: None,
+            counts: false,
+            mute_off: true,
+        };
         for root in roots {
-            rows(doc, &mut out, &root, 0);
+            if let Some(g) = doc.file.groups.iter().find(|g| g.id == root) {
+                catalogview::catalog_rows(&mut out, &doc.file, &doc.expanded, &style, g, 0);
+            }
         }
         let selected_key = match (&doc.form, &doc.group) {
-            (Some(f), _) => Some(f.id.clone()),
-            (None, Some(g)) => Some(format!("g:{g}")),
+            (Some(f), _) => Some(TreeKey::Rule(f.id.clone())),
+            (None, Some(g)) => Some(TreeKey::Group(g.clone())),
             _ => None,
         };
         let selected = selected_key.and_then(|k| out.iter().position(|r| r.key == k));
@@ -364,8 +336,7 @@ pub fn editor_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) 
         for event in shown.events {
             match event {
                 tree::Event::Select(key) => doc.select(&key),
-                tree::Event::Expand(key, open) => {
-                    let g = key.trim_start_matches("g:").to_owned();
+                tree::Event::Expand(TreeKey::Group(g), open) => {
                     if open {
                         doc.expanded.insert(g);
                     } else {
@@ -502,15 +473,10 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
                         ui.label("");
                     } else {
                         egui::ComboBox::from_id_salt(("catalog-editor-kind", form.id.as_str(), i))
-                            .selected_text(
-                                KINDS
-                                    .iter()
-                                    .find(|(k, _)| *k == row.kind)
-                                    .map_or("", |(_, n)| *n),
-                            )
+                            .selected_text(row.kind.type_name())
                             .show_ui(ui, |ui| {
-                                for (k, n) in KINDS {
-                                    ui.selectable_value(&mut row.kind, k, n);
+                                for k in KINDS {
+                                    ui.selectable_value(&mut row.kind, k, k.type_name());
                                 }
                             });
                         ui.add(

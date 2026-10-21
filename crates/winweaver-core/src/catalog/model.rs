@@ -165,6 +165,20 @@ pub enum RegKind {
     Binary,
 }
 
+impl RegKind {
+    /// The name of the registry type the kind writes, as regedit shows it.
+    pub fn type_name(self) -> &'static str {
+        match self {
+            RegKind::DWord => "REG_DWORD",
+            RegKind::QWord => "REG_QWORD",
+            RegKind::String => "REG_SZ",
+            RegKind::ExpandString => "REG_EXPAND_SZ",
+            RegKind::MultiString => "REG_MULTI_SZ",
+            RegKind::Binary => "REG_BINARY",
+        }
+    }
+}
+
 /// A script or a comment: one line or a list of lines.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(untagged)]

@@ -5,7 +5,6 @@
 //! write it. A key, a value or a comment is edited in a window over the tab and lines are removed
 //! after a question; Save writes every line back, the ones the program does not read too.
 
-use std::collections::HashMap;
 use std::ops::Range;
 use std::path::PathBuf;
 
@@ -14,26 +13,21 @@ use winweaver_core::admx::CatalogFile;
 use winweaver_core::catalog::{Action, Catalog};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::regfile::{Line, RegFile};
-use winweaver_core::registry::{self, Data};
+use winweaver_core::registry::{Data, NEW_TYPES, self};
 
 use crate::i18n::{tr, trf};
-use crate::regview::value_title;
+use crate::regview::{self, value_title};
 use crate::views::{self, rtitle};
 use crate::{
-    Act, ProfileAct, Question, RegFileAct, RegistryAct, Search, icons, list, matches_words, style,
-    tree, widgets,
+    Act, ProfileAct, Question, RegFileAct, RegistryAct, Search, Tab, icons, list, matches_words,
+    regedit, style, tree, widgets,
 };
 
-/// The types the editor of a value offers.
-const TYPES: [&str; 7] = [
-    "REG_SZ",
-    "REG_EXPAND_SZ",
-    "REG_MULTI_SZ",
-    "REG_DWORD",
-    "REG_QWORD",
-    "REG_BINARY",
-    "REG_NONE",
-];
+/// The types the editor of a value offers: the ones of the registry, and REG_NONE as a file may
+/// hold it.
+fn value_types() -> Vec<&'static str> {
+    NEW_TYPES.iter().copied().chain(["REG_NONE"]).collect()
+}
 /// The most characters of data a row shows.
 const SHOWN_MAX: usize = 200;
 /// The most rules the head of a key lists.
@@ -112,30 +106,9 @@ pub fn items(lines: &[Line]) -> Vec<Item> {
 
 /// The rules of a catalog by the keys they write (in lower case), each with the value it writes in
 /// lower case, `None` for the values of a list.
-type Writers = HashMap<String, Vec<(String, Option<String>)>>;
 
-fn writers_of(catalog: &Catalog) -> Writers {
-    let mut out = Writers::new();
-    for rule in catalog.rules() {
-        for action in &rule.actions {
-            let (path, name) = match action {
-                Action::Reg { path, name, .. } | Action::RegRemove { path, name, .. } => {
-                    (path, Some(name.to_lowercase()))
-                }
-                Action::RegList { path, .. } => (path, None),
-                _ => continue,
-            };
-            if let Some(key) = registry::normalize(path) {
-                let list = out.entry(key.to_lowercase()).or_default();
-                let entry = (rule.id.clone(), name);
-                if !list.contains(&entry) {
-                    list.push(entry);
-                }
-            }
-        }
-    }
-    out
-}
+
+
 
 /// Whether a key is in the default user profile as the files of the plans load it.
 fn in_default_user(path: &str) -> bool {
@@ -247,7 +220,7 @@ pub struct RegFileDoc {
     pub follow: bool,
     pub follow_line: bool,
     /// The rules of the catalog by the keys they write, with the count of rules it was made of.
-    writers: Option<(usize, Writers)>,
+    writers: Option<regview::Writers>,
 }
 
 impl RegFileDoc {
@@ -278,12 +251,7 @@ impl RegFileDoc {
         ))
     }
 
-    pub fn title(&self) -> String {
-        self.path
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_default()
-    }
+
 
     /// The entry of the outline the selection is in; `None` for the whole file.
     pub fn item(&self, items: &[Item]) -> Option<usize> {
@@ -556,21 +524,7 @@ impl RegFileDoc {
 
     /// The rules of the loaded catalogs that write a key, or a value of it.
     fn rules_of(&self, path: &str, value: Option<&str>) -> Vec<String> {
-        let Some((_, writers)) = &self.writers else {
-            return Vec::new();
-        };
-        let value = value.map(str::to_lowercase);
-        let mut out: Vec<String> = Vec::new();
-        for (id, name) in writers.get(&catalog_key(path)).into_iter().flatten() {
-            let fits = match (&value, name) {
-                (Some(v), Some(n)) => v == n,
-                _ => true,
-            };
-            if fits && !out.contains(id) {
-                out.push(id.clone());
-            }
-        }
-        out
+        regview::Writers::ids_for(&self.writers, &catalog_key(path), value).to_vec()
     }
 }
 
@@ -955,9 +909,9 @@ pub fn regfile_view(
     imports: &[CatalogFile],
     acts: &mut Vec<Act>,
 ) {
-    let count = catalog.rules().len();
-    if doc.writers.as_ref().is_none_or(|(n, _)| *n != count) {
-        doc.writers = Some((count, writers_of(catalog)));
+    if let Some((_, path)) = doc.selected_key() {
+        let value = doc.selected_value();
+        regview::Writers::refresh(&mut doc.writers, catalog, &catalog_key(&path), value.as_deref());
     }
     let items = items(&doc.file.lines);
     let selected = doc.item(&items);
@@ -1088,38 +1042,15 @@ fn value_fields(ui: &mut egui::Ui, edit: &mut Edit) {
     if edit.delete {
         return;
     }
-    ui.label(tr("Type"));
-    egui::ComboBox::from_id_salt("regfile-type")
-        .selected_text(edit.type_name.as_str())
-        .show_ui(ui, |ui| {
-            for t in TYPES {
-                ui.selectable_value(&mut edit.type_name, t.to_owned(), t);
-            }
-        });
-    ui.end_row();
-    ui.label(tr("Data"));
-    let multi = matches!(
-        edit.type_name.as_str(),
-        "REG_MULTI_SZ" | "REG_BINARY" | "REG_NONE"
+    let types = value_types();
+    regedit::type_and_data(
+        ui,
+        "regfile-type",
+        Some(&types),
+        &mut edit.type_name,
+        &mut edit.text,
+        420.0,
     );
-    let hint = match edit.type_name.as_str() {
-        "REG_DWORD" | "REG_QWORD" => tr("A number: decimal, or hexadecimal after 0x"),
-        "REG_MULTI_SZ" => tr("One string per line"),
-        "REG_BINARY" | "REG_NONE" => tr("Bytes as hexadecimal pairs"),
-        _ => "",
-    };
-    let field = if multi {
-        egui::TextEdit::multiline(&mut edit.text).desired_rows(8)
-    } else {
-        egui::TextEdit::singleline(&mut edit.text)
-    };
-    ui.add(
-        field
-            .desired_width(420.0)
-            .hint_text(hint)
-            .font(egui::TextStyle::Monospace),
-    );
-    ui.end_row();
 }
 
 #[cfg(test)]

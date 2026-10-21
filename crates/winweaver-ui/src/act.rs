@@ -8,7 +8,7 @@ use winweaver_core::profile::{Account, Install, Languages};
 use winweaver_core::users;
 
 use crate::{
-    CatalogRef, ImportSource, Question, ScriptKind, Sel, SettingsSection, regfileview, regview,
+    CatalogRef, TreeKey, ImportSource, Question, ScriptKind, Sel, SettingsSection, regfileview, regview,
 };
 
 /// A change requested while a frame was drawn, applied after it.
@@ -298,10 +298,11 @@ pub enum CatalogAct {
     Compare(CatalogRef),
     /// Opens the tab of an import.
     Open(String),
-    Select(String),
+    /// A group, a policy, or (`None`) the catalog itself.
+    Select(Option<TreeKey>),
     /// Selects a group (`g:<id>`) or a policy of the catalog tab in front and opens its tree down
     /// to it: a link of a view.
-    Reveal(String),
+    Reveal(TreeKey),
     Expand(String, bool),
     /// Imports the catalog file of the active tab.
     ImportOpen,

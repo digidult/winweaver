@@ -123,37 +123,60 @@ fn matches(file: &CatalogFile, lang: &str, words: &[String]) -> (HashSet<String>
 }
 
 /// What the search lets through: everything, or the matching rules and their groups.
-struct Filter {
-    words: bool,
-    rules: HashSet<String>,
-    groups: HashSet<String>,
+pub(crate) struct Filter {
+    pub(crate) words: bool,
+    pub(crate) rules: HashSet<String>,
+    pub(crate) groups: HashSet<String>,
 }
 
-/// The rows of the tree under a group: groups as `g:<id>`, policies as `r:<id>`.
-fn catalog_rows(
-    rows: &mut Vec<tree::Row<String>>,
+/// A row of the tree of a catalog: a group or a policy.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TreeKey {
+    Group(String),
+    Rule(String),
+}
+
+/// How the rows of a catalog tree are drawn.
+pub(crate) struct RowStyle<'a> {
+    /// The language of the titles; the titles of the file for one it has no texts in.
+    pub(crate) lang: &'a str,
+    /// A search: only the groups and the rules it lets through, every group open.
+    pub(crate) filter: Option<&'a Filter>,
+    /// The count of the rules of a group at its right.
+    pub(crate) counts: bool,
+    /// A `.off` rule drawn muted.
+    pub(crate) mute_off: bool,
+}
+
+/// The rows of the tree under a group: the group, the groups in it and its policies.
+pub(crate) fn catalog_rows(
+    rows: &mut Vec<tree::Row<TreeKey>>,
     file: &CatalogFile,
-    lang: &str,
-    doc: &CatalogDoc,
-    filter: &Filter,
+    expanded: &HashSet<String>,
+    style: &RowStyle,
     group: &Group,
     depth: usize,
 ) {
-    if filter.words && !filter.groups.contains(&group.id) {
+    let filtered = style.filter.filter(|f| f.words);
+    if filtered.is_some_and(|f| !f.groups.contains(&group.id)) {
         return;
     }
-    let open = filter.words || doc.expanded.contains(&group.id);
+    let open = filtered.is_some() || expanded.contains(&group.id);
     let rules: Vec<&Rule> = file
         .rules
         .iter()
         .filter(|r| r.group == group.id)
-        .filter(|r| !filter.words || filter.rules.contains(&r.id))
+        .filter(|r| filtered.is_none_or(|f| f.rules.contains(&r.id)))
         .collect();
     rows.push(tree::Row {
-        key: format!("g:{}", group.id),
+        key: TreeKey::Group(group.id.clone()),
         depth,
-        title: group_title(file, lang, group).to_owned(),
-        right: rules.len().to_string(),
+        title: group_title(file, style.lang, group).to_owned(),
+        right: if style.counts {
+            rules.len().to_string()
+        } else {
+            String::new()
+        },
         check: tree::Check::None,
         open: Some(open),
         muted: false,
@@ -168,17 +191,17 @@ fn catalog_rows(
         .iter()
         .filter(|g| g.parent.as_deref() == Some(group.id.as_str()))
     {
-        catalog_rows(rows, file, lang, doc, filter, child, depth + 1);
+        catalog_rows(rows, file, expanded, style, child, depth + 1);
     }
     for rule in rules {
         rows.push(tree::Row {
-            key: format!("r:{}", rule.id),
+            key: TreeKey::Rule(rule.id.clone()),
             depth: depth + 1,
-            title: rule_texts(file, lang, rule).0.to_owned(),
+            title: rule_texts(file, style.lang, rule).0.to_owned(),
             right: String::new(),
             check: tree::Check::None,
             open: None,
-            muted: false,
+            muted: style.mute_off && rule.id.ends_with(".off"),
             icon: None,
             switch: None,
         });
@@ -203,13 +226,19 @@ pub fn catalog_view(
         rules,
         groups,
     };
+    let style = RowStyle {
+        lang: &lang,
+        filter: Some(&filter),
+        counts: true,
+        mute_off: false,
+    };
     let mut rows = Vec::new();
     for root in roots(file) {
-        catalog_rows(&mut rows, file, &lang, doc, &filter, root, 0);
+        catalog_rows(&mut rows, file, &doc.expanded, &style, root, 0);
     }
     let key = match (&doc.sel, &doc.group) {
-        (Some(r), _) => Some(format!("r:{r}")),
-        (None, Some(g)) => Some(format!("g:{g}")),
+        (Some(r), _) => Some(TreeKey::Rule(r.clone())),
+        (None, Some(g)) => Some(TreeKey::Group(g.clone())),
         _ => None,
     };
     let selected = key.and_then(|k| rows.iter().position(|r| r.key == k));
@@ -225,16 +254,11 @@ pub fn catalog_view(
         let out = tree::show(ui, id, &rows, selected, scroll);
         for event in out.events {
             match event {
-                tree::Event::Select(k) => {
-                    let key = k.strip_prefix("r:").map_or(k.clone(), str::to_owned);
-                    acts.push(Act::Catalog(CatalogAct::Select(key)));
+                tree::Event::Select(k) => acts.push(Act::Catalog(CatalogAct::Select(Some(k)))),
+                tree::Event::Expand(TreeKey::Group(g), open) => {
+                    acts.push(Act::Catalog(CatalogAct::Expand(g, open)));
                 }
-                tree::Event::Expand(k, open) => {
-                    if let Some(g) = k.strip_prefix("g:") {
-                        acts.push(Act::Catalog(CatalogAct::Expand(g.to_owned(), open)));
-                    }
-                }
-                tree::Event::Toggle(_) | tree::Event::Switch(..) => {}
+                _ => {}
             }
         }
         if out.moved {
@@ -382,7 +406,7 @@ fn group_links(
         ui.horizontal_wrapped(|ui| {
             ui.weak(tr("In the group"));
             if ui.link(group_title(file, lang, parent)).clicked() {
-                acts.push(Act::Catalog(CatalogAct::Reveal(format!("g:{}", parent.id))));
+                acts.push(Act::Catalog(CatalogAct::Reveal(TreeKey::Group(parent.id.clone()))));
             }
         });
     }
@@ -400,7 +424,7 @@ fn group_links(
         ui.add_space(4.0);
         for g in children {
             if ui.link(group_title(file, lang, g)).clicked() {
-                acts.push(Act::Catalog(CatalogAct::Reveal(format!("g:{}", g.id))));
+                acts.push(Act::Catalog(CatalogAct::Reveal(TreeKey::Group(g.id.clone()))));
             }
         }
     }
@@ -410,7 +434,7 @@ fn group_links(
         ui.add_space(4.0);
         for r in policies {
             if ui.link(rule_texts(file, lang, r).0).clicked() {
-                acts.push(Act::Catalog(CatalogAct::Reveal(r.id.clone())));
+                acts.push(Act::Catalog(CatalogAct::Reveal(TreeKey::Rule(r.id.clone()))));
             }
         }
     }

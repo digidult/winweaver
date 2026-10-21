@@ -80,7 +80,7 @@ impl Search {
 }
 
 use crate::i18n::{tr, trf};
-use crate::{Act, Question, RegistryAct, icons, style, tree, views, widgets};
+use crate::{Act, Question, RegistryAct, icons, regedit, style, tree, views, widgets};
 
 /// The most rules the line above the values names.
 const WRITERS_MAX: usize = 12;
@@ -91,7 +91,35 @@ pub struct Writers {
     key: String,
     value: Option<String>,
     rules: usize,
-    ids: Vec<String>,
+    pub ids: Vec<String>,
+}
+
+impl Writers {
+    /// Fills the cache for a key (or a value of it) unless it holds that already.
+    pub fn refresh(cache: &mut Option<Writers>, catalog: &Catalog, path: &str, value: Option<&str>) {
+        let key = path.to_lowercase();
+        let rules = catalog.rules().len();
+        let fresh = cache
+            .as_ref()
+            .is_some_and(|w| w.key == key && w.value.as_deref() == value && w.rules == rules);
+        if !fresh {
+            let found = registry::writers(catalog, path, value);
+            *cache = Some(Writers {
+                key,
+                value: value.map(str::to_owned),
+                rules,
+                ids: found.iter().map(|r| r.id.clone()).collect(),
+            });
+        }
+    }
+
+    /// The ids of the cache, when it is for this key and value.
+    pub fn ids_for<'a>(cache: &'a Option<Writers>, path: &str, value: Option<&str>) -> &'a [String] {
+        match cache {
+            Some(w) if w.key.eq_ignore_ascii_case(path) && w.value.as_deref() == value => &w.ids,
+            _ => &[],
+        }
+    }
 }
 
 /// What the editor of the tab makes.
@@ -309,21 +337,7 @@ fn writers_line(
     texts: Option<&CatalogTexts>,
     acts: &mut Vec<Act>,
 ) {
-    let key = doc.path.to_lowercase();
-    let rules = catalog.rules().len();
-    let fresh = doc
-        .writers
-        .as_ref()
-        .is_some_and(|w| w.key == key && w.value == doc.value && w.rules == rules);
-    if !fresh {
-        let found = registry::writers(catalog, &doc.path, doc.value.as_deref());
-        doc.writers = Some(Writers {
-            key,
-            value: doc.value.clone(),
-            rules,
-            ids: found.iter().map(|r| r.id.clone()).collect(),
-        });
-    }
+    Writers::refresh(&mut doc.writers, catalog, &doc.path, doc.value.as_deref());
     let Some(w) = &doc.writers else {
         return;
     };
@@ -599,44 +613,15 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
                 );
                 ui.end_row();
                 if edit.kind != EditKind::NewKey {
-                    ui.label(tr("Type"));
-                    if edit.kind == EditKind::NewValue {
-                        egui::ComboBox::from_id_salt("registry-type")
-                            .selected_text(edit.type_name.as_str())
-                            .show_ui(ui, |ui| {
-                                for t in NEW_TYPES {
-                                    ui.selectable_value(&mut edit.type_name, t.to_owned(), t);
-                                }
-                            });
-                    } else {
-                        ui.monospace(&edit.type_name);
-                    }
-                    ui.end_row();
-                    ui.label(tr("Data"));
-                    let multi = matches!(
-                        edit.type_name.as_str(),
-                        "REG_MULTI_SZ" | "REG_BINARY" | "REG_NONE"
+                    let types = (edit.kind == EditKind::NewValue).then_some(&NEW_TYPES[..]);
+                    regedit::type_and_data(
+                        ui,
+                        "registry-type",
+                        types,
+                        &mut edit.type_name,
+                        &mut edit.text,
+                        380.0,
                     );
-                    let hint = match edit.type_name.as_str() {
-                        "REG_DWORD" | "REG_QWORD" => {
-                            tr("A number: decimal, or hexadecimal after 0x")
-                        }
-                        "REG_MULTI_SZ" => tr("One string per line"),
-                        "REG_BINARY" | "REG_NONE" => tr("Bytes as hexadecimal pairs"),
-                        _ => "",
-                    };
-                    let field = if multi {
-                        egui::TextEdit::multiline(&mut edit.text).desired_rows(8)
-                    } else {
-                        egui::TextEdit::singleline(&mut edit.text)
-                    };
-                    ui.add(
-                        field
-                            .desired_width(380.0)
-                            .hint_text(hint)
-                            .font(egui::TextStyle::Monospace),
-                    );
-                    ui.end_row();
                 }
             });
         if let Some(e) = &edit.error {
@@ -647,7 +632,9 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
             if ui.button(tr("OK")).clicked() {
                 acts.push(Act::Registry(RegistryAct::Save));
             }
-            if ui.button(tr("Cancel")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+            if ui.button(tr("Cancel")).clicked()
+                || ui.input(|i| i.key_pressed(egui::Key::Escape))
+            {
                 close = true;
             }
         });

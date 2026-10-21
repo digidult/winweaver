@@ -13,6 +13,9 @@ use crate::i18n::{tr, trf};
 use crate::tree::Scroll;
 use crate::{Act, Question, Search, UsersAct, icons, list, matches_words, style, widgets};
 
+/// The width of a password field.
+const PASSWORD_WIDTH: f32 = 240.0;
+
 /// Why the master password is asked.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Purpose {
@@ -529,34 +532,14 @@ fn master_window(ui: &mut egui::Ui, doc: &mut UsersDoc) {
     };
     let mut done = None;
     widgets::Modal::new(title).show(ui.ctx(), |ui| {
-        ui.label(tr("Master password"));
-        let field = egui::TextEdit::singleline(&mut doc.ask.text)
-            .password(true)
-            .desired_width(240.0);
-        let response = ui.add(field);
-        let mut enter = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+        let mut enter = password_field(ui, tr("Master password"), &mut doc.ask.text);
         if purpose == Purpose::Set {
-            ui.label(tr("Once more"));
-            let again = egui::TextEdit::singleline(&mut doc.ask.again)
-                .password(true)
-                .desired_width(240.0);
-            let response = ui.add(again);
-            enter |= response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+            enter |= password_field(ui, tr("Once more"), &mut doc.ask.again);
             ui.weak(tr(
                 "Without it the passwords cannot be read again: there is no way to recover them.",
             ));
         }
-        if !doc.ask.error.is_empty() {
-            ui.colored_label(ui.visuals().warn_fg_color, &doc.ask.error);
-        }
-        ui.horizontal(|ui| {
-            if ui.button(tr("OK")).clicked() || enter {
-                done = Some(true);
-            }
-            if ui.button(tr("Cancel")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                done = Some(false);
-            }
-        });
+        done = password_buttons(ui, &doc.ask.error, enter);
     });
     match done {
         Some(false) => doc.ask = MasterAsk::default(),
@@ -578,6 +561,34 @@ fn master_window(ui: &mut egui::Ui, doc: &mut UsersDoc) {
     }
 }
 
+/// A hidden field of a password; `true` when Enter was pressed in it.
+fn password_field(ui: &mut egui::Ui, label: &str, text: &mut String) -> bool {
+    ui.label(label);
+    let field = egui::TextEdit::singleline(text)
+        .password(true)
+        .desired_width(PASSWORD_WIDTH);
+    let response = ui.add(field);
+    response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter))
+}
+
+/// The error and the buttons of a password window: `Some(true)` on OK or Enter, `Some(false)` on
+/// Cancel or Escape.
+fn password_buttons(ui: &mut egui::Ui, error: &str, enter: bool) -> Option<bool> {
+    if !error.is_empty() {
+        ui.colored_label(ui.visuals().warn_fg_color, error);
+    }
+    let mut done = None;
+    ui.horizontal(|ui| {
+        if ui.button(tr("OK")).clicked() || enter {
+            done = Some(true);
+        }
+        if ui.button(tr("Cancel")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+            done = Some(false);
+        }
+    });
+    done
+}
+
 /// The window that sets the password of an account.
 fn password_window(ui: &mut egui::Ui, doc: &mut UsersDoc) {
     let Some(edit) = &mut doc.password_edit else {
@@ -586,28 +597,9 @@ fn password_window(ui: &mut egui::Ui, doc: &mut UsersDoc) {
     let mut done = None;
     let title = trf("The password of {name}", &[("name", &edit.name)]);
     widgets::Modal::new(title).show(ui.ctx(), |ui| {
-        ui.label(tr("Password"));
-        let field = egui::TextEdit::singleline(&mut edit.text)
-            .password(true)
-            .desired_width(240.0);
-        ui.add(field);
-        ui.label(tr("Once more"));
-        let again = egui::TextEdit::singleline(&mut edit.again)
-            .password(true)
-            .desired_width(240.0);
-        let response = ui.add(again);
-        let enter = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-        if !edit.error.is_empty() {
-            ui.colored_label(ui.visuals().warn_fg_color, &edit.error);
-        }
-        ui.horizontal(|ui| {
-            if ui.button(tr("OK")).clicked() || enter {
-                done = Some(true);
-            }
-            if ui.button(tr("Cancel")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                done = Some(false);
-            }
-        });
+        password_field(ui, tr("Password"), &mut edit.text);
+        let enter = password_field(ui, tr("Once more"), &mut edit.again);
+        done = password_buttons(ui, &edit.error, enter);
     });
     match done {
         Some(false) => doc.password_edit = None,

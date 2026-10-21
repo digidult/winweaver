@@ -1,4 +1,5 @@
 use super::*;
+use winweaver_core::diff::ItemKey;
 
 #[test]
 fn file_stems_are_safe() {
@@ -138,7 +139,7 @@ fn every_kind_of_tab_draws_without_a_screen() {
 /// The key of the first rule of the diff in the last tab.
 fn first_rule_key(app: &App) -> Option<String> {
     match app.docs.last() {
-        Some(Doc::Diff(d)) => d.diff.keys().into_iter().find(|k| k.starts_with("rule:")),
+        Some(Doc::Diff(d)) => d.diff.keys().into_iter().find(|k| ItemKey::rule(k).is_some()),
         _ => None,
     }
 }
@@ -469,9 +470,9 @@ fn an_item_of_a_diff_takes_a_comment_applies_alone_and_leads_to_both_profiles() 
         .diff
         .keys()
         .into_iter()
-        .find(|k| k.starts_with("rule:"))
+        .find(|k| ItemKey::rule(k).is_some())
         .expect("Strict differs in a rule");
-    let id = key.trim_start_matches("rule:").to_owned();
+    let id = ItemKey::rule(&key).expect("the key of a rule").to_owned();
     app.apply(vec![
         Act::Diff(DiffAct::Select(key.clone())),
         Act::Diff(DiffAct::Comment(

@@ -49,7 +49,7 @@ impl App {
             }
             Some(Doc::Catalog(c)) if c.file.is_none() => (c.sel.clone()?, String::new()),
             Some(Doc::Diff(d)) => {
-                let id = d.sel.as_deref()?.strip_prefix("rule:")?;
+                let id = diff::ItemKey::rule(d.sel.as_deref()?)?;
                 (id.to_owned(), d.diff.base.path.clone())
             }
             _ => return None,

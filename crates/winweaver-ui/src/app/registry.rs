@@ -5,17 +5,12 @@ use crate::*;
 impl App {
     /// Opens a registry file in a tab of its own, or brings its tab to the front.
     pub(crate) fn open_reg_path(&mut self, path: PathBuf) {
-        if self.focus_tab(|d| matches!(d, Doc::RegFile(r) if r.path == path)) {
-            return;
-        }
-        match RegFile::load(&path) {
-            Ok(file) => {
-                let doc = regfileview::RegFileDoc::new(file, path.clone());
-                self.open_tab(Doc::RegFile(Box::new(doc)));
-                self.opened(&path);
-            }
-            Err(e) => self.open_failed(e),
-        }
+        self.open_file(
+            &path,
+            |d| matches!(d, Doc::RegFile(r) if r.path == path),
+            RegFile::load,
+            |file, path| Doc::RegFile(Box::new(regfileview::RegFileDoc::new(file, path))),
+        );
     }
 
     /// Saves the registry file in front at its place, or at one the user picks.

@@ -47,6 +47,27 @@ impl App {
         }
     }
 
+    /// Opens a file in a new tab in front, unless a tab has it: `same` finds that tab, `load`
+    /// reads the file and `make` wraps what it read.
+    pub(crate) fn open_file<T, E: std::fmt::Display>(
+        &mut self,
+        path: &Path,
+        same: impl Fn(&Doc) -> bool,
+        load: impl FnOnce(&Path) -> Result<T, E>,
+        make: impl FnOnce(T, PathBuf) -> Doc,
+    ) {
+        if self.focus_tab(same) {
+            return;
+        }
+        match load(path) {
+            Ok(file) => {
+                self.open_tab(make(file, path.to_path_buf()));
+                self.opened(path);
+            }
+            Err(e) => self.open_failed(e),
+        }
+    }
+
     pub(crate) fn remember_recent(&mut self, path: &Path) {
         self.settings.remember(path);
         self.settings_dirty = true;
@@ -189,22 +210,16 @@ impl App {
     }
 
     pub(crate) fn open_md_path(&mut self, path: PathBuf) {
-        match winweaver_core::jsonfile::read_text(&path, MARKDOWN_MAX_BYTES) {
-            Ok(text) => {
-                let title = path
-                    .file_name()
-                    .map(|n| n.to_string_lossy().into_owned())
-                    .unwrap_or_else(|| "page.md".to_owned());
-                self.docs.push(Doc::Markdown(Box::new(MdDoc::new(
-                    title,
-                    Some(path.clone()),
-                    text,
-                ))));
-                self.active = self.docs.len() - 1;
-                self.opened(&path);
-            }
-            Err(e) => self.open_failed(e),
-        }
+        let title = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "page.md".to_owned());
+        self.open_file(
+            &path,
+            |_| false,
+            |p| winweaver_core::jsonfile::read_text(p, MARKDOWN_MAX_BYTES),
+            |text, path| Doc::Markdown(Box::new(MdDoc::new(title, Some(path), text))),
+        );
     }
 
     /// Opens an answer file (its embedded profile), a WinKickOff profile or an audit report as a

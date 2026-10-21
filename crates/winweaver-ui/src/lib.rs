@@ -21,6 +21,7 @@ mod marksview;
 mod mcpview;
 mod mdview;
 mod question;
+mod regedit;
 mod regfileview;
 mod regview;
 mod renderer;
@@ -59,6 +60,7 @@ pub use act::{
     Act, CatalogAct, DiffAct, FileAct, ImportAct, MarksAct, McpAct, NavAct, PcAct, ProfileAct,
     RegFileAct, RegistryAct, SettingsAct, ThemeAct, UsersAct,
 };
+pub use catalogview::TreeKey;
 pub use diffview::DiffDoc;
 pub use doc::{Doc, DocKind, SettingsDoc, SettingsSection, Tab};
 pub use forms::Form;
@@ -89,7 +91,12 @@ const SEARCH_HISTORY: usize = 20;
 /// Below this width of the window the command bar shows icons only, in the navigation row.
 const COMPACT_WIDTH: f32 = 1100.0;
 /// The largest Markdown file a tab shows.
-const MARKDOWN_MAX_BYTES: u64 = 4 * 1024 * 1024;
+pub(crate) const MARKDOWN_MAX_BYTES: u64 = 4 * 1024 * 1024;
+/// The size of the window at the first start, and the least size it takes.
+const WINDOW_SIZE: [f32; 2] = [1280.0, 800.0];
+const WINDOW_MIN_SIZE: [f32; 2] = [900.0, 560.0];
+/// The size of the window of the smoke test.
+const SMOKE_WINDOW_SIZE: [f32; 2] = [400.0, 300.0];
 
 /// The key of the group of the profile tree that lists the options of catalogs that are not
 /// loaded; no catalog can have it as an id.
@@ -155,16 +162,6 @@ impl ProfileDoc {
             reveal: false,
             follow: false,
             focus: None,
-        }
-    }
-
-    pub fn title(&self) -> String {
-        match &self.path {
-            Some(p) => p
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default(),
-            None => format!("{}.{}", self.profile.name, profile::EXTENSION),
         }
     }
 
@@ -462,16 +459,12 @@ fn capture_issues(summary: &thispc::CaptureSummary) -> Vec<Issue> {
 
 /// What a profile tab selects for an item of a diff ([`Diff::keys`]).
 fn sel_from_diff_key(catalog: &Catalog, key: &str) -> Sel {
-    if let Some(id) = key.strip_prefix("rule:") {
-        sel_from_item(catalog, id)
-    } else if key.starts_with("install:") {
-        Sel::Form(Form::Install)
-    } else if key.starts_with("languages:") {
-        Sel::Form(Form::Languages)
-    } else if key == "accounts" {
-        Sel::Form(Form::Accounts)
-    } else {
-        Sel::None
+    match diff::ItemKey::parse(key) {
+        Some(diff::ItemKey::Rule(id)) => sel_from_item(catalog, &id),
+        Some(diff::ItemKey::Install(_)) => Sel::Form(Form::Install),
+        Some(diff::ItemKey::Languages(_)) => Sel::Form(Form::Languages),
+        Some(diff::ItemKey::Accounts) => Sel::Form(Form::Accounts),
+        None => Sel::None,
     }
 }
 
@@ -863,7 +856,7 @@ pub fn smoke_window(cli_renderer: Option<&str>) -> Result<String, String> {
     let info = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
     let viewport = egui::ViewportBuilder::default()
         .with_title("WinWeaver smoke test")
-        .with_inner_size([400.0, 300.0]);
+        .with_inner_size(SMOKE_WINDOW_SIZE);
     let (_, failures) = renderer::start("WinWeaver smoke test", &viewport, &order, |_, _| {
         let seen = info.clone();
         Box::new(move |cc| {
@@ -891,8 +884,8 @@ pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
     let order = renderer::order(chosen_renderer(cli_renderer, &settings)?);
     let viewport = egui::ViewportBuilder::default()
         .with_title("WinWeaver")
-        .with_inner_size([1280.0, 800.0])
-        .with_min_inner_size([900.0, 560.0]);
+        .with_inner_size(WINDOW_SIZE)
+        .with_min_inner_size(WINDOW_MIN_SIZE);
     renderer::start("WinWeaver", &viewport, &order, |drawn, failures| {
         let catalog = catalog.clone();
         let texts = texts.clone();

@@ -444,7 +444,7 @@ pub fn journal_view(ui: &mut egui::Ui, panel: &mut McpPanel, search: &crate::Sea
             matches_words(&hay, &words)
         })
         .map(|(i, e)| {
-            let result = list::Cell::new(&e.result);
+            let result = list::Cell::new(e.result.name());
             list::Row {
                 key: i,
                 cells: vec![
@@ -452,7 +452,7 @@ pub fn journal_view(ui: &mut egui::Ui, panel: &mut McpPanel, search: &crate::Sea
                     list::Cell::new(&e.client).muted(),
                     list::Cell::new(&e.method).strong(),
                     list::Cell::new(&e.detail).muted(),
-                    if e.result == "ok" {
+                    if e.result.is_ok() {
                         result
                     } else {
                         result.warn()
@@ -588,7 +588,7 @@ pub fn detail_view(
                         (tr("Call"), entry.method.clone()),
                         (tr("Time"), entry.time.clone()),
                         (tr("Client"), entry.client.clone()),
-                        (tr("Result"), entry.result.clone()),
+                        (tr("Result"), entry.result.to_string()),
                         (tr("Duration"), trf("{ms} ms", &[("ms", &entry.ms)])),
                     ];
                     for (name, value) in rows {

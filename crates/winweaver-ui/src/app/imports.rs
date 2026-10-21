@@ -5,17 +5,12 @@ use crate::*;
 impl App {
     /// Opens a catalog file in a tab of its own, without importing it.
     pub(crate) fn open_catalog_path(&mut self, path: PathBuf) {
-        if self.focus_tab(|d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path))) {
-            return;
-        }
-        match CatalogFile::load(&path) {
-            Ok(file) => {
-                let doc = catalogview::CatalogDoc::from_file(file, path.clone());
-                self.open_tab(Doc::Catalog(Box::new(doc)));
-                self.opened(&path);
-            }
-            Err(e) => self.open_failed(e),
-        }
+        self.open_file(
+            &path,
+            |d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path)),
+            CatalogFile::load,
+            |file, path| Doc::Catalog(Box::new(catalogview::CatalogDoc::from_file(file, path))),
+        );
     }
 
     /// Opens an ADMX file as a catalog tab without importing it: its policies with the texts of
@@ -696,20 +691,17 @@ impl App {
             CatalogAct::Open(id) => self.open_catalog(&id),
             CatalogAct::Select(key) => {
                 if let Some(Doc::Catalog(c)) = self.docs.get_mut(self.active) {
-                    if let Some(group) = key.strip_prefix("g:") {
-                        c.group = Some(group.to_owned());
-                        c.sel = None;
-                    } else if key.is_empty() {
-                        c.group = None;
-                        c.sel = None;
-                    } else {
-                        c.group = None;
-                        c.sel = Some(key);
-                    }
+                    let (group, sel) = match key {
+                        Some(TreeKey::Group(g)) => (Some(g), None),
+                        Some(TreeKey::Rule(r)) => (None, Some(r)),
+                        None => (None, None),
+                    };
+                    c.group = group;
+                    c.sel = sel;
                 }
             }
             CatalogAct::Reveal(key) => {
-                self.apply(vec![Act::Catalog(CatalogAct::Select(key))]);
+                self.apply(vec![Act::Catalog(CatalogAct::Select(Some(key)))]);
                 self.reveal_selection();
             }
             CatalogAct::Expand(gid, open) => {

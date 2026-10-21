@@ -3,6 +3,9 @@
 
 use crate::*;
 
+/// A draft is written this long after the last change.
+const DRAFT_DELAY: std::time::Duration = std::time::Duration::from_secs(2);
+
 impl App {
     /// Brings the tab of a kind the window holds once to the front, making it when there is
     /// none, and gives its index.
@@ -77,7 +80,7 @@ impl App {
                 continue;
             }
             let due = match d.changed {
-                Some(t) => all || t.elapsed() >= std::time::Duration::from_secs(2),
+                Some(t) => all || t.elapsed() >= DRAFT_DELAY,
                 None => false,
             };
             if !due {

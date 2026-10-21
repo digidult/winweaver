@@ -13,7 +13,7 @@ use winweaver_core::resolver::State;
 use crate::i18n::{tr, trf};
 use crate::{
     Act, CatalogAct, Form, ImportAct, NavAct, PcAct, ProfileAct, ProfileDoc, RegistryAct,
-    ScriptKind, Search, Sel, Settings, UNKNOWN_GROUP, icons, matches_words, style, tree,
+    ScriptKind, Search, Sel, Settings, TreeKey, UNKNOWN_GROUP, icons, matches_words, style, tree,
 };
 
 pub fn rtitle<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule) -> &'a str {
@@ -51,7 +51,7 @@ impl RuleLink<'_> {
         match self {
             RuleLink::Profile => Act::Profile(ProfileAct::Reveal(Sel::Rule(id))),
             RuleLink::Catalog(file) if file.rules.iter().any(|r| r.id == id) => {
-                Act::Catalog(CatalogAct::Reveal(id))
+                Act::Catalog(CatalogAct::Reveal(TreeKey::Rule(id)))
             }
             RuleLink::Catalog(_) | RuleLink::Elsewhere => {
                 Act::Profile(ProfileAct::ShowInProfile(String::new(), id))

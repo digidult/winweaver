@@ -26,7 +26,7 @@ const SKILL: &str = include_str!("../../../../agents/skills/winweaver/SKILL.md")
 
 /// Why a tool call failed; its name starts the text the client sees.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Kind {
+pub enum Kind {
     Invalid,
     NotFound,
     NotAllowed,

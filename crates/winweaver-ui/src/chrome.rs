@@ -9,9 +9,9 @@ use crate::commands::{Item, Menu, keys};
 use crate::i18n::{tr, trf};
 use crate::style::{self, Palette};
 use crate::{
-    Act, App, CatalogAct, DiffAct, Doc, FileAct, Form, ImportAct, MarksAct, McpAct, NavAct,
-    PRESETS, PcAct, ProfileAct, RegistryAct, ScriptKind, Sel, Settings, SettingsAct,
-    SettingsSection, Tab, UsersAct, icons, texts_for, views,
+    Act, App, CatalogAct, DiffAct, Doc, FileAct, Form, ImportAct, MarksAct, McpAct, NavAct, PRESETS,
+    PcAct, ProfileAct, RegistryAct, ScriptKind, Sel, Settings, SettingsAct, SettingsSection, Tab,
+    TreeKey, UsersAct, icons, texts_for, views,
 };
 use winweaver_core::validate::{self, Severity, Target};
 
@@ -495,7 +495,7 @@ impl App {
                 };
                 let mut out = vec![(
                     file.name.clone(),
-                    Some(Act::Catalog(CatalogAct::Select(String::new()))),
+                    Some(Act::Catalog(CatalogAct::Select(None))),
                 )];
                 let lang = crate::i18n::current();
                 let rule = c
@@ -514,7 +514,7 @@ impl App {
                     let title = crate::catalogview::group_title(file, &lang, found).to_owned();
                     chain.push((
                         title,
-                        Some(Act::Catalog(CatalogAct::Select(format!("g:{g}")))),
+                        Some(Act::Catalog(CatalogAct::Select(Some(TreeKey::Group(g))))),
                     ));
                     group = found.parent.clone();
                 }
