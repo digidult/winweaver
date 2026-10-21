@@ -16,10 +16,10 @@ use super::ps::{block, join_blocks};
 use super::text::{ascii_json, comment_text, ps_list, xml_escape};
 use super::xml::{Command, Setting, command_lines, component, setting_lines};
 use super::{
-    ARCHITECTURES, ASK_KEY, Build, MAX_COMMAND, POST_OOBE, POST_OOBE_NAME, RenderError, SCRIPTS_DIR,
-    SECTION_ACTIVE_SETUP, SECTION_COMPUTER_NAME, SECTION_DEFAULT_USER, SECTION_POST_OOBE_TASK,
-    SETUP_SYSTEM, SETUP_SYSTEM_NAME, SETUP_USER, SETUP_USER_NAME, TEMP_COMPUTER_NAME, TEMPLATE_XML,
-    runtime_version,
+    ARCHITECTURES, ASK_KEY, Build, MAX_COMMAND, POST_OOBE, POST_OOBE_NAME, RenderError,
+    SCRIPTS_DIR, SECTION_ACTIVE_SETUP, SECTION_COMPUTER_NAME, SECTION_DEFAULT_USER,
+    SECTION_POST_OOBE_TASK, SETUP_SYSTEM, SETUP_SYSTEM_NAME, SETUP_USER, SETUP_USER_NAME,
+    TEMP_COMPUTER_NAME, TEMPLATE_XML, runtime_version,
 };
 
 /// What the rules in effect give the answer file, by pass and by script.
@@ -215,7 +215,11 @@ impl Assembly<'_> {
         }
         if self.has_post {
             let names: Vec<String> = if self.profile.install.account_mode == "file" {
-                self.profile.accounts.iter().map(|a| a.name.clone()).collect()
+                self.profile
+                    .accounts
+                    .iter()
+                    .map(|a| a.name.clone())
+                    .collect()
             } else {
                 Vec::new()
             };
@@ -330,7 +334,11 @@ impl Assembly<'_> {
                 &international,
             ));
             if !shell_oobe.is_empty() {
-                out.extend(component("Microsoft-Windows-Shell-Setup", arch, &shell_oobe));
+                out.extend(component(
+                    "Microsoft-Windows-Shell-Setup",
+                    arch,
+                    &shell_oobe,
+                ));
             }
             out.extend(extras("oobeSystem", arch));
         }
@@ -473,7 +481,8 @@ impl Assembly<'_> {
                 xml_escape(&l.user_locale)
             ),
         ];
-        international.extend(self.settings_of("oobeSystem", "Microsoft-Windows-International-Core")?);
+        international
+            .extend(self.settings_of("oobeSystem", "Microsoft-Windows-International-Core")?);
         let mut shell = Vec::new();
         if !self.rules.oobe_elements.is_empty() {
             shell.push("      <OOBE>".to_owned());

@@ -231,7 +231,9 @@ impl Machine for NativeMachine {
             return Ok(None);
         };
         key.enum_values()
-            .map(|v| v.map(|(name, value)| (name, Data::from_raw(value.vtype as u32, &value.bytes))))
+            .map(|v| {
+                v.map(|(name, value)| (name, Data::from_raw(value.vtype as u32, &value.bytes)))
+            })
             .collect::<io::Result<Vec<_>>>()
             .map(Some)
             .map_err(|e| e.to_string())

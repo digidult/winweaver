@@ -156,7 +156,10 @@ pub(crate) fn reg_list_line(
 }
 
 /// The block of a rule: the marker and the lines of its script actions.
-pub(super) fn block(rule: &Rule, params: &BTreeMap<String, Value>) -> Result<Option<String>, RenderError> {
+pub(super) fn block(
+    rule: &Rule,
+    params: &BTreeMap<String, Value>,
+) -> Result<Option<String>, RenderError> {
     let mut lines = Vec::new();
     for action in &rule.actions {
         lines.extend(script_lines(rule, action, params, rule.phase)?);

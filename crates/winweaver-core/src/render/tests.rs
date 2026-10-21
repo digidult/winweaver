@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
-use super::*;
 use super::xml::{Setting, setting_lines};
+use super::*;
 
 #[test]
 fn helpers() {

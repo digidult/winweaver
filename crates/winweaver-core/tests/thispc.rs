@@ -9,8 +9,8 @@ use winweaver_core::registry::Data;
 use winweaver_core::resources::{self, Locales};
 use winweaver_core::thispc::{
     self, FIRST_SIGN_IN, InputLanguage, MemoryMachine, NOTE_ADMIN, NOTE_CURRENT_USER,
-    NOTE_NOT_ON_BUILD, ONLY_DURING_INSTALL, Probe, ReadAccount, Report, SIGN_IN_SCREEN,
-    Status, SystemInfo, Verdict,
+    NOTE_NOT_ON_BUILD, ONLY_DURING_INSTALL, Probe, ReadAccount, Report, SIGN_IN_SCREEN, Status,
+    SystemInfo, Verdict,
 };
 
 /// The input languages and layouts of Windows 11 the tests know (the program reads them from

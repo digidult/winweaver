@@ -12,7 +12,10 @@ pub(super) struct Setting {
 }
 
 /// Nested elements of settings that share a component, in the order given.
-pub(super) fn setting_lines(settings: &[Setting], indent: usize) -> Result<Vec<String>, RenderError> {
+pub(super) fn setting_lines(
+    settings: &[Setting],
+    indent: usize,
+) -> Result<Vec<String>, RenderError> {
     #[derive(Default)]
     struct Node {
         value: Option<String>,
@@ -77,7 +80,10 @@ pub(super) struct Command {
     pub(super) path: String,
 }
 
-pub(super) fn command_lines(commands: &[Command], indent: usize) -> Result<Vec<String>, RenderError> {
+pub(super) fn command_lines(
+    commands: &[Command],
+    indent: usize,
+) -> Result<Vec<String>, RenderError> {
     let pad = " ".repeat(indent);
     let mut out = Vec::new();
     if commands.is_empty() {

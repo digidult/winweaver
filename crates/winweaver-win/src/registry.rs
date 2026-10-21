@@ -192,9 +192,9 @@ impl Registry for NativeRegistry {
             Err(DaclError::NotTaken) => {
                 Err(format!("{full}: Windows does not take this access list"))
             }
-            Err(DaclError::Empty) => {
-                Err(format!("{full}: the access list has no entries Windows takes"))
-            }
+            Err(DaclError::Empty) => Err(format!(
+                "{full}: the access list has no entries Windows takes"
+            )),
             Err(DaclError::Status(code)) => Err(rights_error(code, &full)),
         }
     }

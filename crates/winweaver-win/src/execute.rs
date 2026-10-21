@@ -655,7 +655,12 @@ fn service_start(backup: &mut Backup, name: &str, start: u32, only_from: Option<
                 return ("ok", format!("the start type is not {from}, unchanged"));
             }
             backup.remember(&key, "Start");
-            done(write_value(&key, "Start", RegKind::DWord, &Value::from(start)))
+            done(write_value(
+                &key,
+                "Start",
+                RegKind::DWord,
+                &Value::from(start),
+            ))
         }
         Ok(None) => ("skipped", "the service is not present".to_owned()),
         Err(e) => ("failed", e),
@@ -679,7 +684,13 @@ fn run_from_media(folder: &str, pattern: &str, deep: bool, file: &str, args: &[S
 }
 
 /// Writes a value into every subkey of a key.
-fn set_in_subkeys(backup: &mut Backup, path: &str, name: &str, kind: RegKind, data: &Value) -> Outcome {
+fn set_in_subkeys(
+    backup: &mut Backup,
+    path: &str,
+    name: &str,
+    kind: RegKind,
+    data: &Value,
+) -> Outcome {
     let subs = match subkey_names(path) {
         Ok(subs) => subs,
         Err(e) => return ("failed", e),

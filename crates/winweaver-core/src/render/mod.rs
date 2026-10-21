@@ -31,12 +31,17 @@ pub(crate) use params::{fill, fill_value, list_values, params_of};
 pub(crate) use ps::{join_blocks, reg_list_line, reg_path, reg_value, script_lines};
 pub(crate) use text::ps_list;
 
-pub(super) const TEMPLATE_XML: &str = include_str!("../../../../data/templates/autounattend.template.xml");
-pub(super) const SETUP_SYSTEM: &str = include_str!("../../../../data/templates/Setup-System.runtime.ps1");
-pub(super) const SETUP_USER: &str = include_str!("../../../../data/templates/Setup-User.runtime.ps1");
+pub(super) const TEMPLATE_XML: &str =
+    include_str!("../../../../data/templates/autounattend.template.xml");
+pub(super) const SETUP_SYSTEM: &str =
+    include_str!("../../../../data/templates/Setup-System.runtime.ps1");
+pub(super) const SETUP_USER: &str =
+    include_str!("../../../../data/templates/Setup-User.runtime.ps1");
 pub(super) const POST_OOBE: &str = include_str!("../../../../data/templates/Post-OOBE.runtime.ps1");
-pub(super) const SECTION_DEFAULT_USER: &str = include_str!("../../../../data/templates/section-default-user.ps1");
-pub(super) const SECTION_ACTIVE_SETUP: &str = include_str!("../../../../data/templates/section-active-setup.ps1");
+pub(super) const SECTION_DEFAULT_USER: &str =
+    include_str!("../../../../data/templates/section-default-user.ps1");
+pub(super) const SECTION_ACTIVE_SETUP: &str =
+    include_str!("../../../../data/templates/section-active-setup.ps1");
 pub(super) const SECTION_POST_OOBE_TASK: &str =
     include_str!("../../../../data/templates/section-post-oobe-task.ps1");
 pub(super) const SECTION_COMPUTER_NAME: &str =

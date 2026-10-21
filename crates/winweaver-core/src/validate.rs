@@ -426,7 +426,9 @@ fn param_problems(
         } => {
             let mut out = Vec::new();
             if !values.iter().any(|v| same_value(&v.value, value)) {
-                out.push(format!("Parameter {name}: {value} is not one of its options"));
+                out.push(format!(
+                    "Parameter {name}: {value} is not one of its options"
+                ));
             }
             if let Some(other) = differs_from
                 && let Some(other_value) = profile.param(catalog, &rule.id, other)

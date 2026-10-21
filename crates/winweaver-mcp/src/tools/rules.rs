@@ -6,8 +6,8 @@ use winweaver_core::catalog::{Action, Catalog, Param, Rule, check};
 use winweaver_core::resolver::{self, State as RuleState};
 
 use super::{
-    Args, Kind, LIST_LIMIT, Needs, Outcome, Tool, ToolError, current, current_mut, fail, resolution,
-    s, schema,
+    Args, Kind, LIST_LIMIT, Needs, Outcome, Tool, ToolError, current, current_mut, fail,
+    resolution, s, schema,
 };
 use crate::{Server, State};
 
@@ -166,7 +166,13 @@ fn describe(action: &Action) -> String {
     }
 }
 
-fn param_json(catalog: &Catalog, p: &winweaver_core::profile::Profile, rule: &Rule, name: &str, param: &Param) -> Value {
+fn param_json(
+    catalog: &Catalog,
+    p: &winweaver_core::profile::Profile,
+    rule: &Rule,
+    name: &str,
+    param: &Param,
+) -> Value {
     let value = p.param(catalog, &rule.id, name).unwrap_or(Value::Null);
     match param {
         Param::Enum {
@@ -343,9 +349,7 @@ fn set_rule(server: &Server, state: &mut State, args: &Args<'_>) -> Outcome {
         .filter(|r| matches!(resolution.state(&r.id), RuleState::Blocked { by } if by == &id))
         .map(|r| r.id.as_str())
         .collect();
-    Ok(
-        json!({ "id": id, "state": state_text(resolution.state(&id)), "blocked_rules": blocked }),
-    )
+    Ok(json!({ "id": id, "state": state_text(resolution.state(&id)), "blocked_rules": blocked }))
 }
 
 /// The value of a parameter as the tool takes it: an option of an enum, a number in range, one
@@ -375,10 +379,7 @@ fn param_value(param: &Param, pname: &str, value: Value) -> Result<Value, ToolEr
                 .as_i64()
                 .ok_or_else(|| fail(Kind::Invalid, "a whole number is needed"))?;
             if !(*min..=*max).contains(&n) {
-                return Err(fail(
-                    Kind::Invalid,
-                    format!("{n} is outside {min}..{max}"),
-                ));
+                return Err(fail(Kind::Invalid, format!("{n} is outside {min}..{max}")));
             }
             Value::from(n)
         }
@@ -397,9 +398,9 @@ fn param_value(param: &Param, pname: &str, value: Value) -> Result<Value, ToolEr
             }
             let mut texts = Vec::new();
             for item in items {
-                let t = item.as_str().ok_or_else(|| {
-                    fail(Kind::Invalid, "every item of a list is a text")
-                })?;
+                let t = item
+                    .as_str()
+                    .ok_or_else(|| fail(Kind::Invalid, "every item of a list is a text"))?;
                 let t = super::profiles::one_line(t, 500)?;
                 if !t.is_empty() {
                     texts.push(Value::from(t));

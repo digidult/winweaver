@@ -10,8 +10,8 @@ use winweaver_core::resolver;
 use winweaver_core::{clock, render, thispc, validate};
 
 use super::{
-    Args, Kind, LIST_LIMIT, Needs, Outcome, Tool, ToolError, current, current_mut, fail,
-    redacted, resolution, s, schema,
+    Args, Kind, LIST_LIMIT, Needs, Outcome, Tool, ToolError, current, current_mut, fail, redacted,
+    resolution, s, schema,
 };
 use crate::{Server, State, WsDoc};
 
@@ -542,8 +542,7 @@ fn read_this_pc(server: &Server, state: &mut State, _args: &Args<'_>) -> Outcome
     let plan = thispc::plan(catalog, &base, &ids);
     let report = thispc::run(&*machine, &plan, true, &clock::now_utc_iso());
     let readings = thispc::judge(catalog, &plan, &report.results);
-    let (mut profile, summary) =
-        thispc::capture(catalog, &base, &readings, report.system.as_ref());
+    let (mut profile, summary) = thispc::capture(catalog, &base, &readings, report.system.as_ref());
     profile.name = if report.computer.is_empty() {
         "This PC".to_owned()
     } else {

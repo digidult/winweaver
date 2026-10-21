@@ -325,7 +325,8 @@ impl Server {
     /// the mode: the choice of the person who starts the server.
     pub fn select(&self, name: &str) -> Result<(), String> {
         let mut state = self.lock();
-        tools::select(self, &mut state, name).map_err(|e| format!("{}: {}", e.kind.name(), e.message))
+        tools::select(self, &mut state, name)
+            .map_err(|e| format!("{}: {}", e.kind.name(), e.message))
     }
 
     /// Handles one JSON-RPC message given as text; `None` for a notification.
