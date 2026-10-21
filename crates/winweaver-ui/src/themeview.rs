@@ -21,7 +21,6 @@ impl ThemeDoc {
             dirty: false,
         }
     }
-
 }
 
 /// What a colour of the theme paints.

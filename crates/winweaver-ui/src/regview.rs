@@ -96,7 +96,12 @@ pub struct Writers {
 
 impl Writers {
     /// Fills the cache for a key (or a value of it) unless it holds that already.
-    pub fn refresh(cache: &mut Option<Writers>, catalog: &Catalog, path: &str, value: Option<&str>) {
+    pub fn refresh(
+        cache: &mut Option<Writers>,
+        catalog: &Catalog,
+        path: &str,
+        value: Option<&str>,
+    ) {
         let key = path.to_lowercase();
         let rules = catalog.rules().len();
         let fresh = cache
@@ -114,7 +119,11 @@ impl Writers {
     }
 
     /// The ids of the cache, when it is for this key and value.
-    pub fn ids_for<'a>(cache: &'a Option<Writers>, path: &str, value: Option<&str>) -> &'a [String] {
+    pub fn ids_for<'a>(
+        cache: &'a Option<Writers>,
+        path: &str,
+        value: Option<&str>,
+    ) -> &'a [String] {
         match cache {
             Some(w) if w.key.eq_ignore_ascii_case(path) && w.value.as_deref() == value => &w.ids,
             _ => &[],
@@ -632,9 +641,7 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
             if ui.button(tr("OK")).clicked() {
                 acts.push(Act::Registry(RegistryAct::Save));
             }
-            if ui.button(tr("Cancel")).clicked()
-                || ui.input(|i| i.key_pressed(egui::Key::Escape))
-            {
+            if ui.button(tr("Cancel")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
                 close = true;
             }
         });

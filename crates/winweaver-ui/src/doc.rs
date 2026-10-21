@@ -266,7 +266,8 @@ impl Tab for DiffDoc {
     fn name(&self) -> String {
         format!(
             "{} vs {}.{}",
-            self.diff.base.name, self.diff.other.name,
+            self.diff.base.name,
+            self.diff.other.name,
             diff::EXTENSION
         )
     }

@@ -8,7 +8,8 @@ use winweaver_core::profile::{Account, Install, Languages};
 use winweaver_core::users;
 
 use crate::{
-    CatalogRef, TreeKey, ImportSource, Question, ScriptKind, Sel, SettingsSection, regfileview, regview,
+    CatalogRef, ImportSource, Question, ScriptKind, Sel, SettingsSection, TreeKey, regfileview,
+    regview,
 };
 
 /// A change requested while a frame was drawn, applied after it.

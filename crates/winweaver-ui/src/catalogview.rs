@@ -406,7 +406,9 @@ fn group_links(
         ui.horizontal_wrapped(|ui| {
             ui.weak(tr("In the group"));
             if ui.link(group_title(file, lang, parent)).clicked() {
-                acts.push(Act::Catalog(CatalogAct::Reveal(TreeKey::Group(parent.id.clone()))));
+                acts.push(Act::Catalog(CatalogAct::Reveal(TreeKey::Group(
+                    parent.id.clone(),
+                ))));
             }
         });
     }
@@ -424,7 +426,9 @@ fn group_links(
         ui.add_space(4.0);
         for g in children {
             if ui.link(group_title(file, lang, g)).clicked() {
-                acts.push(Act::Catalog(CatalogAct::Reveal(TreeKey::Group(g.id.clone()))));
+                acts.push(Act::Catalog(CatalogAct::Reveal(TreeKey::Group(
+                    g.id.clone(),
+                ))));
             }
         }
     }
@@ -434,7 +438,9 @@ fn group_links(
         ui.add_space(4.0);
         for r in policies {
             if ui.link(rule_texts(file, lang, r).0).clicked() {
-                acts.push(Act::Catalog(CatalogAct::Reveal(TreeKey::Rule(r.id.clone()))));
+                acts.push(Act::Catalog(CatalogAct::Reveal(TreeKey::Rule(
+                    r.id.clone(),
+                ))));
             }
         }
     }

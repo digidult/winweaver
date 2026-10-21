@@ -689,7 +689,7 @@ mod tests {
             client: String::new(),
             method: "get_rule".to_owned(),
             detail: String::new(),
-            result: "ok".to_owned(),
+            result: winweaver_mcp::Outcome::Ok,
             arguments: serde_json::json!({ "id": rule, "path": "HKLM\\Software\\X" }),
             answer: serde_json::json!({ "profile": "Office", "catalog": "test" }),
             ms: 1,

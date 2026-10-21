@@ -55,9 +55,12 @@ impl App {
     }
 
     pub(crate) fn open_diff_path(&mut self, path: PathBuf) {
-        self.open_file(&path, |_| false, Diff::load, |diff, path| {
-            Doc::Diff(Box::new(DiffDoc::new(diff, Some(path))))
-        });
+        self.open_file(
+            &path,
+            |_| false,
+            Diff::load,
+            |diff, path| Doc::Diff(Box::new(DiffDoc::new(diff, Some(path)))),
+        );
     }
 
     pub(crate) fn compare_active(&mut self, other: Profile, other_path: Option<&Path>) {

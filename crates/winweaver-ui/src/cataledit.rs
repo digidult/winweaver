@@ -294,9 +294,6 @@ impl EditorDoc {
     }
 }
 
-/// The rows of the tree under a group of the file.
-
-
 /// The tab: the tree on the left, the form on the right.
 pub fn editor_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
     let p = style::palette(ui);

@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use eframe::egui::{self, Margin, RichText};
 use serde_json::Value;
 use winweaver_core::catalog::{Catalog, Rule};
-use winweaver_core::diff::{Diff, ItemKey, self};
+use winweaver_core::diff::{Diff, ItemKey};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::profile::Choice;
 
@@ -43,8 +43,6 @@ impl DiffDoc {
             reveal: false,
         }
     }
-
-
 }
 
 /// The state of a rule in one profile as lines: on or off, then the parameters.

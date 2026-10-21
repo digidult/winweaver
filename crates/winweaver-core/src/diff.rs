@@ -231,7 +231,11 @@ impl Diff {
         if self.accounts.is_some() {
             keys.push(ItemKey::Accounts.to_string());
         }
-        keys.extend(self.rules.keys().map(|k| ItemKey::Rule(k.clone()).to_string()));
+        keys.extend(
+            self.rules
+                .keys()
+                .map(|k| ItemKey::Rule(k.clone()).to_string()),
+        );
         keys
     }
 
