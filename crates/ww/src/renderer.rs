@@ -142,7 +142,6 @@ pub fn start(
             Ok(()) => return Ok((renderer, failures)),
             Err(e) if !created.load(Ordering::SeqCst) => {
                 let text = format!("{} did not start: {e}", renderer.title());
-                winweaver_mcp::log::window_line("WARN", &text);
                 failures.push(text);
             }
             Err(e) => return Err(e.to_string()),

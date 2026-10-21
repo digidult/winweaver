@@ -89,7 +89,7 @@ pub fn languages(dir: &Path) -> Vec<Language> {
         code: "en".to_owned(),
         name: "English".to_owned(),
     }];
-    for (code, text) in embedded() {
+    for &(code, text) in embedded() {
         if let Ok((name, _)) = parse(text, &format!("{code}/ui.json")) {
             out.push(Language {
                 code: code.to_owned(),
