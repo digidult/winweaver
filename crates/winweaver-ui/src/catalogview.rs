@@ -218,32 +218,32 @@ pub fn catalog_view(
         acts.push(Act::Nav(NavAct::Revealed));
     }
     widgets::side_panel(ui, "catalog-tree", 380.0, |ui| {
-            if filter.words && filter.rules.is_empty() {
-                ui.weak(tr("Nothing matches the search."));
-            }
-            let id = egui::Id::new(("catalog-tree", doc.id.as_str()));
-            let out = tree::show(ui, id, &rows, selected, scroll);
-            for event in out.events {
-                match event {
-                    tree::Event::Select(k) => {
-                        let key = k.strip_prefix("r:").map_or(k.clone(), str::to_owned);
-                        acts.push(Act::Catalog(CatalogAct::Select(key)));
-                    }
-                    tree::Event::Expand(k, open) => {
-                        if let Some(g) = k.strip_prefix("g:") {
-                            acts.push(Act::Catalog(CatalogAct::Expand(g.to_owned(), open)));
-                        }
-                    }
-                    tree::Event::Toggle(_) | tree::Event::Switch(..) => {}
+        if filter.words && filter.rules.is_empty() {
+            ui.weak(tr("Nothing matches the search."));
+        }
+        let id = egui::Id::new(("catalog-tree", doc.id.as_str()));
+        let out = tree::show(ui, id, &rows, selected, scroll);
+        for event in out.events {
+            match event {
+                tree::Event::Select(k) => {
+                    let key = k.strip_prefix("r:").map_or(k.clone(), str::to_owned);
+                    acts.push(Act::Catalog(CatalogAct::Select(key)));
                 }
+                tree::Event::Expand(k, open) => {
+                    if let Some(g) = k.strip_prefix("g:") {
+                        acts.push(Act::Catalog(CatalogAct::Expand(g.to_owned(), open)));
+                    }
+                }
+                tree::Event::Toggle(_) | tree::Event::Switch(..) => {}
             }
-            if out.moved {
-                acts.push(Act::Nav(NavAct::Follow));
-            }
-            if out.scrolled {
-                acts.push(Act::Nav(NavAct::Revealed));
-            }
-        });
+        }
+        if out.moved {
+            acts.push(Act::Nav(NavAct::Follow));
+        }
+        if out.scrolled {
+            acts.push(Act::Nav(NavAct::Revealed));
+        }
+    });
     egui::CentralPanel::default().show(ui, |ui| {
         egui::ScrollArea::vertical()
             .auto_shrink(false)

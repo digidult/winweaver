@@ -10,17 +10,17 @@ impl App {
             return;
         };
         widgets::Modal::new(ask.title.as_str()).show(ctx, |ui| {
-                ui.label(ask.text.as_str());
-                ui.add_space(8.0);
-                ui.horizontal(|ui| {
-                    if ui.button(ask.yes.as_str()).clicked() {
-                        acts.push(Act::Answer(true));
-                    }
-                    if ui.button(tr("Cancel")).clicked() {
-                        acts.push(Act::Answer(false));
-                    }
-                });
+            ui.label(ask.text.as_str());
+            ui.add_space(8.0);
+            ui.horizontal(|ui| {
+                if ui.button(ask.yes.as_str()).clicked() {
+                    acts.push(Act::Answer(true));
+                }
+                if ui.button(tr("Cancel")).clicked() {
+                    acts.push(Act::Answer(false));
+                }
             });
+        });
     }
 
     pub(crate) fn shortcuts(&mut self, ctx: &egui::Context) -> Vec<Act> {

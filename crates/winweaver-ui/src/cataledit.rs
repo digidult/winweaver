@@ -337,45 +337,45 @@ fn rows(doc: &EditorDoc, out: &mut Vec<tree::Row<String>>, group: &str, depth: u
 pub fn editor_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
     let p = style::palette(ui);
     widgets::side_panel(ui, "catalog-editor-tree", 360.0, |ui| {
-            let mut out = Vec::new();
-            let roots: Vec<String> = doc
-                .file
-                .groups
-                .iter()
-                .filter(|g| g.parent.as_deref() == Some(ROOT_POLICIES))
-                .map(|g| g.id.clone())
-                .collect();
-            for root in roots {
-                rows(doc, &mut out, &root, 0);
-            }
-            let selected_key = match (&doc.form, &doc.group) {
-                (Some(f), _) => Some(f.id.clone()),
-                (None, Some(g)) => Some(format!("g:{g}")),
-                _ => None,
-            };
-            let selected = selected_key.and_then(|k| out.iter().position(|r| r.key == k));
-            let shown = tree::show(
-                ui,
-                egui::Id::new(("catalog-editor", doc.path.display().to_string())),
-                &out,
-                selected,
-                tree::Scroll::None,
-            );
-            for event in shown.events {
-                match event {
-                    tree::Event::Select(key) => doc.select(&key),
-                    tree::Event::Expand(key, open) => {
-                        let g = key.trim_start_matches("g:").to_owned();
-                        if open {
-                            doc.expanded.insert(g);
-                        } else {
-                            doc.expanded.remove(&g);
-                        }
+        let mut out = Vec::new();
+        let roots: Vec<String> = doc
+            .file
+            .groups
+            .iter()
+            .filter(|g| g.parent.as_deref() == Some(ROOT_POLICIES))
+            .map(|g| g.id.clone())
+            .collect();
+        for root in roots {
+            rows(doc, &mut out, &root, 0);
+        }
+        let selected_key = match (&doc.form, &doc.group) {
+            (Some(f), _) => Some(f.id.clone()),
+            (None, Some(g)) => Some(format!("g:{g}")),
+            _ => None,
+        };
+        let selected = selected_key.and_then(|k| out.iter().position(|r| r.key == k));
+        let shown = tree::show(
+            ui,
+            egui::Id::new(("catalog-editor", doc.path.display().to_string())),
+            &out,
+            selected,
+            tree::Scroll::None,
+        );
+        for event in shown.events {
+            match event {
+                tree::Event::Select(key) => doc.select(&key),
+                tree::Event::Expand(key, open) => {
+                    let g = key.trim_start_matches("g:").to_owned();
+                    if open {
+                        doc.expanded.insert(g);
+                    } else {
+                        doc.expanded.remove(&g);
                     }
-                    _ => {}
                 }
+                _ => {}
             }
-        });
+        }
+    });
     egui::CentralPanel::default()
         .frame(
             egui::Frame::new()

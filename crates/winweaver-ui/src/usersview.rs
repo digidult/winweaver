@@ -529,37 +529,35 @@ fn master_window(ui: &mut egui::Ui, doc: &mut UsersDoc) {
     };
     let mut done = None;
     widgets::Modal::new(title).show(ui.ctx(), |ui| {
-            ui.label(tr("Master password"));
-            let field = egui::TextEdit::singleline(&mut doc.ask.text)
+        ui.label(tr("Master password"));
+        let field = egui::TextEdit::singleline(&mut doc.ask.text)
+            .password(true)
+            .desired_width(240.0);
+        let response = ui.add(field);
+        let mut enter = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+        if purpose == Purpose::Set {
+            ui.label(tr("Once more"));
+            let again = egui::TextEdit::singleline(&mut doc.ask.again)
                 .password(true)
                 .desired_width(240.0);
-            let response = ui.add(field);
-            let mut enter = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-            if purpose == Purpose::Set {
-                ui.label(tr("Once more"));
-                let again = egui::TextEdit::singleline(&mut doc.ask.again)
-                    .password(true)
-                    .desired_width(240.0);
-                let response = ui.add(again);
-                enter |= response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-                ui.weak(tr(
-                    "Without it the passwords cannot be read again: there is no way to recover them.",
-                ));
+            let response = ui.add(again);
+            enter |= response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+            ui.weak(tr(
+                "Without it the passwords cannot be read again: there is no way to recover them.",
+            ));
+        }
+        if !doc.ask.error.is_empty() {
+            ui.colored_label(ui.visuals().warn_fg_color, &doc.ask.error);
+        }
+        ui.horizontal(|ui| {
+            if ui.button(tr("OK")).clicked() || enter {
+                done = Some(true);
             }
-            if !doc.ask.error.is_empty() {
-                ui.colored_label(ui.visuals().warn_fg_color, &doc.ask.error);
+            if ui.button(tr("Cancel")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                done = Some(false);
             }
-            ui.horizontal(|ui| {
-                if ui.button(tr("OK")).clicked() || enter {
-                    done = Some(true);
-                }
-                if ui.button(tr("Cancel")).clicked()
-                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
-                {
-                    done = Some(false);
-                }
-            });
         });
+    });
     match done {
         Some(false) => doc.ask = MasterAsk::default(),
         Some(true) => {
@@ -588,31 +586,29 @@ fn password_window(ui: &mut egui::Ui, doc: &mut UsersDoc) {
     let mut done = None;
     let title = trf("The password of {name}", &[("name", &edit.name)]);
     widgets::Modal::new(title).show(ui.ctx(), |ui| {
-            ui.label(tr("Password"));
-            let field = egui::TextEdit::singleline(&mut edit.text)
-                .password(true)
-                .desired_width(240.0);
-            ui.add(field);
-            ui.label(tr("Once more"));
-            let again = egui::TextEdit::singleline(&mut edit.again)
-                .password(true)
-                .desired_width(240.0);
-            let response = ui.add(again);
-            let enter = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-            if !edit.error.is_empty() {
-                ui.colored_label(ui.visuals().warn_fg_color, &edit.error);
+        ui.label(tr("Password"));
+        let field = egui::TextEdit::singleline(&mut edit.text)
+            .password(true)
+            .desired_width(240.0);
+        ui.add(field);
+        ui.label(tr("Once more"));
+        let again = egui::TextEdit::singleline(&mut edit.again)
+            .password(true)
+            .desired_width(240.0);
+        let response = ui.add(again);
+        let enter = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+        if !edit.error.is_empty() {
+            ui.colored_label(ui.visuals().warn_fg_color, &edit.error);
+        }
+        ui.horizontal(|ui| {
+            if ui.button(tr("OK")).clicked() || enter {
+                done = Some(true);
             }
-            ui.horizontal(|ui| {
-                if ui.button(tr("OK")).clicked() || enter {
-                    done = Some(true);
-                }
-                if ui.button(tr("Cancel")).clicked()
-                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
-                {
-                    done = Some(false);
-                }
-            });
+            if ui.button(tr("Cancel")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                done = Some(false);
+            }
         });
+    });
     match done {
         Some(false) => doc.password_edit = None,
         Some(true) => {
@@ -660,34 +656,32 @@ pub fn import_window(ctx: &egui::Context, import: &mut UsersImport) -> ImportDon
     let mut done = ImportDone::Open;
     let mut unlock = false;
     widgets::Modal::new(tr("Accounts from a users file")).show(ctx, |ui| {
-            let n = import.file.users.len();
-            ui.label(trf(
-                "{n} accounts of {name}",
-                &[("n", &n), ("name", &import.file.name)],
-            ));
-            ui.label(tr("Master password, for the passwords of the accounts"));
-            let field = egui::TextEdit::singleline(&mut import.ask.text)
-                .password(true)
-                .desired_width(240.0);
-            let response = ui.add(field);
-            unlock = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-            if !import.ask.error.is_empty() {
-                ui.colored_label(ui.visuals().warn_fg_color, &import.ask.error);
+        let n = import.file.users.len();
+        ui.label(trf(
+            "{n} accounts of {name}",
+            &[("n", &n), ("name", &import.file.name)],
+        ));
+        ui.label(tr("Master password, for the passwords of the accounts"));
+        let field = egui::TextEdit::singleline(&mut import.ask.text)
+            .password(true)
+            .desired_width(240.0);
+        let response = ui.add(field);
+        unlock = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+        if !import.ask.error.is_empty() {
+            ui.colored_label(ui.visuals().warn_fg_color, &import.ask.error);
+        }
+        ui.horizontal(|ui| {
+            if ui.button(tr("With the passwords")).clicked() {
+                unlock = true;
             }
-            ui.horizontal(|ui| {
-                if ui.button(tr("With the passwords")).clicked() {
-                    unlock = true;
-                }
-                if ui.button(tr("Without the passwords")).clicked() {
-                    done = ImportDone::Without;
-                }
-                if ui.button(tr("Cancel")).clicked()
-                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
-                {
-                    done = ImportDone::Cancel;
-                }
-            });
+            if ui.button(tr("Without the passwords")).clicked() {
+                done = ImportDone::Without;
+            }
+            if ui.button(tr("Cancel")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                done = ImportDone::Cancel;
+            }
         });
+    });
     if unlock && let Some(container) = &import.file.passwords {
         let master = Zeroizing::new(std::mem::take(&mut import.ask.text).into_bytes());
         match userstore::decrypt(container, &master) {

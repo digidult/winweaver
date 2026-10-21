@@ -9,9 +9,9 @@ use crate::commands::{Item, Menu, keys};
 use crate::i18n::{tr, trf};
 use crate::style::{self, Palette};
 use crate::{
-    Act, App, CatalogAct, DiffAct, Doc, FileAct, Form, ImportAct, MarksAct, McpAct, NavAct, PRESETS,
-    PcAct, ProfileAct, RegistryAct, ScriptKind, Sel, Settings, SettingsAct, SettingsSection, Tab,
-    UsersAct, icons, texts_for, views,
+    Act, App, CatalogAct, DiffAct, Doc, FileAct, Form, ImportAct, MarksAct, McpAct, NavAct,
+    PRESETS, PcAct, ProfileAct, RegistryAct, ScriptKind, Sel, Settings, SettingsAct,
+    SettingsSection, Tab, UsersAct, icons, texts_for, views,
 };
 use winweaver_core::validate::{self, Severity, Target};
 
@@ -288,7 +288,12 @@ impl App {
             self.discard_act(self.active),
         );
         ui.separator();
-        item(ui, tr("Guide"), keys::GUIDE.text, Act::File(FileAct::OpenGuide));
+        item(
+            ui,
+            tr("Guide"),
+            keys::GUIDE.text,
+            Act::File(FileAct::OpenGuide),
+        );
         item(ui, tr("License"), "", Act::File(FileAct::OpenLicense));
         item(ui, tr("Bookmarks"), "", Act::Marks(MarksAct::Open));
         item(
@@ -563,7 +568,8 @@ impl App {
         let tools = compact && self.has_tools();
         let tools_id = egui::Id::new("nav-tools-width");
         let tools_w = if tools {
-            ui.data(|d| d.get_temp::<f32>(tools_id)).unwrap_or(TOOLS_WIDTH)
+            ui.data(|d| d.get_temp::<f32>(tools_id))
+                .unwrap_or(TOOLS_WIDTH)
         } else {
             0.0
         };
@@ -589,7 +595,8 @@ impl App {
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
             if let Some((back, forward)) = history {
-                if style::icon_button(ui, icons::BACK, tr("Back (Alt+Left)"), back, None).clicked() {
+                if style::icon_button(ui, icons::BACK, tr("Back (Alt+Left)"), back, None).clicked()
+                {
                     acts.push(Act::Profile(ProfileAct::Back));
                 }
                 if style::icon_button(ui, icons::FORWARD, tr("Forward (Alt+Right)"), forward, None)
@@ -770,7 +777,11 @@ impl App {
         let header = |ui: &mut egui::Ui, acts: &mut Vec<Act>| {
             ui.horizontal(|ui| {
                 let errors = validate::errors(&doc.issues);
-                let icon = if errors > 0 { icons::ERROR } else { icons::WARNING };
+                let icon = if errors > 0 {
+                    icons::ERROR
+                } else {
+                    icons::WARNING
+                };
                 ui.label(RichText::new(icon).color(p.msg_fg));
                 ui.label(RichText::new(validate::summary(&doc.issues)).color(p.msg_fg));
                 let toggle = if open { tr("Hide") } else { tr("Show") };

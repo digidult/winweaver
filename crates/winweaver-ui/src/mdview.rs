@@ -3,9 +3,9 @@
 
 use std::path::PathBuf;
 
+use crate::matches_words;
 use eframe::egui;
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
-use crate::matches_words;
 
 /// The guide shown at the first start and from the menu (F1).
 pub const GUIDE: &str = include_str!("../../../data/docs/guide.md");

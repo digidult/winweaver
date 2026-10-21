@@ -398,30 +398,28 @@ pub fn registry_view(
             .show(ui, |ui| search_panel(ui, doc, acts));
     }
     widgets::side_panel(ui, "registry-tree", 360.0, |ui| {
-            let mut out = Vec::new();
-            for (hive, _) in HIVES {
-                rows(doc, &mut out, hive, hive, 0);
-            }
-            let selected = out
-                .iter()
-                .position(|r| r.key.eq_ignore_ascii_case(&doc.path));
-            let scroll = tree::Scroll::wanted(doc.reveal, false);
-            let shown = tree::show(ui, egui::Id::new("registry-tree"), &out, selected, scroll);
-            if shown.scrolled || selected.is_none() {
-                doc.reveal = false;
-            }
-            for event in shown.events {
-                match event {
-                    tree::Event::Select(path) => {
-                        acts.push(Act::Registry(RegistryAct::Go(path, None)))
-                    }
-                    tree::Event::Expand(path, open) => {
-                        acts.push(Act::Registry(RegistryAct::Expand(path, open)))
-                    }
-                    _ => {}
+        let mut out = Vec::new();
+        for (hive, _) in HIVES {
+            rows(doc, &mut out, hive, hive, 0);
+        }
+        let selected = out
+            .iter()
+            .position(|r| r.key.eq_ignore_ascii_case(&doc.path));
+        let scroll = tree::Scroll::wanted(doc.reveal, false);
+        let shown = tree::show(ui, egui::Id::new("registry-tree"), &out, selected, scroll);
+        if shown.scrolled || selected.is_none() {
+            doc.reveal = false;
+        }
+        for event in shown.events {
+            match event {
+                tree::Event::Select(path) => acts.push(Act::Registry(RegistryAct::Go(path, None))),
+                tree::Event::Expand(path, open) => {
+                    acts.push(Act::Registry(RegistryAct::Expand(path, open)))
                 }
+                _ => {}
             }
-        });
+        }
+    });
     egui::CentralPanel::default()
         .frame(
             egui::Frame::new()
@@ -588,74 +586,72 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
     };
     let mut close = false;
     widgets::Modal::new(title).width(560.0).show(ctx, |ui| {
-            ui.weak(&doc.path);
-            ui.add_space(6.0);
-            egui::Grid::new("registry-edit")
-                .num_columns(2)
-                .spacing([12.0, 8.0])
-                .show(ui, |ui| {
-                    ui.label(tr("Name"));
-                    ui.add_enabled(
-                        edit.kind != EditKind::Value,
-                        egui::TextEdit::singleline(&mut edit.name).desired_width(380.0),
+        ui.weak(&doc.path);
+        ui.add_space(6.0);
+        egui::Grid::new("registry-edit")
+            .num_columns(2)
+            .spacing([12.0, 8.0])
+            .show(ui, |ui| {
+                ui.label(tr("Name"));
+                ui.add_enabled(
+                    edit.kind != EditKind::Value,
+                    egui::TextEdit::singleline(&mut edit.name).desired_width(380.0),
+                );
+                ui.end_row();
+                if edit.kind != EditKind::NewKey {
+                    ui.label(tr("Type"));
+                    if edit.kind == EditKind::NewValue {
+                        egui::ComboBox::from_id_salt("registry-type")
+                            .selected_text(edit.type_name.as_str())
+                            .show_ui(ui, |ui| {
+                                for t in NEW_TYPES {
+                                    ui.selectable_value(&mut edit.type_name, t.to_owned(), t);
+                                }
+                            });
+                    } else {
+                        ui.monospace(&edit.type_name);
+                    }
+                    ui.end_row();
+                    ui.label(tr("Data"));
+                    let multi = matches!(
+                        edit.type_name.as_str(),
+                        "REG_MULTI_SZ" | "REG_BINARY" | "REG_NONE"
+                    );
+                    let hint = match edit.type_name.as_str() {
+                        "REG_DWORD" | "REG_QWORD" => {
+                            tr("A number: decimal, or hexadecimal after 0x")
+                        }
+                        "REG_MULTI_SZ" => tr("One string per line"),
+                        "REG_BINARY" | "REG_NONE" => tr("Bytes as hexadecimal pairs"),
+                        _ => "",
+                    };
+                    let field = if multi {
+                        egui::TextEdit::multiline(&mut edit.text).desired_rows(8)
+                    } else {
+                        egui::TextEdit::singleline(&mut edit.text)
+                    };
+                    ui.add(
+                        field
+                            .desired_width(380.0)
+                            .hint_text(hint)
+                            .font(egui::TextStyle::Monospace),
                     );
                     ui.end_row();
-                    if edit.kind != EditKind::NewKey {
-                        ui.label(tr("Type"));
-                        if edit.kind == EditKind::NewValue {
-                            egui::ComboBox::from_id_salt("registry-type")
-                                .selected_text(edit.type_name.as_str())
-                                .show_ui(ui, |ui| {
-                                    for t in NEW_TYPES {
-                                        ui.selectable_value(&mut edit.type_name, t.to_owned(), t);
-                                    }
-                                });
-                        } else {
-                            ui.monospace(&edit.type_name);
-                        }
-                        ui.end_row();
-                        ui.label(tr("Data"));
-                        let multi = matches!(
-                            edit.type_name.as_str(),
-                            "REG_MULTI_SZ" | "REG_BINARY" | "REG_NONE"
-                        );
-                        let hint = match edit.type_name.as_str() {
-                            "REG_DWORD" | "REG_QWORD" => {
-                                tr("A number: decimal, or hexadecimal after 0x")
-                            }
-                            "REG_MULTI_SZ" => tr("One string per line"),
-                            "REG_BINARY" | "REG_NONE" => tr("Bytes as hexadecimal pairs"),
-                            _ => "",
-                        };
-                        let field = if multi {
-                            egui::TextEdit::multiline(&mut edit.text).desired_rows(8)
-                        } else {
-                            egui::TextEdit::singleline(&mut edit.text)
-                        };
-                        ui.add(
-                            field
-                                .desired_width(380.0)
-                                .hint_text(hint)
-                                .font(egui::TextStyle::Monospace),
-                        );
-                        ui.end_row();
-                    }
-                });
-            if let Some(e) = &edit.error {
-                ui.colored_label(style::palette(ui).warn, e);
-            }
-            ui.add_space(8.0);
-            ui.horizontal(|ui| {
-                if ui.button(tr("OK")).clicked() {
-                    acts.push(Act::Registry(RegistryAct::Save));
-                }
-                if ui.button(tr("Cancel")).clicked()
-                    || ui.input(|i| i.key_pressed(egui::Key::Escape))
-                {
-                    close = true;
                 }
             });
+        if let Some(e) = &edit.error {
+            ui.colored_label(style::palette(ui).warn, e);
+        }
+        ui.add_space(8.0);
+        ui.horizontal(|ui| {
+            if ui.button(tr("OK")).clicked() {
+                acts.push(Act::Registry(RegistryAct::Save));
+            }
+            if ui.button(tr("Cancel")).clicked() || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                close = true;
+            }
         });
+    });
     if close {
         doc.edit = None;
     }

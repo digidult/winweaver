@@ -385,9 +385,7 @@ fn unknown_rows(rows: &mut Vec<tree::Row<Key>>, doc: &ProfileDoc, words: &[Strin
     let unknown = &doc.profile.unknown;
     let shown: Vec<(&String, &Value)> = unknown
         .iter()
-        .filter(|(id, _)| {
-            matches_words(id, words)
-        })
+        .filter(|(id, _)| matches_words(id, words))
         .collect();
     if unknown.is_empty() || shown.is_empty() {
         return;

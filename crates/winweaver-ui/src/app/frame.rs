@@ -112,17 +112,17 @@ impl App {
         let settings = &self.settings;
         let p = style::palette(ui);
         widgets::side_panel(ui, "tree", 380.0, |ui| {
-                views::tree_view(
-                    ui,
-                    &self.catalog,
-                    texts,
-                    doc,
-                    &doc.search,
-                    settings.inline_switches,
-                    !settings.hide_unknown,
-                    acts,
-                );
-            });
+            views::tree_view(
+                ui,
+                &self.catalog,
+                texts,
+                doc,
+                &doc.search,
+                settings.inline_switches,
+                !settings.hide_unknown,
+                acts,
+            );
+        });
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(p.bg))
             .show(ui, |ui| {

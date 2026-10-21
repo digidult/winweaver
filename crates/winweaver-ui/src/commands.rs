@@ -214,7 +214,11 @@ impl App {
                 Item::Separator,
                 cmd(icons::IMPORT, tr("Import"), CatalogAct::ImportOpen),
                 Item::Menu(Menu::CompareCatalog),
-                cmd(icons::EDIT, tr("Edit"), CatalogAct::Edit(CatalogRef::Tab(self.active))),
+                cmd(
+                    icons::EDIT,
+                    tr("Edit"),
+                    CatalogAct::Edit(CatalogRef::Tab(self.active)),
+                ),
             ],
             Some(Doc::Catalog(c)) => vec![
                 open(),
@@ -228,7 +232,11 @@ impl App {
                 ),
                 cmd(icons::EXPORT, tr("Export"), ImportAct::Export(c.id.clone())),
                 Item::Menu(Menu::CompareCatalog),
-                cmd(icons::EDIT, tr("Edit"), CatalogAct::Edit(CatalogRef::Import(c.id.clone()))),
+                cmd(
+                    icons::EDIT,
+                    tr("Edit"),
+                    CatalogAct::Edit(CatalogRef::Import(c.id.clone())),
+                ),
             ],
             Some(Doc::CatalogEdit(_)) => vec![save()],
             Some(Doc::RegFile(d)) => {
@@ -238,15 +246,28 @@ impl App {
                     save(),
                     save_as(),
                     Item::Separator,
-                    cmd(icons::FOLDER, tr("New key"), RegFileAct::New(regfileview::EditKind::Key)),
+                    cmd(
+                        icons::FOLDER,
+                        tr("New key"),
+                        RegFileAct::New(regfileview::EditKind::Key),
+                    ),
                     when(
                         icons::ADD,
                         tr("New value"),
                         key.is_some(),
                         RegFileAct::New(regfileview::EditKind::Value),
                     ),
-                    when(icons::EDIT, tr("Edit"), d.target().is_some(), RegFileAct::Edit),
-                    cmd_if(icons::DELETE, tr("Delete"), d.remove_question().map(Act::from)),
+                    when(
+                        icons::EDIT,
+                        tr("Edit"),
+                        d.target().is_some(),
+                        RegFileAct::Edit,
+                    ),
+                    cmd_if(
+                        icons::DELETE,
+                        tr("Delete"),
+                        d.remove_question().map(Act::from),
+                    ),
                     Item::Separator,
                     cmd_if(
                         icons::REGISTRY,
@@ -267,7 +288,11 @@ impl App {
                     Item::Separator,
                     cmd(icons::ADD, tr("Add"), UsersAct::Add),
                     when(icons::DUPLICATE, tr("Duplicate"), one, UsersAct::Duplicate),
-                    cmd_if(icons::DELETE, tr("Remove"), d.remove_question().map(Act::from)),
+                    cmd_if(
+                        icons::DELETE,
+                        tr("Remove"),
+                        d.remove_question().map(Act::from),
+                    ),
                     when(icons::UP, tr("Up"), one, UsersAct::Move(false)),
                     when(icons::DOWN, tr("Down"), one, UsersAct::Move(true)),
                     Item::Separator,
@@ -276,7 +301,11 @@ impl App {
                     items.extend([
                         cmd(icons::UNLOCKED, tr("Lock"), UsersAct::Lock),
                         when(icons::KEY, tr("Password"), one, UsersAct::SetPassword),
-                        cmd(icons::MASTER_KEY, tr("Master password"), UsersAct::SetMaster),
+                        cmd(
+                            icons::MASTER_KEY,
+                            tr("Master password"),
+                            UsersAct::SetMaster,
+                        ),
                     ]);
                 } else {
                     items.push(cmd(icons::LOCKED, tr("Unlock"), UsersAct::Unlock));
@@ -314,7 +343,12 @@ impl App {
                     tr("New value"),
                     RegistryAct::New(regview::EditKind::NewValue, "REG_SZ"),
                 ),
-                when(icons::EDIT, tr("Edit"), d.selected().is_some(), RegistryAct::Edit),
+                when(
+                    icons::EDIT,
+                    tr("Edit"),
+                    d.selected().is_some(),
+                    RegistryAct::Edit,
+                ),
                 cmd(icons::DELETE, tr("Delete"), RegistryAct::AskDelete),
                 Item::Separator,
                 cmd(icons::STAR, tr("Bookmark"), RegistryAct::Bookmark),
