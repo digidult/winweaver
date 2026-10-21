@@ -9,6 +9,7 @@ repository.workspace = true
 authors.workspace = true
 
 [dependencies]
+ww-base = { path = "../ww-base" }
 serde.workspace = true
 serde_json.workspace = true
 indexmap.workspace = true

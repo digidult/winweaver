@@ -7,12 +7,9 @@ pub mod admx;
 pub mod apply;
 pub mod bookmarks;
 pub mod catalog;
-pub mod clock;
 pub mod diff;
 pub mod i18n;
 pub mod import;
-pub mod jsonfile;
-pub mod paths;
 pub mod profile;
 pub mod regfile;
 pub mod registry;
@@ -25,6 +22,8 @@ pub mod thispc;
 pub mod users;
 pub mod userstore;
 pub mod validate;
+
+pub use ww_base::{clock, jsonfile, paths};
 
 /// The version of the program, taken from the workspace: the second number grows with a feature,
 /// the third with a fix.
