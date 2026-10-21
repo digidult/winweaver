@@ -596,10 +596,10 @@ fn lists_of_templates_are_built_applied_and_checked() {
         "{issues:?}"
     );
     let items = |list: &[&str]| list.iter().map(|t| (*t).to_owned()).collect::<Vec<_>>();
-    assert!(crate::values::list_entries(ListNames::Pairs, "", &items(&["a=1", "b"])).is_err());
-    assert!(crate::values::list_entries(ListNames::Items, "", &items(&["a", "A"])).is_err());
+    assert!(values::list_entries(ListNames::Pairs, "", &items(&["a=1", "b"])).is_err());
+    assert!(values::list_entries(ListNames::Items, "", &items(&["a", "A"])).is_err());
     assert_eq!(
-        crate::values::list_entries(ListNames::Numbered, "item", &items(&["x"])).unwrap(),
+        values::list_entries(ListNames::Numbered, "item", &items(&["x"])).unwrap(),
         (vec!["item1".to_owned()], vec!["x".to_owned()])
     );
 }
