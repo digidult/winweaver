@@ -4,7 +4,7 @@ use crate::*;
 
 impl WinWeaver {
     /// The bookmark tab, when it is open.
-    pub(crate) fn marks_doc(&mut self, shell: &mut Shell<WinWeaver>) -> Option<&mut marksview::MarksDoc> {
+    pub(crate) fn marks_doc<'a>(&self, shell: &'a mut Shell<WinWeaver>) -> Option<&'a mut marksview::MarksDoc> {
         shell.docs.iter_mut().find_map(|d| match d {
             Doc::Bookmarks(m) => Some(&mut **m),
             _ => None,

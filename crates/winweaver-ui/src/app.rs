@@ -15,3 +15,5 @@ mod session;
 mod settings;
 mod shell;
 mod users;
+
+pub(crate) use session::show_single;

@@ -3,11 +3,10 @@
 
 use winweaver_core::users::Operation;
 use ww::commands::{cmd, cmd_if, keyed, when};
-use ww::keys::Keys;
 
 use crate::i18n::tr;
 use crate::{
-    Act, CatalogAct, CatalogRef, Doc, FileAct, ImportAct, McpAct, ProfileAct, RegFileAct,
+    Act, CatalogAct, CatalogRef, DiffAct, Doc, FileAct, ImportAct, McpAct, ProfileAct, RegFileAct,
     RegistryAct, Shell, ShellAct, ShellDoc, UsersAct, WinWeaver, icons, regfileview, regview,
 };
 

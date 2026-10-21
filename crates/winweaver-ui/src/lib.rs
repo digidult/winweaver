@@ -29,6 +29,7 @@ mod views;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
+use eframe::egui;
 use winweaver_core::admx::{self, CatalogFile};
 use winweaver_core::bookmarks::{self, Bookmark, Bookmarks};
 use winweaver_core::catalog::{Catalog, TREE_ROOTS, check};
@@ -46,6 +47,7 @@ use winweaver_core::thispc::{self, Report, Verdict};
 use winweaver_core::users::{self, UsersFile};
 use winweaver_core::validate::{self, Issue, Severity, Target};
 
+pub(crate) use app::show_single;
 pub use act::{
     Act, CatalogAct, DiffAct, FileAct, ImportAct, MarksAct, McpAct, PcAct, ProfileAct, RegFileAct,
     RegistryAct, SettingsAct, UsersAct,

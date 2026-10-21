@@ -18,7 +18,7 @@ impl WinWeaver {
         }
     }
 
-    pub(crate) fn active_users(&mut self, shell: &mut Shell<WinWeaver>) -> Option<&mut usersview::UsersDoc> {
+    pub(crate) fn active_users<'a>(&self, shell: &'a mut Shell<WinWeaver>) -> Option<&'a mut usersview::UsersDoc> {
         match shell.docs.get_mut(shell.active) {
             Some(Doc::Users(d)) => Some(d),
             _ => None,

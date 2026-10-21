@@ -118,7 +118,7 @@ impl WinWeaver {
 
     /// Names an import among the loaded ones of the settings.
     pub(crate) fn mark_loaded(&mut self, shell: &mut Shell<WinWeaver>, id: &str) {
-        let list = self
+        let list = shell
             .settings
             .extra
             .loaded_imports

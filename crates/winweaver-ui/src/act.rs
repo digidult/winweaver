@@ -3,8 +3,6 @@
 //! acts of the window itself (the tabs, the files, the settings, the themes, a question) are
 //! `ShellAct` of WW in the variant `Shell`.
 
-use std::path::PathBuf;
-
 use serde_json::Value;
 use winweaver_core::profile::{Account, Install, Languages};
 use winweaver_core::users;

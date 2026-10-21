@@ -3,7 +3,7 @@
 use crate::*;
 
 impl WinWeaver {
-    pub(crate) fn active_profile(&mut self, shell: &mut Shell<WinWeaver>) -> Option<&mut ProfileDoc> {
+    pub(crate) fn active_profile<'a>(&self, shell: &'a mut Shell<WinWeaver>) -> Option<&'a mut ProfileDoc> {
         match shell.docs.get_mut(shell.active) {
             Some(Doc::Profile(doc)) => Some(doc),
             _ => None,
