@@ -86,13 +86,34 @@ fn segments(text: &str) -> Vec<Segment<'_>> {
     out
 }
 
-/// A table of a page: a grid of its width, the header strong, the cells wrapped.
+/// The widths of the columns of a table: the width shared by the longest cell of each column
+/// (between 4 and 60 characters count), none narrower than `COLUMN_MIN`.
+fn column_widths(rows: &[Vec<&str>], cols: usize, width: f32) -> Vec<f32> {
+    let weights: Vec<f32> = (0..cols)
+        .map(|c| {
+            rows.iter()
+                .map(|r| r.get(c).map_or(0, |s| s.chars().count()))
+                .max()
+                .unwrap_or(0)
+                .clamp(4, 60) as f32
+        })
+        .collect();
+    let total: f32 = weights.iter().sum();
+    let free = width - TABLE_GAP * (cols as f32 - 1.0);
+    weights
+        .iter()
+        .map(|w| (free * w / total).max(COLUMN_MIN))
+        .collect()
+}
+
+/// A table of a page: bands of cells of the widths of its columns, the header strong, the
+/// cells wrapped.
 fn table(ui: &mut egui::Ui, cache: &mut CommonMarkCache, rows: &[Vec<&str>], width: f32, n: usize) {
     // Not a grid of egui: a grid keeps the heights of the last frame, so a cell that wraps
     // would not raise its row. Every row is a band of cells of one width, as high as its
     // highest cell, with the lines drawn after it.
     let cols = rows.iter().map(Vec::len).max().unwrap_or(0).max(1);
-    let col = ((width - TABLE_GAP * (cols as f32 - 1.0)) / cols as f32).max(COLUMN_MIN);
+    let widths = column_widths(rows, cols, width);
     let p = crate::style::palette(ui);
     let stroke = egui::Stroke::new(1.0, p.border);
     ui.add_space(4.0);
@@ -116,7 +137,7 @@ fn table(ui: &mut egui::Ui, cache: &mut CommonMarkCache, rows: &[Vec<&str>], wid
                         .show(ui, |ui| {
                             ui.horizontal_top(|ui| {
                                 ui.spacing_mut().item_spacing.x = TABLE_GAP;
-                                for c in 0..cols {
+                                for (c, col) in widths.iter().copied().enumerate() {
                                     let cell = row.get(c).copied().unwrap_or("");
                                     ui.allocate_ui_with_layout(
                                         egui::vec2(col, 0.0),
@@ -135,9 +156,10 @@ fn table(ui: &mut egui::Ui, cache: &mut CommonMarkCache, rows: &[Vec<&str>], wid
                         });
                     let rect = band.response.rect;
                     ui.painter().hline(rect.x_range(), rect.bottom(), stroke);
-                    for c in 1..cols {
-                        let x = rect.left() + 4.0 + c as f32 * (col + TABLE_GAP) - TABLE_GAP / 2.0;
-                        ui.painter().vline(x, rect.y_range(), stroke);
+                    let mut x = rect.left() + 4.0;
+                    for col in &widths[..cols - 1] {
+                        x += col + TABLE_GAP;
+                        ui.painter().vline(x - TABLE_GAP / 2.0, rect.y_range(), stroke);
                     }
                 }
             });
@@ -298,7 +320,7 @@ pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool, tables: TableWidt
         f32::INFINITY
     };
     let table_width = match tables {
-        TableWidth::View => width.min(view_width) - 2.0 * TABLE_GAP,
+        TableWidth::View => view_width - 2.0 * TABLE_GAP,
         TableWidth::Pixels(n) => n as f32,
         TableWidth::Characters(n) => {
             let font = egui::TextStyle::Body.resolve(ui.style());
@@ -370,6 +392,9 @@ mod tests {
         assert!(
             matches!(parts[2], Segment::Markdown(m) if m.starts_with("\nAfter") && m.contains("not | a table"))
         );
+        let widths = column_widths(&[vec!["Area", "State", "Date"], vec!["Core", "a long state of sixty characters and more words to fill the column", "14.10.2026"]], 3, 1000.0);
+        assert!(widths[1] > widths[0] * 3.0 && widths[2] >= COLUMN_MIN, "{widths:?}");
+        assert!((widths.iter().sum::<f32>() - (1000.0 - 2.0 * TABLE_GAP)).abs() < 1.0);
         assert!(is_separator("| :--- | ---: |"));
         assert!(!is_separator("| a | b |"));
     }
