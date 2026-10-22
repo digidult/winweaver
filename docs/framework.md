@@ -16,7 +16,7 @@ WinWeaver.
 
 ## 1. Goals, measurable
 
-- `ww` depends on `eframe`, `egui_commonmark`, `rfd`, `serde` and `ww-base`, never on
+- `ww` depends on `eframe`, `pulldown-cmark`, `rfd`, `serde` and `ww-base`, never on
   `winweaver-core`, `winweaver-win` or `winweaver-mcp`; `cargo build -p ww` and `cargo build -p wedit`
   succeed without the WinWeaver crates in the graph.
 - `wedit` is under 800 lines of its own code and shows every part of the shell: tabs, the menu, the

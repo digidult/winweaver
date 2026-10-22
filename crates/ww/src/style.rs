@@ -501,6 +501,8 @@ pub fn apply(ctx: &egui::Context, light: (Palette, Fonts), dark: (Palette, Fonts
             s.spacing.button_padding = egui::vec2(10.0, 4.0);
             s.spacing.interact_size.y = (24.0 * scale).max(24.0);
             s.spacing.menu_margin = Margin::same(6);
+            // Scroll bars that stay visible while the content is larger than the view.
+            s.spacing.scroll = egui::style::ScrollStyle::solid();
             s.spacing.window_margin = Margin::same(10);
             for (style, size, family) in [
                 (egui::TextStyle::Body, 13.0, &body),

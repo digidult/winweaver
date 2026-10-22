@@ -672,10 +672,19 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   them after the palette, and `style::extra(ui, name)` gives the one of the theme shown. The fields of
   the form Languages (display language, system and user locale) are typed freely with the list of the
   languages of Windows beside them (`forms::locale_field`).
-- Tables and the window (0.24.0, the customer's items of 22.10.2026, evening): a page cuts its tables
-  out (`mdview::segments`, not inside a block of code) and draws them as grids of the width of
-  `Settings::table_width` (`TableWidth`: the view, pixels, characters; Tables on pages in General)
-  with the cells wrapped; the rest goes to egui_commonmark. `Settings::window` (`WindowPlace`) is
+- Markdown pages (0.24.0): WW draws them itself (`ww::markdown`; pulldown-cmark parses, egui_commonmark is
+  gone): every paragraph, heading and cell is one `LayoutJob`, so text, code (`code_bg`, valign BOTTOM) and
+  links share a baseline and wrap at the width of the view (`Settings::wrap_lines`; off, an infinite width
+  and the view scrolls sideways); a link is found under the pointer by `Galley::cursor_from_pos`, a link
+  `#anchor` scrolls the page to its heading, any other goes to `open_url` (the shell takes the pages of the
+  program). Lists put their markers in a column of their own on the baseline of the first line; blocks of
+  code have a copy button; a table is bands of cells of the width of `Settings::table_width`
+  (`TableWidth`: the view, pixels, characters; Tables on pages in General), its columns shared by the
+  length of their text and never narrower than their longest word (`markdown::column_widths`), every row
+  as high as its highest cell. The scroll bars are solid (`ScrollStyle::solid`): visible whenever the
+  content is larger than the view. The screenshots of CI draw the sample page `ww::sample::PAGE` and
+  AGENTS.md at several widths and settings in both programs (`13-` to `19-`, `w1-` to `w8-`): look at them
+  after every change of the drawing. `Settings::window` (`WindowPlace`) is
   where the window was at the close; `run` opens it there, and the first frame fits it to the monitor
   it opened on (`window::fit_window`: moved inside, shrunk to the monitor, never below
   `WINDOW_MIN_SIZE`); a maximized window keeps the place it had before.

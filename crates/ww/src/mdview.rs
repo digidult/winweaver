@@ -1,210 +1,19 @@
-//! Markdown tabs: a page of the program or any `.md` file, rendered with egui_commonmark, with
-//! the search of the tab and the anchors of the headings.
+//! Markdown tabs: a page of the program or any `.md` file, drawn by `markdown` (every paragraph
+//! one text of egui), with the search of the tab and the anchors of the headings.
 
 use std::path::{Path, PathBuf};
 
 use crate::doc::{Document, Search, matches_words};
+use crate::markdown::{self, Block, Outcome, View};
 use crate::settings::TableWidth;
 use eframe::egui;
-use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
-
-/// The space between the columns of a table, and the least width of a column.
-const TABLE_GAP: f32 = 12.0;
-const COLUMN_MIN: f32 = 40.0;
-
-/// A part of a page: Markdown for the viewer, or a table the page draws itself, so that its
-/// width is the one of the settings and its cells wrap inside it.
-enum Segment<'a> {
-    Markdown(&'a str),
-    Table(Vec<Vec<&'a str>>),
-}
-
-/// The cells of a row of a table, trimmed, without the bars at the ends.
-fn cells(line: &str) -> Vec<&str> {
-    let line = line.trim();
-    let line = line.strip_prefix('|').unwrap_or(line);
-    let line = line.strip_suffix('|').unwrap_or(line);
-    line.split('|').map(str::trim).collect()
-}
-
-/// The line under the header of a table: `---`, `:--`, `--:` or `:-:` in every cell.
-fn is_separator(line: &str) -> bool {
-    let parts = cells(line);
-    line.contains('-')
-        && !parts.is_empty()
-        && parts.iter().all(|p| {
-            let p = p.trim_start_matches(':').trim_end_matches(':');
-            !p.is_empty() && p.chars().all(|c| c == '-')
-        })
-}
-
-/// The page cut into Markdown and tables; a table inside a block of code stays Markdown.
-fn segments(text: &str) -> Vec<Segment<'_>> {
-    let mut starts = Vec::new();
-    let mut pos = 0;
-    for line in text.split_inclusive('\n') {
-        starts.push(pos);
-        pos += line.len();
-    }
-    starts.push(text.len());
-    let line = |i: usize| text[starts[i]..starts[i + 1]].trim_end_matches(['\n', '\r']);
-    let n = starts.len() - 1;
-    let mut out = Vec::new();
-    let mut from = 0;
-    let mut fence = false;
-    let mut i = 0;
-    while i < n {
-        let l = line(i).trim_start();
-        if l.starts_with("```") || l.starts_with("~~~") {
-            fence = !fence;
-        }
-        let table = !fence && l.contains('|') && i + 1 < n && is_separator(line(i + 1));
-        if !table {
-            i += 1;
-            continue;
-        }
-        let mut end = i + 2;
-        while end < n && line(end).contains('|') && !line(end).trim().is_empty() {
-            end += 1;
-        }
-        if from < i {
-            out.push(Segment::Markdown(&text[starts[from]..starts[i]]));
-        }
-        let rows = (i..end)
-            .filter(|r| *r != i + 1)
-            .map(|r| cells(line(r)))
-            .collect();
-        out.push(Segment::Table(rows));
-        from = end;
-        i = end;
-    }
-    if from < n {
-        out.push(Segment::Markdown(&text[starts[from]..]));
-    }
-    out
-}
-
-/// The widths of the columns of a table: the width shared by the longest cell of each column
-/// (between 4 and 60 characters count), none narrower than `COLUMN_MIN`.
-fn column_widths(rows: &[Vec<&str>], cols: usize, width: f32) -> Vec<f32> {
-    let weights: Vec<f32> = (0..cols)
-        .map(|c| {
-            rows.iter()
-                .map(|r| r.get(c).map_or(0, |s| s.chars().count()))
-                .max()
-                .unwrap_or(0)
-                .clamp(4, 60) as f32
-        })
-        .collect();
-    let total: f32 = weights.iter().sum();
-    let free = width - TABLE_GAP * (cols as f32 - 1.0);
-    weights
-        .iter()
-        .map(|w| (free * w / total).max(COLUMN_MIN))
-        .collect()
-}
-
-/// A table of a page: bands of cells of the widths of its columns, the header strong, the
-/// cells wrapped.
-fn table(ui: &mut egui::Ui, cache: &mut CommonMarkCache, rows: &[Vec<&str>], width: f32, n: usize) {
-    // Not a grid of egui: a grid keeps the heights of the last frame, so a cell that wraps
-    // would not raise its row. Every row is a band of cells of one width, as high as its
-    // highest cell, with the lines drawn after it.
-    let cols = rows.iter().map(Vec::len).max().unwrap_or(0).max(1);
-    let widths = column_widths(rows, cols, width);
-    let p = crate::style::palette(ui);
-    let stroke = egui::Stroke::new(1.0, p.border);
-    ui.add_space(4.0);
-    ui.push_id(("page-table", n), |ui| {
-        egui::Frame::new()
-            .stroke(stroke)
-            .inner_margin(egui::Margin::same(6))
-            .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = 0.0;
-                for (r, row) in rows.iter().enumerate() {
-                    let fill = if r == 0 {
-                        p.card2
-                    } else if r % 2 == 0 {
-                        p.hover
-                    } else {
-                        egui::Color32::TRANSPARENT
-                    };
-                    let band = egui::Frame::new()
-                        .fill(fill)
-                        .inner_margin(egui::Margin::symmetric(4, 3))
-                        .show(ui, |ui| {
-                            ui.horizontal_top(|ui| {
-                                ui.spacing_mut().item_spacing.x = TABLE_GAP;
-                                for (c, col) in widths.iter().copied().enumerate() {
-                                    let cell = row.get(c).copied().unwrap_or("");
-                                    ui.allocate_ui_with_layout(
-                                        egui::vec2(col, 0.0),
-                                        egui::Layout::top_down(egui::Align::Min),
-                                        |ui| {
-                                            ui.set_width(col);
-                                            // The cells wrap even when the page does not.
-                                            ui.style_mut().wrap_mode =
-                                                Some(egui::TextWrapMode::Wrap);
-                                            if r == 0 {
-                                                ui.strong(cell);
-                                            } else {
-                                                CommonMarkViewer::new().show(ui, cache, cell);
-                                            }
-                                        },
-                                    );
-                                }
-                            });
-                        });
-                    let rect = band.response.rect;
-                    ui.painter().hline(rect.x_range(), rect.bottom(), stroke);
-                    let mut x = rect.left() + 4.0;
-                    for col in &widths[..cols - 1] {
-                        x += col + TABLE_GAP;
-                        ui.painter()
-                            .vline(x - TABLE_GAP / 2.0, rect.y_range(), stroke);
-                    }
-                }
-            });
-    });
-    ui.add_space(4.0);
-}
-
-/// A text of a page: its Markdown through the viewer, its tables as grids of `table_width`.
-fn render(
-    ui: &mut egui::Ui,
-    cache: &mut CommonMarkCache,
-    text: &str,
-    text_width: f32,
-    table_width: f32,
-    tables: &mut usize,
-) {
-    for segment in segments(text) {
-        match segment {
-            Segment::Markdown(md) => {
-                if !md.trim().is_empty() {
-                    // Every text of the page has the same width, before and after a table
-                    // that is wider.
-                    ui.scope(|ui| {
-                        if text_width.is_finite() {
-                            ui.set_max_width(text_width);
-                        }
-                        CommonMarkViewer::new().show(ui, cache, md);
-                    });
-                }
-            }
-            Segment::Table(rows) => {
-                *tables += 1;
-                table(ui, cache, &rows, table_width, *tables);
-            }
-        }
-    }
-}
 
 pub struct MdDoc {
     pub title: String,
     pub path: Option<PathBuf>,
     pub text: String,
-    cache: CommonMarkCache,
+    /// The blocks of the text, parsed again when the text changes (its hash).
+    parsed: Option<(u64, Vec<Block>)>,
     pub search: Search,
     /// The heading to show, by its anchor, and whether to scroll to it at the next frame.
     pub anchor: Option<String>,
@@ -219,7 +28,7 @@ impl MdDoc {
             title: title.into(),
             path,
             text,
-            cache: CommonMarkCache::default(),
+            parsed: None,
             search: Search::default(),
             anchor: None,
             jump: false,
@@ -265,23 +74,6 @@ pub fn slug(heading: &str) -> String {
     out
 }
 
-/// The page cut before the heading of an anchor, outside code blocks.
-fn split_at_heading<'a>(text: &'a str, anchor: &str) -> Option<(&'a str, &'a str)> {
-    let mut offset = 0;
-    let mut in_code = false;
-    for line in text.split_inclusive('\n') {
-        let t = line.trim_end();
-        if t.trim_start().starts_with("```") {
-            in_code = !in_code;
-        }
-        if !in_code && t.starts_with('#') && slug(t.trim_start_matches('#')) == anchor {
-            return Some((&text[..offset], &text[offset..]));
-        }
-        offset += line.len();
-    }
-    None
-}
-
 /// The blocks of a page that hold every word of a search, each with the heading above it: the
 /// paragraphs, lists and code blocks between blank lines.
 pub fn matching_blocks(text: &str, words: &[String]) -> Vec<String> {
@@ -318,113 +110,58 @@ pub fn matching_blocks(text: &str, words: &[String]) -> Vec<String> {
     out
 }
 
-/// The page; `wrap` folds its lines to the width of the view, else
-/// the view scrolls sideways. A table or a block of code wider than the view scrolls sideways
-/// either way.
+/// The page; `wrap` folds its lines to the width of the view, else the view scrolls sideways.
+/// A table is as wide as `tables` says; a table or a block of code wider than the view scrolls
+/// sideways either way. A link to a heading of the page brings it into view; any other link is
+/// handed to egui (the shell opens the pages of the program, the system the web).
 pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool, tables: TableWidth) {
     let words = doc.search.words();
-    let view_width = ui.available_width();
-    let width = if wrap { view_width } else { f32::INFINITY };
-    let table_width = match tables {
-        TableWidth::View => view_width - 2.0 * TABLE_GAP,
-        TableWidth::Pixels(n) => n as f32,
-        TableWidth::Characters(n) => {
-            let font = egui::TextStyle::Body.resolve(ui.style());
-            n as f32 * ui.fonts_mut(|f| f.glyph_width(&font, 'n'))
-        }
-    };
-    let mut tables = 0;
-    let code_bg = crate::style::palette(ui).code_bg;
+    let hash = crate::session::fnv(&doc.text);
+    if doc.parsed.as_ref().is_none_or(|(h, _)| *h != hash) {
+        doc.parsed = Some((hash, markdown::parse(&doc.text)));
+    }
+    let mut out = Outcome::default();
     egui::ScrollArea::both().auto_shrink(false).show(ui, |ui| {
-        // The code of a page takes the colour of the theme, inline and in blocks (a block
-        // is a read-only text field).
-        ui.visuals_mut().code_bg_color = code_bg;
-        ui.visuals_mut().extreme_bg_color = code_bg;
-        if !wrap {
-            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
-        }
+        let view_width = ui.available_width();
+        let view = View {
+            width: if wrap { view_width } else { f32::INFINITY },
+            view_width,
+            tables,
+            anchor: if doc.jump { doc.anchor.clone() } else { None },
+        };
         if words.is_empty() {
-            let jump = if doc.jump {
-                doc.anchor
-                    .as_deref()
-                    .and_then(|a| split_at_heading(&doc.text, a))
-            } else {
-                None
-            };
-            match jump {
-                Some((before, after)) => {
-                    render(ui, &mut doc.cache, before, width, table_width, &mut tables);
-                    let (rect, _) =
-                        ui.allocate_exact_size(egui::vec2(1.0, 1.0), egui::Sense::hover());
-                    ui.scroll_to_rect(rect, Some(egui::Align::Min));
-                    render(ui, &mut doc.cache, after, width, table_width, &mut tables);
-                    doc.jump = false;
-                }
-                None => {
-                    render(
-                        ui,
-                        &mut doc.cache,
-                        &doc.text,
-                        width,
-                        table_width,
-                        &mut tables,
-                    );
-                }
+            if let Some((_, blocks)) = &doc.parsed {
+                markdown::show(ui, blocks, &view, &mut out);
             }
             return;
         }
-        let blocks = matching_blocks(&doc.text, &words);
+        let places = matching_blocks(&doc.text, &words);
         ui.weak(crate::i18n::trf(
             "{n} places hold the search",
-            &[("n", &blocks.len())],
+            &[("n", &places.len())],
         ));
-        for block in &blocks {
+        for place in &places {
             ui.separator();
-            render(ui, &mut doc.cache, block, width, table_width, &mut tables);
+            markdown::show(ui, &markdown::parse(place), &view, &mut out);
         }
     });
+    if doc.jump {
+        doc.jump = false;
+    }
+    match out.link {
+        Some(link) if link.starts_with('#') => {
+            doc.anchor = Some(link.trim_start_matches('#').to_owned());
+            doc.jump = true;
+            ui.ctx().request_repaint();
+        }
+        Some(link) => ui.ctx().open_url(egui::OpenUrl::same_tab(link)),
+        None => {}
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn a_page_is_cut_into_markdown_and_tables() {
-        let text = "Intro\n\n| A | B |\n|---|:-:|\n| 1 | two words |\n| 3 |\n\nAfter\n\n```\n| not | a table |\n|---|---|\n```\n";
-        let parts = segments(text);
-        assert_eq!(parts.len(), 3);
-        assert!(matches!(parts[0], Segment::Markdown(m) if m == "Intro\n\n"));
-        let Segment::Table(rows) = &parts[1] else {
-            panic!("a table");
-        };
-        assert_eq!(
-            rows,
-            &vec![vec!["A", "B"], vec!["1", "two words"], vec!["3"]]
-        );
-        assert!(
-            matches!(parts[2], Segment::Markdown(m) if m.starts_with("\nAfter") && m.contains("not | a table"))
-        );
-        let widths = column_widths(
-            &[
-                vec!["Area", "State", "Date"],
-                vec![
-                    "Core",
-                    "a long state of sixty characters and more words to fill the column",
-                    "14.10.2026",
-                ],
-            ],
-            3,
-            1000.0,
-        );
-        assert!(
-            widths[1] > widths[0] * 3.0 && widths[2] >= COLUMN_MIN,
-            "{widths:?}"
-        );
-        assert!((widths.iter().sum::<f32>() - (1000.0 - 2.0 * TABLE_GAP)).abs() < 1.0);
-        assert!(is_separator("| :--- | ---: |"));
-        assert!(!is_separator("| a | b |"));
-    }
 
     #[test]
     fn a_search_finds_the_blocks_with_their_headings() {
@@ -439,11 +176,9 @@ mod tests {
     }
 
     #[test]
-    fn anchors_find_their_headings() {
+    fn anchors_are_the_slugs_of_the_headings() {
         assert_eq!(slug(" Microsoft Edge"), "microsoft-edge");
         assert_eq!(slug("Table of removed apps"), "table-of-removed-apps");
-        let text = "# Top\n\nText.\n\n## Microsoft Edge\n\nKey.\n";
-        let (before, after) = split_at_heading(text, "microsoft-edge").unwrap();
-        assert!(before.ends_with("Text.\n\n") && after.starts_with("## Microsoft Edge"));
+        assert_eq!(slug("7. Work status"), "7-work-status");
     }
 }

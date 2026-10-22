@@ -17,6 +17,7 @@ pub mod i18n;
 pub mod icons;
 pub mod keys;
 pub mod list;
+pub mod markdown;
 pub mod mdview;
 pub mod question;
 pub mod renderer;

@@ -26,4 +26,16 @@ cargo build --release -p winweaver --no-default-features --features wgpu && copy
 
 - A list item with `code` in it.
 - A second item, long enough to wrap on a narrow window so that the indent of its second line shows.
+  - A nested item under the second one.
+
+1. A numbered step whose number stands on the baseline of its first line.
+2. The second step, with `inline code`, a [link to the heading below](#the-last-heading) and *emphasis*.
+
+> A quote: its bar on the left, its text wrapped like a paragraph.
+
+---
+
+## The last heading
+
+The end of the sample page.
 ";

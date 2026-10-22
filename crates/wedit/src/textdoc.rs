@@ -174,6 +174,10 @@ impl TextDoc {
                     state.store(ui.ctx(), id);
                     ui.memory_mut(|m| m.request_focus(id));
                 }
+                // The field fills the view; the room of the scroll bars is kept, so a bar
+                // appears only when the text is larger than the view.
+                let bar = ui.spacing().scroll.allocated_width();
+                let fill = ui.available_size() - egui::vec2(bar, bar);
                 let scroll = if wrap {
                     egui::ScrollArea::vertical()
                 } else {
@@ -187,7 +191,7 @@ impl TextDoc {
                             .id(id)
                             .font(egui::TextStyle::Monospace)
                             .desired_width(f32::INFINITY)
-                            .desired_rows(40)
+                            .min_size(fill)
                             .lock_focus(true);
                         if !wrap {
                             edit = edit.layouter(&mut no_wrap);
