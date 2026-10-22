@@ -324,11 +324,7 @@ pub fn matching_blocks(text: &str, words: &[String]) -> Vec<String> {
 pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool, tables: TableWidth) {
     let words = doc.search.words();
     let view_width = ui.available_width();
-    let width = if wrap {
-        view_width
-    } else {
-        f32::INFINITY
-    };
+    let width = if wrap { view_width } else { f32::INFINITY };
     let table_width = match tables {
         TableWidth::View => view_width - 2.0 * TABLE_GAP,
         TableWidth::Pixels(n) => n as f32,
@@ -365,7 +361,14 @@ pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool, tables: TableWidt
                     doc.jump = false;
                 }
                 None => {
-                    render(ui, &mut doc.cache, &doc.text, width, table_width, &mut tables);
+                    render(
+                        ui,
+                        &mut doc.cache,
+                        &doc.text,
+                        width,
+                        table_width,
+                        &mut tables,
+                    );
                 }
             }
             return;

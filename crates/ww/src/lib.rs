@@ -21,6 +21,7 @@ pub mod mdview;
 pub mod question;
 pub mod renderer;
 pub mod run;
+pub mod sample;
 pub mod session;
 pub mod settings;
 pub mod shell;

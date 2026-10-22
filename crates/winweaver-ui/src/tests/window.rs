@@ -262,6 +262,40 @@ fn screenshots_of_the_window() {
         d.at = d.file.lines.iter().position(key);
     }
     shot(&mut harness, "12-regfile");
+    // Pages: the sample at several widths and settings, and AGENTS.md at its status table.
+    let sample = dir.join("sample.md");
+    std::fs::write(&sample, ww::sample::PAGE).unwrap();
+    harness
+        .state_mut()
+        .apply(vec![Act::Shell(ShellAct::OpenPath(sample))]);
+    shot(&mut harness, "13-page");
+    harness.state_mut().shell.settings.wrap_lines = false;
+    shot(&mut harness, "14-page-nowrap");
+    harness.state_mut().shell.settings.wrap_lines = true;
+    harness.state_mut().shell.settings.table_width = ww::TableWidth::Characters(40);
+    shot(&mut harness, "15-page-table-40-chars");
+    harness.state_mut().shell.settings.table_width = ww::TableWidth::Pixels(1600);
+    shot(&mut harness, "16-page-table-1600-px");
+    harness.state_mut().shell.settings.table_width = ww::TableWidth::View;
+    harness.set_size(egui::vec2(900.0, 900.0));
+    shot(&mut harness, "17-page-narrow");
+    harness.set_size(egui::vec2(1440.0, 900.0));
+    let agents = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../AGENTS.md");
+    harness
+        .state_mut()
+        .apply(vec![Act::Shell(ShellAct::OpenPath(agents))]);
+    if let Some(Doc::Markdown(m)) = harness.state_mut().shell.docs.last_mut() {
+        m.anchor = Some("7-work-status".to_owned());
+        m.jump = true;
+    }
+    shot(&mut harness, "18-agents-status");
+    harness
+        .state_mut()
+        .apply(vec![Act::Shell(ShellAct::UseTheme("dark".to_owned()))]);
+    shot(&mut harness, "19-agents-dark");
+    harness
+        .state_mut()
+        .apply(vec![Act::Shell(ShellAct::UseTheme("light".to_owned()))]);
     harness.set_size(egui::vec2(1000.0, 700.0));
     shot(&mut harness, "09-compact");
 }

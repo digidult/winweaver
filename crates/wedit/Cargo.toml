@@ -25,3 +25,7 @@ serde_json.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_System_Console"] }
+
+[dev-dependencies]
+# The screenshots of the window, drawn without a screen (src/shots.rs).
+egui_kittest = { version = "0.36", features = ["eframe", "wgpu", "snapshot"] }
