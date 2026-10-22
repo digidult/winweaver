@@ -139,49 +139,47 @@ pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool) {
         f32::INFINITY
     };
     let code_bg = crate::style::palette(ui).code_bg;
-    egui::ScrollArea::both()
-        .auto_shrink(false)
-        .show(ui, |ui| {
-            // The code of a page takes the colour of the theme, inline and in blocks (a block
-            // is a read-only text field).
-            ui.visuals_mut().code_bg_color = code_bg;
-            ui.visuals_mut().extreme_bg_color = code_bg;
-            if width.is_finite() {
-                ui.set_max_width(width);
-            }
-            if words.is_empty() {
-                let jump = if doc.jump {
-                    doc.anchor
-                        .as_deref()
-                        .and_then(|a| split_at_heading(&doc.text, a))
-                } else {
-                    None
-                };
-                match jump {
-                    Some((before, after)) => {
-                        CommonMarkViewer::new().show(ui, &mut doc.cache, before);
-                        let (rect, _) =
-                            ui.allocate_exact_size(egui::vec2(1.0, 1.0), egui::Sense::hover());
-                        ui.scroll_to_rect(rect, Some(egui::Align::Min));
-                        CommonMarkViewer::new().show(ui, &mut doc.cache, after);
-                        doc.jump = false;
-                    }
-                    None => {
-                        CommonMarkViewer::new().show(ui, &mut doc.cache, &doc.text);
-                    }
+    egui::ScrollArea::both().auto_shrink(false).show(ui, |ui| {
+        // The code of a page takes the colour of the theme, inline and in blocks (a block
+        // is a read-only text field).
+        ui.visuals_mut().code_bg_color = code_bg;
+        ui.visuals_mut().extreme_bg_color = code_bg;
+        if width.is_finite() {
+            ui.set_max_width(width);
+        }
+        if words.is_empty() {
+            let jump = if doc.jump {
+                doc.anchor
+                    .as_deref()
+                    .and_then(|a| split_at_heading(&doc.text, a))
+            } else {
+                None
+            };
+            match jump {
+                Some((before, after)) => {
+                    CommonMarkViewer::new().show(ui, &mut doc.cache, before);
+                    let (rect, _) =
+                        ui.allocate_exact_size(egui::vec2(1.0, 1.0), egui::Sense::hover());
+                    ui.scroll_to_rect(rect, Some(egui::Align::Min));
+                    CommonMarkViewer::new().show(ui, &mut doc.cache, after);
+                    doc.jump = false;
                 }
-                return;
+                None => {
+                    CommonMarkViewer::new().show(ui, &mut doc.cache, &doc.text);
+                }
             }
-            let blocks = matching_blocks(&doc.text, &words);
-            ui.weak(crate::i18n::trf(
-                "{n} places hold the search",
-                &[("n", &blocks.len())],
-            ));
-            for block in &blocks {
-                ui.separator();
-                CommonMarkViewer::new().show(ui, &mut doc.cache, block);
-            }
-        });
+            return;
+        }
+        let blocks = matching_blocks(&doc.text, &words);
+        ui.weak(crate::i18n::trf(
+            "{n} places hold the search",
+            &[("n", &blocks.len())],
+        ));
+        for block in &blocks {
+            ui.separator();
+            CommonMarkViewer::new().show(ui, &mut doc.cache, block);
+        }
+    });
 }
 
 #[cfg(test)]

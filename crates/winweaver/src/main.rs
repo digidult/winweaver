@@ -59,8 +59,9 @@ fn option(args: &[String], name: &str) -> Option<String> {
 /// catalog file is read), the templates of this Windows first; a file that cannot be read or
 /// merged is left out.
 fn with_imports(catalog: Catalog, dir: &std::path::Path) -> Catalog {
-    let settings =
-        winweaver_ui::Settings::load("WinWeaver").0.unwrap_or_default();
+    let settings = winweaver_ui::Settings::load("WinWeaver")
+        .0
+        .unwrap_or_default();
     let ids = winweaver_ui::loaded_import_ids(&settings, dir);
     let (files, _) = winweaver_ui::read_imports(dir, &ids);
     match winweaver_core::admx::merge(&catalog, &files) {

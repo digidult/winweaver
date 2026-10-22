@@ -62,7 +62,13 @@ fn color_label(name: &str) -> &'static str {
 }
 
 /// A row of the colour grid: the label, the picker, the value, the button back to the base.
-fn color_row(ui: &mut egui::Ui, theme: &mut Theme, name: &str, label: &str, shown: egui::Color32) -> bool {
+fn color_row(
+    ui: &mut egui::Ui,
+    theme: &mut Theme,
+    name: &str,
+    label: &str,
+    shown: egui::Color32,
+) -> bool {
     let mut changed = false;
     let mut c = shown;
     ui.label(label);
