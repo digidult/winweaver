@@ -629,7 +629,11 @@ pub fn column_widths(lengths: &[usize], least: &[f32], width: f32) -> Vec<f32> {
     // Columns whose share is below their least width take it; the rest share what is left.
     let mut fixed = vec![false; cols];
     loop {
-        let left = free - (0..cols).filter(|c| fixed[*c]).map(|c| least[c]).sum::<f32>();
+        let left = free
+            - (0..cols)
+                .filter(|c| fixed[*c])
+                .map(|c| least[c])
+                .sum::<f32>();
         let total: f32 = (0..cols).filter(|c| !fixed[*c]).map(|c| weights[c]).sum();
         let mut changed = false;
         for c in 0..cols {
@@ -699,8 +703,7 @@ fn table(
         TableWidth::Characters(chars) => {
             let em = ui.fonts_mut(|f| f.glyph_width(&look.body, 'n'));
             chars as f32 * em
-        }
-        // Less the frame of the table: its margin, the padding of a band, the stroke, both sides.
+        } // Less the frame of the table: its margin, the padding of a band, the stroke, both sides.
     } - 2.0 * (CELL_PAD + 6.0 + 1.0);
     let mut lengths = vec![0_usize; cols];
     let mut least = vec![20.0_f32; cols];
@@ -824,6 +827,9 @@ mod tests {
         // A narrow table: no column is narrower than its longest word.
         let narrow = column_widths(&lengths, &least, 300.0);
         assert!(narrow[0] >= 104.0 && narrow[2] >= 80.0, "{narrow:?}");
-        assert!(narrow.iter().zip(least).all(|(w, l)| *w >= l - 0.01), "{narrow:?}");
+        assert!(
+            narrow.iter().zip(least).all(|(w, l)| *w >= l - 0.01),
+            "{narrow:?}"
+        );
     }
 }
