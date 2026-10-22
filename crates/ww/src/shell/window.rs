@@ -44,8 +44,12 @@ fn fit_window(ctx: &egui::Context) {
     let least = egui::Vec2::from(crate::run::WINDOW_MIN_SIZE).min(room);
     let size = inner.size().min(room).max(least);
     let pos = egui::pos2(
-        outer.left().clamp(0.0, (monitor.x - size.x - frame.x).max(0.0)),
-        outer.top().clamp(0.0, (monitor.y - size.y - frame.y).max(0.0)),
+        outer
+            .left()
+            .clamp(0.0, (monitor.x - size.x - frame.x).max(0.0)),
+        outer
+            .top()
+            .clamp(0.0, (monitor.y - size.y - frame.y).max(0.0)),
     );
     if size != inner.size() {
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(size));

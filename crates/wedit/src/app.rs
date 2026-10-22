@@ -424,8 +424,7 @@ impl App for Wedit {
         match shell.active_doc_mut() {
             Some(Doc::Text(doc)) => doc.view(ui, wrap),
             Some(Doc::Page(doc)) => {
-                egui::CentralPanel::default()
-                    .show(ui, |ui| mdview::md_view(ui, doc, wrap, tables));
+                egui::CentralPanel::default().show(ui, |ui| mdview::md_view(ui, doc, wrap, tables));
             }
             _ => {}
         }

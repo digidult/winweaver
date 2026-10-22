@@ -340,8 +340,13 @@ mod tests {
         let Segment::Table(rows) = &parts[1] else {
             panic!("a table");
         };
-        assert_eq!(rows, &vec![vec!["A", "B"], vec!["1", "two words"], vec!["3"]]);
-        assert!(matches!(parts[2], Segment::Markdown(m) if m.starts_with("\nAfter") && m.contains("not | a table")));
+        assert_eq!(
+            rows,
+            &vec![vec!["A", "B"], vec!["1", "two words"], vec!["3"]]
+        );
+        assert!(
+            matches!(parts[2], Segment::Markdown(m) if m.starts_with("\nAfter") && m.contains("not | a table"))
+        );
         assert!(is_separator("| :--- | ---: |"));
         assert!(!is_separator("| a | b |"));
     }
