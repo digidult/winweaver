@@ -6,6 +6,14 @@ Draft 0.1, 14.10.2026.
 
 ```
 crates/
+├── ww-base/             W# base, pure Rust: jsonfile (strict JSON, the trait Document), paths (a file inside
+│                        the program folder kept relative to it), clock; re-exported by the core
+├── ww/                  W# (the framework, docs/ww.md): shell/ (the trait App, Shell, Window as eframe::App,
+│                        ShellAct, the chrome drawn from what the program gives, the settings tab, the
+│                        themes), run (run::<A>, smoke_window::<A>), doc (Document, Search, Draft), settings
+│                        (Settings<X: Extra>), session (drafts, the log), style, themes and their editor,
+│                        i18n, tree, list, widgets, mdview, renderer, commands, keys, icons, dialogs, folders
+├── wedit/               the text editor on W#: main (the command line), app (impl ww::App), textdoc
 ├── winweaver-core/      catalog/ (model, values), jsonfile (the trait Document), profile, resolver, diff,
 │                        validate, render/ (the answer file, one file a pass), thispc/ (plan, evaluate, judge,
 │                        capture, report), scripts, import, apply, admx/ (templates, rules, file, compare,
@@ -17,13 +25,14 @@ crates/
 ├── winweaver-mcp/       the MCP server: JSON-RPC, protocol, the table of tools and their handlers by theme
 │                        (tools/), resources, stdio and HTTP transports, the workspace of documents, the
 │                        journal (Outcome)
-├── winweaver-ui/        eframe application: lib (the types of the window), app/ (the methods of the window
-│                        by theme, the frame, apply as a dispatcher), act (the acts by subsystem), question,
-│                        doc (every tab a document, the trait Tab), commands and icons (the command bar as
-│                        data), widgets, chrome/ (the tab row, the command bar, the navigation row, the
-│                        status bar), views/ (the tree and the detail panel of a profile), the views of the
-│                        other tabs (diff, Markdown, bookmarks, MCP, catalog, its editor, the registry,
-│                        registry files, users files, themes), forms, settings, themes, style, tree, list
+├── winweaver-ui/        WinWeaver on the window of W#: lib (the types of the window), app/ (the methods of
+│                        WinWeaver by theme, each taking the shell; shell: impl ww::App, the draw by kind,
+│                        apply as a dispatcher; menu), act (Shell(ShellAct) for the acts of the window, the
+│                        acts by subsystem for the rest), question, doc (every tab a document, impl
+│                        ww::Document), commands and icons (the command bar as data), widgets, views/ (the
+│                        tree and the detail panel of a profile), the views of the other tabs (diff,
+│                        bookmarks, MCP, catalog, its editor, the registry, registry files, users files),
+│                        forms, settings (the fields of WinWeaver in settings.json)
 └── winweaver/           the binary: argument parsing (window, --mcp stdio, --mcp http, --elevated-apply),
                          embedding of the data folder, logging setup
 data/
@@ -36,8 +45,11 @@ tools/                   conversion of the predecessor's catalog, generation of 
                          or small scripts; they run in CI and on developer machines, never on the customer's PC)
 ```
 
-`winweaver-core` compiles on Linux too, so the unit tests run on any CI runner; `winweaver-win` and the UI
-are Windows only (`cfg(windows)`), and the UI tests run on the Windows runner.
+`ww-base` and `winweaver-core` compile on Linux too, so their unit tests run on any CI runner; `winweaver-win`
+and the UI are Windows only (`cfg(windows)`), and the UI tests run on the Windows runner. The window itself is
+the framework W# (`ww`, `docs/ww.md`): a program implements `ww::App` with its documents, its acts and what it
+draws inside a tab, and the shell owns the tabs, the settings, the themes, the session and the chrome.
+WinWeaver and the editor `wedit` are its two programs.
 
 ## 2. Crates (dependencies policy P4)
 

@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 21.10.2026 (0.23.0: the refactoring of October 2026 done, the code by theme in folders, the same behaviour, pull request #59; the refactoring plan `docs/refactoring.md`, the Linux job checks the whole workspace for Windows; 0.22.1: a profile named outside ASCII builds its answer file, the form names the sample values of the example of a name template, the script of a users file takes any name of the file; 0.22.0: a users file of the accounts of a profile, the password of an account shown and copied, the unsaved changes of a profile as a diff; 0.21.0: users files (.wwusers) with their passwords encrypted, read from this PC, made natively, as a script and into a profile; 0.20.0: every input language and keyboard layout of Windows in the form Languages, no embedded list; 0.19.1: the placeholders of the computer name template described in the form and the guide; 0.19.0: files inside the program folder kept relative to it in the settings, bookmarks, drafts and diffs; 0.18.3: the answer of the question that closes a tab no longer reads as Cancel in uk, ru and be, the release notes of 0.18.3; 0.18.2: the acceptance of 0.18.1 recorded, the release notes of 0.18.2; 0.18.1: the acceptance of 0.16.1 recorded, the messages of the status bar translated, Open the folder after every save, the release notes of 0.18.1; 0.18.0: Open the folder of a built or saved file and of the folders of the program; 0.17.0: the MCP tools of the permissions of registry keys; 0.16.2: the acceptance of 0.11.0 recorded, the release notes of 0.16.2; 0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
+Updated with every change of structure, commands or task status. Last update: 22.10.2026 (0.24.0: the framework W# (`ww-base`, `ww`) with the shell of the window, WinWeaver on it as `ww::App`, the editor wedit as the second program and its archive, `docs/ww.md`; 0.23.0: the refactoring of October 2026 done, the code by theme in folders, the same behaviour, pull request #59; the refactoring plan `docs/refactoring.md`, the Linux job checks the whole workspace for Windows; 0.22.1: a profile named outside ASCII builds its answer file, the form names the sample values of the example of a name template, the script of a users file takes any name of the file; 0.22.0: a users file of the accounts of a profile, the password of an account shown and copied, the unsaved changes of a profile as a diff; 0.21.0: users files (.wwusers) with their passwords encrypted, read from this PC, made natively, as a script and into a profile; 0.20.0: every input language and keyboard layout of Windows in the form Languages, no embedded list; 0.19.1: the placeholders of the computer name template described in the form and the guide; 0.19.0: files inside the program folder kept relative to it in the settings, bookmarks, drafts and diffs; 0.18.3: the answer of the question that closes a tab no longer reads as Cancel in uk, ru and be, the release notes of 0.18.3; 0.18.2: the acceptance of 0.18.1 recorded, the release notes of 0.18.2; 0.18.1: the acceptance of 0.16.1 recorded, the messages of the status bar translated, Open the folder after every save, the release notes of 0.18.1; 0.18.0: Open the folder of a built or saved file and of the folders of the program; 0.17.0: the MCP tools of the permissions of registry keys; 0.16.2: the acceptance of 0.11.0 recorded, the release notes of 0.16.2; 0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
 the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
 of the bookmarks and the catalogs; 0.5.0: the registry
 tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
@@ -47,6 +47,8 @@ functionality carry over; the file formats are new and no program code is ported
 | Use or change the MCP server | `crates/winweaver-mcp/src/lib.rs`, `tools/mod.rs` (the table of the tools), then `agents/skills/winweaver/SKILL.md` |
 | Change what an AI agent or the archive gets | `agents/README.md`, `package/README.md` |
 | Refactor the code (the plan of October 2026, its steps and its CI rules) | `docs/refactoring.md` |
+| Write a program on W#, or change the shell of the window | `docs/ww.md`, then `crates/ww/src/shell/mod.rs` (the trait `App`), `crates/wedit` (the example) |
+| Change wedit | `crates/wedit/src/app.rs`, `package-wedit/README.md` |
 
 ## 3. Folder structure
 
@@ -64,6 +66,20 @@ functionality carry over; the file formats are new and no program code is ported
 │                          tests, the catalog check, the release build and the zip on Windows; a tag v<version>
 │                          publishes a release with docs/releases/v<version>.md
 ├── crates/
+│   ├── ww-base/           W# base, pure Rust: jsonfile (strict JSON, the trait Document, atomic saves),
+│   │                      paths (a file inside the program folder kept relative to it), clock; the core
+│   │                      re-exports them as `winweaver_core::{jsonfile, paths, clock}`
+│   ├── ww/                W# (the framework, `docs/ww.md`): shell/ (mod: the trait App, Shell, ShellAct,
+│   │                      ShellDoc, Nav, Messages; window: Window<A> as eframe::App, the acts of the window,
+│   │                      the keys, the question, the session restored; tabs, bar, nav, status: the chrome
+│   │                      drawn from what the program gives; settings: the settings tab with General;
+│   │                      theme: the theme shown, its editor, the title bar colours), run.rs (run::<A>,
+│   │                      smoke_window::<A>), doc.rs (Document, Search, Draft, Scrolled), settings.rs
+│   │                      (Settings<X: Extra>), session.rs (drafts, the log), style.rs, themes.rs,
+│   │                      themeview.rs, i18n.rs, tree.rs, list.rs, widgets.rs, mdview.rs, renderer.rs,
+│   │                      commands.rs, keys.rs, icons.rs, dialogs.rs, folders.rs; data/themes (Light, Dark)
+│   ├── wedit/             the editor on W#: main.rs (the command line, ww::run), app.rs (Wedit: Doc, Act,
+│   │                      Extra, impl ww::App), textdoc.rs (a text file in the editor of egui)
 │   ├── winweaver-core/    pure Rust, compiles everywhere: catalog/ (model, embedded data, checks, values: the
 │   │                      texts, numbers and items of the values of actions, read once), jsonfile (strict
 │   │                      reading, the trait Document: the parse with its format and version check, the load
@@ -105,47 +121,34 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      profiles, rules, bookmarks, catalogs, registry: the handlers by theme; the 3
 │   │                      resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and Origin checks);
 │   │                      tests/server.rs (both transports on a free loopback port)
-│   ├── winweaver-ui/      the window on eframe (variant A): lib.rs (the types of the window: Sel, ProfileDoc,
-│   │                      Search, App and App::new, the helpers of the frame), app/ (the methods of App by
-│   │                      theme, one file one impl block: frame (eframe::App: the chrome, the active tab
-│   │                      drawn by its kind, the dialogs, the work after the frame), apply (the keyboard, the
-│   │                      question over the window, apply: the dispatcher to the apply_* of each subsystem),
-│   │                      profile, files (open_file, the recent files), pc, users, diff, imports, registry,
-│   │                      marks, session (one tab of a kind, the status helpers saved and opened, the drafts,
-│   │                      the tabs remembered, the log), mcp, settings, themes), act.rs (Act: one variant a
-│   │                      subsystem, ProfileAct, NavAct, FileAct, SettingsAct, ThemeAct, PcAct, UsersAct,
-│   │                      DiffAct, MarksAct, McpAct, CatalogAct, ImportAct, RegistryAct, RegFileAct, Ask and
-│   │                      Answer), question.rs (Question: a question over the window and its constructors),
-│   │                      doc.rs (Doc: every tab a boxed document, the trait Tab: title, dirty, path, search;
-│   │                      DocKind: icon, search hint, what the chrome shows; SettingsDoc, SettingsSection),
-│   │                      commands.rs (the command bar of each tab as data: Command, Separator, Menu; the keys
-│   │                      of the commands with their texts, once), icons.rs (every icon named once),
-│   │                      widgets.rs (Modal, side_panel, list_split, in_folder), folders.rs (the folders next
-│   │                      to the executable), importlist.rs (the catalog files of the imports), dialogs.rs
-│   │                      (the file dialogs, file_stem), views/ (mod: the titles, the links, the cards;
-│   │                      profile_tree: the tree of a profile; detail: the detail panel; rule: the detail of a
-│   │                      rule), forms.rs (Installation, Accounts, Languages), diffview.rs, mdview.rs
-│   │                      (Markdown tabs, the guide), marksview.rs (MarksDoc), mcpview.rs (McpDoc, the MCP
-│   │                      tab), session.rs (drafts, the log), settings.rs (settings.json), i18n.rs (tr and
-│   │                      trf, the translations of the interface), themes.rs (theme files: colours and
-│   │                      fonts), themeview.rs (the editor of a theme as a tab), catalogview.rs (the tab of
-│   │                      an import or of a catalog file: TreeKey, the rows of a catalog tree shared with
-│   │                      the editor), chrome/ (mod: what the chrome shows; tabs: the tab row and the menu;
-│   │                      bar: the command bar and its menus; nav: the navigation row and the search;
-│   │                      status: the message bar and the status bar), style.rs (the palette of light and
-│   │                      dark, Segoe UI and Consolas, the painted buttons, cards and chips), tree.rs (the
-│   │                      painted tree: one stop of Tab, the keys inside, Scroll::wanted), list.rs (the
-│   │                      painted list with columns of the diff, the bookmarks and the MCP journal: widths
-│   │                      by drag, the keys, a mini button), renderer.rs (the renderers built in, the order
-│   │                      Automatic tries, the start of a window), regview.rs (the registry tab: the tree of
-│   │                      keys, the values, the editor of a value, Writers: the rules that write a key),
-│   │                      regedit.rs (the type and data fields of a value, shared by the two editors),
-│   │                      cataledit.rs (the editor of a catalog file: its tree, the form of a policy),
-│   │                      regfileview/ (the tab of a `.reg` file: mod: the document and its outline items;
-│   │                      view: the outline and the values of a key; editor; tests), usersview.rs (the tab
-│   │                      of a users file: the list, the form, the master password), tests/ (the window
-│   │                      tests by theme: window, files, catalogs, registry, pc)
-├── data/                  embedded into the executable at build time
+│   ├── winweaver-ui/      WinWeaver on the window of W#: lib.rs (the types: Sel, ProfileDoc, WinWeaver and
+│   │                      WinWeaver::new, run and smoke_window through ww, the helpers), app/ (the methods
+│   │                      of WinWeaver by theme, one file one impl block, each taking the shell: shell
+│   │                      (impl ww::App: the first tab, the files loaded at a start, open, save, draw by
+│   │                      kind, the command bar, the menus, the navigation row, the messages, the status
+│   │                      bar, the settings sections, the keys, apply: the dispatcher to the apply_* of
+│   │                      each subsystem, the dialogs, the polls after a frame), menu (the menu of the tab
+│   │                      row, the menus This PC, Compare and Catalogs), frame (the active tab drawn by
+│   │                      its kind), profile, files (open_any: a file of any kind), pc, users, diff,
+│   │                      imports, registry, marks, session (one tab of a kind, a draft restored), mcp,
+│   │                      settings (the lines of WinWeaver in General, the section Files, the rename of
+│   │                      an import)), act.rs (Act: Shell(ShellAct<WinWeaver>) for the acts of the window,
+│   │                      one variant a subsystem for the rest: ProfileAct, FileAct, SettingsAct, PcAct,
+│   │                      UsersAct, DiffAct, MarksAct, McpAct, CatalogAct, ImportAct, RegistryAct,
+│   │                      RegFileAct), question.rs (the questions of WinWeaver; From<Question> for Act),
+│   │                      doc.rs (Doc: every tab a boxed document and Shell(ShellDoc); impl ww::Document
+│   │                      with the icon, the search hint, the draft; DocKind; SettingsSection with its
+│   │                      index in the settings tab), commands.rs (the command bar of each tab as
+│   │                      ww::commands items; Menu with its button; the keys of WinWeaver), icons.rs
+│   │                      (the icons beyond WW's), widgets.rs, folders.rs, importlist.rs, dialogs.rs
+│   │                      (open_dialog: the filters of every file WinWeaver opens), views/ (mod: the
+│   │                      titles, the links; header and block from ww::style; profile_tree, detail,
+│   │                      rule), forms.rs, diffview.rs, marksview.rs, mcpview.rs, settings.rs (Extra:
+│   │                      the fields of WinWeaver in settings.json), pages.rs (the guide, the license,
+│   │                      the reference), catalogview.rs, regview.rs, regedit.rs, cataledit.rs,
+│   │                      regfileview/, usersview.rs, tests/ (the window tests: a Window of WinWeaver,
+│   │                      `w.shell` and `w.app`), translations.rs (the test of the texts of winweaver-ui
+│   │                      and ww)
 │   ├── reference/         the parameter reference of the predecessor (00-20 and README), carried over with the
 │   │                      catalog data; the `doc` field of a rule links into it with a heading anchor
 │   ├── catalog/           groups.json, 00-17 rules files, lang/<code>.json for uk, ru, de, es, fr, id, it, tr (catalog 0.11 of the
@@ -163,10 +166,13 @@ functionality carry over; the file formats are new and no program code is ported
 │                          contexts), README.md, skills/ (winweaver: the tools, served as winweaver://skill;
 │                          winweaver-review, -change, -this-pc), pi-agent/ (Dockerfile of the latest pi and
 │                          Node.js LTS, its AGENTS.md, README.md)
+├── package-wedit/         what the archive of wedit adds: README.md for its user, lang/uk/ui.json (every
+│                          text of wedit and of WW in Ukrainian, the example of a language file)
 ├── package/               what the archive adds: README.md for the user (not this repository's), lang/be/ui.json
 │                          (Belarusian, every text: the example of a language, checked by a test of i18n.rs)
 └── docs/
     ├── releases/          release notes v<version>.md
+    ├── framework.md       the plan of W# (part 2 of the refactoring), ww.md the framework for its users
     └── spec/              clean room specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
 ```
 
@@ -640,6 +646,20 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   new JSON document implements `jsonfile::Document`; a new value of an action is read through
   `catalog::values`; in the Windows crate a new API call takes its wrappers from `ffi.rs`; in the MCP
   server a new tool is one row of `TOOLS` with its handler in `tools/<theme>.rs`.
+- W# (0.24.0, `docs/ww.md`): `ww::Window<WinWeaver>` owns `shell: Shell<WinWeaver>` (the tabs, the
+  settings, the status, the themes, the session) and `app: WinWeaver` apart, so every method of
+  WinWeaver takes `shell: &mut Shell<WinWeaver>` (or `&Shell`) beside `self`; an act of the window
+  is `Act::Shell(ShellAct::..)` (open, save, the tabs, the settings, the themes, `Ask` and `Answer`,
+  `Message`, `ShowInFolder`, `OpenLink`), run by the shell, the others by `WinWeaver::apply`. A
+  question is `Question::into()` (`Act::Shell(ShellAct::Ask)`); closing a tab with changes and
+  forgetting the recent files ask through `shell.discard_act` and `shell.forget_recent_act`. The
+  settings tab and the editor of a theme are `Doc::Shell(ShellDoc)`, drawn by the shell; a program
+  section of the settings is `SettingsSection` with its `index()` for `ShellAct::OpenSection`. The
+  tests build `Window::new(WinWeaver::new(catalog, texts), settings)` and read `w.shell.docs`,
+  `w.app.marks`; a method of the app is called as `w.app.m(&mut w.shell, ..)`. The texts of the
+  shell (`crates/ww/src`) are in every `ui.json` of WinWeaver (the test reads both crates) and in
+  `package-wedit/lang/uk/ui.json`. wedit is built by the release build of the workspace and packaged
+  by the job Package as `wedit-<version>.zip` (the exe, its README, `lang/`).
 - The CI way of the refactoring: the Linux job checks the whole workspace for Windows (clippy on the
   target `x86_64-pc-windows-gnu`), so `gh workflow run ci.yml --ref <branch> -f windows=false` is the
   cheap check of a change of any crate; the Windows job runs when the tests of the window, the runner's
@@ -662,7 +682,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Native apply | The script steps of the catalog applied natively (0.15.0): media, services, keys, accounts, the copies of the answer file | 18.10.2026 |
 | Registry | The permissions of keys: owner, access list, own entries changed after a question (0.16.0) | 18.10.2026 |
 | Users files | `.wwusers`: the accounts of a PC with their passwords encrypted, the tab, read from this PC, created natively, the stand-alone script, into a profile (0.21.0) | 20.10.2026 |
-| Refactoring | Part 1 done 21.10.2026 on the branch `refactor`, pull request #59 (0.23.0): the plan `docs/refactoring.md`, its section 10 for what was done and what was left (fourteen functions over 120 lines, the save of a document by its trait). Part 2, the framework W# with the editor `wedit`, gets its own plan after the merge | 21.10.2026 |
+| Refactoring | Part 1 done 21.10.2026 on the branch `refactor`, pull request #59 (0.23.0): the plan `docs/refactoring.md`, its section 10 for what was done and what was left. Part 2 done 22.10.2026 on the branch `ww` (0.24.0): the plan `docs/framework.md`; the crates `ww-base` and `ww`, WinWeaver as `ww::App`, the editor `wedit` with its archive, `docs/ww.md` | 22.10.2026 |
 | Not yet | Nothing of the plan; what comes next comes from the use | |
 | Acceptance | Build 0.11.0 accepted by the customer in a VM on 18.10.2026: all 31 steps of the scenario passed, the four stand-alone scripts (apply, undo, return to defaults, audit) checked for the first time, with the native apply and undo, This PC, the registry search and the catalog editor; earlier the answer file and a `.wwdiff` of a real PC. Build 0.16.1 accepted on 19.10.2026: all 16 steps of parts G, E and F of the same page (the links, registry files and their save from This PC, the script steps applied natively, the permissions of keys). Build 0.18.1 accepted on 19.10.2026: all 19 steps of parts H, I and J (the build, Open the folder, the permissions of a key through MCP from PowerShell 5.1 with a refused SDDL text, the translated messages of the status bar); every step of the page passed. Build 0.20.0 accepted on 20.10.2026: the 23 steps of parts K to P (paths inside the program folder, the help of the name template, the languages and layouts of Windows, a VM installed with that answer file; three steps of the VM skipped, the name checked before), with two notes answered on the page of 0.22.1 (the sample serial number of the example; a `Setup-User.ps1` of three languages, checked again in part R). Parts Q to V of 0.22.1 wait: a profile named outside ASCII, users files in a VM | 20.10.2026 |
 

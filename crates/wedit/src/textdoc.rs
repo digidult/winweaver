@@ -179,7 +179,8 @@ impl TextDoc {
                             self.last_match = None;
                         }
                         if let Some(range) = output.cursor_range {
-                            (self.line, self.col) = position(&self.text, range.primary.index);
+                            (self.line, self.col) =
+                                position(&self.text, range.primary.index.into());
                         }
                     });
             });

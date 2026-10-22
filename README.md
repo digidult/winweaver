@@ -12,6 +12,12 @@ whole functionality; the file formats are new and no code is ported (clean room)
 Stack: Rust, [eframe](https://github.com/emilk/egui) (egui + glow and wgpu + winit). Runs on Windows 10 and 11,
 one executable with its data folders next to it, nothing installed.
 
+The window is built on W# (`ww` in the code, WW in the documents), a small framework of this repository for
+programs that analyse and manage a system: a window with document tabs, a command bar, a navigation row,
+themes, translations, drafts and the session, with the program bringing its documents and acts
+([docs/ww.md](docs/ww.md)). Its second program is `wedit`, a portable text editor with a Markdown viewer,
+shipped as `wedit-<version>.zip` beside WinWeaver.
+
 Licence: [MIT](LICENSE).
 
 ## Status
@@ -34,6 +40,7 @@ specification is the plan; `AGENTS.md` keeps the state.
 |---|---|
 | Map of the repository, rules for agents and developers | [AGENTS.md](AGENTS.md) |
 | Specification (scope, UI, documents, features, architecture) | [docs/spec/](docs/spec/README.md) |
+| W#, the framework of the window, for the people who write a program on it | [docs/ww.md](docs/ww.md) |
 
 ## Languages
 
