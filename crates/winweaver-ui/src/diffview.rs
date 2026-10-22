@@ -11,12 +11,11 @@ use winweaver_core::diff::{Diff, ItemKey};
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::profile::Choice;
 
+use crate::ShellAct;
 use crate::i18n::{tr, trf};
 use crate::views::{self, gtitle, rtitle};
-use crate::ShellAct;
 use crate::{
-    Act, DiffAct, MarksAct, ProfileAct, Settings, icons, list, matches_words,
-    style, tree,
+    Act, DiffAct, MarksAct, ProfileAct, Settings, icons, list, matches_words, style, tree,
 };
 
 pub struct DiffDoc {
@@ -219,7 +218,9 @@ pub fn diff_view(
                 }
                 let text = trf("Open {name}", &[("name", name)]);
                 if ui.link(text).on_hover_text(path.as_str()).clicked() {
-                    acts.push(Act::Shell(ShellAct::OpenPath(std::path::PathBuf::from(path))));
+                    acts.push(Act::Shell(ShellAct::OpenPath(std::path::PathBuf::from(
+                        path,
+                    ))));
                 }
             }
         });

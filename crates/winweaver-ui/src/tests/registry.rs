@@ -30,7 +30,10 @@ fn the_rights_of_a_key_change_after_a_question() {
         Act::Registry(RegistryAct::RightsAdd),
         crate::question::change_rights(key).into(),
     ]);
-    assert!(app.shell.question.is_some(), "a change of the rights asks first");
+    assert!(
+        app.shell.question.is_some(),
+        "a change of the rights asks first"
+    );
     assert!(open(&app));
     app.apply(vec![Act::Shell(ShellAct::Answer(true))]);
     let text = reg.security(key).unwrap();
@@ -81,7 +84,8 @@ fn the_registry_tab_edits_asks_and_bookmarks() {
     ]);
     assert_eq!(reg.read(key).unwrap().values.len(), 1);
     assert!(
-        app.app.marks
+        app.app
+            .marks
             .items
             .iter()
             .any(|b| b.is_registry() && b.path == key && b.item == "N")

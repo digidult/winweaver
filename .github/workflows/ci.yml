@@ -127,11 +127,21 @@ jobs:
           Copy-Item -Recurse data/presets "$root/profiles"
           Copy-Item -Recurse package/lang "$root/lang"
           Copy-Item -Recurse agents "$root/agents"
+          # The editor wedit, built on WW, as an archive of its own.
+          $wedit = 'dist-wedit/wedit'
+          New-Item -ItemType Directory -Force $wedit | Out-Null
+          Copy-Item target/release/wedit.exe "$wedit/"
+          Copy-Item package-wedit/README.md "$wedit/README.md"
+          Copy-Item -Recurse package-wedit/lang "$wedit/lang"
           "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append
       - uses: actions/upload-artifact@v4
         with:
           name: WinWeaver-${{ env.VERSION }}
           path: dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wedit-${{ env.VERSION }}
+          path: dist-wedit/
 
   release:
     name: Release
@@ -147,10 +157,16 @@ jobs:
           pattern: WinWeaver-*
           merge-multiple: true
           path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wedit-*
+          merge-multiple: true
+          path: dist-wedit
       - name: Archive
         run: |
           v="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
-          cd dist && zip -qr "WinWeaver-$v.zip" WinWeaver
+          (cd dist && zip -qr "WinWeaver-$v.zip" WinWeaver)
+          (cd dist-wedit && zip -qr "../dist/wedit-$v.zip" wedit)
       - name: Release notes file
         id: notes
         run: |

@@ -30,6 +30,10 @@ pub mod themeview;
 pub mod tree;
 pub mod widgets;
 
+// The crates a program on WW names in its own code: egui through eframe, the file dialogs.
+pub use eframe;
+pub use rfd;
+
 pub use commands::{Command, Item, MenuButton};
 pub use doc::{Document, Draft, Scrolled, Search, matches_words, remember_search};
 pub use question::Question;

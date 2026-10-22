@@ -110,7 +110,10 @@ impl SettingsSection {
 
     /// The number of the section in the settings tab, where General is 0.
     pub fn index(self) -> usize {
-        Self::ALL.iter().position(|s| *s == self).map_or(0, |i| i + 1)
+        Self::ALL
+            .iter()
+            .position(|s| *s == self)
+            .map_or(0, |i| i + 1)
     }
 }
 

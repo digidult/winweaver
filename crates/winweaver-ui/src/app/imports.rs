@@ -102,7 +102,11 @@ impl WinWeaver {
     }
 
     /// Reads the catalog file of an import, unless it is loaded, and marks it in the settings.
-    pub(crate) fn load_import(&mut self, shell: &mut Shell<WinWeaver>, id: &str) -> Result<(), String> {
+    pub(crate) fn load_import(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        id: &str,
+    ) -> Result<(), String> {
         if !self.imports.iter().any(|f| f.id == id) {
             let path = self
                 .imports_dir
@@ -387,7 +391,8 @@ impl WinWeaver {
         let Some(file) = self.imports.iter().find(|f| f.id == id) else {
             return;
         };
-        shell.docs
+        shell
+            .docs
             .push(Doc::Catalog(Box::new(catalogview::CatalogDoc::new(file))));
         shell.active = shell.docs.len() - 1;
     }
@@ -662,7 +667,8 @@ impl WinWeaver {
             &[("first", &first.name), ("second", &second.name)],
         );
         let page = comparison_page(first, second);
-        shell.docs
+        shell
+            .docs
             .push(Doc::Markdown(Box::new(MdDoc::new(title, None, page))));
         shell.active = shell.docs.len() - 1;
     }

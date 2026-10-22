@@ -7,7 +7,10 @@ use crate::ShellDoc;
 #[test]
 fn app_starts_with_the_office_preset() {
     let catalog = Catalog::embedded().unwrap();
-    let app = Window::new(WinWeaver::new(catalog, CatalogTexts::embedded().unwrap()), Settings::default());
+    let app = Window::new(
+        WinWeaver::new(catalog, CatalogTexts::embedded().unwrap()),
+        Settings::default(),
+    );
     assert_eq!(app.shell.docs.len(), 1);
     assert_eq!(app.shell.docs[0].title(), "Office.wwprofile");
     assert!(!app.shell.docs[0].dirty());
@@ -40,7 +43,10 @@ fn the_guide_opens_once_and_markdown_files_open() {
 fn every_kind_of_tab_draws_without_a_screen() {
     use egui_kittest::kittest::Queryable;
     let catalog = Catalog::embedded().unwrap();
-    let mut app = Window::new(WinWeaver::new(catalog, CatalogTexts::embedded().unwrap()), Settings::default());
+    let mut app = Window::new(
+        WinWeaver::new(catalog, CatalogTexts::embedded().unwrap()),
+        Settings::default(),
+    );
     let empty = admx::to_catalog_file(
         &admx::Templates::default(),
         "empty",
@@ -121,7 +127,10 @@ fn every_kind_of_tab_draws_without_a_screen() {
 #[test]
 fn the_divider_of_a_diff_stays_put_whatever_item_is_shown() {
     let catalog = Catalog::embedded().unwrap();
-    let mut app = Window::new(WinWeaver::new(catalog, CatalogTexts::embedded().unwrap()), Settings::default());
+    let mut app = Window::new(
+        WinWeaver::new(catalog, CatalogTexts::embedded().unwrap()),
+        Settings::default(),
+    );
     app.apply(vec![Act::Diff(DiffAct::CompareWith("Strict"))]);
     let keys = match app.shell.docs.last() {
         Some(Doc::Diff(d)) => d.diff.keys(),
@@ -132,8 +141,9 @@ fn the_divider_of_a_diff_stays_put_whatever_item_is_shown() {
         .with_size(egui::vec2(1200.0, 800.0))
         .build_eframe(|_| app);
     let list = egui::Id::new(("diff-list", "Office", "Strict"));
-    let width =
-        |h: &egui_kittest::Harness<'_, Window<WinWeaver>>| h.ctx.read_response(list).map(|r| r.rect.width());
+    let width = |h: &egui_kittest::Harness<'_, Window<WinWeaver>>| {
+        h.ctx.read_response(list).map(|r| r.rect.width())
+    };
     harness.step();
     harness.step();
     let first = width(&harness).expect("the list is drawn");
@@ -158,7 +168,10 @@ fn screenshots_of_the_window() {
     let dir = PathBuf::from(dir);
     std::fs::create_dir_all(&dir).unwrap();
     let catalog = Catalog::embedded().unwrap();
-    let app = Window::new(WinWeaver::new(catalog, CatalogTexts::embedded().unwrap()), Settings::default());
+    let app = Window::new(
+        WinWeaver::new(catalog, CatalogTexts::embedded().unwrap()),
+        Settings::default(),
+    );
     let mut harness = egui_kittest::Harness::builder()
         .with_size(egui::vec2(1440.0, 900.0))
         .with_pixels_per_point(1.0)
@@ -276,7 +289,11 @@ fn a_theme_tab_previews_its_theme_and_a_theme_can_be_chosen() {
     app.apply(vec![Act::Shell(ShellAct::EditTheme("matrix".into()))]);
     assert_eq!(app.shell.docs.len(), 2, "one tab per theme");
     app.apply(vec![Act::Shell(ShellAct::Activate(0))]);
-    assert_eq!(app.shell.wanted_theme().0.id, "light", "the settings theme again");
+    assert_eq!(
+        app.shell.wanted_theme().0.id,
+        "light",
+        "the settings theme again"
+    );
     app.apply(vec![Act::Shell(ShellAct::UseTheme("latte".into()))]);
     assert_eq!(app.shell.settings.custom_theme, "latte");
     assert_eq!(app.shell.settings.theme, ThemeChoice::Light);
@@ -308,7 +325,8 @@ fn tabs_move_and_the_tab_in_front_stays_in_front() {
         Act::Marks(MarksAct::Open),
         Act::Shell(ShellAct::OpenSettings),
     ]);
-    let titles = |app: &Window<WinWeaver>| app.shell.docs.iter().map(Doc::title).collect::<Vec<_>>();
+    let titles =
+        |app: &Window<WinWeaver>| app.shell.docs.iter().map(Doc::title).collect::<Vec<_>>();
     let start = titles(&app);
     assert_eq!(start.len(), 4);
     assert_eq!(app.shell.active, 3);

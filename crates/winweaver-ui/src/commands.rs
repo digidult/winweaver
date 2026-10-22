@@ -111,7 +111,12 @@ impl WinWeaver {
                 ]
             }
             Some(Doc::Shell(ShellDoc::Theme(_))) => vec![
-                keyed(icons::OPEN, tr("Open"), &keys::OPEN, ShellAct::OpenThemeFile),
+                keyed(
+                    icons::OPEN,
+                    tr("Open"),
+                    &keys::OPEN,
+                    ShellAct::OpenThemeFile,
+                ),
                 save(),
                 save_as(),
             ],

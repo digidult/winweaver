@@ -2,9 +2,9 @@
 
 use ww::shell::menu_item;
 
+use crate::ShellAct;
 use crate::commands::{Menu, keys};
 use crate::*;
-use crate::ShellAct;
 
 impl WinWeaver {
     /// The items of the menu button of the tab row.

@@ -18,7 +18,10 @@ impl WinWeaver {
         }
     }
 
-    pub(crate) fn active_users<'a>(&self, shell: &'a mut Shell<WinWeaver>) -> Option<&'a mut usersview::UsersDoc> {
+    pub(crate) fn active_users<'a>(
+        &self,
+        shell: &'a mut Shell<WinWeaver>,
+    ) -> Option<&'a mut usersview::UsersDoc> {
         match shell.docs.get_mut(shell.active) {
             Some(Doc::Users(d)) => Some(d),
             _ => None,
@@ -88,7 +91,12 @@ impl WinWeaver {
     }
 
     /// Asks before an operation of the users file in front on this PC, once its plan is sound.
-    pub(crate) fn ask_users_run(&mut self, shell: &mut Shell<WinWeaver>, operation: users::Operation, all: bool) {
+    pub(crate) fn ask_users_run(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        operation: users::Operation,
+        all: bool,
+    ) {
         if !winweaver_win::elevated() {
             shell.status =
                 tr("Run WinWeaver as administrator to change the accounts of this PC").to_owned();
@@ -124,7 +132,12 @@ impl WinWeaver {
     }
 
     /// Runs a confirmed operation on this PC and shows its outcomes in the tab.
-    pub(crate) fn run_users(&mut self, shell: &mut Shell<WinWeaver>, operation: users::Operation, names: &[String]) {
+    pub(crate) fn run_users(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        operation: users::Operation,
+        names: &[String],
+    ) {
         let Some(d) = self.active_users(shell) else {
             return;
         };
@@ -231,9 +244,10 @@ impl WinWeaver {
             }
             Ok(file) => {
                 let n = file.users.len();
-                self.apply(shell, Act::Profile(ProfileAct::SetAccounts(
-                    file.accounts(None),
-                )));
+                self.apply(
+                    shell,
+                    Act::Profile(ProfileAct::SetAccounts(file.accounts(None))),
+                );
                 shell.status = trf("{n} accounts loaded without passwords", &[("n", &n)]);
             }
             Err(e) => shell.open_failed(e),

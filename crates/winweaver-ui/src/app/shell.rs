@@ -198,10 +198,9 @@ impl App for WinWeaver {
                 ui.label(RichText::new(tag).color(color).size(style::size(ui, 12.0)));
                 let (label, sel) = match &issue.target {
                     Target::Rule(id) => (
-                        self.catalog.rule(id).map_or_else(
-                            || id.clone(),
-                            |r| views::rtitle(texts, r).to_owned(),
-                        ),
+                        self.catalog
+                            .rule(id)
+                            .map_or_else(|| id.clone(), |r| views::rtitle(texts, r).to_owned()),
                         Sel::Rule(id.clone()),
                     ),
                     Target::Install => (tr("Installation").to_owned(), Sel::Form(Form::Install)),

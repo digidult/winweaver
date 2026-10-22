@@ -70,13 +70,16 @@ fn only_the_checked_imports_load_and_unknown_options_find_their_catalog() {
     assert_eq!(app.shell.settings.extra.loaded_imports, Some(Vec::new()));
     let (unknown, _, _, sel) = state(&app);
     assert_eq!((unknown, sel), (1, Sel::Unknown(id.to_owned())));
-    let mut next = Window::new(WinWeaver::new(catalog, Vec::new()), Settings {
+    let mut next = Window::new(
+        WinWeaver::new(catalog, Vec::new()),
+        Settings {
             extra: Extra {
                 loaded_imports: None,
                 ..Extra::default()
             },
             ..Settings::default()
-        });
+        },
+    );
     next.app.imports_dir = dir.join("imports");
     next.app.load_imports(&mut next.shell);
     assert_eq!(
@@ -100,7 +103,10 @@ fn the_unknown_options_have_their_group_in_the_tree() {
     let mut profile = Profile::new("P", catalog.version());
     profile.set_on("admx.other.policy", true);
     profile.split_unknown(&catalog);
-    let mut app = Window::new(WinWeaver::new(catalog.clone(), Vec::new()), Settings::default());
+    let mut app = Window::new(
+        WinWeaver::new(catalog.clone(), Vec::new()),
+        Settings::default(),
+    );
     app.shell.docs = vec![Doc::Profile(Box::new(ProfileDoc::new(
         profile, None, &catalog,
     )))];
@@ -179,7 +185,10 @@ fn a_new_catalog_is_edited_checked_and_saved() {
     assert!(app.app.catalog.rule(&id).is_some(), "{}", app.shell.status);
     app.apply(vec![crate::question::remove_policy(id.clone()).into()]);
     assert!(app.shell.question.is_some(), "a removal asks");
-    app.apply(vec![Act::Shell(ShellAct::Answer(true)), Act::Shell(ShellAct::Save)]);
+    app.apply(vec![
+        Act::Shell(ShellAct::Answer(true)),
+        Act::Shell(ShellAct::Save),
+    ]);
     assert!(app.app.catalog.rule(&id).is_none());
     std::fs::remove_dir_all(&dir).unwrap();
 }
@@ -213,7 +222,12 @@ fn links_open_the_catalog_at_a_policy_and_select_it_in_another_tree() {
     app.app.imports_dir = dir.join("imports");
     app.app.load_imports(&mut app.shell);
     let id = "admx.sample.turnoff";
-    let alias: Vec<String> = app.app.catalog.alias_groups(id).map(str::to_owned).collect();
+    let alias: Vec<String> = app
+        .app
+        .catalog
+        .alias_groups(id)
+        .map(str::to_owned)
+        .collect();
     assert_eq!(alias.len(), 1, "the second import shows the policy too");
     app.apply(vec![Act::Profile(ProfileAct::ShowIn(
         id.to_owned(),

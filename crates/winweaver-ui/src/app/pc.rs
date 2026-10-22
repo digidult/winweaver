@@ -49,7 +49,13 @@ impl WinWeaver {
 
     /// Starts a read of this PC in a thread of its own, one at a time; `poll_pc_read` takes its
     /// report.
-    pub(crate) fn start_pc_read(&mut self, shell: &mut Shell<WinWeaver>, job: PcJob, plan: thispc::Plan, read_system: bool) {
+    pub(crate) fn start_pc_read(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        job: PcJob,
+        plan: thispc::Plan,
+        read_system: bool,
+    ) {
         if self.pc_read.is_some() {
             shell.status = tr("This PC is being read; wait until the read ends").to_owned();
             return;
@@ -100,11 +106,19 @@ impl WinWeaver {
     }
 
     /// Puts the report of a read of this PC where its job wants it.
-    pub(crate) fn finish_pc_read(&mut self, shell: &mut Shell<WinWeaver>, job: PcJob, plan: &thispc::Plan, report: &Report) {
+    pub(crate) fn finish_pc_read(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        job: PcJob,
+        plan: &thispc::Plan,
+        report: &Report,
+    ) {
         let readings = thispc::judge(&self.catalog, plan, &report.results);
         match job {
             PcJob::Check { doc } => self.finish_check(shell, &doc, plan, report, &readings),
-            PcJob::NewProfile { base } => self.finish_capture(shell, None, &base, plan, report, &readings),
+            PcJob::NewProfile { base } => {
+                self.finish_capture(shell, None, &base, plan, report, &readings)
+            }
             PcJob::Selection { doc, base } => {
                 self.finish_capture(shell, Some(&doc), &base, plan, report, &readings)
             }
@@ -113,7 +127,8 @@ impl WinWeaver {
 
     /// The capture of a read: a new profile tab, or the profile of the tab named by `target`.
     pub(crate) fn finish_capture(
-        &mut self, shell: &mut Shell<WinWeaver>,
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
         target: Option<&str>,
         base: &Profile,
         plan: &thispc::Plan,
@@ -170,7 +185,8 @@ impl WinWeaver {
 
     /// The result of a check of the rules of the tab named by `key`, listed in its messages.
     pub(crate) fn finish_check(
-        &mut self, shell: &mut Shell<WinWeaver>,
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
         key: &str,
         plan: &thispc::Plan,
         report: &Report,
@@ -357,7 +373,12 @@ impl WinWeaver {
     }
 
     /// Reads an audit report into a new profile, on the base of the open profile.
-    pub(crate) fn open_report_from(&mut self, shell: &mut Shell<WinWeaver>, report: Report, path: &Path) {
+    pub(crate) fn open_report_from(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        report: Report,
+        path: &Path,
+    ) {
         let base = match shell.docs.get(shell.active) {
             Some(Doc::Profile(doc)) => doc.profile.clone(),
             _ => Profile::parse(PRESETS[0].1, PRESETS[0].0)

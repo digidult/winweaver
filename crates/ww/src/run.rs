@@ -83,8 +83,7 @@ pub fn run<A: App>(
     cli_renderer: Option<&str>,
     make: impl Fn(&Settings<A::Extra>) -> A + Clone + 'static,
 ) -> Result<(), String> {
-    let (settings, warning) = match Settings::<A::Extra>::load_from(&Settings::<A::Extra>::path())
-    {
+    let (settings, warning) = match Settings::<A::Extra>::load_from(&Settings::<A::Extra>::path()) {
         Ok(s) => (s, None),
         Err(e) => (Settings::default(), Some(e)),
     };

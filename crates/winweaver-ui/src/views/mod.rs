@@ -12,8 +12,8 @@ use winweaver_core::resolver::State;
 
 use crate::i18n::{tr, trf};
 use crate::{
-    Act, CatalogAct, Form, ImportAct, PcAct, ProfileAct, ProfileDoc, RegistryAct,
-    ScriptKind, Search, Sel, Settings, TreeKey, UNKNOWN_GROUP, icons, matches_words, style, tree,
+    Act, CatalogAct, Form, ImportAct, PcAct, ProfileAct, ProfileDoc, RegistryAct, ScriptKind,
+    Search, Sel, Settings, TreeKey, UNKNOWN_GROUP, icons, matches_words, style, tree,
 };
 
 mod detail;
@@ -23,9 +23,9 @@ mod rule;
 mod tests;
 
 pub(crate) use detail::*;
-pub(crate) use ww::style::{block, header};
 pub(crate) use profile_tree::*;
 pub(crate) use rule::*;
+pub(crate) use ww::style::{block, header};
 
 pub fn rtitle<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule) -> &'a str {
     texts.map_or(rule.title.as_str(), |t| t.rule_title(rule))

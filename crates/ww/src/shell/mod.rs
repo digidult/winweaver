@@ -324,7 +324,13 @@ pub trait App: Sized + 'static {
     fn apply(&mut self, shell: &mut Shell<Self>, act: Self::Act);
 
     /// The windows of the program over the tabs, drawn after the question of the window.
-    fn dialogs(&mut self, _shell: &mut Shell<Self>, _ctx: &egui::Context, _acts: &mut Vec<Self::Act>) {}
+    fn dialogs(
+        &mut self,
+        _shell: &mut Shell<Self>,
+        _ctx: &egui::Context,
+        _acts: &mut Vec<Self::Act>,
+    ) {
+    }
 
     /// After the acts of a frame: the polls of the work in the background.
     fn after_frame(&mut self, _shell: &mut Shell<Self>, _ctx: &egui::Context) {}

@@ -10,12 +10,12 @@ use winweaver_core::bookmarks::{Bookmark, Bookmarks};
 use winweaver_core::catalog::{Catalog, Rule};
 use winweaver_core::i18n::CatalogTexts;
 
+use crate::ShellAct;
 use crate::i18n::{tr, trf};
 use crate::views::{self, gsummary, gtitle, rtitle};
-use crate::ShellAct;
 use crate::{
-    Act, CatalogAct, Form, MarksAct, ProfileAct, Question, Settings, icons, list,
-    matches_words, style, tree,
+    Act, CatalogAct, Form, MarksAct, ProfileAct, Question, Settings, icons, list, matches_words,
+    style, tree,
 };
 
 /// The question before the removal of a bookmark, naming its option and its comment.

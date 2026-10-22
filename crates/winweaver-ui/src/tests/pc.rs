@@ -8,7 +8,10 @@ use super::*;
 fn this_pc_is_read_in_the_background() {
     let catalog = Catalog::embedded().unwrap();
     let profile = Profile::from_defaults("Office", &catalog);
-    let mut app = Window::new(WinWeaver::new(catalog.clone(), Vec::new()), Settings::default());
+    let mut app = Window::new(
+        WinWeaver::new(catalog.clone(), Vec::new()),
+        Settings::default(),
+    );
     app.shell.docs = vec![
         Doc::Profile(Box::new(ProfileDoc::new(profile.clone(), None, &catalog))),
         Doc::Profile(Box::new(ProfileDoc::new(profile, None, &catalog))),

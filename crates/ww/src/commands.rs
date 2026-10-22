@@ -53,7 +53,12 @@ pub fn cmd_if<T>(icon: &'static str, label: &'static str, act: Option<T>) -> Ite
 }
 
 /// A command enabled on a condition.
-pub fn when<T>(icon: &'static str, label: &'static str, enabled: bool, act: impl Into<T>) -> Item<T> {
+pub fn when<T>(
+    icon: &'static str,
+    label: &'static str,
+    enabled: bool,
+    act: impl Into<T>,
+) -> Item<T> {
     cmd_if(icon, label, enabled.then(|| act.into()))
 }
 

@@ -4,7 +4,12 @@ use crate::*;
 
 impl WinWeaver {
     /// The profile tab: the tree on the left, the detail panel in the middle.
-    pub(crate) fn draw_profile(&self, shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    pub(crate) fn draw_profile(
+        &self,
+        shell: &Shell<WinWeaver>,
+        ui: &mut egui::Ui,
+        acts: &mut Vec<Act>,
+    ) {
         let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
             return;
         };
@@ -31,7 +36,12 @@ impl WinWeaver {
     }
 
     /// The diff tab: the list of the differences on the left, the selected one in the middle.
-    pub(crate) fn draw_diff(&self, shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    pub(crate) fn draw_diff(
+        &self,
+        shell: &Shell<WinWeaver>,
+        ui: &mut egui::Ui,
+        acts: &mut Vec<Act>,
+    ) {
         let marked = self
             .current_bookmark(shell)
             .is_some_and(|b| self.marks.find(&b).is_some());
@@ -64,7 +74,12 @@ impl WinWeaver {
 
     /// The MCP tab: the configuration, and with the server running the journal under it and
     /// the selected call on the right.
-    pub(crate) fn draw_mcp(&mut self, shell: &mut Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    pub(crate) fn draw_mcp(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        ui: &mut egui::Ui,
+        acts: &mut Vec<Act>,
+    ) {
         let Some(Doc::Mcp(doc)) = shell.docs.get(shell.active) else {
             return;
         };
@@ -115,7 +130,12 @@ impl WinWeaver {
     }
 
     /// The bookmark tab: the list on the left, the selected bookmark in the middle.
-    pub(crate) fn draw_marks(&self, shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    pub(crate) fn draw_marks(
+        &self,
+        shell: &Shell<WinWeaver>,
+        ui: &mut egui::Ui,
+        acts: &mut Vec<Act>,
+    ) {
         let Some(Doc::Bookmarks(doc)) = shell.docs.get(shell.active) else {
             return;
         };
@@ -157,7 +177,12 @@ impl WinWeaver {
     }
 
     /// The tab of an import: its tree and the selected policy.
-    pub(crate) fn draw_catalog(&self, shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    pub(crate) fn draw_catalog(
+        &self,
+        shell: &Shell<WinWeaver>,
+        ui: &mut egui::Ui,
+        acts: &mut Vec<Act>,
+    ) {
         let shown = match shell.docs.get(shell.active) {
             Some(Doc::Catalog(doc)) => doc.catalog(&self.imports).map(|f| (f, doc)),
             _ => None,
@@ -180,27 +205,47 @@ impl WinWeaver {
         }
     }
 
-    pub(crate) fn draw_registry(&mut self, shell: &mut Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    pub(crate) fn draw_registry(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        ui: &mut egui::Ui,
+        acts: &mut Vec<Act>,
+    ) {
         let texts = texts_for(&self.texts, &i18n::current());
         if let Some(Doc::Registry(doc)) = shell.docs.get_mut(shell.active) {
             regview::registry_view(ui, doc, &self.catalog, texts, acts);
         }
     }
 
-    pub(crate) fn draw_catalog_editor(&mut self, shell: &mut Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    pub(crate) fn draw_catalog_editor(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        ui: &mut egui::Ui,
+        acts: &mut Vec<Act>,
+    ) {
         if let Some(Doc::CatalogEdit(doc)) = shell.docs.get_mut(shell.active) {
             cataledit::editor_view(ui, doc, acts);
         }
     }
 
-    pub(crate) fn draw_reg_file(&mut self, shell: &mut Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    pub(crate) fn draw_reg_file(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        ui: &mut egui::Ui,
+        acts: &mut Vec<Act>,
+    ) {
         let texts = texts_for(&self.texts, &i18n::current());
         if let Some(Doc::RegFile(doc)) = shell.docs.get_mut(shell.active) {
             regfileview::regfile_view(ui, doc, &self.catalog, texts, &self.imports, acts);
         }
     }
 
-    pub(crate) fn draw_users(&mut self, shell: &mut Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    pub(crate) fn draw_users(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        ui: &mut egui::Ui,
+        acts: &mut Vec<Act>,
+    ) {
         if let Some(Doc::Users(doc)) = shell.docs.get_mut(shell.active) {
             usersview::users_view(ui, doc, acts);
         }

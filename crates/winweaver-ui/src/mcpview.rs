@@ -15,11 +15,9 @@ use winweaver_mcp::config::{Config, Transport};
 use winweaver_mcp::http::HttpServer;
 use winweaver_mcp::{Entry, Mode, RegistryAccess, Server};
 
-use crate::i18n::{tr, trf};
 use crate::ShellAct;
-use crate::{
-    Act, CatalogAct, McpAct, RegistryAct, list, matches_words, style, tree, views,
-};
+use crate::i18n::{tr, trf};
+use crate::{Act, CatalogAct, McpAct, RegistryAct, list, matches_words, style, tree, views};
 
 /// A server the window runs.
 pub struct McpRun {

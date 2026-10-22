@@ -47,16 +47,16 @@ use winweaver_core::thispc::{self, Report, Verdict};
 use winweaver_core::users::{self, UsersFile};
 use winweaver_core::validate::{self, Issue, Severity, Target};
 
-pub(crate) use app::show_single;
 pub use act::{
     Act, CatalogAct, DiffAct, FileAct, ImportAct, MarksAct, McpAct, PcAct, ProfileAct, RegFileAct,
     RegistryAct, SettingsAct, UsersAct,
 };
+pub(crate) use app::show_single;
 pub use catalogview::TreeKey;
 pub use dialogs::file_stem;
 pub(crate) use dialogs::{
-    ask_save_path, file_dialog, kept_name, open_dialog, pick_profile, reg_extension, with_extension,
-    write_file,
+    ask_save_path, file_dialog, kept_name, open_dialog, pick_profile, reg_extension,
+    with_extension, write_file,
 };
 pub use diffview::DiffDoc;
 pub use doc::{Doc, DocKind, SettingsSection};
@@ -90,7 +90,6 @@ pub const PRESETS: [(&str, &str); 4] = [
     ),
     ("Home", include_str!("../../../data/presets/home.wwprofile")),
 ];
-
 
 /// The translations of the interface embedded in the executable: the language code and the
 /// file. Every text of the interface has a translation in each of them.

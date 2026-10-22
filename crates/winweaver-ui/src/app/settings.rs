@@ -1,8 +1,8 @@
 //! The settings of WinWeaver: its lines in the General section of the window, the section Files,
 //! the rename of an import.
 
-use crate::*;
 use crate::ShellAct;
+use crate::*;
 
 impl WinWeaver {
     /// The lines of WinWeaver in the card Window of the General section.
@@ -72,9 +72,7 @@ impl WinWeaver {
             ui.horizontal_wrapped(|ui| {
                 ui.label(text);
                 if ui.small_button(tr("Open")).clicked() {
-                    shell
-                        .pending
-                        .push(Act::Shell(ShellAct::ShowInFolder(path)));
+                    shell.pending.push(Act::Shell(ShellAct::ShowInFolder(path)));
                 }
             });
         }

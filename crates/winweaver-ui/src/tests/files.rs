@@ -75,8 +75,9 @@ fn bookmarks_toggle_and_lead_back() {
         Act::Marks(MarksAct::Open),
         Act::Marks(MarksAct::Select(0)),
     ]);
-    let question = marksview::remove_question(&app.app.catalog, None, &app.app.imports, &app.app.marks, 0)
-        .expect("the bookmark is there");
+    let question =
+        marksview::remove_question(&app.app.catalog, None, &app.app.imports, &app.app.marks, 0)
+            .expect("the bookmark is there");
     app.apply(vec![question.into()]);
     assert!(app.shell.question.is_some());
     app.apply(vec![Act::Shell(ShellAct::Answer(true))]);
@@ -90,7 +91,10 @@ fn drafts_come_back_after_a_restart() {
     let catalog = Catalog::embedded().unwrap();
     let dir = std::env::temp_dir().join(format!("winweaver-session-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
-    let mut app = Window::new(WinWeaver::new(catalog.clone(), Vec::new()), Settings::default());
+    let mut app = Window::new(
+        WinWeaver::new(catalog.clone(), Vec::new()),
+        Settings::default(),
+    );
     app.shell.drafts_dir = dir.join("drafts");
     app.shell.logs_dir = dir.join("logs");
     app.apply(vec![Act::Profile(ProfileAct::Toggle(
@@ -185,13 +189,23 @@ and kept"
     };
     assert_eq!(office.profile.rules.get(&id), strict.rules.get(&id));
     app.apply(vec![Act::Diff(DiffAct::GoTo(key.clone(), true))]);
-    assert_eq!(app.shell.docs.len(), 3, "the preset Strict opens in a new tab");
+    assert_eq!(
+        app.shell.docs.len(),
+        3,
+        "the preset Strict opens in a new tab"
+    );
     assert_eq!(app.shell.active, 2);
-    assert_eq!(app.app.active_profile(&mut app.shell).unwrap().sel, Sel::Rule(id.clone()));
+    assert_eq!(
+        app.app.active_profile(&mut app.shell).unwrap().sel,
+        Sel::Rule(id.clone())
+    );
     app.shell.active = 1;
     app.apply(vec![Act::Diff(DiffAct::GoTo(key, false))]);
     assert_eq!(app.shell.active, 0);
-    assert_eq!(app.app.active_profile(&mut app.shell).unwrap().sel, Sel::Rule(id));
+    assert_eq!(
+        app.app.active_profile(&mut app.shell).unwrap().sel,
+        Sel::Rule(id)
+    );
 }
 
 #[test]
@@ -208,8 +222,13 @@ fn opening_a_file_adds_a_tab_and_remembers_it() {
     assert_eq!(app.shell.settings.recent, vec![path.clone()]);
     app.app.open_any(&mut app.shell, path.clone());
     assert_eq!(app.shell.docs.len(), 2, "the same file activates its tab");
-    app.app.open_any(&mut app.shell, dir.join("missing.wwprofile"));
-    assert!(app.shell.status.starts_with("Open failed"), "{}", app.shell.status);
+    app.app
+        .open_any(&mut app.shell, dir.join("missing.wwprofile"));
+    assert!(
+        app.shell.status.starts_with("Open failed"),
+        "{}",
+        app.shell.status
+    );
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
@@ -242,7 +261,11 @@ fn a_registry_file_opens_in_its_tab_and_keeps_its_comments() {
     assert!(d.apply_edit());
     assert!(app.shell.docs[app.shell.active].dirty());
     app.apply(vec![Act::Shell(ShellAct::Save)]);
-    assert!(!app.shell.docs[app.shell.active].dirty(), "{}", app.shell.status);
+    assert!(
+        !app.shell.docs[app.shell.active].dirty(),
+        "{}",
+        app.shell.status
+    );
     let saved = RegFile::load(&path).unwrap().to_text();
     assert!(saved.contains("; kept"), "{saved}");
     assert!(saved.contains("\"B\"=\"text\""), "{saved}");

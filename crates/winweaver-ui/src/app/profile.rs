@@ -3,7 +3,10 @@
 use crate::*;
 
 impl WinWeaver {
-    pub(crate) fn active_profile<'a>(&self, shell: &'a mut Shell<WinWeaver>) -> Option<&'a mut ProfileDoc> {
+    pub(crate) fn active_profile<'a>(
+        &self,
+        shell: &'a mut Shell<WinWeaver>,
+    ) -> Option<&'a mut ProfileDoc> {
         match shell.docs.get_mut(shell.active) {
             Some(Doc::Profile(doc)) => Some(doc),
             _ => None,
@@ -219,7 +222,12 @@ impl WinWeaver {
 
     /// Shows a policy of an import in the tree of a profile: an import that is not loaded is, the
     /// first profile tab comes to the front, the groups above the policy open and it is selected.
-    pub(crate) fn show_in_profile(&mut self, shell: &mut Shell<WinWeaver>, import: &str, rule: &str) {
+    pub(crate) fn show_in_profile(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        import: &str,
+        rule: &str,
+    ) {
         if !import.is_empty() && !self.imports.iter().any(|f| f.id == import) {
             if let Err(e) = self.load_import(shell, import) {
                 shell.status = trf("The import was not loaded: {e}", &[("e", &e)]);

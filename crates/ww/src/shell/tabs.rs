@@ -4,13 +4,13 @@
 use eframe::egui::{self, Align2, CornerRadius, Sense, Stroke};
 
 use super::{
-    App, ShellAct, TAB_CLOSE, TAB_DOT, TAB_GAP, TAB_HEIGHT, TAB_ICON, TAB_PADDING,
-    TAB_TITLE_WIDTH, Window,
+    App, ShellAct, TAB_CLOSE, TAB_DOT, TAB_GAP, TAB_HEIGHT, TAB_ICON, TAB_PADDING, TAB_TITLE_WIDTH,
+    Window,
 };
 use crate::doc::Document;
 use crate::i18n::tr;
-use crate::style::{self, Palette};
 use crate::icons;
+use crate::style::{self, Palette};
 
 impl<A: App> Window<A> {
     /// The tab row: the menu button, the tabs with their icons, the new tab button.

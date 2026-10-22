@@ -10,9 +10,9 @@ use eframe::egui;
 use winweaver_core::admx::CatalogFile;
 use winweaver_core::catalog::{Group, Rule};
 
+use crate::ShellAct;
 use crate::i18n::{tr, trf};
 use crate::{Act, CatalogAct, ProfileAct, Search, matches_words, style, tree, widgets};
-use crate::ShellAct;
 
 /// An open tab of a catalog.
 pub struct CatalogDoc {

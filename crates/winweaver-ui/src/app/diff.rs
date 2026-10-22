@@ -63,7 +63,12 @@ impl WinWeaver {
         );
     }
 
-    pub(crate) fn compare_active(&mut self, shell: &mut Shell<WinWeaver>, other: Profile, other_path: Option<&Path>) {
+    pub(crate) fn compare_active(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        other: Profile,
+        other_path: Option<&Path>,
+    ) {
         let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
             shell.status = tr("Compare: the active tab is not a profile").to_owned();
             return;
@@ -72,7 +77,8 @@ impl WinWeaver {
         let other_side = diff::Side::of(&other, other_path);
         let diff = Diff::between(&doc.profile, &other, base_side, other_side);
         shell.status = trf("{n} differences", &[("n", &diff.count())]);
-        shell.docs
+        shell
+            .docs
             .push(Doc::Diff(Box::new(DiffDoc::new(diff, None))));
         shell.active = shell.docs.len() - 1;
     }
@@ -85,7 +91,8 @@ impl WinWeaver {
                 && p.path.as_ref().is_some_and(|x| x.display().to_string() == diff.base.path))
         };
         let by_name = |d: &Doc| matches!(d, Doc::Profile(p) if p.profile.name == diff.base.name);
-        shell.docs
+        shell
+            .docs
             .iter()
             .position(by_path)
             .or_else(|| shell.docs.iter().position(by_name))
@@ -131,7 +138,8 @@ impl WinWeaver {
             let by_name = |(i, d): (usize, &Doc)| {
                 Some(i) != base_tab && matches!(d, Doc::Profile(p) if p.profile.name == side.name)
             };
-            shell.docs
+            shell
+                .docs
                 .iter()
                 .enumerate()
                 .position(by_path)

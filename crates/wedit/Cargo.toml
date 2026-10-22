@@ -1,0 +1,27 @@
+[package]
+name = "wedit"
+description = "wedit: a portable text editor on WW (W#), with the Markdown viewer of WW"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "wedit"
+path = "src/main.rs"
+
+[features]
+default = ["glow", "wgpu"]
+# The renderers of the window: OpenGL (glow), DirectX 12 (wgpu); at least one.
+glow = ["ww/glow"]
+wgpu = ["ww/wgpu"]
+
+[dependencies]
+ww = { path = "../ww", default-features = false }
+serde.workspace = true
+serde_json.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_System_Console"] }

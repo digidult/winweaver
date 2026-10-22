@@ -187,7 +187,11 @@ impl WinWeaver {
     }
 
     /// Takes the result of a finished search of a registry tab.
-    pub(crate) fn poll_registry_search(&mut self, shell: &mut Shell<WinWeaver>, ctx: &egui::Context) {
+    pub(crate) fn poll_registry_search(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        ctx: &egui::Context,
+    ) {
         for doc in &mut shell.docs {
             let Doc::Registry(d) = doc else {
                 continue;
@@ -213,9 +217,18 @@ impl WinWeaver {
     }
 
     /// Opens the registry tab, or brings it to the front, at a key and a value of it.
-    pub(crate) fn open_registry(&mut self, shell: &mut Shell<WinWeaver>, path: &str, value: Option<&str>) {
+    pub(crate) fn open_registry(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        path: &str,
+        value: Option<&str>,
+    ) {
         let reg = self.registry.clone();
-        match shell.docs.iter().position(|d| matches!(d, Doc::Registry(_))) {
+        match shell
+            .docs
+            .iter()
+            .position(|d| matches!(d, Doc::Registry(_)))
+        {
             Some(i) => {
                 shell.active = i;
                 if let Some(Doc::Registry(d)) = shell.docs.get_mut(i) {
@@ -319,7 +332,12 @@ impl WinWeaver {
         ));
     }
 
-    pub(crate) fn registry_delete(&mut self, shell: &mut Shell<WinWeaver>, path: &str, value: Option<&str>) {
+    pub(crate) fn registry_delete(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        path: &str,
+        value: Option<&str>,
+    ) {
         let reg = self.registry.clone();
         let result = match value {
             Some(v) => reg.delete_value(path, v),
@@ -410,7 +428,9 @@ impl WinWeaver {
             RegistryAct::Rights => self.registry_rights(shell),
             RegistryAct::RightsAdd => self.registry_rights_add(shell),
             RegistryAct::RightsSave => self.registry_rights_save(shell),
-            RegistryAct::Delete(path, value) => self.registry_delete(shell, &path, value.as_deref()),
+            RegistryAct::Delete(path, value) => {
+                self.registry_delete(shell, &path, value.as_deref())
+            }
             RegistryAct::Bookmark => self.bookmark_registry(shell),
         }
     }
