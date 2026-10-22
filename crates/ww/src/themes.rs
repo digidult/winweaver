@@ -233,7 +233,8 @@ mod tests {
     #[test]
     fn the_embedded_themes_load_with_their_colours_and_fonts() {
         let list = themes(&std::env::temp_dir().join("winweaver-no-themes"));
-        assert_eq!(list.len(), 4);
+        // Light and Dark of WW; a program adds its own with `install`.
+        assert_eq!(list.len(), 2);
         let light = list.iter().find(|t| t.id == "light").unwrap();
         assert_eq!(
             light.palette(),
@@ -242,14 +243,7 @@ mod tests {
         );
         let dark = list.iter().find(|t| t.id == "dark").unwrap();
         assert_eq!(dark.palette(), Palette::DARK);
-        let matrix = list.iter().find(|t| t.id == "matrix").unwrap();
-        assert!(matrix.dark);
-        assert_eq!(matrix.font, "Consolas");
-        let p = matrix.palette();
-        assert_eq!(p.bg, Color32::from_rgb(0, 0, 0));
-        assert_eq!(p.sel_text, Color32::from_rgb(0xb6, 0xff, 0xb6));
-        let latte = list.iter().find(|t| t.id == "latte").unwrap();
-        assert_eq!(latte.palette().check, Color32::from_rgb(0x8c, 0x5e, 0x3c));
+        assert!(dark.dark);
         assert_eq!(color("#00ff41"), Some(Color32::from_rgb(0, 255, 65)));
         assert_eq!(color("00ff41"), None);
         assert_eq!(color_text(Color32::from_rgb(0, 255, 65)), "#00ff41");
