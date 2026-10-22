@@ -159,7 +159,8 @@ fn table(ui: &mut egui::Ui, cache: &mut CommonMarkCache, rows: &[Vec<&str>], wid
                     let mut x = rect.left() + 4.0;
                     for col in &widths[..cols - 1] {
                         x += col + TABLE_GAP;
-                        ui.painter().vline(x - TABLE_GAP / 2.0, rect.y_range(), stroke);
+                        ui.painter()
+                            .vline(x - TABLE_GAP / 2.0, rect.y_range(), stroke);
                     }
                 }
             });
@@ -392,8 +393,22 @@ mod tests {
         assert!(
             matches!(parts[2], Segment::Markdown(m) if m.starts_with("\nAfter") && m.contains("not | a table"))
         );
-        let widths = column_widths(&[vec!["Area", "State", "Date"], vec!["Core", "a long state of sixty characters and more words to fill the column", "14.10.2026"]], 3, 1000.0);
-        assert!(widths[1] > widths[0] * 3.0 && widths[2] >= COLUMN_MIN, "{widths:?}");
+        let widths = column_widths(
+            &[
+                vec!["Area", "State", "Date"],
+                vec![
+                    "Core",
+                    "a long state of sixty characters and more words to fill the column",
+                    "14.10.2026",
+                ],
+            ],
+            3,
+            1000.0,
+        );
+        assert!(
+            widths[1] > widths[0] * 3.0 && widths[2] >= COLUMN_MIN,
+            "{widths:?}"
+        );
         assert!((widths.iter().sum::<f32>() - (1000.0 - 2.0 * TABLE_GAP)).abs() < 1.0);
         assert!(is_separator("| :--- | ---: |"));
         assert!(!is_separator("| a | b |"));
