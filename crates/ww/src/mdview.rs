@@ -88,37 +88,60 @@ fn segments(text: &str) -> Vec<Segment<'_>> {
 
 /// A table of a page: a grid of its width, the header strong, the cells wrapped.
 fn table(ui: &mut egui::Ui, cache: &mut CommonMarkCache, rows: &[Vec<&str>], width: f32, n: usize) {
+    // Not a grid of egui: a grid keeps the heights of the last frame, so a cell that wraps
+    // would not raise its row. Every row is a band of cells of one width, as high as its
+    // highest cell, with the lines drawn after it.
     let cols = rows.iter().map(Vec::len).max().unwrap_or(0).max(1);
     let col = ((width - TABLE_GAP * (cols as f32 - 1.0)) / cols as f32).max(COLUMN_MIN);
     let p = crate::style::palette(ui);
+    let stroke = egui::Stroke::new(1.0, p.border);
     ui.add_space(4.0);
-    egui::Frame::new()
-        .stroke(egui::Stroke::new(1.0, p.border))
-        .inner_margin(egui::Margin::same(6))
-        .show(ui, |ui| {
-            egui::Grid::new(("page-table", n))
-                .num_columns(cols)
-                .spacing([TABLE_GAP, 4.0])
-                .striped(true)
-                .min_col_width(col)
-                .max_col_width(col)
-                .show(ui, |ui| {
-                    for (r, row) in rows.iter().enumerate() {
-                        for c in 0..cols {
-                            let cell = row.get(c).copied().unwrap_or("");
-                            ui.scope(|ui| {
-                                ui.set_max_width(col);
-                                if r == 0 {
-                                    ui.strong(cell);
-                                } else {
-                                    CommonMarkViewer::new().show(ui, cache, cell);
+    ui.push_id(("page-table", n), |ui| {
+        egui::Frame::new()
+            .stroke(stroke)
+            .inner_margin(egui::Margin::same(6))
+            .show(ui, |ui| {
+                ui.spacing_mut().item_spacing.y = 0.0;
+                for (r, row) in rows.iter().enumerate() {
+                    let fill = if r == 0 {
+                        p.card2
+                    } else if r % 2 == 0 {
+                        p.hover
+                    } else {
+                        egui::Color32::TRANSPARENT
+                    };
+                    let band = egui::Frame::new()
+                        .fill(fill)
+                        .inner_margin(egui::Margin::symmetric(4, 3))
+                        .show(ui, |ui| {
+                            ui.horizontal_top(|ui| {
+                                ui.spacing_mut().item_spacing.x = TABLE_GAP;
+                                for c in 0..cols {
+                                    let cell = row.get(c).copied().unwrap_or("");
+                                    ui.allocate_ui_with_layout(
+                                        egui::vec2(col, 0.0),
+                                        egui::Layout::top_down(egui::Align::Min),
+                                        |ui| {
+                                            ui.set_width(col);
+                                            if r == 0 {
+                                                ui.strong(cell);
+                                            } else {
+                                                CommonMarkViewer::new().show(ui, cache, cell);
+                                            }
+                                        },
+                                    );
                                 }
                             });
-                        }
-                        ui.end_row();
+                        });
+                    let rect = band.response.rect;
+                    ui.painter().hline(rect.x_range(), rect.bottom(), stroke);
+                    for c in 1..cols {
+                        let x = rect.left() + 4.0 + c as f32 * (col + TABLE_GAP) - TABLE_GAP / 2.0;
+                        ui.painter().vline(x, rect.y_range(), stroke);
                     }
-                });
-        });
+                }
+            });
+    });
     ui.add_space(4.0);
 }
 
