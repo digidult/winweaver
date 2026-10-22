@@ -155,7 +155,10 @@ fn read_file(path: &Path) -> Result<String, String> {
     if size > MAX_BYTES {
         return Err(trf(
             "{path} is larger than {mb} MB",
-            &[("path", &path.display()), ("mb", &(MAX_BYTES / 1024 / 1024))],
+            &[
+                ("path", &path.display()),
+                ("mb", &(MAX_BYTES / 1024 / 1024)),
+            ],
         ));
     }
     let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
@@ -411,7 +414,12 @@ impl App for Wedit {
                 cmd(icons::EDIT, tr("Edit as text"), Act::EditAsText),
             ],
             Some(Doc::Shell(ShellDoc::Theme(_))) => vec![
-                keyed(icons::OPEN, tr("Open"), &keys::OPEN, ShellAct::OpenThemeFile),
+                keyed(
+                    icons::OPEN,
+                    tr("Open"),
+                    &keys::OPEN,
+                    ShellAct::OpenThemeFile,
+                ),
                 save,
                 save_as,
             ],
@@ -421,8 +429,20 @@ impl App for Wedit {
     }
 
     fn menu(&self, shell: &Shell<Self>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
-        menu_item(ui, tr("New"), keys::NEW.text, Act::Shell(ShellAct::New), acts);
-        menu_item(ui, tr("Open..."), keys::OPEN.text, Act::Shell(ShellAct::Open), acts);
+        menu_item(
+            ui,
+            tr("New"),
+            keys::NEW.text,
+            Act::Shell(ShellAct::New),
+            acts,
+        );
+        menu_item(
+            ui,
+            tr("Open..."),
+            keys::OPEN.text,
+            Act::Shell(ShellAct::Open),
+            acts,
+        );
         ui.add_enabled_ui(!shell.settings.recent.is_empty(), |ui| {
             ui.menu_button(tr("Open recent"), |ui| {
                 for path in &shell.settings.recent {
@@ -436,7 +456,13 @@ impl App for Wedit {
                 }
             });
         });
-        menu_item(ui, tr("Save"), keys::SAVE.text, Act::Shell(ShellAct::Save), acts);
+        menu_item(
+            ui,
+            tr("Save"),
+            keys::SAVE.text,
+            Act::Shell(ShellAct::Save),
+            acts,
+        );
         menu_item(
             ui,
             tr("Save as..."),
