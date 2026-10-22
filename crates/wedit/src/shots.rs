@@ -78,6 +78,8 @@ fn screenshots_of_wedit() {
         .state_mut()
         .apply(vec![Act::Shell(ShellAct::UseTheme("dark".to_owned()))]);
     shot(&mut harness, &dir, "w7-agents-dark");
-    harness.state_mut().apply(vec![Act::Shell(ShellAct::OpenSettings)]);
+    harness
+        .state_mut()
+        .apply(vec![Act::Shell(ShellAct::OpenSettings)]);
     shot(&mut harness, &dir, "w8-settings");
 }
