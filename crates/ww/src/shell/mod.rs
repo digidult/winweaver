@@ -218,6 +218,10 @@ pub trait App: Sized + 'static {
     /// After the tabs of the last session and the drafts are back.
     fn restored(&mut self, _shell: &mut Shell<Self>) {}
 
+    /// When the window closes, before the files of the tabs are remembered: what the program
+    /// keeps in its settings for the next start beyond them.
+    fn closing(&mut self, _shell: &mut Shell<Self>) {}
+
     /// Opens a new document (the button + and Ctrl+N).
     fn new_document(&mut self, shell: &mut Shell<Self>);
 

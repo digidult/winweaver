@@ -351,6 +351,7 @@ impl<A: App> eframe::App for Window<A> {
         let closing = self.shell.exit || ui.ctx().input(|i| i.viewport().close_requested());
         self.shell.write_drafts(closing);
         if closing {
+            self.app.closing(&mut self.shell);
             self.shell.remember_tabs();
         }
         self.shell.persist_settings();

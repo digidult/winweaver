@@ -37,7 +37,8 @@ features `glow` (OpenGL) and `wgpu` (DirectX 12), both by default.
    window, the name of the log), `BUILD`, `NEW_HINT`; `shell_doc` and `shell_act` (the two
    conversions); `started` (the first tab, at every construction, the tests too), `load` (the
    files of the program at a start), `restored` (after the tabs of the last session and the drafts
-   are back); `new_document`, `open_path`, `open_dialog`, `save`, `restore_draft`; `draw` (the
+   are back), `closing` (before the files of the tabs are remembered, for what the program keeps
+   beyond them); `new_document`, `open_path`, `open_dialog`, `save`, `restore_draft`; `draw` (the
    active tab), `commands`, `menu`, `menu_popup`, `nav`, `messages` and `messages_body`,
    `status_left`, `status_right`, `busy`; `settings_sections`, `settings_general`,
    `settings_section`, `settings_opened`; `shortcuts`, `apply`, `dialogs`, `after_frame`;

@@ -21,9 +21,20 @@ const MAX_BYTES: u64 = 16 * 1024 * 1024;
 const FIND_NEXT: Keys = Keys::new("F3", Modifiers::NONE, Key::F3);
 const FIND_BACK: Keys = Keys::new("Shift+F3", Modifiers::SHIFT, Key::F3);
 
-/// The fields of wedit in the settings file: none beyond the ones of the window.
+/// The fields of wedit in the settings file.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct Extra {}
+pub struct Extra {
+    /// The `.md` files open as text when the window closed: the window remembers the files of
+    /// its tabs, and a `.md` file comes back as a page, so these come back as text too.
+    #[serde(default)]
+    pub text_pages: Vec<PathBuf>,
+}
+
+/// Whether a file is a Markdown page.
+fn is_page(path: &Path) -> bool {
+    path.extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("md"))
+}
 
 impl ww::Extra for Extra {
     const FORMAT: &'static str = "wedit-settings";
@@ -264,8 +275,19 @@ impl App for Wedit {
         shell.open_tab(Doc::Text(TextDoc::new(String::new(), None)));
     }
 
-    /// The files of the command line, in tabs; an empty first tab makes room for them.
+    /// The `.md` files that were open as text come back as text tabs (the window brought them
+    /// back as pages); then the files of the command line, in tabs; an empty first tab makes
+    /// room for them.
     fn restored(&mut self, shell: &mut Shell<Self>) {
+        if shell.settings.restore_tabs {
+            let active = shell.active;
+            for path in shell.settings.extra.text_pages.clone() {
+                if path.exists() {
+                    self.open_text(shell, path);
+                }
+            }
+            shell.active = active.min(shell.docs.len().saturating_sub(1));
+        }
         let files = std::mem::take(&mut self.files);
         if files.is_empty() {
             return;
@@ -281,19 +303,36 @@ impl App for Wedit {
         }
     }
 
+    /// The `.md` files open as text, for the next start.
+    fn closing(&mut self, shell: &mut Shell<Self>) {
+        let pages: Vec<PathBuf> = shell
+            .docs
+            .iter()
+            .filter_map(|d| match d {
+                Doc::Text(t) => t.path.clone().filter(|p| is_page(p)),
+                _ => None,
+            })
+            .collect();
+        if shell.settings.extra.text_pages != pages {
+            shell.settings.extra.text_pages = pages;
+            shell.settings_dirty = true;
+        }
+    }
+
     fn new_document(&mut self, shell: &mut Shell<Self>) {
         shell.open_tab(Doc::Text(TextDoc::new(String::new(), None)));
     }
 
     fn open_path(&mut self, shell: &mut Shell<Self>, path: PathBuf) {
-        let ext = path
+        if is_page(&path) {
+            self.open_page(shell, path);
+        } else if path
             .extension()
-            .map(|e| e.to_string_lossy().to_ascii_lowercase())
-            .unwrap_or_default();
-        match ext.as_str() {
-            "md" => self.open_page(shell, path),
-            ww::themes::EXTENSION => shell.open_theme_path(path),
-            _ => self.open_text(shell, path),
+            .is_some_and(|e| e == ww::themes::EXTENSION)
+        {
+            shell.open_theme_path(path);
+        } else {
+            self.open_text(shell, path);
         }
     }
 
