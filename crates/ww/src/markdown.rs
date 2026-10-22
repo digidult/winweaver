@@ -627,7 +627,9 @@ pub fn column_widths(
     width: f32,
     measure: &dyn Fn(&str) -> f32,
 ) -> Vec<f32> {
-    let cell = |r: &Vec<String>, c: usize| r.get(c).map(String::as_str).unwrap_or("");
+    fn cell(row: &[String], c: usize) -> &str {
+        row.get(c).map_or("", String::as_str)
+    }
     let weights: Vec<f32> = (0..cols)
         .map(|c| {
             rows.iter()
