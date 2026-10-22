@@ -302,15 +302,15 @@ pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool, tables: TableWidt
             };
             match jump {
                 Some((before, after)) => {
-                    CommonMarkViewer::new().show(ui, &mut doc.cache, before);
+                    render(ui, &mut doc.cache, before, table_width, &mut tables);
                     let (rect, _) =
                         ui.allocate_exact_size(egui::vec2(1.0, 1.0), egui::Sense::hover());
                     ui.scroll_to_rect(rect, Some(egui::Align::Min));
-                    CommonMarkViewer::new().show(ui, &mut doc.cache, after);
+                    render(ui, &mut doc.cache, after, table_width, &mut tables);
                     doc.jump = false;
                 }
                 None => {
-                    CommonMarkViewer::new().show(ui, &mut doc.cache, &doc.text);
+                    render(ui, &mut doc.cache, &doc.text, table_width, &mut tables);
                 }
             }
             return;
