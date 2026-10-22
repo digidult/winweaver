@@ -160,7 +160,7 @@ impl TextDoc {
                 color,
                 f32::INFINITY,
             );
-            ui.fonts(|f| f.layout_job(job))
+            ui.fonts_mut(|f| f.layout_job(job))
         };
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(p.card))
