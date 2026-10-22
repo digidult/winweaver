@@ -620,43 +620,16 @@ const TABLE_GAP: f32 = 12.0;
 const CELL_PAD: f32 = 4.0;
 
 /// The widths of the columns of a table of `width`: shared by the length of the longest cell of
-/// each column (4 to 60 characters count), none narrower than its longest word, which never
-/// breaks; the table is wider than `width` when the words do not fit.
-pub fn column_widths(
-    rows: &[Vec<String>],
-    cols: usize,
-    width: f32,
-    measure: &dyn Fn(&str) -> f32,
-) -> Vec<f32> {
-    fn cell(row: &[String], c: usize) -> &str {
-        row.get(c).map_or("", String::as_str)
-    }
-    let weights: Vec<f32> = (0..cols)
-        .map(|c| {
-            rows.iter()
-                .map(|r| cell(r, c).chars().count())
-                .max()
-                .unwrap_or(0)
-                .clamp(4, 60) as f32
-        })
-        .collect();
-    let least: Vec<f32> = (0..cols)
-        .map(|c| {
-            rows.iter()
-                .flat_map(|r| cell(r, c).split_whitespace())
-                .map(measure)
-                .fold(20.0_f32, f32::max)
-        })
-        .collect();
+/// each column (`lengths`, 4 to 60 characters count), none narrower than its longest word
+/// (`least`), which never breaks; the table is wider than `width` when the words do not fit.
+pub fn column_widths(lengths: &[usize], least: &[f32], width: f32) -> Vec<f32> {
+    let cols = lengths.len();
+    let weights: Vec<f32> = lengths.iter().map(|n| (*n).clamp(4, 60) as f32).collect();
     let free = width - TABLE_GAP * (cols as f32 - 1.0);
     // Columns whose share is below their least width take it; the rest share what is left.
     let mut fixed = vec![false; cols];
     loop {
-        let left = free
-            - (0..cols)
-                .filter(|c| fixed[*c])
-                .map(|c| least[c])
-                .sum::<f32>();
+        let left = free - (0..cols).filter(|c| fixed[*c]).map(|c| least[c]).sum::<f32>();
         let total: f32 = (0..cols).filter(|c| !fixed[*c]).map(|c| weights[c]).sum();
         let mut changed = false;
         for c in 0..cols {
@@ -679,6 +652,36 @@ pub fn column_widths(
     }
 }
 
+/// The width of the widest word of a cell, every piece of it in the font it is drawn with: a
+/// word may run over runs of several styles (`(`, then code, then `,`).
+fn widest_word(ui: &egui::Ui, look: &Look, cell: &Inline, head: bool) -> f32 {
+    let mut widest = 0.0_f32;
+    let mut current = 0.0_f32;
+    for span in &cell.spans {
+        let font = if span.code {
+            &look.code
+        } else if head || span.strong {
+            &look.strong
+        } else {
+            &look.body
+        };
+        for (i, piece) in span.text.split(char::is_whitespace).enumerate() {
+            if i > 0 {
+                widest = widest.max(current);
+                current = 0.0;
+            }
+            if !piece.is_empty() {
+                current += ui.fonts_mut(|f| {
+                    f.layout_no_wrap(piece.to_owned(), font.clone(), look.text)
+                        .size()
+                        .x
+                });
+            }
+        }
+    }
+    widest.max(current)
+}
+
 /// A table: bands of cells of the widths of its columns, every row as high as its highest cell,
 /// the head strong.
 fn table(
@@ -697,19 +700,18 @@ fn table(
             let em = ui.fonts_mut(|f| f.glyph_width(&look.body, 'n'));
             chars as f32 * em
         }
-    } - 2.0 * (CELL_PAD + 6.0);
-    let plain: Vec<Vec<String>> = rows
-        .iter()
-        .map(|r| r.iter().map(Inline::plain).collect())
-        .collect();
-    let measure = |word: &str| {
-        ui.fonts_mut(|f| {
-            f.layout_no_wrap(word.to_owned(), look.strong.clone(), look.text)
-                .size()
-                .x
-        })
-    };
-    let widths = column_widths(&plain, cols, width, &measure);
+        // Less the frame of the table: its margin, the padding of a band, the stroke, both sides.
+    } - 2.0 * (CELL_PAD + 6.0 + 1.0);
+    let mut lengths = vec![0_usize; cols];
+    let mut least = vec![20.0_f32; cols];
+    for (r, row) in rows.iter().enumerate() {
+        for (c, cell) in row.iter().enumerate() {
+            lengths[c] = lengths[c].max(cell.plain().chars().count());
+            // A little room, so that a word as wide as its column is not wrapped.
+            least[c] = least[c].max(widest_word(ui, look, cell, r == 0) + 2.0);
+        }
+    }
+    let widths = column_widths(&lengths, &least, width);
     let stroke = Stroke::new(1.0, look.border);
     ui.push_id(("page-table", n), |ui| {
         egui::Frame::new()
@@ -814,23 +816,14 @@ mod tests {
 
     #[test]
     fn the_columns_share_the_width_and_keep_their_words() {
-        let rows = vec![
-            vec!["Area".into(), "State".into(), "Date".into()],
-            vec![
-                "Specification".into(),
-                "a long state of sixty characters and more words to fill the column".into(),
-                "14.10.2026".into(),
-            ],
-        ];
-        let measure = |w: &str| w.chars().count() as f32 * 8.0;
-        let wide = column_widths(&rows, 3, 1000.0, &measure);
+        let lengths = [13, 66, 10];
+        let least = [104.0, 80.0, 80.0];
+        let wide = column_widths(&lengths, &least, 1000.0);
         assert!(wide[1] > wide[0] * 3.0, "{wide:?}");
         assert!((wide.iter().sum::<f32>() - (1000.0 - 2.0 * TABLE_GAP)).abs() < 1.0);
         // A narrow table: no column is narrower than its longest word.
-        let narrow = column_widths(&rows, 3, 300.0, &measure);
-        assert!(
-            narrow[0] >= 13.0 * 8.0 && narrow[2] >= 10.0 * 8.0,
-            "{narrow:?}"
-        );
+        let narrow = column_widths(&lengths, &least, 300.0);
+        assert!(narrow[0] >= 104.0 && narrow[2] >= 80.0, "{narrow:?}");
+        assert!(narrow.iter().zip(least).all(|(w, l)| *w >= l - 0.01), "{narrow:?}");
     }
 }
