@@ -646,9 +646,11 @@ pub fn column_widths(lengths: &[usize], least: &[f32], width: f32) -> Vec<f32> {
             return (0..cols)
                 .map(|c| {
                     if fixed[c] {
-                        least[c]
+                        least[c].ceil()
                     } else {
-                        left * weights[c] / total
+                        // Whole points, so that the columns never add up to a hair more than
+                        // the table and the page does not scroll sideways for it.
+                        (left * weights[c] / total).floor()
                     }
                 })
                 .collect();
@@ -823,7 +825,9 @@ mod tests {
         let least = [104.0, 80.0, 80.0];
         let wide = column_widths(&lengths, &least, 1000.0);
         assert!(wide[1] > wide[0] * 3.0, "{wide:?}");
-        assert!((wide.iter().sum::<f32>() - (1000.0 - 2.0 * TABLE_GAP)).abs() < 1.0);
+        let sum: f32 = wide.iter().sum();
+        let free = 1000.0 - 2.0 * TABLE_GAP;
+        assert!(sum <= free && free - sum < 3.0, "{wide:?}");
         // A narrow table: no column is narrower than its longest word.
         let narrow = column_widths(&lengths, &least, 300.0);
         assert!(narrow[0] >= 104.0 && narrow[2] >= 80.0, "{narrow:?}");
