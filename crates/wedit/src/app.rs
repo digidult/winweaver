@@ -274,7 +274,6 @@ impl App for Wedit {
         let untouched = matches!(shell.docs.first(), Some(Doc::Text(t)) if t.text.is_empty() && !t.dirty && t.path.is_none());
         if shell.docs.len() > before && untouched && shell.docs.len() > 1 {
             shell.docs.remove(0);
-            shell.active = shell.active.saturating_sub(1).max(0);
             shell.active = shell.docs.len() - 1;
         }
     }

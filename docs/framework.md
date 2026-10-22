@@ -245,3 +245,15 @@ Windows twice.
   server or a background read beyond `after_frame`.
 - No change of the look, the keys or the texts; no new feature of WinWeaver.
 - A crate of its own for `tree` and `list` (W# widgets) only if a third user asks.
+
+## 10. Done (22.10.2026)
+
+W1 to W5 as planned, on the branch `ww`, version 0.24.0. What differs from the plan above: `shell/frame.rs`,
+`shell/apply.rs`, `shell/session.rs` and `shell/files.rs` are `shell/window.rs` (the frame, the acts of
+the window, the keys, the session restored) with the session helpers as methods of `Shell`; the theme
+module of the shell is `shell/theme.rs`; `App::started` (the first tab, at every construction), `load`
+(the files of the program at a start) and `restored` are three hooks, and `settings_opened` lets the
+program read its lists again when the settings tab opens; `Window<A>` holds the shell and the program
+apart, so the tests build `Window::new(WinWeaver::new(catalog, texts), settings)`. The drafts of
+WinWeaver keep their format (the profile as a JSON object) under the name `ww-draft`, and a draft of
+0.23.0 reads too. `ww` re-exports `eframe` and `rfd`, so wedit depends on `ww` alone.
