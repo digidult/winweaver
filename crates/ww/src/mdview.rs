@@ -8,8 +8,6 @@ use crate::settings::TableWidth;
 use eframe::egui;
 use egui_commonmark::{CommonMarkCache, CommonMarkViewer};
 
-/// The widest a page is laid out, so that lines stay readable on a wide window.
-const PAGE_WIDTH: f32 = 860.0;
 /// The space between the columns of a table, and the least width of a column.
 const TABLE_GAP: f32 = 12.0;
 const COLUMN_MIN: f32 = 40.0;
@@ -144,6 +142,9 @@ fn table(ui: &mut egui::Ui, cache: &mut CommonMarkCache, rows: &[Vec<&str>], wid
                                         egui::Layout::top_down(egui::Align::Min),
                                         |ui| {
                                             ui.set_width(col);
+                                            // The cells wrap even when the page does not.
+                                            ui.style_mut().wrap_mode =
+                                                Some(egui::TextWrapMode::Wrap);
                                             if r == 0 {
                                                 ui.strong(cell);
                                             } else {
@@ -173,6 +174,7 @@ fn render(
     ui: &mut egui::Ui,
     cache: &mut CommonMarkCache,
     text: &str,
+    text_width: f32,
     table_width: f32,
     tables: &mut usize,
 ) {
@@ -180,7 +182,14 @@ fn render(
         match segment {
             Segment::Markdown(md) => {
                 if !md.trim().is_empty() {
-                    CommonMarkViewer::new().show(ui, cache, md);
+                    // Every text of the page has the same width, before and after a table
+                    // that is wider.
+                    ui.scope(|ui| {
+                        if text_width.is_finite() {
+                            ui.set_max_width(text_width);
+                        }
+                        CommonMarkViewer::new().show(ui, cache, md);
+                    });
                 }
             }
             Segment::Table(rows) => {
@@ -309,14 +318,14 @@ pub fn matching_blocks(text: &str, words: &[String]) -> Vec<String> {
     out
 }
 
-/// The page; `wrap` folds its lines to the width of the view (a readable width at most), else
+/// The page; `wrap` folds its lines to the width of the view, else
 /// the view scrolls sideways. A table or a block of code wider than the view scrolls sideways
 /// either way.
 pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool, tables: TableWidth) {
     let words = doc.search.words();
     let view_width = ui.available_width();
     let width = if wrap {
-        view_width.min(PAGE_WIDTH)
+        view_width
     } else {
         f32::INFINITY
     };
@@ -335,8 +344,8 @@ pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool, tables: TableWidt
         // is a read-only text field).
         ui.visuals_mut().code_bg_color = code_bg;
         ui.visuals_mut().extreme_bg_color = code_bg;
-        if width.is_finite() {
-            ui.set_max_width(width);
+        if !wrap {
+            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Extend);
         }
         if words.is_empty() {
             let jump = if doc.jump {
@@ -348,15 +357,15 @@ pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool, tables: TableWidt
             };
             match jump {
                 Some((before, after)) => {
-                    render(ui, &mut doc.cache, before, table_width, &mut tables);
+                    render(ui, &mut doc.cache, before, width, table_width, &mut tables);
                     let (rect, _) =
                         ui.allocate_exact_size(egui::vec2(1.0, 1.0), egui::Sense::hover());
                     ui.scroll_to_rect(rect, Some(egui::Align::Min));
-                    render(ui, &mut doc.cache, after, table_width, &mut tables);
+                    render(ui, &mut doc.cache, after, width, table_width, &mut tables);
                     doc.jump = false;
                 }
                 None => {
-                    render(ui, &mut doc.cache, &doc.text, table_width, &mut tables);
+                    render(ui, &mut doc.cache, &doc.text, width, table_width, &mut tables);
                 }
             }
             return;
@@ -368,7 +377,7 @@ pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool, tables: TableWidt
         ));
         for block in &blocks {
             ui.separator();
-            render(ui, &mut doc.cache, block, table_width, &mut tables);
+            render(ui, &mut doc.cache, block, width, table_width, &mut tables);
         }
     });
 }
