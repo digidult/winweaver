@@ -60,7 +60,7 @@ fn option(args: &[String], name: &str) -> Option<String> {
 /// merged is left out.
 fn with_imports(catalog: Catalog, dir: &std::path::Path) -> Catalog {
     let settings =
-        winweaver_ui::Settings::load_from(&winweaver_ui::Settings::path()).unwrap_or_default();
+        winweaver_ui::Settings::load("WinWeaver").0.unwrap_or_default();
     let ids = winweaver_ui::loaded_import_ids(&settings, dir);
     let (files, _) = winweaver_ui::read_imports(dir, &ids);
     match winweaver_core::admx::merge(&catalog, &files) {

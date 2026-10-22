@@ -87,6 +87,12 @@ Ctrl+Shift+PgUp and PgDn; the program adds its own in `shortcuts`.
 - The settings tab has the General section of the window (language, theme and its fonts, the
   window: the program's lines through `settings_general`, the renderer, the tabs of the last
   session) and the sections of the program (`settings_sections`, `settings_section`).
+- A program adds colours to the themes with `ww::style::install_colors` (`ExtraColor`: the name in a
+  theme file, the label of the theme editor, the light and the dark value); `style::extra(ui, name)`
+  gives the one of the theme shown, a theme file overrides it by name, and the editor lists it after
+  the palette. The palette has `code_bg` for the code of a page.
+- `Settings::wrap_lines` (General, Wrap lines to the width of the view) is what a text or a page
+  follows: `ww::mdview::md_view(ui, doc, wrap)` folds the lines or scrolls sideways.
 - The look comes from `ww::style`: `palette(ui)` for the colours, `font`, `strong`, `muted`,
   `mono`, `size`, `row_height` for the text, `card`, `block`, `header`, `section_title`, `chip`,
   `icon_button`, `tool_button`, `selectable_text`, `copy_label`. `ww::tree::show` and
@@ -94,7 +100,10 @@ Ctrl+Shift+PgUp and PgDn; the program adds its own in `shortcuts`.
 
 ## 5. Next to the executable
 
-`settings.json`, `drafts/` (a draft two seconds after a change, `{"path", "document"}` with the
+`<exe>.settings.json` (the settings, named after the executable so that two copies with different
+names keep their own; `<program>.settings.json` and a `settings.json` of an earlier version are read
+and kept when they exist; `Settings::load` finds the file and `Shell::settings_path` names it),
+`drafts/` (a draft two seconds after a change, `{"path", "document"}` with the
 document the program gives, read back through `restore_draft`), `logs/<name>-<date>.log` (every
 new message of the status bar, through `Shell::log` too), `themes/` (`<id>.wwtheme` files; the
 embedded ones are Light and Dark, and `App::themes` adds more), `lang/<code>/ui.json`

@@ -43,7 +43,7 @@ impl WinWeaver {
         ui.add_space(4.0);
         ui.label(trf(
             "Settings file: {path}",
-            &[("path", &Settings::path().display())],
+            &[("path", &shell.settings_path.display())],
         ));
         let folders = [
             (

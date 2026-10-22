@@ -91,7 +91,7 @@ generic key selects the edition during the installation; it does not activate Wi
 | `profiles/` | Your profiles; the presets are there as files too |
 | `lang/be/` | The Belarusian translation, the example of a language |
 | `agents/` | Instructions, skills and a container for AI agents |
-| `settings.json`, `bookmarks.wwmarks` | Created when needed |
+| `winweaver.settings.json`, `bookmarks.wwmarks` | Created when needed; the settings are named after the executable, so a renamed copy keeps its own, and a `settings.json` of an earlier version is read and kept |
 | `output/` | Answer files, scripts, plans and backups of changes of this PC |
 | `imports/` | Imported policy templates |
 | `themes/` | Your themes (`<name>.wwtheme`) |

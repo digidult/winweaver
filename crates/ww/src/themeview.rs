@@ -56,8 +56,41 @@ fn color_label(name: &str) -> &'static str {
         "msg_bg" => tr("Message bar"),
         "msg_fg" => tr("Text of the message bar"),
         "msg_border" => tr("Frame of the message bar"),
+        "code_bg" => tr("Code on pages"),
         _ => "",
     }
+}
+
+/// A row of the colour grid: the label, the picker, the value, the button back to the base.
+fn color_row(ui: &mut egui::Ui, theme: &mut Theme, name: &str, label: &str, shown: egui::Color32) -> bool {
+    let mut changed = false;
+    let mut c = shown;
+    ui.label(label);
+    if egui::color_picker::color_edit_button_srgba(ui, &mut c, egui::color_picker::Alpha::Opaque)
+        .changed()
+    {
+        theme.colors.insert(name.to_owned(), themes::color_text(c));
+        changed = true;
+    }
+    style::copy_label(
+        ui,
+        egui::RichText::new(themes::color_text(c)).font(style::mono(ui, 12.0)),
+        false,
+    );
+    if theme.colors.contains_key(name) {
+        if ui
+            .small_button(tr("From the base"))
+            .on_hover_text(tr("Takes the colour of the light or dark base again"))
+            .clicked()
+        {
+            theme.colors.remove(name);
+            changed = true;
+        }
+    } else {
+        ui.label(style::muted(ui, tr("as in the base"), 11.0));
+    }
+    ui.end_row();
+    changed
 }
 
 /// A list of font families to choose from, the first entry empty for the default.
@@ -217,38 +250,20 @@ pub fn theme_view<A: App>(
                     .striped(true)
                     .show(ui, |ui| {
                         for (name, _) in style::COLOR_NAMES {
-                            let Some(mut c) = palette.get(name) else {
+                            let Some(c) = palette.get(name) else {
                                 continue;
                             };
-                            ui.label(color_label(name));
-                            if egui::color_picker::color_edit_button_srgba(
-                                ui,
-                                &mut c,
-                                egui::color_picker::Alpha::Opaque,
-                            )
-                            .changed()
-                            {
-                                theme.colors.insert(name.to_owned(), themes::color_text(c));
-                                changed = true;
-                            }
-                            style::copy_label(
-                                ui,
-                                egui::RichText::new(themes::color_text(c)).font(style::mono(ui, 12.0)),
-                                false,
-                            );
-                            if theme.colors.contains_key(name) {
-                                if ui
-                                    .small_button(tr("From the base"))
-                                    .on_hover_text(tr("Takes the colour of the light or dark base again"))
-                                    .clicked()
-                                {
-                                    theme.colors.remove(name);
-                                    changed = true;
-                                }
-                            } else {
-                                ui.label(style::muted(ui, tr("as in the base"), 11.0));
-                            }
-                            ui.end_row();
+                            changed |= color_row(ui, theme, name, color_label(name), c);
+                        }
+                        // The colours the program added, after the ones of the palette.
+                        for extra in style::extra_colors() {
+                            let base = if theme.dark { extra.dark } else { extra.light };
+                            let c = theme
+                                .colors
+                                .get(extra.name)
+                                .and_then(|t| themes::color(t))
+                                .unwrap_or(base);
+                            changed |= color_row(ui, theme, extra.name, extra.label, c);
                         }
                     });
             });

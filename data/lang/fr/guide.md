@@ -310,7 +310,7 @@ vont dans la console d'où le programme a été démarré et dans `logs/`.
 
 ## Fichiers à côté de l'exécutable
 
-`settings.json` (langue, thème, fichiers récents, onglets de la dernière session), `profiles/` (vos
+`winweaver.settings.json` (langue, thème, fichiers récents, onglets de la dernière session), `profiles/` (vos
 profils), `output/` (le fichier de réponses et les scripts), `drafts/` (modifications non enregistrées,
 restaurées au démarrage suivant), `mcp/` (les configurations du serveur MCP), `logs/` (ce qu'a fait le programme), `bookmarks.wwmarks`. Rien n'est
 écrit ailleurs.

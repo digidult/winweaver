@@ -55,6 +55,7 @@ impl<A: App> Shell<A> {
             (light.palette(), light.fonts()),
             (dark.palette(), dark.fonts()),
         );
+        style::resolve_extra(&light.colors, &dark.colors);
         ctx.set_theme(*preference);
         self.applied_theme = Some(wanted);
     }

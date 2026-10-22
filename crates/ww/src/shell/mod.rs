@@ -349,6 +349,8 @@ pub struct Shell<A: App> {
     pub active: usize,
     pub settings: Settings<A::Extra>,
     pub settings_dirty: bool,
+    /// The file the settings are written to (`Settings::load` names it).
+    pub settings_path: PathBuf,
     /// The recent searches of every tab.
     pub search_history: Vec<String>,
     /// A question over the window and the act a yes runs.
@@ -385,6 +387,7 @@ impl<A: App> Shell<A> {
             active: 0,
             settings,
             settings_dirty: false,
+            settings_path: Settings::<A::Extra>::candidates(A::NAME).remove(0),
             search_history,
             question: None,
             messages_open: true,
@@ -642,7 +645,7 @@ impl<A: App> Shell<A> {
             return;
         }
         self.settings_dirty = false;
-        if let Err(e) = self.settings.save_to(&Settings::<A::Extra>::path()) {
+        if let Err(e) = self.settings.save_to(&self.settings_path) {
             self.status = trf("Settings not saved: {e}", &[("e", &e)]);
         }
     }

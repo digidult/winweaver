@@ -660,6 +660,18 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   shell (`crates/ww/src`) are in every `ui.json` of WinWeaver (the test reads both crates) and in
   `package-wedit/lang/uk/ui.json`. wedit is built by the release build of the workspace and packaged
   by the job Package as `wedit-<version>.zip` (the exe, its README, `lang/`).
+- The settings file (0.24.0, the customer's item 3 of 22.10.2026): `Settings::load(program)` reads the
+  first of `<exe stem>.settings.json`, `<program>.settings.json` and `settings.json` that exists and
+  writes back to it (`Shell::settings_path`), so two copies of an executable with different names keep
+  their own settings and a `settings.json` of 0.23.0 goes on. `Settings::wrap_lines` folds the lines of
+  a text or a page to the width of the view (the setting Wrap lines of General); off, the view scrolls
+  sideways (a `layouter` of infinite width in wedit, an infinite width for the page). A page always
+  scrolls sideways for a table or a block of code wider than the view, and its code takes the colour
+  `code_bg` of the theme. A program adds colours to the themes with `style::install_colors`
+  (`ExtraColor`: name, label, light, dark); a theme file overrides them by name, the theme editor lists
+  them after the palette, and `style::extra(ui, name)` gives the one of the theme shown. The fields of
+  the form Languages (display language, system and user locale) are typed freely with the list of the
+  languages of Windows beside them (`forms::locale_field`).
 - The CI way of the refactoring: the Linux job checks the whole workspace for Windows (clippy on the
   target `x86_64-pc-windows-gnu`), so `gh workflow run ci.yml --ref <branch> -f windows=false` is the
   cheap check of a change of any crate; the Windows job runs when the tests of the window, the runner's

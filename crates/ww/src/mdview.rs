@@ -128,12 +128,27 @@ pub fn matching_blocks(text: &str, words: &[String]) -> Vec<String> {
     out
 }
 
-pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc) {
+/// The page; `wrap` folds its lines to the width of the view (a readable width at most), else
+/// the view scrolls sideways. A table or a block of code wider than the view scrolls sideways
+/// either way.
+pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool) {
     let words = doc.search.words();
-    egui::ScrollArea::vertical()
+    let width = if wrap {
+        ui.available_width().min(PAGE_WIDTH)
+    } else {
+        f32::INFINITY
+    };
+    let code_bg = crate::style::palette(ui).code_bg;
+    egui::ScrollArea::both()
         .auto_shrink(false)
         .show(ui, |ui| {
-            ui.set_max_width(PAGE_WIDTH);
+            // The code of a page takes the colour of the theme, inline and in blocks (a block
+            // is a read-only text field).
+            ui.visuals_mut().code_bg_color = code_bg;
+            ui.visuals_mut().extreme_bg_color = code_bg;
+            if width.is_finite() {
+                ui.set_max_width(width);
+            }
             if words.is_empty() {
                 let jump = if doc.jump {
                     doc.anchor

@@ -287,7 +287,7 @@ tempat program dijalankan dan ke `logs/`.
 
 ## File di samping file program
 
-`settings.json` (bahasa, tema, file terbaru, tab dari sesi terakhir), `profiles/` (profil
+`winweaver.settings.json` (bahasa, tema, file terbaru, tab dari sesi terakhir), `profiles/` (profil
 Anda), `output/` (file jawaban dan skrip), `drafts/` (perubahan yang belum disimpan, dipulihkan saat
 program dimulai berikutnya), `mcp/` (konfigurasi server MCP), `logs/` (apa yang dilakukan program), `bookmarks.wwmarks`. Tidak ada yang
 ditulis di tempat lain.

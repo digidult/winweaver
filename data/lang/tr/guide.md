@@ -292,7 +292,7 @@ konsola ve `logs/` klasörüne gider.
 
 ## Yürütülebilir dosyanın yanındaki dosyalar
 
-`settings.json` (dil, tema, son kullanılan dosyalar, son oturumun sekmeleri), `profiles/`
+`winweaver.settings.json` (dil, tema, son kullanılan dosyalar, son oturumun sekmeleri), `profiles/`
 (profilleriniz), `output/` (yanıt dosyası ve betikler), `drafts/` (bir sonraki başlangıçta geri yüklenen
 kaydedilmemiş değişiklikler), `mcp/` (MCP sunucusunun yapılandırmaları), `logs/` (programın yaptıkları), `bookmarks.wwmarks`. Başka hiçbir yere bir
 şey yazılmaz.

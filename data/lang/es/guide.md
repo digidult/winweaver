@@ -305,7 +305,7 @@ la consola desde la que se inició el programa y a `logs/`.
 
 ## Archivos junto al ejecutable
 
-`settings.json` (idioma, tema, archivos recientes, las pestañas de la última sesión), `profiles/` (tus
+`winweaver.settings.json` (idioma, tema, archivos recientes, las pestañas de la última sesión), `profiles/` (tus
 perfiles), `output/` (el archivo de respuesta y los scripts), `drafts/` (cambios sin guardar, que se
 restauran en el siguiente inicio), `mcp/` (las configuraciones del servidor MCP), `logs/` (lo que ha hecho el programa), `bookmarks.wwmarks`. No se
 escribe nada en ningún otro sitio.

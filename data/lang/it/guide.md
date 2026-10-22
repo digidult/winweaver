@@ -296,7 +296,7 @@ vanno nella console da cui è stato avviato il programma e in `logs/`.
 
 ## File accanto all'eseguibile
 
-`settings.json` (lingua, tema, file recenti, le schede dell'ultima sessione), `profiles/` (i tuoi
+`winweaver.settings.json` (lingua, tema, file recenti, le schede dell'ultima sessione), `profiles/` (i tuoi
 profili), `output/` (il file di risposte e gli script), `drafts/` (le modifiche non salvate, ripristinate
 all'avvio successivo), `mcp/` (le configurazioni del server MCP), `logs/` (cosa ha fatto il programma), `bookmarks.wwmarks`. Il programma non
 scrive nulla altrove.

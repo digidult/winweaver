@@ -146,10 +146,22 @@ impl TextDoc {
         Some(next)
     }
 
-    /// The editor: a monospace text field over the whole tab, scrolled both ways.
-    pub fn view(&mut self, ui: &mut egui::Ui) {
+    /// The editor: a monospace text field over the whole tab; `wrap` folds the lines to the
+    /// width of the view, else the view scrolls sideways.
+    pub fn view(&mut self, ui: &mut egui::Ui, wrap: bool) {
         let p = style::palette(ui);
         let id = self.id();
+        let font = egui::TextStyle::Monospace.resolve(ui.style());
+        let color = ui.visuals().text_color();
+        let mut no_wrap = |ui: &egui::Ui, text: &dyn egui::TextBuffer, _width: f32| {
+            let job = egui::text::LayoutJob::simple(
+                text.as_str().to_owned(),
+                font.clone(),
+                color,
+                f32::INFINITY,
+            );
+            ui.fonts(|f| f.layout_job(job))
+        };
         egui::CentralPanel::default()
             .frame(egui::Frame::new().fill(p.card))
             .show(ui, |ui| {
@@ -162,17 +174,25 @@ impl TextDoc {
                     state.store(ui.ctx(), id);
                     ui.memory_mut(|m| m.request_focus(id));
                 }
-                egui::ScrollArea::both()
+                let scroll = if wrap {
+                    egui::ScrollArea::vertical()
+                } else {
+                    egui::ScrollArea::both()
+                };
+                scroll
                     .id_salt(("wedit-scroll", &self.draft_key))
                     .auto_shrink(false)
                     .show(ui, |ui| {
-                        let output = egui::TextEdit::multiline(&mut self.text)
+                        let mut edit = egui::TextEdit::multiline(&mut self.text)
                             .id(id)
                             .font(egui::TextStyle::Monospace)
                             .desired_width(f32::INFINITY)
                             .desired_rows(40)
-                            .lock_focus(true)
-                            .show(ui);
+                            .lock_focus(true);
+                        if !wrap {
+                            edit = edit.layouter(&mut no_wrap);
+                        }
+                        let output = edit.show(ui);
                         if output.response.changed() {
                             self.dirty = true;
                             self.changed = Some(Instant::now());

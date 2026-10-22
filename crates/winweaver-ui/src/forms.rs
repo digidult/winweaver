@@ -360,27 +360,68 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>, acts: &mut Vec<
     });
 }
 
+/// A locale field: a tag typed freely, with the list of the languages of Windows beside it
+/// (filtered by what is typed) that fills the tag in.
+fn locale_field(ui: &mut egui::Ui, id: &str, value: &mut String, table: &resources::Locales) {
+    ui.horizontal(|ui| {
+        ui.add(egui::TextEdit::singleline(value).desired_width(120.0));
+        if table.languages.is_empty() {
+            return;
+        }
+        let known = table.language(value).map(|l| l.name.clone());
+        let needle = if known.is_some() {
+            String::new()
+        } else {
+            value.trim().to_lowercase()
+        };
+        let mut chosen = None;
+        egui::ComboBox::from_id_salt(id)
+            .selected_text(known.unwrap_or_default())
+            .width(240.0)
+            .height(360.0)
+            .show_ui(ui, |ui| {
+                for language in &table.languages {
+                    if language.lcid.is_empty() {
+                        continue;
+                    }
+                    let text = format!("{} {}", language.name, language.tag).to_lowercase();
+                    if !text.contains(&needle) {
+                        continue;
+                    }
+                    let on = language.tag.eq_ignore_ascii_case(value);
+                    let label = format!("{} ({})", language.name, language.tag);
+                    if ui.selectable_label(on, label).clicked() && !on {
+                        chosen = Some(language.tag.clone());
+                    }
+                }
+            });
+        if let Some(tag) = chosen {
+            *value = tag;
+        }
+    });
+}
+
 fn languages_form(ui: &mut egui::Ui, l: &mut Languages) {
     ui.heading(tr("Languages"));
     ui.add_space(6.0);
+    let table = resources::locales();
     egui::Grid::new("languages-form")
         .num_columns(2)
         .spacing([16.0, 8.0])
         .show(ui, |ui| {
-            for (label, value) in [
-                ("Display language", &mut l.ui_language),
-                ("System locale", &mut l.system_locale),
-                ("User locale", &mut l.user_locale),
+            for (label, id, value) in [
+                ("Display language", "ui-language", &mut l.ui_language),
+                ("System locale", "system-locale", &mut l.system_locale),
+                ("User locale", "user-locale", &mut l.user_locale),
             ] {
                 ui.label(tr(label));
-                ui.add(egui::TextEdit::singleline(value).desired_width(120.0));
+                locale_field(ui, id, value, table);
                 ui.end_row();
             }
         });
     ui.weak(tr("The display language is never changed later: the installed Windows keeps the language of the answer file."));
     ui.add_space(8.0);
     ui.strong(tr("Input languages (the first is the default)"));
-    let table = resources::locales();
     if table.languages.is_empty() {
         ui.weak(tr("The languages and layouts of Windows were not read: the list keeps its items, and new ones cannot be chosen."));
     }

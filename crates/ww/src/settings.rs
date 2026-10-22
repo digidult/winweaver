@@ -56,6 +56,9 @@ pub struct Settings<X: Extra> {
     pub renderer: String,
     /// The tabs with files open at the last close are opened again at the start.
     pub restore_tabs: bool,
+    /// The lines of a text or a page are wrapped to the width of the view; else the view
+    /// scrolls sideways.
+    pub wrap_lines: bool,
     /// The files of the tabs open at the last close, and the active one among them.
     pub open_tabs: Vec<PathBuf>,
     pub active_tab: usize,
@@ -77,6 +80,7 @@ impl<X: Extra> Default for Settings<X> {
             custom_theme: String::new(),
             renderer: String::new(),
             restore_tabs: true,
+            wrap_lines: true,
             open_tabs: Vec::new(),
             active_tab: 0,
             recent: Vec::new(),
@@ -87,8 +91,36 @@ impl<X: Extra> Default for Settings<X> {
 }
 
 impl<X: Extra> Settings<X> {
-    pub fn path() -> PathBuf {
-        exe_dir().join("settings.json")
+    /// The files the settings may live in, next to the executable: the one named after the
+    /// executable (`<exe>.settings.json`, so two copies of the program with different names keep
+    /// their own), the one named after the program, and `settings.json` of earlier versions.
+    pub fn candidates(program: &str) -> Vec<PathBuf> {
+        let dir = exe_dir();
+        let mut names: Vec<String> = Vec::new();
+        if let Some(exe) = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.file_stem().map(|s| s.to_string_lossy().to_lowercase()))
+        {
+            names.push(format!("{exe}.settings.json"));
+        }
+        let own = format!("{}.settings.json", program.to_lowercase());
+        if !names.contains(&own) {
+            names.push(own);
+        }
+        names.push("settings.json".to_owned());
+        names.into_iter().map(|n| dir.join(n)).collect()
+    }
+
+    /// The settings of the first of `candidates` that exists, the defaults when none does, and
+    /// the file to write them to: the one read, else the first candidate.
+    pub fn load(program: &str) -> (Result<Self, String>, PathBuf) {
+        let candidates = Self::candidates(program);
+        let path = candidates
+            .iter()
+            .find(|p| p.exists())
+            .cloned()
+            .unwrap_or_else(|| candidates[0].clone());
+        (Self::load_from(&path), path)
     }
 
     /// The settings of a file; the defaults when the file does not exist. The files the settings

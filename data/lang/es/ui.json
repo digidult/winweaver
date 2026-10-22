@@ -758,5 +758,7 @@
   "none": "ninguna",
   "{name} users": "Usuarios de {name}",
   "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.": "El ejemplo toma el número de serie {serial} y la dirección MAC {mac}; cada equipo da los suyos.",
-  "Theme files": "Archivos de temas"
+  "Theme files": "Archivos de temas",
+  "Wrap lines to the width of the view": "Ajustar las líneas al ancho de la vista",
+  "Code on pages": "Código en las páginas"
 }

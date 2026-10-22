@@ -244,10 +244,9 @@ impl Wedit {
             "wedit {version}, settings {path}",
             &[
                 ("version", &VERSION),
-                ("path", &ww::Settings::<Extra>::path().display()),
+                ("path", &shell.settings_path.display()),
             ],
         )
-        .replace("{graphics}", &shell.graphics)
     }
 }
 
@@ -326,10 +325,7 @@ impl App for Wedit {
     fn open_path(&mut self, shell: &mut Shell<Self>, path: PathBuf) {
         if is_page(&path) {
             self.open_page(shell, path);
-        } else if path
-            .extension()
-            .is_some_and(|e| e == ww::themes::EXTENSION)
-        {
+        } else if path.extension().is_some_and(|e| e == ww::themes::EXTENSION) {
             shell.open_theme_path(path);
         } else {
             self.open_text(shell, path);
@@ -423,10 +419,11 @@ impl App for Wedit {
     }
 
     fn draw(&mut self, shell: &mut Shell<Self>, ui: &mut egui::Ui, _acts: &mut Vec<Act>) {
+        let wrap = shell.settings.wrap_lines;
         match shell.active_doc_mut() {
-            Some(Doc::Text(doc)) => doc.view(ui),
+            Some(Doc::Text(doc)) => doc.view(ui, wrap),
             Some(Doc::Page(doc)) => {
-                egui::CentralPanel::default().show(ui, |ui| mdview::md_view(ui, doc));
+                egui::CentralPanel::default().show(ui, |ui| mdview::md_view(ui, doc, wrap));
             }
             _ => {}
         }

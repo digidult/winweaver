@@ -129,6 +129,10 @@ impl<A: App> Window<A> {
                 &mut self.shell.settings.restore_tabs,
                 tr("Open the tabs of the last session at the start"),
             );
+            ui.checkbox(
+                &mut self.shell.settings.wrap_lines,
+                tr("Wrap lines to the width of the view"),
+            );
         });
     }
 

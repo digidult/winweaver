@@ -67,8 +67,9 @@ impl WinWeaver {
     }
 
     pub(crate) fn draw_markdown(&mut self, shell: &mut Shell<WinWeaver>, ui: &mut egui::Ui) {
+        let wrap = shell.settings.wrap_lines;
         if let Some(Doc::Markdown(doc)) = shell.docs.get_mut(shell.active) {
-            egui::CentralPanel::default().show(ui, |ui| mdview::md_view(ui, doc));
+            egui::CentralPanel::default().show(ui, |ui| mdview::md_view(ui, doc, wrap));
         }
     }
 

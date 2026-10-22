@@ -50,8 +50,7 @@ pub fn smoke_window<A: App>(cli_renderer: Option<&str>) -> Result<String, String
             }
         }
     }
-    let settings =
-        Settings::<A::Extra>::load_from(&Settings::<A::Extra>::path()).unwrap_or_default();
+    let settings = Settings::<A::Extra>::load(A::NAME).0.unwrap_or_default();
     let order = renderer::order(chosen_renderer(cli_renderer, &settings.renderer)?);
     let info = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
     let title = format!("{} smoke test", A::NAME);
@@ -83,7 +82,8 @@ pub fn run<A: App>(
     cli_renderer: Option<&str>,
     make: impl Fn(&Settings<A::Extra>) -> A + Clone + 'static,
 ) -> Result<(), String> {
-    let (settings, warning) = match Settings::<A::Extra>::load_from(&Settings::<A::Extra>::path()) {
+    let (loaded, settings_path) = Settings::<A::Extra>::load(A::NAME);
+    let (settings, warning) = match loaded {
         Ok(s) => (s, None),
         Err(e) => (Settings::default(), Some(e)),
     };
@@ -95,12 +95,14 @@ pub fn run<A: App>(
     renderer::start(A::NAME, &viewport, &order, |drawn, failures| {
         let make = make.clone();
         let settings = settings.clone();
+        let settings_path = settings_path.clone();
         let warning = warning.clone();
         let failures = failures.to_vec();
         Box::new(move |cc| {
             style::install_fonts(&cc.egui_ctx);
             let app = make(&settings);
             let mut window = Window::new(app, settings);
+            window.shell.settings_path = settings_path;
             window.shell.graphics = renderer::graphics_text(cc);
             window.shell.log(
                 "INFO",

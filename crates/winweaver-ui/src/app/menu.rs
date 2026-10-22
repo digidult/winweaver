@@ -125,7 +125,7 @@ impl WinWeaver {
                 &[
                     ("build", &winweaver_core::BUILD),
                     ("catalog", &self.catalog.version()),
-                    ("path", &Settings::path().display()),
+                    ("path", &shell.settings_path.display()),
                 ],
             ))),
             acts,

@@ -40,15 +40,82 @@ pub struct Palette {
     pub msg_bg: Color32,
     pub msg_fg: Color32,
     pub msg_border: Color32,
+    /// The code on a page: the blocks and the words of code.
+    pub code_bg: Color32,
 }
 
 const fn hex(v: u32) -> Color32 {
     Color32::from_rgb((v >> 16) as u8, (v >> 8) as u8, v as u8)
 }
 
+/// A colour a program adds to the themes beyond the ones of the palette: its name in a theme
+/// file, its label in the theme editor (translated), its value on the light and on the dark
+/// base. A theme file overrides it by its name like any colour.
+pub struct ExtraColor {
+    pub name: &'static str,
+    pub label: &'static str,
+    pub light: Color32,
+    pub dark: Color32,
+}
+
+static EXTRA_COLORS: std::sync::RwLock<&'static [ExtraColor]> = std::sync::RwLock::new(&[]);
+/// The extra colours of the themes shown now: the name, the light and the dark value.
+static EXTRA_VALUES: std::sync::RwLock<Vec<(String, Color32, Color32)>> =
+    std::sync::RwLock::new(Vec::new());
+
+/// The colours a program adds to the themes, named once at the start.
+pub fn install_colors(list: &'static [ExtraColor]) {
+    *EXTRA_COLORS.write().unwrap_or_else(|e| e.into_inner()) = list;
+}
+
+/// The colours the program added.
+pub fn extra_colors() -> &'static [ExtraColor] {
+    *EXTRA_COLORS.read().unwrap_or_else(|e| e.into_inner())
+}
+
+/// The value of an added colour on a base, before a theme overrides it.
+pub fn extra_default(name: &str, dark: bool) -> Option<Color32> {
+    extra_colors()
+        .iter()
+        .find(|c| c.name == name)
+        .map(|c| if dark { c.dark } else { c.light })
+}
+
+/// The added colours of the two themes the window shows, from their files; `apply` of the
+/// themes calls it.
+pub fn resolve_extra(
+    light: &std::collections::BTreeMap<String, String>,
+    dark: &std::collections::BTreeMap<String, String>,
+) {
+    let values = extra_colors()
+        .iter()
+        .map(|c| {
+            let of = |map: &std::collections::BTreeMap<String, String>, base: Color32| {
+                map.get(c.name)
+                    .and_then(|t| crate::themes::color(t))
+                    .unwrap_or(base)
+            };
+            (c.name.to_owned(), of(light, c.light), of(dark, c.dark))
+        })
+        .collect();
+    *EXTRA_VALUES.write().unwrap_or_else(|e| e.into_inner()) = values;
+}
+
+/// An added colour of the theme the window shows; the text colour for a name nobody added.
+pub fn extra(ui: &egui::Ui, name: &str) -> Color32 {
+    let dark = ui.visuals().dark_mode;
+    EXTRA_VALUES
+        .read()
+        .unwrap_or_else(|e| e.into_inner())
+        .iter()
+        .find(|(n, _, _)| n == name)
+        .map(|(_, l, d)| if dark { *d } else { *l })
+        .unwrap_or_else(|| ui.visuals().text_color())
+}
+
 /// The names of the colours of a theme file, in the order of the theme editor, with the names of
 /// the first version each one also takes.
-pub const COLOR_NAMES: [(&str, &[&str]); 18] = [
+pub const COLOR_NAMES: [(&str, &[&str]); 19] = [
     ("bg", &["background"]),
     ("card", &["field"]),
     ("card2", &["button", "field"]),
@@ -67,6 +134,7 @@ pub const COLOR_NAMES: [(&str, &[&str]); 18] = [
     ("msg_bg", &[]),
     ("msg_fg", &[]),
     ("msg_border", &[]),
+    ("code_bg", &[]),
 ];
 
 impl Palette {
@@ -90,6 +158,7 @@ impl Palette {
         msg_bg: hex(0xfff4e5),
         msg_fg: hex(0x5a3b00),
         msg_border: hex(0xf0d9b5),
+        code_bg: hex(0xeeeeee),
     };
 
     pub const DARK: Palette = Palette {
@@ -112,6 +181,7 @@ impl Palette {
         msg_bg: hex(0x433418),
         msg_fg: hex(0xffd9a0),
         msg_border: hex(0x5c4620),
+        code_bg: hex(0x1c1c1c),
     };
 
     fn slot(&mut self, name: &str) -> Option<&mut Color32> {
@@ -134,6 +204,7 @@ impl Palette {
             "msg_bg" => &mut self.msg_bg,
             "msg_fg" => &mut self.msg_fg,
             "msg_border" => &mut self.msg_border,
+            "code_bg" => &mut self.code_bg,
             _ => return None,
         })
     }
@@ -249,7 +320,7 @@ pub fn visuals(p: &Palette) -> egui::Visuals {
     v.window_fill = p.card;
     v.faint_bg_color = p.card2;
     v.extreme_bg_color = p.card2;
-    v.code_bg_color = p.hover;
+    v.code_bg_color = p.code_bg;
     v.text_edit_bg_color = Some(p.card2);
     v.window_stroke = Stroke::new(1.0, p.border);
     v.window_corner_radius = CornerRadius::same(8);

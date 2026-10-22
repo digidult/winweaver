@@ -285,7 +285,7 @@ the console the program was started from and to `logs/`.
 
 ## Files next to the executable
 
-`settings.json` (language, theme, recent files, the tabs of the last session), `profiles/` (your
+`winweaver.settings.json` (language, theme, recent files, the tabs of the last session), `profiles/` (your
 profiles), `output/` (the answer file and the scripts), `drafts/` (unsaved changes, restored at the
 next start), `mcp/` (the configurations of the MCP server), `logs/` (what the program did), `bookmarks.wwmarks`. Nothing is written anywhere else.
 

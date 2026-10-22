@@ -307,7 +307,7 @@ Meldungen gehen an die Konsole, aus der das Programm gestartet wurde, und nach `
 
 ## Dateien neben der ausführbaren Datei
 
-`settings.json` (Sprache, Design, zuletzt verwendete Dateien, die Registerkarten der letzten Sitzung),
+`winweaver.settings.json` (Sprache, Design, zuletzt verwendete Dateien, die Registerkarten der letzten Sitzung),
 `profiles/` (Ihre Profile), `output/` (die Antwortdatei und die Skripts), `drafts/` (nicht gespeicherte
 Änderungen, die beim nächsten Start wiederhergestellt werden), `mcp/` (die Konfigurationen des MCP-Servers), `logs/` (was das Programm getan hat),
 `bookmarks.wwmarks`. An anderer Stelle wird nichts geschrieben.
