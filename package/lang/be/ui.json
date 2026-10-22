@@ -760,5 +760,9 @@
   "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.": "Прыклад бярэ серыйны нумар {serial} і MAC-адрас {mac}; камп'ютар дае свае.",
   "Theme files": "Файлы тэм",
   "Wrap lines to the width of the view": "Пераносіць радкі па шырыні вобласці прагляду",
-  "Code on pages": "Код на старонках"
+  "Code on pages": "Код на старонках",
+  "Tables on pages": "Табліцы на старонках",
+  "The width of the view": "Шырыня вобласці прагляду",
+  "Pixels": "Пікселяў",
+  "Characters": "Сімвалаў"
 }

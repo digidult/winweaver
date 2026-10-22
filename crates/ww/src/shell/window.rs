@@ -17,13 +17,83 @@ pub const COMPACT_WIDTH: f32 = 1100.0;
 pub struct Window<A: App> {
     pub shell: Shell<A>,
     pub app: A,
+    /// The first frame fitted the window to its monitor.
+    placed: bool,
+}
+
+/// The window fitted to the monitor it opened on: moved inside it, and shrunk when it is larger
+/// (a maximized window stays as it is).
+fn fit_window(ctx: &egui::Context) {
+    let (outer, inner, monitor, maximized) = ctx.input(|i| {
+        let v = i.viewport();
+        (
+            v.outer_rect,
+            v.inner_rect,
+            v.monitor_size,
+            v.maximized.unwrap_or(false),
+        )
+    });
+    let (Some(outer), Some(inner), Some(monitor)) = (outer, inner, monitor) else {
+        return;
+    };
+    if maximized || monitor.x <= 0.0 || monitor.y <= 0.0 {
+        return;
+    }
+    let frame = outer.size() - inner.size();
+    let room = monitor - frame;
+    let least = egui::Vec2::from(crate::run::WINDOW_MIN_SIZE).min(room);
+    let size = inner.size().min(room).max(least);
+    let pos = egui::pos2(
+        outer.left().clamp(0.0, (monitor.x - size.x - frame.x).max(0.0)),
+        outer.top().clamp(0.0, (monitor.y - size.y - frame.y).max(0.0)),
+    );
+    if size != inner.size() {
+        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(size));
+    }
+    if pos != outer.min {
+        ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(pos));
+    }
 }
 
 impl<A: App> Window<A> {
     pub fn new(mut app: A, settings: crate::Settings<A::Extra>) -> Self {
         let mut shell = Shell::new(settings);
         app.started(&mut shell);
-        Self { shell, app }
+        Self {
+            shell,
+            app,
+            placed: false,
+        }
+    }
+
+    /// Where the window is, into the settings for the next start; a maximized window keeps the
+    /// place it had before.
+    fn remember_window(&mut self, ctx: &egui::Context) {
+        let (outer, inner, maximized) = ctx.input(|i| {
+            let v = i.viewport();
+            (v.outer_rect, v.inner_rect, v.maximized.unwrap_or(false))
+        });
+        let (Some(outer), Some(inner)) = (outer, inner) else {
+            return;
+        };
+        let now = crate::WindowPlace {
+            x: outer.left(),
+            y: outer.top(),
+            width: inner.width(),
+            height: inner.height(),
+            maximized,
+        };
+        let place = match (&self.shell.settings.window, maximized) {
+            (Some(before), true) => crate::WindowPlace {
+                maximized: true,
+                ..before.clone()
+            },
+            _ => now,
+        };
+        if self.shell.settings.window.as_ref() != Some(&place) {
+            self.shell.settings.window = Some(place);
+            self.shell.settings_dirty = true;
+        }
     }
 
     /// Runs the acts of a frame: the ones of the window here, the others by the program.
@@ -287,6 +357,10 @@ impl<A: App> eframe::App for Window<A> {
         if self.shell.exit {
             ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
         }
+        if !self.placed {
+            self.placed = true;
+            fit_window(ui.ctx());
+        }
         self.shell.apply_visuals(ui.ctx());
         self.shell.color_title_bar(ui, frame);
         let title = self.shell.window_title();
@@ -351,6 +425,7 @@ impl<A: App> eframe::App for Window<A> {
         let closing = self.shell.exit || ui.ctx().input(|i| i.viewport().close_requested());
         self.shell.write_drafts(closing);
         if closing {
+            self.remember_window(ui.ctx());
             self.app.closing(&mut self.shell);
             self.shell.remember_tabs();
         }

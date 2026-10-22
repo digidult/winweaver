@@ -760,5 +760,9 @@
   "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.": "Contoh ini memakai nomor seri {serial} dan alamat MAC {mac}; setiap komputer memberi miliknya sendiri.",
   "Theme files": "Berkas tema",
   "Wrap lines to the width of the view": "Lipat baris sesuai lebar tampilan",
-  "Code on pages": "Kode pada halaman"
+  "Code on pages": "Kode pada halaman",
+  "Tables on pages": "Tabel pada halaman",
+  "The width of the view": "Lebar tampilan",
+  "Pixels": "Piksel",
+  "Characters": "Karakter"
 }

@@ -760,5 +760,9 @@
   "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.": "Örnek, {serial} seri numarasını ve {mac} MAC adresini kullanır; her bilgisayar kendi değerlerini verir.",
   "Theme files": "Tema dosyaları",
   "Wrap lines to the width of the view": "Satırları görünüm genişliğine göre kaydır",
-  "Code on pages": "Sayfalardaki kod"
+  "Code on pages": "Sayfalardaki kod",
+  "Tables on pages": "Sayfalardaki tablolar",
+  "The width of the view": "Görünüm genişliği",
+  "Pixels": "Piksel",
+  "Characters": "Karakter"
 }

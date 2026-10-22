@@ -672,6 +672,13 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   them after the palette, and `style::extra(ui, name)` gives the one of the theme shown. The fields of
   the form Languages (display language, system and user locale) are typed freely with the list of the
   languages of Windows beside them (`forms::locale_field`).
+- Tables and the window (0.24.0, the customer's items of 22.10.2026, evening): a page cuts its tables
+  out (`mdview::segments`, not inside a block of code) and draws them as grids of the width of
+  `Settings::table_width` (`TableWidth`: the view, pixels, characters; Tables on pages in General)
+  with the cells wrapped; the rest goes to egui_commonmark. `Settings::window` (`WindowPlace`) is
+  where the window was at the close; `run` opens it there, and the first frame fits it to the monitor
+  it opened on (`window::fit_window`: moved inside, shrunk to the monitor, never below
+  `WINDOW_MIN_SIZE`); a maximized window keeps the place it had before.
 - The CI way of the refactoring: the Linux job checks the whole workspace for Windows (clippy on the
   target `x86_64-pc-windows-gnu`), so `gh workflow run ci.yml --ref <branch> -f windows=false` is the
   cheap check of a change of any crate; the Windows job runs when the tests of the window, the runner's

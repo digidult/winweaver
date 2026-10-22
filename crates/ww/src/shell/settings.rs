@@ -8,7 +8,7 @@ use crate::doc::Document;
 use crate::folders::dir;
 use crate::i18n::{self, tr, trf};
 use crate::renderer::Renderer;
-use crate::settings::ThemeChoice;
+use crate::settings::{TableWidth, ThemeChoice};
 use crate::{style, themes, themeview};
 
 impl<A: App> Window<A> {
@@ -133,6 +133,48 @@ impl<A: App> Window<A> {
                 &mut self.shell.settings.wrap_lines,
                 tr("Wrap lines to the width of the view"),
             );
+            self.table_width_choice(ui);
+        });
+    }
+
+    /// How wide a table of a page may be: the view, so many pixels or so many characters.
+    fn table_width_choice(&mut self, ui: &mut egui::Ui) {
+        let width = &mut self.shell.settings.table_width;
+        let pixels = match *width {
+            TableWidth::Pixels(n) => n,
+            _ => 800,
+        };
+        let characters = match *width {
+            TableWidth::Characters(n) => n,
+            _ => 100,
+        };
+        ui.horizontal(|ui| {
+            ui.label(tr("Tables on pages"));
+            let shown = match width {
+                TableWidth::View => tr("The width of the view"),
+                TableWidth::Pixels(_) => tr("Pixels"),
+                TableWidth::Characters(_) => tr("Characters"),
+            };
+            egui::ComboBox::from_id_salt("table-width")
+                .selected_text(shown)
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(width, TableWidth::View, tr("The width of the view"));
+                    ui.selectable_value(width, TableWidth::Pixels(pixels), tr("Pixels"));
+                    ui.selectable_value(
+                        width,
+                        TableWidth::Characters(characters),
+                        tr("Characters"),
+                    );
+                });
+            match width {
+                TableWidth::Pixels(n) => {
+                    ui.add(egui::DragValue::new(n).range(100..=4000));
+                }
+                TableWidth::Characters(n) => {
+                    ui.add(egui::DragValue::new(n).range(20..=400));
+                }
+                TableWidth::View => {}
+            }
         });
     }
 

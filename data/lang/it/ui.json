@@ -760,5 +760,9 @@
   "The example takes the serial number {serial} and the MAC address {mac}; a computer gives its own.": "L'esempio usa il numero di serie {serial} e l'indirizzo MAC {mac}; ogni computer dà i propri.",
   "Theme files": "File dei temi",
   "Wrap lines to the width of the view": "Manda a capo le righe alla larghezza della vista",
-  "Code on pages": "Codice nelle pagine"
+  "Code on pages": "Codice nelle pagine",
+  "Tables on pages": "Tabelle nelle pagine",
+  "The width of the view": "La larghezza della vista",
+  "Pixels": "Pixel",
+  "Characters": "Caratteri"
 }

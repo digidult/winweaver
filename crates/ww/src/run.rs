@@ -88,10 +88,17 @@ pub fn run<A: App>(
         Err(e) => (Settings::default(), Some(e)),
     };
     let order = renderer::order(chosen_renderer(cli_renderer, &settings.renderer)?);
-    let viewport = egui::ViewportBuilder::default()
+    let mut viewport = egui::ViewportBuilder::default()
         .with_title(A::NAME)
         .with_inner_size(WINDOW_SIZE)
         .with_min_inner_size(WINDOW_MIN_SIZE);
+    // Where the window was at the last close; the first frame fits it to the monitor.
+    if let Some(w) = &settings.window {
+        viewport = viewport
+            .with_inner_size([w.width, w.height])
+            .with_position([w.x, w.y])
+            .with_maximized(w.maximized);
+    }
     renderer::start(A::NAME, &viewport, &order, |drawn, failures| {
         let make = make.clone();
         let settings = settings.clone();
