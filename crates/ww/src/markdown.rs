@@ -135,7 +135,9 @@ impl Builder {
             link: self.links.last().cloned(),
             ..self.style.clone()
         };
-        self.inline.get_or_insert_with(Inline::default).push(text, &style);
+        self.inline
+            .get_or_insert_with(Inline::default)
+            .push(text, &style);
     }
 
     fn start(&mut self, tag: Tag<'_>) {
@@ -272,7 +274,8 @@ impl Builder {
 
 /// The blocks of a Markdown text.
 pub fn parse(text: &str) -> Vec<Block> {
-    let options = Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TASKLISTS;
+    let options =
+        Options::ENABLE_TABLES | Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TASKLISTS;
     let mut b = Builder {
         frames: vec![Frame::Blocks(Vec::new())],
         open: Vec::new(),
@@ -292,7 +295,9 @@ pub fn parse(text: &str) -> Vec<Block> {
                     link: b.links.last().cloned(),
                     ..b.style.clone()
                 };
-                b.inline.get_or_insert_with(Inline::default).push(&t, &style);
+                b.inline
+                    .get_or_insert_with(Inline::default)
+                    .push(&t, &style);
             }
             Event::SoftBreak => b.text(" "),
             Event::HardBreak => b.text("\n"),
@@ -561,13 +566,9 @@ fn list(
         };
         ui.horizontal_top(|ui| {
             ui.spacing_mut().item_spacing.x = 0.0;
-            let galley = ui.fonts_mut(|f| {
-                f.layout_no_wrap(marker, look.body.clone(), look.text)
-            });
-            let (rect, _) = ui.allocate_exact_size(
-                egui::vec2(marker_width, galley.size().y),
-                Sense::hover(),
-            );
+            let galley = ui.fonts_mut(|f| f.layout_no_wrap(marker, look.body.clone(), look.text));
+            let (rect, _) =
+                ui.allocate_exact_size(egui::vec2(marker_width, galley.size().y), Sense::hover());
             let x = rect.right() - galley.size().x - style::size(ui, 6.0);
             ui.painter()
                 .galley(egui::pos2(x, rect.top()), galley, look.text);
@@ -651,7 +652,11 @@ pub fn column_widths(
     // Columns whose share is below their least width take it; the rest share what is left.
     let mut fixed = vec![false; cols];
     loop {
-        let left = free - (0..cols).filter(|c| fixed[*c]).map(|c| least[c]).sum::<f32>();
+        let left = free
+            - (0..cols)
+                .filter(|c| fixed[*c])
+                .map(|c| least[c])
+                .sum::<f32>();
         let total: f32 = (0..cols).filter(|c| !fixed[*c]).map(|c| weights[c]).sum();
         let mut changed = false;
         for c in 0..cols {
@@ -747,7 +752,8 @@ fn table(
                     let mut x = rect.left() + CELL_PAD;
                     for col in &widths[..cols - 1] {
                         x += col + TABLE_GAP;
-                        ui.painter().vline(x - TABLE_GAP / 2.0, rect.y_range(), stroke);
+                        ui.painter()
+                            .vline(x - TABLE_GAP / 2.0, rect.y_range(), stroke);
                     }
                 }
             });
@@ -778,7 +784,11 @@ mod tests {
         assert_eq!(p.plain(), "Some strong and code with a link.");
         assert!(p.spans.iter().any(|s| s.strong && s.text == "strong"));
         assert!(p.spans.iter().any(|s| s.code && s.text == "code"));
-        assert!(p.spans.iter().any(|s| s.link.as_deref() == Some("a.md#b") && s.text == "link"));
+        assert!(
+            p.spans
+                .iter()
+                .any(|s| s.link.as_deref() == Some("a.md#b") && s.text == "link")
+        );
         let Block::List(None, items) = &blocks[2] else {
             panic!("{:?}", blocks[2]);
         };
@@ -818,6 +828,9 @@ mod tests {
         assert!((wide.iter().sum::<f32>() - (1000.0 - 2.0 * TABLE_GAP)).abs() < 1.0);
         // A narrow table: no column is narrower than its longest word.
         let narrow = column_widths(&rows, 3, 300.0, &measure);
-        assert!(narrow[0] >= 13.0 * 8.0 && narrow[2] >= 10.0 * 8.0, "{narrow:?}");
+        assert!(
+            narrow[0] >= 13.0 * 8.0 && narrow[2] >= 10.0 * 8.0,
+            "{narrow:?}"
+        );
     }
 }
