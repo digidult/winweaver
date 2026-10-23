@@ -160,11 +160,7 @@ impl<A: App> Window<A> {
                 .show_ui(ui, |ui| {
                     ui.selectable_value(width, PageWidth::View, tr("The width of the view"));
                     ui.selectable_value(width, PageWidth::Pixels(pixels), tr("Pixels"));
-                    ui.selectable_value(
-                        width,
-                        PageWidth::Characters(characters),
-                        tr("Characters"),
-                    );
+                    ui.selectable_value(width, PageWidth::Characters(characters), tr("Characters"));
                 });
             match width {
                 PageWidth::Pixels(n) => {
