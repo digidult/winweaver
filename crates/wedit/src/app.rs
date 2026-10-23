@@ -420,11 +420,11 @@ impl App for Wedit {
 
     fn draw(&mut self, shell: &mut Shell<Self>, ui: &mut egui::Ui, _acts: &mut Vec<Act>) {
         let wrap = shell.settings.wrap_lines;
-        let tables = shell.settings.table_width;
+        let page = shell.settings.page_width;
         match shell.active_doc_mut() {
             Some(Doc::Text(doc)) => doc.view(ui, wrap),
             Some(Doc::Page(doc)) => {
-                egui::CentralPanel::default().show(ui, |ui| mdview::md_view(ui, doc, wrap, tables));
+                egui::CentralPanel::default().show(ui, |ui| mdview::md_view(ui, doc, wrap, page));
             }
             _ => {}
         }

@@ -13,7 +13,6 @@ use eframe::egui::{
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag};
 
 use crate::i18n::tr;
-use crate::settings::TableWidth;
 use crate::{icons, style};
 
 /// A run of text in one style.
@@ -319,11 +318,10 @@ pub fn parse(text: &str) -> Vec<Block> {
 
 /// How a page is drawn.
 pub struct View {
-    /// The width of a text: the view, or infinite when the lines do not wrap.
+    /// The width of a text: the page, or infinite when the lines do not wrap.
     pub width: f32,
-    /// The width of the view, for a table as wide as the view.
-    pub view_width: f32,
-    pub tables: TableWidth,
+    /// The width of the page (`Settings::page_width`): its tables fill it.
+    pub page: f32,
     /// The heading to bring into view, by its anchor.
     pub anchor: Option<String>,
 }
@@ -699,14 +697,9 @@ fn table(
     n: usize,
 ) {
     let cols = rows.iter().map(Vec::len).max().unwrap_or(0).max(1);
-    let width = match view.tables {
-        TableWidth::View => view.view_width,
-        TableWidth::Pixels(px) => px as f32,
-        TableWidth::Characters(chars) => {
-            let em = ui.fonts_mut(|f| f.glyph_width(&look.body, 'n'));
-            chars as f32 * em
-        } // Less the frame of the table: its margin, the padding of a band, the stroke, both sides.
-    } - 2.0 * (CELL_PAD + 6.0 + 1.0);
+    // The page less the frame of the table: its margin, the padding of a band, the stroke, both
+    // sides.
+    let width = view.page - 2.0 * (CELL_PAD + 6.0 + 1.0);
     let mut lengths = vec![0_usize; cols];
     let mut least = vec![20.0_f32; cols];
     for (r, row) in rows.iter().enumerate() {

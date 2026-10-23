@@ -41,11 +41,12 @@ impl ThemeChoice {
     }
 }
 
-/// How wide a table of a page may be: its cells wrap inside it.
+/// How wide a page of Markdown is: its text wraps at this width (when the lines wrap), its tables
+/// and blocks of code fill it.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "lowercase")]
-pub enum TableWidth {
-    /// The width of the view (a readable width at most when the lines wrap).
+pub enum PageWidth {
+    /// The width of the view.
     View,
     Pixels(u32),
     /// So many characters of the text of the page.
@@ -81,8 +82,9 @@ pub struct Settings<X: Extra> {
     /// The lines of a text or a page are wrapped to the width of the view; else the view
     /// scrolls sideways.
     pub wrap_lines: bool,
-    /// How wide a table of a page may be.
-    pub table_width: TableWidth,
+    /// How wide a page of Markdown is (`table_width` in the first builds of 0.24.0).
+    #[serde(alias = "table_width")]
+    pub page_width: PageWidth,
     /// The window as it was at the last close, opened there again (fitted to the monitor).
     pub window: Option<WindowPlace>,
     /// The files of the tabs open at the last close, and the active one among them.
@@ -107,7 +109,7 @@ impl<X: Extra> Default for Settings<X> {
             renderer: String::new(),
             restore_tabs: true,
             wrap_lines: true,
-            table_width: TableWidth::View,
+            page_width: PageWidth::View,
             window: None,
             open_tabs: Vec::new(),
             active_tab: 0,

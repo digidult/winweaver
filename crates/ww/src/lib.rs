@@ -40,6 +40,6 @@ pub use commands::{Command, Item, MenuButton};
 pub use doc::{Document, Draft, Scrolled, Search, matches_words, remember_search};
 pub use question::Question;
 pub use run::{run, smoke_window};
-pub use settings::{Extra, Settings, TableWidth, ThemeChoice, WindowPlace};
+pub use settings::{Extra, PageWidth, Settings, ThemeChoice, WindowPlace};
 pub use shell::{App, Messages, Nav, SettingsDoc, Shell, ShellAct, ShellDoc, Window};
 pub use themeview::ThemeDoc;

@@ -93,8 +93,9 @@ Ctrl+Shift+PgUp and PgDn; the program adds its own in `shortcuts`.
   the palette. The palette has `code_bg` for the code of a page.
 - `Settings::wrap_lines` (General, Wrap lines to the width of the view) is what a text or a page
   follows: `ww::mdview::md_view(ui, doc, wrap, tables)` folds the lines or scrolls sideways, and
-  draws the tables of the page as grids of `Settings::table_width` (`TableWidth`: the view, pixels
-  or characters, Tables on pages in General) with their cells wrapped.
+  makes the page as wide as `Settings::page_width` (`PageWidth`: the view, pixels or characters,
+  Width of pages in General): its text wraps at that width, its tables fill it with their cells
+  wrapped.
 - `Settings::window` is where the window was at the last close; `run` opens it there and the first
   frame fits it to its monitor.
 - The look comes from `ww::style`: `palette(ui)` for the colours, `font`, `strong`, `muted`,

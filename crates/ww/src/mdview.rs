@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use crate::doc::{Document, Search, matches_words};
 use crate::markdown::{self, Block, Outcome, View};
-use crate::settings::TableWidth;
+use crate::settings::PageWidth;
 use eframe::egui;
 
 pub struct MdDoc {
@@ -110,11 +110,11 @@ pub fn matching_blocks(text: &str, words: &[String]) -> Vec<String> {
     out
 }
 
-/// The page; `wrap` folds its lines to the width of the view, else the view scrolls sideways.
-/// A table is as wide as `tables` says; a table or a block of code wider than the view scrolls
+/// The page, as wide as `page` says; `wrap` folds its lines to that width, else the view scrolls
+/// sideways. Its tables fill the width of the page; a table or a block of code wider than the view scrolls
 /// sideways either way. A link to a heading of the page brings it into view; any other link is
 /// handed to egui (the shell opens the pages of the program, the system the web).
-pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool, tables: TableWidth) {
+pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool, page: PageWidth) {
     let words = doc.search.words();
     let hash = crate::session::fnv(&doc.text);
     if doc.parsed.as_ref().is_none_or(|(h, _)| *h != hash) {
@@ -122,11 +122,17 @@ pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool, tables: TableWidt
     }
     let mut out = Outcome::default();
     egui::ScrollArea::both().auto_shrink(false).show(ui, |ui| {
-        let view_width = ui.available_width();
+        let page = match page {
+            PageWidth::View => ui.available_width(),
+            PageWidth::Pixels(n) => n as f32,
+            PageWidth::Characters(n) => {
+                let font = crate::style::font(ui, 13.0);
+                n as f32 * ui.fonts_mut(|f| f.glyph_width(&font, 'n'))
+            }
+        };
         let view = View {
-            width: if wrap { view_width } else { f32::INFINITY },
-            view_width,
-            tables,
+            width: if wrap { page } else { f32::INFINITY },
+            page,
             anchor: if doc.jump { doc.anchor.clone() } else { None },
         };
         if words.is_empty() {

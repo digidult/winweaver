@@ -272,11 +272,11 @@ fn screenshots_of_the_window() {
     harness.state_mut().shell.settings.wrap_lines = false;
     shot(&mut harness, "14-page-nowrap");
     harness.state_mut().shell.settings.wrap_lines = true;
-    harness.state_mut().shell.settings.table_width = ww::TableWidth::Characters(40);
-    shot(&mut harness, "15-page-table-40-chars");
-    harness.state_mut().shell.settings.table_width = ww::TableWidth::Pixels(1600);
-    shot(&mut harness, "16-page-table-1600-px");
-    harness.state_mut().shell.settings.table_width = ww::TableWidth::View;
+    harness.state_mut().shell.settings.page_width = ww::PageWidth::Characters(80);
+    shot(&mut harness, "15-page-80-chars");
+    harness.state_mut().shell.settings.page_width = ww::PageWidth::Pixels(1600);
+    shot(&mut harness, "16-page-1600-px");
+    harness.state_mut().shell.settings.page_width = ww::PageWidth::View;
     harness.set_size(egui::vec2(900.0, 900.0));
     shot(&mut harness, "17-page-narrow");
     harness.set_size(egui::vec2(1440.0, 900.0));
