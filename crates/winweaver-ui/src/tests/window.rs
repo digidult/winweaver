@@ -274,8 +274,13 @@ fn screenshots_of_the_window() {
     harness.state_mut().shell.settings.wrap_lines = true;
     harness.state_mut().shell.settings.page_width = ww::PageWidth::Characters(80);
     shot(&mut harness, "15-page-80-chars");
+    harness.state_mut().shell.settings.page_width = ww::PageWidth::Pixels(700);
+    shot(&mut harness, "16-page-700-px");
+    // A limit wider than the window: the page follows the window.
     harness.state_mut().shell.settings.page_width = ww::PageWidth::Pixels(1600);
-    shot(&mut harness, "16-page-1600-px");
+    harness.set_size(egui::vec2(900.0, 900.0));
+    shot(&mut harness, "16b-page-1600-px-narrow-window");
+    harness.set_size(egui::vec2(1440.0, 900.0));
     harness.state_mut().shell.settings.page_width = ww::PageWidth::View;
     harness.set_size(egui::vec2(900.0, 900.0));
     shot(&mut harness, "17-page-narrow");

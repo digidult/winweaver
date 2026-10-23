@@ -41,8 +41,8 @@ impl ThemeChoice {
     }
 }
 
-/// How wide a page of Markdown is: its text wraps at this width (when the lines wrap), its tables
-/// and blocks of code fill it.
+/// How wide a page of Markdown is at most (a narrower view makes it narrower): its text wraps at
+/// this width (when the lines wrap), its tables and blocks of code fill it.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "lowercase")]
 pub enum PageWidth {

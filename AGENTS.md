@@ -679,8 +679,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   `#anchor` scrolls the page to its heading, any other goes to `open_url` (the shell takes the pages of the
   program). Lists put their markers in a column of their own on the baseline of the first line; blocks of
   code have a copy button; the whole page (its text, its blocks of code, its tables) is as wide as
-  `Settings::page_width` (`PageWidth`: the view, pixels, characters; Width of pages in General, the
-  customer's item of 23.10.2026); a table is bands of cells of that width, its columns shared by the
+  `Settings::page_width` (`PageWidth`: the view, or at most so many pixels or characters, never wider
+  than the view; Width of pages in General, the customer's item of 23.10.2026); a table is bands of cells of that width, its columns shared by the
   length of their text and never narrower than their longest word (`markdown::column_widths`), every row
   as high as its highest cell. The scroll bars are solid (`ScrollStyle::solid`): visible whenever the
   content is larger than the view. The screenshots of CI draw the sample page `ww::sample::PAGE` and

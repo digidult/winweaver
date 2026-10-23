@@ -537,9 +537,14 @@ fn draw_blocks(
                 ui.add_space(style::size(ui, 8.0));
             }
             Block::Rule => {
-                ui.add_space(style::size(ui, 4.0));
-                ui.separator();
-                ui.add_space(style::size(ui, 4.0));
+                // As long as the page, not the view.
+                let gap = style::size(ui, 6.0);
+                let (rect, _) = ui.allocate_exact_size(
+                    egui::vec2(width.min(view.page), 2.0 * gap + 1.0),
+                    Sense::hover(),
+                );
+                ui.painter()
+                    .hline(rect.x_range(), rect.center().y, Stroke::new(1.0, look.border));
             }
         }
     }

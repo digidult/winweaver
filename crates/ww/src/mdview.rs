@@ -122,12 +122,14 @@ pub fn md_view(ui: &mut egui::Ui, doc: &mut MdDoc, wrap: bool, page: PageWidth) 
     }
     let mut out = Outcome::default();
     egui::ScrollArea::both().auto_shrink(false).show(ui, |ui| {
+        // A limit: so many pixels or characters at most, the view when it is narrower.
+        let view_width = ui.available_width();
         let page = match page {
-            PageWidth::View => ui.available_width(),
-            PageWidth::Pixels(n) => n as f32,
+            PageWidth::View => view_width,
+            PageWidth::Pixels(n) => (n as f32).min(view_width),
             PageWidth::Characters(n) => {
                 let font = crate::style::font(ui, 13.0);
-                n as f32 * ui.fonts_mut(|f| f.glyph_width(&font, 'n'))
+                (n as f32 * ui.fonts_mut(|f| f.glyph_width(&font, 'n'))).min(view_width)
             }
         };
         let view = View {
