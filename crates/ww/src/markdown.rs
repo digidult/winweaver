@@ -543,8 +543,11 @@ fn draw_blocks(
                     egui::vec2(width.min(view.page), 2.0 * gap + 1.0),
                     Sense::hover(),
                 );
-                ui.painter()
-                    .hline(rect.x_range(), rect.center().y, Stroke::new(1.0, look.border));
+                ui.painter().hline(
+                    rect.x_range(),
+                    rect.center().y,
+                    Stroke::new(1.0, look.border),
+                );
             }
         }
     }
