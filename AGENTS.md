@@ -754,7 +754,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | MCP server | stdio and HTTP, 36 tools, 4 resources, modes, journal, token, configuration files; tests of both transports |
 | W# and wedit | The crates `ww-base` and `ww`, the editor `wedit` with its archive, `docs/ww.md` |
 | wwlite | The light edition for Windows with its archive; a browser edition studied in `docs/wasm.md` |
-| In work (pull request #60, 0.24.0) | The current list of the customer in six groups: the shell (keys, focus, About, links, icons, the question of a closing tab), the documents, the profile (links between catalogs, colours of the panels, `.reg` and `.ps1` of a diff and a whole profile, the command line), the registry and `.pol` files, drafts of every document, `wwlite` and a study of a Wasm edition |
+| Done in pull request #61 (0.25.0) | The list of the customer of 24.10.2026 in six groups: the shell (keys, focus, About, links, icons, the question of a closing tab), the documents, the profile (links between catalogs, colours of the panels, `.reg` and `.ps1` of a diff and a whole profile, the command line), the registry and `.pol` files, drafts of every document, `wwlite` and a study of a Wasm edition |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the
