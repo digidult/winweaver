@@ -1,6 +1,6 @@
 # 12. Telemetry, advertising and preinstalled apps, Copilot and Recall, widgets, web search
 
-Section 8 of `Setup-System.ps1` plus the related values in the default user profile (section 14).
+Rules of `Setup-System.ps1` (specialize) plus the related values in the default user profile (section 14).
 This is not cosmetics: each item either reduces the data sent outside or removes a channel through
 which unwanted apps and links appear on the PC.
 
@@ -26,7 +26,7 @@ which unwanted apps and links appear on the PC.
 - Cross-links:
   - DiagTrack and the Application Experience tasks (Compatibility Appraiser) are not disabled: disabling them
     interferes with feature update offers; here they are kept for the sake of `DeferFeatureUpdatesDays`
-    (section 06). The critic confirmed that the Appraiser tasks are absent under their old names on build 26200.
+    (section 06). On build 26200 the Appraiser tasks are absent under their old names.
   - Windows Error Reporting is disabled: developer dumps (`LocalDumps`) are not affected; the
     «Программа перестала работать» (Program has stopped working) window appears, but the report is not sent.
 - Version differences: the value `AllowTelemetry=0` on Windows 10/11 Pro is treated as 1. In Windows 11
@@ -70,7 +70,8 @@ which unwanted apps and links appear on the PC.
   - `Pol\WindowsAI\DisableClickToDo = 1`: Click to Do (actions on screen content) is off;
   - `Disable-WindowsOptionalFeature -FeatureName Recall`, if the component is enabled;
   - the Copilot app (`Microsoft.Copilot`, `Microsoft.Windows.Ai.Copilot.Provider`) is removed
-    through `$AppsToRemove` (section 13); the taskbar button is hidden in the default user profile.
+    by the rules `apps.remove.copilot` and `apps.remove.copilot-provider` (section 13); the taskbar button is
+    hidden in the default user profile.
 - Expected effect: no AI component takes screenshots or sends document content
   to the cloud; there is no Copilot button.
 - Cross-links: Recall and Click to Do exist only on Copilot+ PCs (NPU) since 24H2; on ordinary PCs

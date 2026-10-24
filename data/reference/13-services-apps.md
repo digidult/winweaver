@@ -1,6 +1,6 @@
 # 13. Services and app removal
 
-Section 9 of `Setup-System.ps1`. Principle: only what is not needed in a workgroup and either
+Rules of `Setup-System.ps1` (specialize). Principle: only what is not needed in a workgroup and either
 expands the attack surface, pulls data into the cloud, or shows advertising is removed. Everything
 needed for system maintenance or office work stays.
 
@@ -12,25 +12,23 @@ The `RetailDemo` service (retail store demo mode) gets startup type 4. It is nee
 
 - Value: `$true`.
 - What it does: the services `XblAuthManager`, `XblGameSave`, `XboxNetApiSvc`, `XboxGipSvc` get startup type 4;
-  `Pol\GameDVR\AllowGameDVR = 0` (game recording and Game Bar are off); inside the app removal block,
-  `MapsBroker` additionally gets startup type 4 (see the known inconsistency below).
+  `Pol\GameDVR\AllowGameDVR = 0` (game recording and Game Bar are off). `MapsBroker` has a rule of its own
+  (below).
 - Expected effect: no background Xbox Live services, no Game Bar overlay on Win+G, no background
   screen recording (which noticeably loads weak PCs).
-- Cross-links: Xbox apps are removed in `$AppsToRemove`; without them the services would still start
+- Cross-links: Xbox apps are removed by the rules `apps.remove.xbox-*`; without them the services would still start
   on triggers. Store games that use Xbox Live do not work: acceptable on work PCs.
 - Version differences: `XboxGipSvc` since Windows 10 1709. No changes in 24H2.
 - Verification: `Get-Service Xbl*, XboxNetApiSvc, XboxGipSvc | Select Name, StartType` → Disabled.
 - Rollback: `Set-Service <name> -StartupType Manual`; delete `AllowGameDVR`.
 
-Known inconsistency in version 0.2: `MapsBroker` (downloading offline maps for the «Карты» (Maps) app)
-is disabled inside the `RemoveBloatApps` condition when `RemoveXboxServices = $true`, although logically
-it belongs to the removal of the `Microsoft.WindowsMaps` app. It works correctly with the default
-values; with `RemoveXboxServices = $false` the service stays enabled without the app (harmless).
-A fix is planned in the constructor: bind `MapsBroker` to the Maps removal.
+`MapsBroker` (downloading offline maps for the «Карты» (Maps) app) gets startup type 4 by the rule
+`apps.maps-broker-off`, which needs the removal of the `Microsoft.WindowsMaps` app (`apps.remove.maps`): without the
+app the service is not needed.
 
 ## RemoveBloatApps
 
-- Value: `$true`. The list is in `$AppsToRemove`.
+- Value: `$true`. Every app of the table is a rule of its own in the catalog (`apps.remove.*`).
 - Where it applies: specialize, SYSTEM, before user profiles are created.
 - What it does: queries `Get-AppxProvisionedPackage -Online` once (apps that Windows installs for
   every new user) and `Get-AppxPackage -AllUsers` (already installed copies). For each name in the
@@ -89,7 +87,7 @@ A fix is planned in the constructor: bind `MapsBroker` to the Maps removal.
 | Package | Why |
 |---|---|
 | Microsoft.WindowsStore, Microsoft.StorePurchaseApp | Updating apps and components (WebView2, Photos, codecs), installing programs |
-| Microsoft.DesktopAppInstaller | winget: installing programs from the command line, a future channel for the users project |
+| Microsoft.DesktopAppInstaller | winget: installing programs from the command line |
 | Microsoft.Windows.Photos, Microsoft.Paint, Microsoft.ScreenSketch | Viewing and editing images, screenshots: office work |
 | Microsoft.WindowsCalculator, Microsoft.WindowsNotepad, Microsoft.WindowsTerminal | Basic tools |
 | Microsoft.WindowsCamera, Microsoft.WindowsSoundRecorder | Video calls, voice recorder |
@@ -115,7 +113,7 @@ A fix is planned in the constructor: bind `MapsBroker` to the Maps removal.
 - Why: Quick Assist is the built-in remote control tool that "Microsoft tech support" scammers
   and groups such as Storm-1811 ask people to launch over the phone; for non-professional
   users the risk outweighs the benefit. Remote support by the organization's own administrator should go through
-  a tool that the organization chooses (a constructor parameter).
+  a tool that the organization chooses.
 - Cross-links: `DisableRemoteAssistance` (section 08) closes the second built-in channel.
   The user can reinstall Quick Assist from the Store: no policy blocking installation is set
   (it would require blocking the Store entirely).
@@ -127,8 +125,7 @@ A fix is planned in the constructor: bind `MapsBroker` to the Maps removal.
 
 ## OneDrive
 
-- Rule: `apps.remove.onedrive` (WinKickOff only, not in v0.2), phase default-user, on by default in every preset
-  since 26.09.2026 (customer decision; v0.2 kept OneDrive).
+- Rule: `apps.remove.onedrive`, phase default-user, on by default and in every preset.
 - What it does: removes the value `OneDriveSetup` from `Software\Microsoft\Windows\CurrentVersion\Run` of the
   default user profile (`C:\Users\Default\NTUSER.DAT`). Windows puts `OneDriveSetup.exe /thfirstsetup` there; it
   installs OneDrive into the profile of every new user at the first sign-in.
@@ -148,15 +145,15 @@ A fix is planned in the constructor: bind `MapsBroker` to the Maps removal.
 
 ## SupportInformation
 
-- Rule: `system.support-info` (off by default; branch `unattend-tree`, stage 4 of the plan of 13.10.2026).
+- Rule: `system.support-info` (off by default).
 - Values in `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\OEMInformation`: `Manufacturer`, `Model`, `SupportPhone`,
   `SupportHours`, `SupportURL` (strings, the five parameters of the rule; `Logo`, a bitmap path, is not written).
   Their Windows default is unknown: a vendor may ship them, a clean image has no key, so the revert leaves them.
 - What it does: "Settings, System, About" shows the texts under "Support" and "Device specifications", so a person who
   needs help sees whom to call.
 - Why the registry and not the unattend setting `Microsoft-Windows-Shell-Setup\OEMInformation`: the same values, and
-  they work on a running Windows ("This PC") (customer decision 5 of 13.10.2026).
-- Limits: ASCII only (the check refuses other characters: the embedded scripts are read without a code page, see T24
-  for the account texts); the check warns when the rule is on and every text is empty.
+  they work on a running Windows ("This PC").
+- Limits: ASCII only (the check refuses other characters: the embedded scripts are read without a code page; see
+  section 03 for the account texts).
 - Verification: `Get-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\OEMInformation`.
 - Rollback: delete the values (the vendor's texts, if there were any, are not restored).

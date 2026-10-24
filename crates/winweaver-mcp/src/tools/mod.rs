@@ -1,5 +1,4 @@
-//! The tools and resources of the MCP server. The names are the ones of the predecessor's server,
-//! so that the instructions written for agents carry over.
+//! The tools and resources of the MCP server.
 //!
 //! Every tool is one entry of [`TOOLS`]: its name, its description, what it needs (the mode, the
 //! registry, the library, this PC) and the function that runs it, in `profiles`, `rules`,

@@ -221,11 +221,19 @@ pub(crate) fn group_detail(
             }
         });
     }
-    block(ui, |ui| {
-        style::section_title(ui, tr("This PC, this selection"));
-        ui.add_space(4.0);
-        this_pc_buttons(ui, acts);
-    });
+    // The passes of the installation and the first sign-in have nothing for a running PC.
+    let ids: Vec<String> = catalog
+        .rules_under(id)
+        .iter()
+        .map(|r| r.id.clone())
+        .collect();
+    if winweaver_core::export::applicable(catalog, &ids) {
+        block(ui, |ui| {
+            style::section_title(ui, tr("This PC, this selection"));
+            ui.add_space(4.0);
+            this_pc_buttons(ui, acts);
+        });
+    }
     block(ui, |ui| {
         style::section_title(ui, tr("Rules of this group"));
         for rule in catalog.rules_in(id) {

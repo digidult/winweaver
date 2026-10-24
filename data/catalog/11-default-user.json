@@ -1,7 +1,7 @@
 {
   "comment": [
     "Default user profile (hive C:\\Users\\Default\\NTUSER.DAT, mounted as $du).",
-    "Section 10 of the v0.2 machine script. The generator replaces DU:\\ paths with \"$du\\\".",
+    "The generator replaces DU:\\ paths with \"$du\\\".",
     "These are personal settings of the user, not policies: the user can change them in Settings."
   ],
   "rules": [

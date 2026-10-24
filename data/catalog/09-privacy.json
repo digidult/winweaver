@@ -1,5 +1,5 @@
 {
-  "comment": ["Telemetry, advertising, AI, widgets, web search, long paths. Section 8 of the v0.2 machine script."],
+  "comment": ["Telemetry, advertising, AI, widgets, web search, long paths."],
   "rules": [
     {
       "id": "privacy.telemetry-minimal",
@@ -404,7 +404,7 @@
       "versions": "Windows 11 24H2 (26100.3915) and later; the features themselves exist only on Copilot+ PCs, on other PCs the values have no effect.",
       "verify": "reg query \"HKCU\\Software\\Policies\\Microsoft\\Windows\\WindowsAI\"",
       "rollback": "Delete the values in the user profile.",
-      "note": "28.09.2026, customer list MoreOptions: Windows AI (card 19, section \"Windows AI\")",
+      "note": "Customer list MoreOptions: Windows AI (card 19, section \"Windows AI\")",
       "actions": [
         {
           "type": "reg",
@@ -669,7 +669,7 @@
       "versions": "All releases of Windows 10 and 11; the values are not documented by Microsoft as a policy.",
       "verify": "reg query \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection\"",
       "rollback": "Delete the values.",
-      "note": "28.09.2026, customer list MoreOptions: telemetry, advertising, search, speech (card 19)",
+      "note": "Customer list MoreOptions: telemetry, advertising, search, speech (card 19)",
       "actions": [
         {
           "type": "reg",
@@ -1249,7 +1249,7 @@
       "versions": "All releases of Windows 10 and 11; the value is widely used but not documented on Microsoft Learn. Since 2023 Microsoft does not sign packages with co-installers.",
       "verify": "reg query \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Device Installer\" /v DisableCoInstallers",
       "rollback": "Delete the values.",
-      "note": "28.09.2026, customer list MoreOptions: drivers and devices (card 19)",
+      "note": "Customer list MoreOptions: drivers and devices (card 19)",
       "actions": [
         {
           "type": "reg",

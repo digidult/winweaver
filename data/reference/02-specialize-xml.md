@@ -25,7 +25,7 @@ powershell.exe -NoProfile -WindowStyle Hidden -Command "try{$x=[xml]::new();$x.L
   is fixed by Setup for all versions from Windows 7 onward.
 - Version differences: none. The method (scripts inside the XML) is taken from the practice of the Schneegans generator; it
   works on Windows 10 and 11.
-- Verification: after installation three files exist in `C:\ProgramData\Unattend\Scripts`.
+- Verification: after installation the extracted scripts exist in `C:\ProgramData\Unattend\Scripts`.
 - Rollback: not required.
 
 ## Order 2. BypassNRO
@@ -62,7 +62,7 @@ powershell.exe -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -Command "
 - Error handling: three levels. The wrapper catches an exception at launch; inside the script `trap { ...; continue }`
   logs any unhandled error and continues with the next line; each call is wrapped in try/catch
   or in `Set-Reg`/`Invoke-Exe`, which write OK/WARN/ERROR themselves. The script ends with `exit 0`.
-- Run time: 2-6 minutes depending on the disk (most of the time goes to removing 33 apps and DISM).
+- Run time: 2-6 minutes depending on the disk (most of the time goes to removing apps and DISM).
 - Cross-links: the entire content of the script is described in sections 04-14.
 - Version differences: `powershell.exe` is Windows PowerShell 5.1, built into all versions of Windows 10/11.
   PowerShell 7 is neither used nor required.
@@ -87,30 +87,31 @@ Component `Microsoft-Windows-Shell-Setup` in specialize.
 ## ComputerName
 
 Component `Microsoft-Windows-Shell-Setup` in specialize; the form "Installation" (`install.computer_name_mode` and
-`install.computer_name`, profile format 4, task T24).
+`install.computer_name`).
 
 | Mode | `ComputerName` | What happens |
 |---|---|---|
-| `random` (default, as before 1.3.0-rc.2) | absent | Windows Setup makes up a name (`DESKTOP-` and random characters) |
+| `random` (default) | absent | Windows Setup makes up a name (`DESKTOP-` and random characters) |
 | `fixed` | the name of the profile | Windows Setup gives the computer that name in this pass |
-| `template` | `WINKICKOFF-TMP` | `Setup-System.ps1` computes the name and keeps writing it until the restart that ends the pass |
+| `template` | `WINWEAVER-TMP` | `Setup-System.ps1` computes the name and keeps writing it until the restart that ends the pass |
 
-- Value: up to 15 characters (the NetBIOS limit); WinKickOff allows Latin letters, digits and hyphens, not only digits
-  and no hyphen at the start or the end, which is also a valid DNS host name. Microsoft Learn lists the characters a
-  name may not contain and says that an asterisk or an empty value makes Windows create a random 15-character name.
+- Value: up to 15 characters (the NetBIOS limit); WinWeaver allows Latin letters, digits and hyphens, not only digits
+  (a name without a hyphen at the start or the end is also a valid DNS host name). Microsoft Learn lists the
+  characters a name may not contain and says that an asterisk or an empty value makes Windows create a random
+  15-character name.
 - Template: text with parts in braces, `{serial}` (the end of `Win32_BIOS.SerialNumber`, letters and digits only),
   `{mac}` (the end of the address of the first physical adapter of `Win32_NetworkAdapter`) and `{random}` (letters
-  and digits without 0, 1, I and O), each with an optional length: `OFFICE-{serial:6}`. Without a length: 6, 6 and 4.
-  The text must hold a letter and the longest result at most 15 characters (`core/computername.py`). A part that
-  cannot be read (an empty serial number or one such as "To be filled by O.E.M.", no adapter) becomes random
-  characters of its length.
-- How a template works (`templates/section-computer-name.ps1`, at the start of `Setup-System.ps1`): the answer file
-  names the computer `WINKICKOFF-TMP`; the script computes the name and starts a hidden PowerShell process that writes
+  and digits without 0, 1, I and O), each with an optional length from 1 to 15: `OFFICE-{serial:6}`. Without a
+  length: 15, 12 and 6. The name with the full length of each part must fit 15 characters
+  (`validate::is_name_template`, `render::computer_name_parts`). A part that cannot be read (an empty serial number
+  or one such as "To be filled by O.E.M.", no adapter) becomes random characters of its length.
+- How a template works (`data/templates/section-computer-name.ps1`, at the start of `Setup-System.ps1`): the answer
+  file names the computer `WINWEAVER-TMP`; the script computes the name and starts a hidden PowerShell process that writes
   it every 50 ms to `HKLM\SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName` (`ComputerName`) and
   `HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters` (`Hostname`, `NV Hostname`) until the restart after
   specialize stops it, so the name that Windows Setup writes in the same pass does not stay. The same technique is
   used by the answer file generator of Christoph Schneegans (`modifier/ComputerName.cs`, `resource/SetComputerName.ps1`
-  of github.com/cschneegans/unattend-generator); the code of WinKickOff is its own. Forum reports say that writing
+  of github.com/cschneegans/unattend-generator); the code of WinWeaver is its own. Forum reports say that writing
   the registry alone, without the loop, takes effect only after one more restart.
 - Expected effect: the name of the form or of the template from the first sign-in; `Setup-System.log` has the line
   "computer name from the template: ...".
@@ -123,12 +124,11 @@ Component `Microsoft-Windows-Shell-Setup` in specialize; the form "Installation"
 
 ## JoinWorkgroup
 
-- Form "Installation", field "Workgroup" (`install.workgroup`; profile format 5, branch `unattend-tree`, stage 6 of
-  the plan of 13.10.2026). Empty writes nothing and Windows keeps WORKGROUP.
-- Setting in specialize: `Microsoft-Windows-UnattendedJoin\Identification\JoinWorkgroup`, a component the generator
-  adds through the merge of the `xml-setting` actions (`Renderer._extra_components`).
+- Form "Installation", field "Workgroup" (`install.workgroup`). Empty writes nothing and Windows keeps WORKGROUP.
+- Setting in specialize: `Microsoft-Windows-UnattendedJoin\Identification\JoinWorkgroup`, a component the build
+  adds and merges with the `xml-setting` actions of the same component (`render/answer.rs`).
 - What it does: the computer joins the named workgroup during installation, so the PCs of one network see each other
   under the same name without a visit to the system properties.
 - Limits: up to 15 Latin letters, digits and hyphens (the check refuses other names). A workgroup is not a domain:
-  `JoinDomain` and the credentials stay out of WinKickOff.
+  `JoinDomain` and the credentials stay out of WinWeaver.
 - Pending: acceptance in a VM (the name in "System", "About").

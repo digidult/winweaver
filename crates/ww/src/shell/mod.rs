@@ -115,7 +115,33 @@ impl Document for ShellDoc {
     fn has_tools(&self) -> bool {
         matches!(self, ShellDoc::Theme(_))
     }
+
+    fn draft_key(&self) -> Option<String> {
+        match self {
+            ShellDoc::Theme(t) => Some(t.draft.key.clone()),
+            ShellDoc::Settings(_) => None,
+        }
+    }
+
+    /// The draft of a theme with unsaved changes: the theme and its id, the kind `ww-theme`.
+    fn draft_due(&mut self, all: bool) -> Option<crate::doc::Draft> {
+        let ShellDoc::Theme(t) = self else {
+            return None;
+        };
+        if !t.draft.ready(t.dirty, all) {
+            return None;
+        }
+        let document = serde_json::json!({
+            "kind": THEME_DRAFT,
+            "id": t.theme.id,
+            "theme": serde_json::to_value(&t.theme).unwrap_or_default(),
+        });
+        t.draft.offer(t.theme.path.clone(), document)
+    }
 }
+
+/// The kind of the draft of a theme.
+pub const THEME_DRAFT: &str = "ww-theme";
 
 /// The navigation row of a tab: the history, the breadcrumb, the star.
 pub struct Nav<T> {
@@ -613,6 +639,36 @@ impl<A: App> Shell<A> {
             .map(Path::to_path_buf)
             .unwrap_or_else(exe_dir);
         Some((base.join(path), anchor))
+    }
+
+    /// Opens the draft of a document of the window (the editor of a theme); `false` when the
+    /// draft is not one of the window.
+    pub fn restore_shell_draft(
+        &mut self,
+        key: &str,
+        path: Option<PathBuf>,
+        document: &serde_json::Value,
+    ) -> bool {
+        if document.get("kind").and_then(|k| k.as_str()) != Some(THEME_DRAFT) {
+            return false;
+        }
+        let Some(mut theme) = document
+            .get("theme")
+            .and_then(|t| serde_json::from_value::<Theme>(t.clone()).ok())
+        else {
+            return false;
+        };
+        theme.id = document
+            .get("id")
+            .and_then(|i| i.as_str())
+            .unwrap_or_default()
+            .to_owned();
+        theme.path = path.filter(|p| p.exists());
+        let mut doc = ThemeDoc::new(theme);
+        doc.dirty = true;
+        doc.draft = crate::doc::DraftState::with_key(key.to_owned());
+        self.docs.push(A::shell_doc(ShellDoc::Theme(Box::new(doc))));
+        true
     }
 
     /// The question before a tab with unsaved changes closes: save them, close without them, or

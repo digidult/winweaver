@@ -172,8 +172,8 @@ asalnya: di kiri profil seperti sekarang, di kanan seperti yang disimpan.
 ## Membuka file lain
 
 Buka menerima profil (`.wwprofile`), perbandingan (`.wwdiff`), file penanda (`.wwmarks`), halaman Markdown,
-file jawaban yang dibuat oleh WinWeaver atau WinKickOff (profil yang tersemat di dalamnya), profil WinKickOff,
-dan laporan audit (`.json`).
+file jawaban dengan profil tersemat (profil yang tersemat di dalamnya), profil lama dalam JSON, dan
+laporan audit (`.json`).
 
 File registri (`.reg`) terbuka di tabnya sendiri, seperti yang dijelaskan di bagian tentang registri.
 
@@ -263,6 +263,10 @@ menyebutkan apa yang dipakai jendela untuk menggambar.
 | `--detailed-log` | Dengan `--mcp`: log menyimpan setiap permintaan dan jawaban utuh, tanpa kata sandi, kunci, dan token |
 | `--version` | Menampilkan versi |
 | `--check-catalog` | Memuat katalog bawaan dengan terjemahannya dan menampilkan masalahnya |
+| `--script KIND FILE` | Menulis skrip mandiri dari profil (`.wwprofile`) atau perbedaan (`.wwdiff`) tanpa jendela: `apply`, `revert` (kembali ke default Windows) atau `audit`; skrip penerapan atau pengembalian mendapat `Undo-Apply.ps1` di sampingnya |
+| `--reg KIND FILE` | Menulis file registri penerapan (`apply`) atau pengembalian ke default (`revert`) dari profil atau perbedaan |
+| `--only IDS` | Dengan `--script` atau `--reg`: hanya aturan atau grup ini, id-nya dipisahkan koma |
+| `--out FOLDER` | Dengan `--script` atau `--reg`: folder file, secara default `output` di samping program |
 | `--help` | Menampilkan daftar parameter |
 | `--smoke-window` | Membuka jendela kecil, menggambar dua bingkai, dan menampilkan apa yang menggambarnya (juga dengan `--renderer`): pemeriksaan grafis |
 | `--elevated-apply PLAN DIGEST` | Jendela menjalankan dirinya sendiri dengan cara ini untuk menerapkan rencana yang dikonfirmasi sebagai administrator; bukan untuk dijalankan manual |

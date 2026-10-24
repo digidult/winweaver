@@ -91,6 +91,13 @@ impl WinWeaver {
             Act::File(FileAct::OpenGuide),
             acts,
         );
+        menu_item(
+            ui,
+            tr("Documentation"),
+            "",
+            Act::File(FileAct::OpenDocs),
+            acts,
+        );
         menu_item(ui, tr("License"), "", Act::File(FileAct::OpenLicense), acts);
         menu_item(ui, tr("Bookmarks"), "", Act::Marks(MarksAct::Open), acts);
         menu_item(
@@ -98,6 +105,17 @@ impl WinWeaver {
             tr("Registry"),
             "",
             Act::Registry(RegistryAct::Open("HKEY_LOCAL_MACHINE".to_owned(), None)),
+            acts,
+        );
+        menu_item(
+            ui,
+            tr("Group Policy of the computer"),
+            "",
+            Act::Pol(PolAct::OpenSystem(
+                winweaver_core::pol::Scope::Computer,
+                None,
+                None,
+            )),
             acts,
         );
         menu_item(ui, tr("MCP server"), "", Act::Mcp(McpAct::Open), acts);
@@ -122,10 +140,16 @@ impl WinWeaver {
         acts: &mut Vec<Act>,
     ) {
         match menu {
-            Menu::ThisPc => this_pc_menu(ui, acts),
+            Menu::ThisPc => {
+                let ids = self.selection_ids(shell);
+                let applicable = winweaver_core::export::applicable(&self.catalog, &ids);
+                this_pc_menu(ui, acts, applicable);
+            }
             Menu::CompareProfile => self.compare_profile_menu(shell, ui, acts),
             Menu::Catalogs => self.catalogs_menu(ui, acts),
             Menu::CompareCatalog => self.compare_catalog_menu(shell, ui, acts),
+            Menu::RegFileApply => regfile_apply_menu(shell, ui, acts),
+            Menu::Pol => pol_menu(ui, acts),
         }
     }
 
@@ -238,13 +262,68 @@ impl WinWeaver {
     }
 }
 
-/// The commands of This PC for the selection.
-fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
-    let mut item = |ui: &mut egui::Ui, text: &str, act: Act| {
+/// The Group Policy files: the computer's and the users' of this Windows, or any file.
+fn pol_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    use winweaver_core::pol::Scope;
+    for (text, act) in [
+        (
+            tr("Group Policy of the computer"),
+            PolAct::OpenSystem(Scope::Computer, None, None),
+        ),
+        (
+            tr("Group Policy of the users"),
+            PolAct::OpenSystem(Scope::User, None, None),
+        ),
+        (tr("Open a Group Policy file..."), PolAct::OpenFile),
+    ] {
         if ui.button(text).clicked() {
+            acts.push(Act::Pol(act));
+            ui.close();
+        }
+    }
+}
+
+/// What of the registry file in front goes to this PC: the selected value, the selected key with
+/// its values, the whole file; each asks first.
+fn regfile_apply_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    let Some(Doc::RegFile(d)) = shell.docs.get(shell.active) else {
+        return;
+    };
+    use regfileview::ApplyScope;
+    for (text, scope) in [
+        (tr("The selected value..."), ApplyScope::Value),
+        (tr("The selected key with its values..."), ApplyScope::Key),
+        (tr("The whole file..."), ApplyScope::File),
+    ] {
+        let enabled = d.changes(scope).is_some();
+        if ui.add_enabled(enabled, egui::Button::new(text)).clicked() {
+            acts.push(Act::RegFile(RegFileAct::AskApply(scope)));
+            ui.close();
+        }
+    }
+}
+
+/// The commands of This PC for the selection (offered only when a rule of it can be applied on a
+/// PC) and for the whole profile.
+fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>, applicable: bool) {
+    let mut add = |ui: &mut egui::Ui, text: &str, enabled: bool, act: Act| {
+        if ui.add_enabled(enabled, egui::Button::new(text)).clicked() {
             acts.push(act);
             ui.close();
         }
+    };
+    let mut item = |ui: &mut egui::Ui, text: &str, act: Act| {
+        let selection = matches!(
+            act,
+            Act::Pc(
+                PcAct::ReadSelection
+                    | PcAct::Check
+                    | PcAct::SaveScript(_)
+                    | PcAct::SaveRegFile(_)
+                    | PcAct::PlanNative(_)
+            )
+        );
+        add(ui, text, applicable || !selection, act);
     };
     item(
         ui,
@@ -286,6 +365,27 @@ fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         ui,
         tr("Save an audit script for the selection..."),
         Act::Pc(PcAct::SaveScript(ScriptKind::Audit)),
+    );
+    ui.separator();
+    item(
+        ui,
+        tr("Save an apply script for the whole profile..."),
+        Act::Pc(PcAct::SaveScriptAll(ScriptKind::Apply)),
+    );
+    item(
+        ui,
+        tr("Save a return-to-defaults script for the whole profile..."),
+        Act::Pc(PcAct::SaveScriptAll(ScriptKind::Revert)),
+    );
+    item(
+        ui,
+        tr("Save a registry file for the whole profile..."),
+        Act::Pc(PcAct::SaveRegFileAll(false)),
+    );
+    item(
+        ui,
+        tr("Save a return-to-defaults registry file for the whole profile..."),
+        Act::Pc(PcAct::SaveRegFileAll(true)),
     );
     ui.separator();
     item(

@@ -1,8 +1,8 @@
 # 01. windowsPE pass: key, edition, license, hardware check bypass
 
 Component `Microsoft-Windows-Setup`, two copies: `processorArchitecture="amd64"` and `"arm64"`.
-Setup applies the one that matches the architecture of the installation media; the other is ignored. The x86 copy was removed:
-there is no 32-bit Windows 11.
+Setup applies the one that matches the architecture of the installation media; the other is ignored. There is no x86
+copy: there is no 32-bit Windows 11.
 
 ## ProductKey / Key
 
@@ -20,7 +20,7 @@ there is no 32-bit Windows 11.
   a real key will have to be entered after installation (Settings → System → Activation).
 - Version differences: the key is the same for Windows 10 and 11. Other editions need their own generic
   keys (Home: `YTMG3-N6DKC-DKB77-7M9GH-8HVX7`, Enterprise: `NPPR9-FWDCX-D2C8J-H872K-2YT43`);
-  this is a parameter of the future constructor.
+  the edition and the key mode are fields of the profile (the key modes below).
 - Verification: after installation `slmgr /dli` shows Professional; `reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v EditionID`
   shows `Professional` (`ProductName` still says "Windows 10 Pro" on Windows 11, so it is no check).
 - Rollback: not required; changing the edition requires a reinstallation.
@@ -30,42 +30,42 @@ there is no 32-bit Windows 11.
 - Value: `OnError`.
 - What it does: the key entry window is shown only if the key is rejected. This is the default value,
   specified explicitly. `Always` with the key `00000-00000-00000-00000-00000` shows the key and edition selection
-  window on every installation: that is the WinKickOff key mode "ask".
+  window on every installation: that is the key mode `ask` of the profile.
 - Version differences: none.
 
-## Key modes of WinKickOff: who chooses the edition
+## Key modes: who chooses the edition
 
 The form "Installation" offers three key modes (profile field `install.product_key_mode`):
 
 | Mode | `<Key>` | `<WillShowUI>` | What Setup shows |
 |---|---|---|---|
-| `generic` | the key of the chosen edition in `render.EDITION_KEYS` (Pro `VK7JG-NPHTM-C97JM-9MPGT-3V66T`; 14 editions, see below) | OnError | Nothing: Setup matches the key to an image ("Matched Professional with Professional") |
+| `generic` | the key of the chosen edition in `resources::EDITION_KEYS` (Pro `VK7JG-NPHTM-C97JM-9MPGT-3V66T`; 14 editions, see below) | OnError | Nothing: Setup matches the key to an image ("Matched Professional with Professional") |
 | `ask` | `00000-00000-00000-00000-00000` | Always | The product key page. A typed key installs the edition of that key; "I don't have a product key" opens the list of every edition in `install.wim` |
-| `custom` | the key of the profile | OnError | The edition of that key; the page only if the key is rejected |
+| `key` | the key of the profile | OnError | The edition of that key; the page only if the key is rejected |
 
-- The editions of `generic` (the list was extended by the customer on 05.10.2026): Pro and Education have generic
+- The editions of `generic`: Pro and Education have generic
   installation keys, which select the edition and do not activate; Windows activates later with the digital licence of
   the PC or a key of the licence. The other twelve (Pro N, Pro for Workstations and its N, Pro Education and its N,
   Education N, Enterprise, Enterprise N, G and G N, Enterprise LTSC 2024 and Enterprise N LTSC 2024; the LTSC keys
   also install Windows 10 LTSC 2021 and 2019) are the KMS client keys (GVLK) of the Microsoft Learn table "Key
-  Management Services (KMS) client activation and product keys" (every key compared on 08.10.2026). Windows installed
+  Management Services (KMS) client activation and product keys" (every key compared with that table). Windows installed
   with one is a KMS client: it activates only against a KMS host on the local network, and Microsoft warns that these
   keys "won't activate or serve as a retail license key". Without a KMS host, type the key of the licence after
-  installation (Settings, System, Activation, or `slmgr /ipk`). The form says so under the edition list.
+  installation (Settings, System, Activation, or `slmgr /ipk`).
 - Setup installs an edition only when `install.wim` (or `install.esd`) of the media holds it; list the editions of the
   target media with `dism /Get-WimInfo /WimFile:<media>\sources\install.wim` (read only). Enterprise G and LTSC come on
   their own media. What Setup shows when no image matches the key is to be confirmed in a virtual machine.
-- The edition list of the form applies to `generic` only; the window disables it in the other modes, and the build
-  writes a header line "Edition: chosen during Setup" in mode `ask`. The Home preset uses `ask`.
+- The edition of the profile chooses the key in mode `generic` only; in the other modes the key decides the edition.
+  The Home preset uses `ask`.
 - Microsoft Learn ("Work with product keys and activation") names both ways: a key in `ProductKey\Key`, or typing the
   key during Setup, where "the product key selects a Windows edition to install". The exact pages of Windows 11 Setup
   ("I don't have a product key", then the list) are described by third parties; confirm in a virtual machine.
 - `ei.cfg` and `pid.txt` on the media do not help: "If you use an answer file during installation, Windows Setup
   ignores the EI.cfg and PID.txt files" (Microsoft Learn). An empty `Key` is not allowed ("does not support empty
   elements"), and without the element Setup may silently take the edition of the key in the firmware.
-- The protection of WinKickOff is made for Pro. On Home, the deferral of feature updates is ignored (Policy CSP Update
-  lists Pro, Enterprise, Education), BitLocker cannot be turned on later, and the Copilot and Recall policies are not
-  supported according to their ADMX; the check of the editor says so in mode `ask`.
+- The protection rules of the catalog are made for Pro. On Home, the deferral of feature updates is ignored (Policy
+  CSP Update lists Pro, Enterprise, Education), BitLocker cannot be turned on later, and the Copilot and Recall
+  policies are not supported according to their ADMX.
 
 ## AcceptEula
 
@@ -109,18 +109,18 @@ run in WinPE before copying starts.
 | Element | Why it is absent | Consequence |
 |---|---|---|
 | `DiskConfiguration` | Automatic partitioning wipes the disk without asking | Setup shows disk and partition selection: the only screen that requires a person |
-| `ImageInstall` | The edition is selected by the key; the image does not need to be specified | None |
-| `Microsoft-Windows-International-Core-WinPE` | The Setup language depends on the ISO | The first Setup screen for choosing the language and keyboard layout remains (a constructor parameter) |
+| `ImageInstall` | The edition is selected by the key; the image does not need to be specified (the element is written only for the disk mode `partition`, section "ImageInstall / InstallTo") | None |
+| `Microsoft-Windows-International-Core-WinPE` | The Setup language depends on the ISO | The first Setup screen for choosing the language and keyboard layout remains |
 | `UseConfigurationSet` | There is no `$OEM$` folder | None |
 
 ## SkipAutoActivation
 
-- Rule: `install.skip-auto-activation` (off by default; branch `unattend-tree`, stage 4 of the plan of 13.10.2026).
+- Rule: `install.skip-auto-activation` (off by default).
 - Value: `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SoftwareProtectionPlatform\Activation\Manual = 1`
   (DWord; the Windows default is 0), written by Setup-System.ps1 in specialize. The unattend setting
   `Microsoft-Windows-Security-SPP\SkipAutoActivation` writes the same value; the registry is used because it also works
-  on a running Windows ("This PC") and can be reverted (customer decision 5 of 13.10.2026: a native setting only where
-  the registry does not work during installation).
+  on a running Windows ("This PC") and can be reverted (a setting of the answer file is used only where the registry
+  does not work during installation).
 - What it does: Windows does not try to activate on its own; activation starts when a key is typed or `slmgr /ato` runs.
 - Why: twelve of the fourteen editions of the generic key table (section "ProductKey / Key") are KMS client keys;
   without a KMS host such a Windows keeps trying to activate and shows errors. Pro and Education use generic keys that
@@ -133,11 +133,11 @@ run in WinPE before copying starts.
 
 ## DynamicUpdate
 
-- Rule: `install.no-dynamic-update` (off by default; branch `unattend-tree`, stage 5 of the plan of 13.10.2026).
+- Rule: `install.no-dynamic-update` (off by default).
 - Settings: `Microsoft-Windows-Setup\DynamicUpdate\Enable = false` and `DynamicUpdate\WillShowUI = Never` in the
-  windowsPE pass, written by the action `xml-setting` (the first use of it: the registry cannot act in windowsPE, so
-  customer decision 5 of 13.10.2026 allows a native setting here). The settings of one component and pass merge into
-  one `<component>` element with the product key.
+  windowsPE pass, written by the action `xml-setting` (the registry cannot act in windowsPE, so a setting of the
+  answer file is used here). The settings of one component and pass merge into one `<component>` element with the
+  product key.
 - What it does: Setup does not download updates of itself, of drivers and of the image from Windows Update before the
   installation starts, and shows no Dynamic Update page.
 - Expected effect: the installation runs the same offline and online and finishes sooner; a known problem of the
@@ -148,7 +148,7 @@ run in WinPE before copying starts.
 
 ## Diagnostics
 
-- Rule: `install.no-setup-diagnostics` (off by default; branch `unattend-tree`, stage 5 of the plan of 13.10.2026).
+- Rule: `install.no-setup-diagnostics` (off by default).
 - Setting: `Microsoft-Windows-Setup\Diagnostics\OptIn = false` in the windowsPE pass (an `xml-setting` action).
 - What it does: Windows Setup sends no diagnostic data about the installation to Microsoft; the diagnostic data of
   the installed Windows is the matter of the telemetry policy (`privacy.telemetry-minimal`).
@@ -158,15 +158,14 @@ run in WinPE before copying starts.
 
 ## ImageInstall / InstallTo
 
-- Form "Installation", block "Disk" (`install.disk_mode` `partition`, `disk_id`, `partition_id`; profile format 5,
-  branch `unattend-tree`, stage 6 of the plan of 13.10.2026). The default `ask` writes nothing: Windows Setup asks
-  where to install, as before.
+- Form "Installation", block "Disk" (`install.disk_mode` `partition`, `disk_id`, `partition_id`). The default `ask`
+  writes nothing: Windows Setup asks where to install.
 - Settings in windowsPE: `Microsoft-Windows-Setup\ImageInstall\OSImage\InstallTo\DiskID` and `PartitionID`, and
   `OSImage\WillShowUI = OnError`; written by the generator from the form through the same merge as the `xml-setting`
   actions, so they share the `Microsoft-Windows-Setup` component with the product key.
 - What it does: Setup installs the image to that partition without the disk page. The partition must exist and be
-  formatted; what is on it is replaced, and Setup stops with an error when it is missing (customer decision 2 of
-  13.10.2026: no `DiskConfiguration`, the disk is not repartitioned; that may come later).
+  formatted; what is on it is replaced, and Setup stops with an error when it is missing (there is no
+  `DiskConfiguration`: the disk is not repartitioned).
 - Numbers as diskpart shows them: on a usual UEFI disk Windows is partition 3, after the EFI (1) and MSR (2)
   partitions. The check reports the mode as a warning, so that nobody installs without asking by accident.
 - Pending: acceptance in a VM (a prepared partition; a second disk).

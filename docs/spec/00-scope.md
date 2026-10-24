@@ -1,7 +1,5 @@
 # 00. Scope and principles
 
-Draft 0.1, 14.10.2026.
-
 ## 1. What WinWeaver is
 
 WinWeaver is a portable Windows desktop program for people who install and maintain Windows 11 Pro on the PCs
@@ -17,20 +15,31 @@ The program:
 2. edits profiles: which rules are on, with which parameters, plus the forms of the installation (edition
    and key, computer name, workgroup, disk, accounts, languages, time zone);
 3. checks a profile and builds `autounattend.xml` from it, with the profile embedded so that the file opens
-   again as a profile; imports older answer files by their actions;
-4. compares two profiles, saves the differences as a diff file, merges a diff into a profile;
-5. reads the settings of this PC into a profile, applies a profile or a selection of rules to this PC and
-   returns settings to Windows defaults, all natively through the Windows API, with a backup and an undo;
-6. imports ADMX policy templates (of this Windows or of a folder) as rules, with a trust order between
-   imports, and exchanges them as catalog files;
-7. generates stand-alone scripts (Apply, Undo, Audit) for use on a PC without the program;
-8. serves an MCP server (stdio and loopback HTTP) through which AI agents read and, when allowed, edit
-   profiles and read this PC;
-9. shows its own documentation, a guide at the first start and a catalog of bookmarks inside the window;
-10. ships with presets (Office, Strict, Laptop, Home) and in nine languages (English, Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish).
+   again as a profile;
+4. compares a profile with a file, a preset or its own saved state, saves the differences as a diff file
+   with comments and applies a diff, or one difference of it, to a profile;
+5. reads the settings of this PC into a profile or checks a selection of rules on it, applies a selection
+   or returns it to the Windows defaults natively through the Windows API with a backup and an undo, and
+   saves the same as stand-alone scripts (Apply, Revert, Audit, Undo) and registry files for a PC without
+   the program;
+6. imports ADMX policy templates (of this Windows, of a folder, of a zip archive) as catalogs of rules,
+   exchanges them as catalog files, compares and edits them;
+7. shows and edits the registry of this PC (keys, values, permissions, search) and registry files (`.reg`);
+8. keeps users files: the local accounts of a PC with their passwords encrypted, read from this PC,
+   created on it natively or through a stand-alone script, and passed to the accounts of a profile;
+9. serves an MCP server (stdio and loopback HTTP) through which AI agents read and, when allowed, edit
+   profiles, bookmarks, catalog files and the registry, and read this PC;
+10. shows its guide (at the first start), the reference of the parameters, its licence and any Markdown
+    page inside the window, and keeps bookmarks of options and of registry keys;
+11. ships with presets (Office, Strict, Laptop, Home) and in nine languages (English, Ukrainian, Russian,
+    German, Spanish, French, Indonesian, Italian and Turkish).
 
-The predecessor is WinKickOff (Python 3.14, tkinter). WinWeaver carries over the data of its built-in rule
-catalog and its whole functionality. The file formats are new and need no compatibility. No code is ported.
+The rule catalog, its translations, the presets, the time zones and the runtime templates (the PowerShell
+of the answer file and of the stand-alone scripts in `data/templates/`) are data of the project; the program
+code is its own.
+
+The window is built on W#, the framework of this repository (the crates `ww-base` and `ww`, described in
+`docs/ww.md`). W# also carries a second program, the text editor wedit (`crates/wedit`).
 
 ## 2. Non-goals
 
@@ -38,68 +47,76 @@ catalog and its whole functionality. The file formats are new and need no compat
 - Third-party programs, drivers from the internet, cosmetics of the desktop.
 - Running on anything but Windows (the program reads and writes the Windows registry).
 - An installer: the program is a zip with one executable and data folders.
-- Compatibility with the file formats of the predecessor.
 
 ## 3. Stack
 
-- Rust, stable toolchain, edition 2024, x64 Windows target with the MSVC toolchain in CI (`x86_64-pc-windows-msvc`).
-- UI: eframe (egui with the glow renderer on winit). Immediate mode, one window, our own widgets where egui
-  has none (tree with check boxes, breadcrumb, tabs with close buttons).
-- Target systems: Windows 10 (21H2 or later) and Windows 11. The program must start on a clean Windows 10 PC
-  without any redistributable: static CRT, no extra DLL (the OpenGL driver of Windows is enough for glow;
-  a software fallback is a known limitation, see `04-architecture.md`).
+- Rust, stable toolchain, edition 2024 (rust-version 1.88); the Windows target `x86_64-pc-windows-msvc`
+  with the C runtime linked statically.
+- UI: eframe (egui on winit) through W#, with two renderers: OpenGL through glow and DirectX 12 through
+  wgpu with its `dx12` backend alone. Immediate mode, one window, painted widgets of W# where egui has
+  none (the tree with check boxes, the lists with columns, the breadcrumb, the tabs, the cards).
+- Target systems: Windows 10 and Windows 11, x64, the systems the Rust toolchain supports. The program
+  starts on a clean PC without any redistributable: static CRT, no extra DLL. Without a driver of the
+  graphics card OpenGL is not available, and DirectX 12 draws on the software rasterizer of Windows
+  (`04-architecture.md` section 9).
 
 ## 4. Principles
 
-- P1 Portability. One executable and its data folders next to it (`lang/`, `themes/`, `catalogs/`, `docs/`,
-  `profiles/`). Settings, logs, drafts and output are written next to the executable; nothing goes to the
-  registry, `%APPDATA%` or the Start menu. When the folder is read-only, the program says so and runs without
-  saving settings.
-- P2 No PowerShell in the program. Reading, applying and reverting settings of this PC use the Windows API
-  (registry, services, scheduled tasks, DISM where needed) from an elevated helper process of the same
-  executable. PowerShell survives only inside the generated answer file where Windows Setup has no other
-  mechanism (the embedded scripts of the passes), and in the stand-alone scripts generated for use without
-  the program.
+- P1 Portability. One executable and its data folders next to it. The catalog, the translations of the
+  built-in languages, the presets, the themes, the guide, the reference and the licence are embedded, so a
+  bare `winweaver.exe` runs. Settings, bookmarks, profiles, output, imports, drafts, MCP configurations and
+  logs are written next to the executable (`02-documents.md` section 10); nothing goes to the registry,
+  `%APPDATA%` or the Start menu, and nothing is written outside the program folder and the system temp
+  folder. The extensions of the program are registered nowhere. A file that cannot be written gives a
+  message, never a crash.
+- P2 No PowerShell in the program. Reading this PC uses the Windows API in the process of the window.
+  Applying, returning to defaults and undoing run in an elevated helper process of the same executable,
+  also through the Windows API (registry, services, DISM, the package API, the network management API,
+  programs of the system folder); the operations of a users file run natively in the window started as
+  administrator. PowerShell appears only inside the generated answer file and in the generated stand-alone
+  scripts; the program never runs a script.
 - P3 Languages. English is the source language of the interface, the catalog and the documentation.
-  Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish ship built in. A language is a set of files in `lang/<code>/` next to the
-  executable; a missing text falls back to English; a new language is added by adding its folder.
-- P4 Dependencies. Popular, well known, open source Rust crates; pure Rust, no extra DLL, no runtime to
-  install. A new crate is named in `04-architecture.md` with the reason.
-- P5 Untrusted input. Profiles, diffs, catalog files, policy templates, answer files and MCP requests are
-  read with limits (size, depth, characters) and every defect becomes a short message, never a crash or a
-  hang of the window. Texts that reach the registry, the answer file or a script are checked by the rules
-  of the place they go to.
-- P6 Keyboard. Every function is reachable without a mouse: tabs, tree, search, menu, forms and dialogs
-  have focus order and shortcuts (`01-ui.md` section 12).
+  Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish ship built in. A folder
+  `lang/<code>/` next to the executable (`ui.json`, optionally `guide.md`) adds a language of the
+  interface or overrides a built-in one; a missing text falls back to English. Every text of the interface
+  is written as `tr` or `trf` and has a translation in every built-in language; a test fails otherwise.
+- P4 Dependencies. Popular, well known, open source Rust crates that need no extra DLL next to the
+  executable and no runtime to install. A new crate is named in `04-architecture.md` with the reason.
+- P5 Untrusted input. Profiles, diffs, bookmark files, catalog files, policy templates and their archives,
+  registry files, users files, answer files, audit reports, theme files and MCP requests are read with
+  limits (size, depth, characters), and every defect becomes a short message, never a crash or a hang of
+  the window. Texts that reach the registry, the answer file or a script are checked by the rules of the
+  place they go to.
+- P6 Keyboard. The tabs, the command bar, the trees, the lists, the forms and the dialogs work with the
+  keyboard (`01-ui.md` section 12).
 - P7 One window, documents as tabs. The window holds tabs; a tab is a document (a profile, a diff, a
-  catalog, a bookmark file, a Markdown page) or a function (MCP, settings). Profiles, diffs, catalogs and
-  bookmark files are plain files with their own extensions; presets are embedded in the executable.
-- P8 Clean room. The specification is the source of truth; the implementation is written from it.
+  catalog, the editor of a catalog, the bookmarks, a Markdown page, the registry, a registry file, a users
+  file, the editor of a theme) or a function (MCP, settings). Profiles, diffs, catalog files, bookmark
+  files, users files, themes and MCP configurations are plain files with their own extensions; presets are
+  embedded in the executable.
+- P8 Own code. The specification is the source of truth for the behaviour; the program code is written
+  from it. The data named in section 1 are data of the project.
 
 ## 5. Licence
 
-MIT (`LICENSE` in the root). Imported ADMX templates of Microsoft are not redistributed by the program;
-the user imports them from their Windows.
+MIT (`LICENSE` in the root, also built into the executable and shown by Menu, License). The ADMX templates
+of Microsoft are not redistributed by the program; the user imports them from their Windows.
 
 ## 6. Development process
 
-- English everywhere in the repository. Commit messages: an imperative first line up to 72 characters, a
-  body when the why is not obvious. Author `digidult`.
-- A feature is a branch and a pull request into `main`; CI builds and tests every pull request.
+- English everywhere in the repository. No em dash and no en dash in any text the project creates; number
+  ranges use a hyphen. Text files are UTF-8 without a byte order mark, with LF line endings; `rustfmt`
+  (width 100) and `clippy -D warnings`.
+- Commit messages: an imperative first line up to 72 characters, a body when the why is not obvious.
+  Author `digidult`.
+- A feature is a branch and a pull request into `main`, which the customer merges. CI runs for a pull
+  request that is ready for review, for `main` after a merge and for a tag (`AGENTS.md` section 5).
+- The version of the workspace grows with every pull request that reaches `main`: the second number for a
+  feature, the third for fixes only. Every build names its commit (`<version>+<12 digits of the commit>`),
+  shown by `--version`, About, the logs, the MCP server, the answer file and the scripts. A release has its
+  notes in `docs/releases/v<version>.md`.
 - The customer's work PC has no Rust toolchain and gets none: builds, tests and any run of the program
   happen in CI or in a VM. On that PC agents only read.
-- Documentation changes go in the same pull request as the code they describe; `AGENTS.md` is the map and
+- Documentation changes go in the same pull request as the code they describe: this specification, the
+  guide in every language and `package/README.md` for a change the user sees. `AGENTS.md` is the map and
   is updated with every change of structure or status.
-
-## Decisions
-
-- 14.10.2026: the supported systems are Windows 10 and 11, the systems the Rust toolchain supports;
-  among the Windows desktops in use online these are almost all (the customer left the choice to the
-  agent, guided by the versions in use).
-- 14.10.2026: the runtime templates of the predecessor (the PowerShell of the answer file and of the
-  stand-alone scripts) are carried over as data in `data/templates/`.
-
-## Open questions
-
-1. Should the executable be signed (a code signing certificate is needed) or is SmartScreen's warning
-   acceptable for an internal tool?

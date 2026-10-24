@@ -1,6 +1,6 @@
 {
   "comment": [
-    "Services and app removal. Section 9 of the v0.2 machine script.",
+    "Services and app removal.",
     "One rule per app: the generator collects every enabled appx action into one Remove-Apps call."
   ],
   "rules": [
@@ -55,7 +55,7 @@
       "requires": ["apps.remove.maps"],
       "tags": ["mapsbroker", "maps", "service"],
       "doc": "docs/technical/reference/13-services-apps.md#removexboxservices",
-      "summary": "MapsBroker serves the Maps app; without the app the service is not needed. In the v0.2 file it was disabled under the Xbox condition; here it is tied to removing Maps.",
+      "summary": "MapsBroker serves the Maps app; without the app the service is not needed. The rule is tied to removing Maps.",
       "effect": "One automatic service fewer.",
       "rollback": "Set-Service MapsBroker -StartupType Automatic",
       "actions": [{"type": "service", "name": "MapsBroker", "start": 4, "default": 2}]
@@ -547,7 +547,7 @@
       "versions": "OneDrive sync client (all supported versions). The HKCU value from the customer's list is not documented by Microsoft and is not written.",
       "verify": "reg query \"HKLM\\SOFTWARE\\Policies\\Microsoft\\OneDrive\" /v KFMBlockOptIn",
       "rollback": "Delete the value.",
-      "note": "28.09.2026, customer list MoreOptions: OneDrive policies (card 19, section \"OneDrive policies\")",
+      "note": "Customer list MoreOptions: OneDrive policies (card 19, section \"OneDrive policies\")",
       "actions": [
         {
           "type": "reg",

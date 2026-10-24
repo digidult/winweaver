@@ -14,6 +14,7 @@ pub const STOP: &str = "\u{25A0}";
 pub const IMPORT: &str = "\u{1F4E5}";
 pub const EXPORT: &str = "\u{1F4E4}";
 pub const EDIT: &str = "\u{270F}";
+pub const RENAME: &str = "\u{1F3F7}";
 pub const SHOW: &str = "\u{27A1}";
 pub const FOLDER: &str = "\u{1F4C1}";
 pub const ADD: &str = "\u{2795}";

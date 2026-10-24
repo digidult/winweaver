@@ -34,6 +34,14 @@ impl WinWeaver {
             &mut extra.hide_unknown,
             tr("Hide the options of the profile whose catalog is not loaded"),
         );
+        ui.checkbox(
+            &mut extra.writers_open,
+            tr("Show the rules that write a key of a registry file open"),
+        );
+        ui.checkbox(
+            &mut extra.pol_with_pc,
+            tr("Open the Group Policy files of this Windows when this PC is read"),
+        );
         ui.add_space(4.0);
     }
 

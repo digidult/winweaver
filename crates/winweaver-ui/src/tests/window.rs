@@ -71,6 +71,7 @@ fn every_kind_of_tab_draws_without_a_screen() {
         (Act::Marks(MarksAct::Open), None),
         (Act::Mcp(McpAct::Open), None),
         (Act::File(FileAct::OpenGuide), None),
+        (Act::File(FileAct::OpenDocs), Some("README.md")),
         (
             Act::Shell(ShellAct::EditTheme("matrix".to_owned())),
             Some("Use this theme"),
@@ -84,7 +85,7 @@ fn every_kind_of_tab_draws_without_a_screen() {
             assert!(has(&harness, label), "{label} is not drawn");
         }
     }
-    assert_eq!(harness.state().shell.docs.len(), 7);
+    assert_eq!(harness.state().shell.docs.len(), 8);
     assert_eq!(
         harness.state().shell.docs[harness.state().shell.active].title(),
         "Office.wwprofile"

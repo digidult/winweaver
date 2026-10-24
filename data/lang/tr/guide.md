@@ -175,8 +175,8 @@ bir sekmede açar: solda profilin şimdiki hali, sağda kaydedildiği hali.
 ## Diğer dosyaları açma
 
 Aç komutu; profilleri (`.wwprofile`), karşılaştırmaları (`.wwdiff`), yer işareti dosyalarını
-(`.wwmarks`), Markdown sayfalarını, WinWeaver veya WinKickOff tarafından oluşturulan yanıt dosyalarını
-(içerdikleri profil), WinKickOff profillerini ve denetim raporlarını (`.json`) kabul eder.
+(`.wwmarks`), Markdown sayfalarını, profil içeren yanıt dosyalarını (içerdikleri profil), JSON
+biçimindeki eski profilleri ve denetim raporlarını (`.json`) kabul eder.
 
 Bir kayıt dosyası (`.reg`), kayıt defteri bölümünde anlatıldığı gibi kendi sekmesinde açılır.
 
@@ -268,6 +268,10 @@ yazılır: `--renderer=directx`.
 | `--detailed-log` | `--mcp` ile: günlük her isteği ve yanıtı parolalar, anahtarlar ve belirteçler olmadan eksiksiz tutar |
 | `--version` | Sürümü yazdırır |
 | `--check-catalog` | Yerleşik kataloğu çevirileriyle yükler ve sorunlarını yazdırır |
+| `--script KIND FILE` | Pencere olmadan bir profilin (`.wwprofile`) veya bir farkın (`.wwdiff`) bağımsız betiğini yazar: `apply`, `revert` (Windows varsayılanlarına dönüş) veya `audit`; uygulama veya dönüş betiğinin yanına `Undo-Apply.ps1` konur |
+| `--reg KIND FILE` | Bir profilin veya farkın uygulama (`apply`) ya da varsayılanlara dönüş (`revert`) kayıt dosyasını yazar |
+| `--only IDS` | `--script` veya `--reg` ile: yalnızca bu kurallar veya gruplar, kimlikleri virgülle ayrılmış |
+| `--out FOLDER` | `--script` veya `--reg` ile: dosyaların klasörü, varsayılan olarak programın yanındaki `output` |
 | `--help` | Parametre listesini yazdırır |
 | `--smoke-window` | Küçük bir pencere açar, iki kare çizer ve bunları neyin çizdiğini yazdırır (`--renderer` ile de): grafik denetimi |
 | `--elevated-apply PLAN DIGEST` | Pencere, onaylanmış bir planı yönetici olarak uygulamak için kendini böyle başlatır; elle başlatmak için değildir |

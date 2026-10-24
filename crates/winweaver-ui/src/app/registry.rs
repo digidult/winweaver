@@ -264,7 +264,12 @@ impl WinWeaver {
             .key
             .as_ref()
             .is_some_and(|k| k.values.iter().any(|v| v.name.eq_ignore_ascii_case(&name)));
+        let old = edit.old.clone();
         let result: Result<Option<String>, String> = match kind {
+            EditKind::RenameValue => {
+                winweaver_core::registry::rename_value(&*reg, &d.path, &old, &name).map(|()| None)
+            }
+            EditKind::RenameKey => reg.rename_key(&d.path, &name).map(Some),
             EditKind::NewKey => {
                 if name.is_empty() || name.contains('\\') {
                     Err(tr("A name without backslashes is needed").to_owned())
@@ -283,7 +288,10 @@ impl WinWeaver {
             Ok(key) => {
                 d.edit = None;
                 match key {
-                    Some(path) => d.go(&*reg, &path, None),
+                    Some(path) => {
+                        d.refresh(&*reg);
+                        d.go(&*reg, &path, None);
+                    }
                     None => {
                         d.value = Some(name);
                         d.refresh(&*reg);
@@ -402,6 +410,16 @@ impl WinWeaver {
                     d.start_edit(regview::EditKind::Value, "");
                 }
             }
+            RegistryAct::Rename => {
+                if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) {
+                    let kind = if d.selected().is_some() {
+                        regview::EditKind::RenameValue
+                    } else {
+                        regview::EditKind::RenameKey
+                    };
+                    d.start_edit(kind, "");
+                }
+            }
             RegistryAct::New(kind, type_name) => {
                 if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) {
                     d.start_edit(kind, type_name);
@@ -436,6 +454,35 @@ impl WinWeaver {
     }
 
     /// Runs an act of the acts of the tab of a registry file.
+    /// Applies the selected value, the selected key or the whole registry file in front to the
+    /// registry of this PC, after its question; the status says what was done and the first error.
+    fn apply_reg_file_to_pc(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        scope: regfileview::ApplyScope,
+    ) {
+        let changes = match shell.docs.get(shell.active) {
+            Some(Doc::RegFile(d)) => d.changes(scope),
+            _ => None,
+        };
+        let Some(changes) = changes else {
+            return;
+        };
+        let (done, errors) = winweaver_core::regfile::apply_changes(&*self.registry, &changes);
+        shell.status = match errors.first() {
+            None => trf("Applied {n} changes to this PC", &[("n", &done)]),
+            Some(first) => trf(
+                "Applied {done} changes to this PC, {failed} failed: {first}",
+                &[("done", &done), ("failed", &errors.len()), ("first", first)],
+            ),
+        };
+        let failed = errors.len();
+        shell.log(
+            "INFO",
+            &format!("registry file applied: {done} changes, {failed} failed"),
+        );
+    }
+
     pub(crate) fn apply_reg_file(&mut self, shell: &mut Shell<WinWeaver>, act: RegFileAct) {
         match act {
             RegFileAct::Edit => {
@@ -454,6 +501,20 @@ impl WinWeaver {
                 if let Some(Doc::RegFile(d)) = shell.docs.get_mut(shell.active) {
                     d.remove_lines(&lines);
                 }
+            }
+            RegFileAct::AskApply(scope) => {
+                let question = match shell.docs.get(shell.active) {
+                    Some(Doc::RegFile(d)) => d.apply_question(scope),
+                    _ => None,
+                };
+                if let Some(question) = question {
+                    shell.ask(question);
+                }
+            }
+            RegFileAct::Apply(scope) => self.apply_reg_file_to_pc(shell, scope),
+            RegFileAct::Outline(tree) => {
+                shell.settings.extra.regfile_tree = tree;
+                shell.settings_dirty = true;
             }
         }
     }

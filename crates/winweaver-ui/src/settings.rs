@@ -33,6 +33,13 @@ pub struct Extra {
     /// The options of catalogs that are not loaded are left out of the tree.
     pub hide_unknown: bool,
     pub desc_sections: DescSections,
+    /// The rules that write a key of a registry file are shown open at first.
+    pub writers_open: bool,
+    /// The outline of a registry file is a tree of its keys, as regedit shows them; off, a list in
+    /// the order of the file.
+    pub regfile_tree: bool,
+    /// The Group Policy files of this Windows open in their tabs when this PC is read.
+    pub pol_with_pc: bool,
 }
 
 impl Default for Extra {
@@ -47,6 +54,9 @@ impl Default for Extra {
             hidden_imports: Vec::new(),
             hide_unknown: false,
             desc_sections: DescSections::default(),
+            writers_open: true,
+            regfile_tree: true,
+            pol_with_pc: false,
         }
     }
 }

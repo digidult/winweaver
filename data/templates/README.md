@@ -1,7 +1,8 @@
 # Runtime templates
 
-The fixed parts of the output file. The generator (`winkickoff/core/render.py`) fills the `{{name}}` slots with
-the blocks of the enabled rules and with profile data; everything else is copied as is.
+The fixed parts of the answer file and of the stand-alone scripts. The build (`crates/winweaver-core/src/render/`
+for the answer file, `scripts.rs` and `users.rs` for the stand-alone scripts) fills the `{{name}}` slots with the
+blocks of the enabled rules and with profile data; everything else is copied as is.
 
 | File | Content | Slots |
 |---|---|---|
@@ -10,25 +11,19 @@ the blocks of the enabled rules and with profile data; everything else is copied
 | `section-computer-name.ps1` | The computer name of a template (`install.computer_name_mode` `template`): computes it and starts a hidden process that writes it until the restart after specialize (reference card 02) | `name_parts` |
 | `section-default-user.ps1` | Mounting of the default user hive (`$du`) around the blocks of the default-user phase | `blocks` |
 | `section-active-setup.ps1` | Active Setup registration of `Setup-User.ps1` (added when the user-first-logon phase has rules) | none |
-| `section-post-oobe-task.ps1` | Scheduled task for `Post-OOBE.ps1` (added when the post-oobe phase has rules) | none |
-| `Setup-User.runtime.ps1` | Per-user log, Set-Reg and Remove-Reg (HKCU of the user), input language lists from the profile | `input_languages`, `input_fallback`, `transient_languages`, `blocks` |
+| `section-post-oobe-task.ps1` | Scheduled task for `Post-OOBE.ps1` (added when the post-oobe phase has rules or an account text needs it) | none |
+| `Setup-User.runtime.ps1` | Per-user log, Set-Reg and Remove-Reg (HKCU of the user), input language lists from the profile | `input_languages`, `input_tips`, `input_fallback`, `transient_languages`, `blocks` |
 | `Post-OOBE.runtime.ps1` | Waiting for OOBE to finish, Set-Reg and Remove-Reg, list of accounts, Set-AccountText and ConvertFrom-Base64Text (display names and descriptions outside ASCII, set through ADSI), removal of the task | `accounts`, `account_texts`, `blocks` |
-| `Audit.runtime.ps1` | Read-only audit of selected rules on a running Windows (T15): Test-Reg, Test-RegList, Test-ServiceStart, Test-Feature, Test-AppAbsent and others; JSON report, with `system` when the data forms are read | `build_label`, `blocks`, `system_section` |
-| `section-read-system.ps1` | The data forms for "Read the settings of this PC" (T25, `core/capture.py`): edition, time zone, computer name, languages, local accounts and their groups (no passwords, no keys) | none |
-| `Apply.runtime.ps1` | Applying selected rules to a running Windows (T15): administrator check, the same helpers as Setup-System with the previous state saved to `backup-*.json` (Set-RegList saves every value of the key it touches), default user hive mounting | `build_label`, `accounts`, `blocks` |
-| `Undo.runtime.ps1` | Restoring from `backup-*.json` (T15); a list of values comes back value by value | `build_label` |
+| `Audit.runtime.ps1` | Read-only audit of selected rules on a running Windows: Test-Reg, Test-RegList, Test-ServiceStart, Test-Feature, Test-AppAbsent and others; JSON report, with `system` when the data forms are read | `build_label`, `blocks`, `system_section` |
+| `section-read-system.ps1` | The data forms of the audit report, which WinWeaver turns into a profile: edition, time zone, computer name, languages, local accounts and their groups (no passwords, no keys) | none |
+| `Apply.runtime.ps1` | Applying selected rules to a running Windows, or returning them to the Windows defaults: administrator check, the same helpers as Setup-System with the previous state saved to `backup-*.json` (Set-RegList saves every value of the key it touches), default user hive mounting | `build_label`, `accounts`, `blocks` |
+| `Undo.runtime.ps1` | Restoring from `backup-*.json` of the apply script or of the native apply; a list of values comes back value by value | `build_label` |
+| `Create-Users.runtime.ps1` | The stand-alone script of a users file (`.wwusers`): asks the master password, creates or updates the local accounts of the file next to it | `users_label`, `users_file_b64`, `build` |
 
-`VERSION` holds the version of the catalog and the runtime; profiles store it as `catalog_version`. 0.5
-(1.1.0-rc.2): Set-RegList and Test-RegList for lists of values, and `Set-Reg` accepts an empty MultiString. 0.6:
-Set-Reg and Remove-Reg in Setup-User and Post-OOBE (rules of the phases user-first-logon and post-oobe may write the
-registry; their other action types stay limited to `ps`), values of the sign-in screen (`HKU:\.DEFAULT\`), rules of
-File Explorer namespaces, desktop icons and the keys that switch the input language. 0.7 (1.3.0-rc.2): the computer
-name of a template (`section-computer-name.ps1`) and the account texts outside ASCII (`Set-AccountText` in Post-OOBE;
-the build creates Post-OOBE.ps1 and its task for them even without post-oobe rules). 0.8 (1.4.0-rc.1): the audit
-reports `system` (slot `system_section`, `section-read-system.ps1`) and serialises JSON to depth 6, for the read of
-this PC; the answer file did not change.
-Any change of a template or of the catalog that changes the output file needs a new version and a run of
-`python -m unittest discover -s tests` (the tests compare the built file with the verified v0.2).
+`VERSION` holds the version of the runtime templates (`render::runtime_version`), the same as the version of the
+catalog (`CATALOG_VERSION`); the header of the answer file names both, and a profile stores the catalog version
+as `catalog`. Any change of a template or of the catalog that changes the output file needs a new version and a
+run of the tests of `crates/winweaver-core` (`tests/render.rs`, `tests/scripts.rs`).
 
 Everything the generator itself writes (header, block markers, embedded profile) is ASCII, so the answer
 file does not depend on how Windows Setup treats national characters.

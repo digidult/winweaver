@@ -1,5 +1,5 @@
 {
-  "comment": ["Printing. Section 1 of the v0.2 machine script."],
+  "comment": ["Printing."],
   "rules": [
     {
       "id": "printing.spooler-automatic",

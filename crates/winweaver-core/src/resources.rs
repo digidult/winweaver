@@ -11,7 +11,7 @@ const TIMEZONES: &str = include_str!("../../../data/resources/timezones.json");
 
 /// The editions a profile can name with their generic installation keys (Pro and Education) or
 /// KMS client keys (the rest), as Microsoft publishes them; a key selects the edition and does not
-/// activate Windows. The names are the ones the predecessor's customer aligned.
+/// activate Windows.
 pub const EDITION_KEYS: [(&str, &str); 14] = [
     ("Pro", "VK7JG-NPHTM-C97JM-9MPGT-3V66T"),
     ("Enterprise", "NPPR9-FWDCX-D2C8J-H872K-2YT43"),

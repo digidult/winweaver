@@ -1,7 +1,7 @@
 # 19. More privacy options: AI, telemetry, advertising, search, speech, Office, OneDrive, drivers, Explorer
 
-Rules from the customer's list of 28.09.2026 (file MoreOptions: "AI and telemetry must be off; the whole list is
-on by default everywhere except Home"). Every value was checked on 28.09.2026 against Microsoft Learn
+Rules from the customer's list (file MoreOptions: "AI and telemetry must be off; the whole list is
+on by default everywhere except Home"). Every value was checked against Microsoft Learn
 (Policy CSP, ADMX reference, "Manage connections from Windows operating system components to Microsoft
 services", Microsoft 365 Apps privacy controls, OneDrive Group Policy), the ADMX templates shipped with Windows 11
 25H2 (26200) and read-only registry queries on a 26200 PC. Where the list had a wrong path, an internal value,
@@ -9,7 +9,7 @@ a value that does not exist or an obsolete one, the catalog uses the documented 
 out; the section "Corrections to the list" names each case.
 
 All rules below are on by default, so they are in the "Office", "Strict" and "Laptop"
-presets. The Home preset (the list `HOME_RULES` in `WinKickOff/tools/make_presets.py`) turns on only ten of them:
+presets. The Home preset turns on only ten of them:
 `telemetry.app-telemetry-off`, `ads.lock-screen-spotlight-off`, `ads.account-notifications-off`,
 `ads.advertising-id-user-off`, `search.user-cloud-off`, `speech.online-user-off`, `speech.narrator-online-off`,
 `speech.narrator-extensions-off`, `onedrive.kfm-block` and `nav.launch-to-this-pc`. Per-user values are
@@ -23,8 +23,8 @@ U undocumented value of a Settings switch (community sources), harmless.
 
 | Rule | Values | Effect | Status |
 |---|---|---|---|
-| `privacy.copilot-recall-off` (v0.2) | `HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI` DisableAIDataAnalysis=1, AllowRecallEnablement=0, DisableClickToDo=1; `...\WindowsCopilot` TurnOffWindowsCopilot=1 | Recall, snapshots and Click to Do off; the machine copy of TurnOffWindowsCopilot is not documented (the user copy is) | D |
-| `default-user.copilot-off` (v0.2) | `HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot` TurnOffWindowsCopilot=1 and the taskbar button | Old Copilot sidebar off; deprecated in 24H2, the Copilot app itself is removed by `apps.remove.copilot` | D |
+| `privacy.copilot-recall-off` | `HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI` DisableAIDataAnalysis=1, AllowRecallEnablement=0, DisableClickToDo=1; `...\WindowsCopilot` TurnOffWindowsCopilot=1 | Recall, snapshots and Click to Do off; the machine copy of TurnOffWindowsCopilot is not documented (the user copy is) | D |
+| `default-user.copilot-off` | `HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot` TurnOffWindowsCopilot=1 and the taskbar button | Old Copilot sidebar off; deprecated in 24H2, the Copilot app itself is removed by `apps.remove.copilot` | D |
 | `ai.recall-user-off` | `HKCU\Software\Policies\Microsoft\Windows\WindowsAI` DisableAIDataAnalysis=1, DisableClickToDo=1 | User copies of the Recall and Click to Do policies | D |
 | `ai.settings-agent-off` | `...\WindowsAI` DisableSettingsAgent=1 | No AI agent in the Settings search | P |
 | `ai.agent-connectors-off` | `...\WindowsAI` ConfigureAgentConnectors=2 | Agent connectors (MCP servers for AI agents) forced off | P |
@@ -39,7 +39,7 @@ U undocumented value of a Settings switch (community sources), harmless.
 
 | Rule | Values | Effect | Status |
 |---|---|---|---|
-| `privacy.telemetry-minimal` (v0.2) | `HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection` AllowTelemetry = parameter `level`, default 1; feedback, advertising ID, WER, activity history, DiagTrack, CEIP tasks | Since 28.09.2026 the level is a parameter: 1 (Required) or 0 (Security). Pro treats 0 as 1; on Enterprise or Education 0 really stops the data, which Microsoft advises against for PCs updated by Windows Update (compatibility data for safeguard holds). The default stays 1, the lowest level Pro sends | D |
+| `privacy.telemetry-minimal` | `HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection` AllowTelemetry = parameter `level`, default 1; feedback, advertising ID, WER, activity history, DiagTrack, CEIP tasks | The level is a parameter: 1 (Required) or 0 (Security). Pro treats 0 as 1; on Enterprise or Education 0 really stops the data, which Microsoft advises against for PCs updated by Windows Update (compatibility data for safeguard holds). The default is 1, the lowest level Pro sends | D |
 | `telemetry.settings-state` | `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection` AllowTelemetry=1, MaxTelemetryAllowed=1 | State of the Settings page «Диагностика и отзывы» (Diagnostics & feedback): Required, no higher level offered. Not a policy; the policy above decides | U |
 | `telemetry.user-policy` | `HKCU\Software\Policies\Microsoft\Windows\DataCollection` AllowTelemetry=1 | User copy of the policy; when both exist the more restrictive applies | D |
 | `telemetry.change-notification-off` | `...\DataCollection` DisableTelemetryOptInChangeNotification=1 | No toast about the diagnostic data level; documented replacement of ShowedToastAtLevel | D |
@@ -53,7 +53,7 @@ U undocumented value of a Settings switch (community sources), harmless.
 
 | Rule | Values | Effect | Status |
 |---|---|---|---|
-| `privacy.consumer-content`, `privacy.widgets-off`, `default-user.no-consumer-content`, `default-user.no-sync-provider-ads`, `default-user.http-accept-language-optout` (v0.2 and 25.09) | cards 12 and 14 | Moved into this subsection; ContentDeliveryAllowed, SubscribedContent-338393/353694/353696Enabled, AdvertisingInfo Enabled, HttpAcceptLanguageOptOut and DisableConsumerAccountStateContent of the list are already there | D and U |
+| `privacy.consumer-content`, `privacy.widgets-off`, `default-user.no-consumer-content`, `default-user.no-sync-provider-ads`, `default-user.http-accept-language-optout` | cards 12 and 14 | In this subsection of the catalog; ContentDeliveryAllowed, SubscribedContent-338393/353694/353696Enabled, AdvertisingInfo Enabled, HttpAcceptLanguageOptOut and DisableConsumerAccountStateContent of the list are already there | D and U |
 | `ads.lock-screen-spotlight-off` | `HKCU\...\ContentDeliveryManager` RotatingLockScreenEnabled=0, SubscribedContentEnabled=0 | No Spotlight pictures on the lock screen; the meaning of SubscribedContentEnabled is not documented | U |
 | `ads.suggestions-user-policies` | `HKCU\Software\Policies\Microsoft\Windows\CloudContent` DisableTailoredExperiencesWithDiagnosticData=1, DisableThirdPartySuggestions=1 | No tailored tips, no third-party app suggestions (user policies, Pro supported) | D |
 | `ads.account-notifications-off` | `HKCU\...\SystemSettings\AccountNotifications` EnableAccountNotifications=0 | No account and service prompts in Settings | U |
@@ -66,7 +66,7 @@ values, and its policy is Enterprise/Education only; a fixed wallpaper is a sepa
 
 | Rule | Values | Effect | Status |
 |---|---|---|---|
-| `privacy.web-search-off` (v0.2) | card 12 | No Bing results in Start search | D |
+| `privacy.web-search-off` | card 12 | No Bing results in Start search | D |
 | `search.cloud-off` | `HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search` AllowCloudSearch=0, EnableDynamicContentInWSB=0, AllowSearchToUseLocation=0 | No cloud content, no search highlights, no location in search | D |
 | `search.user-cloud-off` | `HKCU\...\SearchSettings` IsAADCloudSearchEnabled, IsMSACloudSearchEnabled, IsDynamicSearchBoxEnabled, IsDeviceSearchHistoryEnabled = 0 | The same switches in the user profile and no local search history | U |
 | `search.start-track-off` | `HKCU\...\Explorer\Advanced` Start_TrackProgs=0 | App launches are not tracked for Start and search | D |
@@ -101,7 +101,7 @@ saving, Safe Links and Safe Documents.
 
 | Rule | Values | Effect | Status |
 |---|---|---|---|
-| `apps.remove.onedrive` (26.09) | card 13 | OneDrive is not installed for new users | D |
+| `apps.remove.onedrive` | card 13 | OneDrive is not installed for new users | D |
 | `onedrive.kfm-block` | `HKLM\SOFTWARE\Policies\Microsoft\OneDrive` KFMBlockOptIn=1 | Desktop, Documents and Pictures cannot be moved to any OneDrive; needed on non-domain PCs | D |
 | `onedrive.no-traffic-before-signin` | `...\OneDrive` PreventNetworkTrafficPreUserSignIn=1 | No OneDrive traffic before a user signs in to OneDrive (stays in effect after removal of the policy) | D |
 | `onedrive.feedback-off` | `...\OneDrive` EnableSendFeedback=0, EnableSurveyCampaigns=0, EnableContactSupport=0 | No feedback, surveys or support contact | D |
@@ -120,7 +120,7 @@ never set.
 
 ## This PC folders
 
-From the customer's file `enable_namespaces_in_mypc.reg` (28.09.2026): "add every Explorer namespace, also the
+From the customer's file `enable_namespaces_in_mypc.reg`: "add every Explorer namespace, also the
 missing ones; by default the icons are not shown". Read-only inspection of a 26200 PC: `HKLM\SOFTWARE\Microsoft\
 Windows\CurrentVersion\Explorer\MyComputer\NameSpace` and its WOW6432Node twin hold 11 entries, each with
 `HiddenByDefault=1` (1 hides, 0 shows; since 22H2, without the feature gate `HideIfEnabled` since 24H2). The file
@@ -146,7 +146,7 @@ Every rule writes both views (32-bit programs use the WOW6432Node view in their 
 
 The Local and the classic known folders resolve to the same profile folder; "Local" does not mean "outside OneDrive"
 (with OneDrive folder backup both are redirected). The return-to-defaults value of `HiddenByDefault` is 1, the state of
-24H2 and 25H2, also for 3D Objects (customer decision of 05.10.2026); Windows 10 does not have the value.
+24H2 and 25H2, also for 3D Objects; Windows 10 does not have the value.
 
 Navigation pane (`...\Explorer\Desktop\NameSpace`, both views), also missing from the file:
 
@@ -156,9 +156,9 @@ Navigation pane (`...\Explorer\Desktop\NameSpace`, both views), also missing fro
 | `nav.home-hidden` | {f874310e-b6b7-47dc-bc84-b9e6b38f5903} «Главная» (Home), CLSID_MSGraphHomeFolder | off | Requires `nav.launch-to-this-pc` (`LaunchTo=1` in the default profile), because Explorer opens on Home. With the This PC folders hidden, users would lose the quick way to Documents; reports say Quick access pins disappear with Home |
 | `nav.launch-to-this-pc` | `HKCU\...\Explorer\Advanced` LaunchTo=1 | off | Explorer opens on This PC |
 
-Not generated here: the Network, Libraries and Linux entries of the navigation pane and the other File Explorer
-namespaces and desktop icons are rules of card 20 (`20-explorer-namespaces.md`, catalog 0.6); OneDrive in the pane is
-covered by `apps.remove.onedrive` and `onedrive.block`. Not generated at all: `ThisPCPolicy` of `FolderDescriptions`
+Not in this card: the Network, Libraries and Linux entries of the navigation pane and the other File Explorer
+namespaces and desktop icons are rules of card 20 (`20-explorer-namespaces.md`); OneDrive in the pane is
+covered by `apps.remove.onedrive` and `onedrive.block`. Not in the catalog at all: `ThisPCPolicy` of `FolderDescriptions`
 (on 22H2 and later `HiddenByDefault` decides; whether ThisPCPolicy still hides is unverified) and the
 `DelegateFolders` of This PC (portable devices and similar data sources).
 
@@ -167,26 +167,26 @@ Verification: open This PC and press F5; after a feature update Windows may rest
 
 ## Corrections to the list
 
-| Item of the list | Finding | In WinKickOff |
+| Item of the list | Finding | In the catalog |
 |---|---|---|
 | WindowsAI TurnOffSavingSnapshots | Not a value: it is the display name of the DisableAIDataAnalysis policy | DisableAIDataAnalysis (machine and user) |
 | WindowsAI DisableAgentConnectors, DisableAgentWorkspaces, DisableRemoteAgentConnectors | Not defined by Microsoft (ADMX, CSP, preview list) | ConfigureAgentConnectors=2; the agent workspace is only switched on by an administrator in Settings |
-| WindowsAI SetCopilotHardwareKey | Lives in `HKCU\...\CopilotKey`; takes an app ID, has no "off" value | Not generated |
-| WindowsAI AllowCopilotRuntime, IsCopilotAvailable, IsUserEligible | Internal shell state that Windows rewrites | Not generated |
+| WindowsAI SetCopilotHardwareKey | Lives in `HKCU\...\CopilotKey`; takes an app ID, has no "off" value | No rule |
+| WindowsAI AllowCopilotRuntime, IsCopilotAvailable, IsUserEligible | Internal shell state that Windows rewrites | No rule |
 | ConsentStore generativeAI Value, systemAIModels Value and RecordUsageData, AppPrivacy LetAppsAccessGenerativeAI | generativeAI is absent on 26200 (old Insider name), the others are internal state or the old policy name | LetAppsAccessSystemAIModels=2 |
 | ConsentStore microphone for Microsoft.Copilot and Microsoft.MicrosoftOfficeHub | Internal per-app state | LetAppsAccessMicrophone_ForceDenyTheseApps with both apps |
 | `HKLM\SOFTWARE\Policies\Microsoft\Paint` | Wrong path | `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint` |
-| Explorer\Advanced ShowCopilotNudges | Not present on 26200 and not documented | Not generated |
+| Explorer\Advanced ShowCopilotNudges | Not present on 26200 and not documented | No rule |
 | Edge CopilotCDPPageContext | Obsolete after Edge 132 | EdgeEntraCopilotPageContext |
 | Edge DevToolsGenAiSettings | Not an Edge policy (Chrome only) | Kept for Chrome (`chrome.devtools-genai-off`) |
-| Edge CopilotPageContext, EdgeEntraCopilotPageContext, Microsoft365CopilotChatIconEnabled, ComposeInlineEnabled, ShareBrowsingHistoryWithCopilotSearchAllowed | Apply only to Microsoft Entra ID profiles | Generated and on as the list asks, marked "Entra ID profiles"; no effect with local accounts |
-| Office common\ai\training optionalconnectedexperiencesenabled, common\ai contentsafetyserviceenabled | Not found in any Microsoft source; the content safety policies moderate AI, they do not turn it off | Not generated; usercontentdisabled and controllerconnectedservicesenabled cover the intent |
+| Edge CopilotPageContext, EdgeEntraCopilotPageContext, Microsoft365CopilotChatIconEnabled, ComposeInlineEnabled, ShareBrowsingHistoryWithCopilotSearchAllowed | Apply only to Microsoft Entra ID profiles | Rules, on as the list asks, marked "Entra ID profiles"; no effect with local accounts |
+| Office common\ai\training optionalconnectedexperiencesenabled, common\ai contentsafetyserviceenabled | Not found in any Microsoft source; the content safety policies moderate AI, they do not turn it off | No rule; usercontentdisabled and controllerconnectedservicesenabled cover the intent |
 | OneDrive KFMBlockOptIn in HKCU | Documented for the machine only | HKLM value only |
 | Diagnostics\DiagTrack ShowedToastAtLevel | State written by Windows | DisableTelemetryOptInChangeNotification=1 |
 | `HKCU\...\CurrentVersion\Policies\DataCollection` AllowTelemetry, MaxTelemetryAllowed | Written by tweak tools; Windows reads the machine copy | HKLM copy (`telemetry.settings-state`) and the user policy (`telemetry.user-policy`) |
 | AllowTelemetry = 0 | Pro treats 0 as 1; 0 matters only on Enterprise and Education and there hurts the update safeguards | Parameter of `privacy.telemetry-minimal`, default 1 |
 | `HKCU\...\Policies\Microsoft\Windows\DataCollection` DoNotShowFeedbackNotifications, `HKCU\...\AppCompat` AITEnable, `HKCU\...\AdvertisingInfo` DisabledByGroupPolicy, `HKCU\...\InputPersonalization` AllowInputPersonalization | No user-scope policy exists | Machine policies, plus the per-user Settings values where they exist |
-| PolicyManager\default\WiFi AllowWiFiHotSpotReporting, AllowAutoConnectToWiFiSenseHotspots | Wi-Fi Sense was removed in Windows 10 1803 | Not generated |
+| PolicyManager\default\WiFi AllowWiFiHotSpotReporting, AllowAutoConnectToWiFiSenseHotspots | Wi-Fi Sense was removed in Windows 10 1803 | No rule |
 | ConsentStore appDiagnostics Value | Internal state of the Settings switch | LetAppsGetDiagnosticInfo=2 |
 
 Values that were considered and left out on purpose: `DisableOneSettingsDownloads` (Microsoft asks not to block
@@ -198,8 +198,8 @@ that endpoint, it keeps safeguard-hold data current), `DisableInventory` (touche
 
 - Verification: `reg query` of the keys above; Settings pages show "Some settings are managed by your
   organization"; `edge://policy` for Edge; in Office, File, Account, Account Privacy. The "This PC" menu
-  of WinKickOff checks every rule on a running PC.
-- Rollback: every rule has a Windows default for "Return the selection to Windows defaults now...":
+  of WinWeaver checks every rule on a running PC.
+- Rollback: every rule has a Windows default for "Return the selection to Windows defaults...":
   policies are removed, per-user values return to "no value".
 
 ## Sources

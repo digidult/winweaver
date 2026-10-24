@@ -1,6 +1,6 @@
 # 11. Logging for incident investigation
 
-Section 7 of `Setup-System.ps1`. Goal: when something happens on one PC in the workgroup, the logs
+Rules of `Setup-System.ps1` (specialize). Goal: when something happens on one PC in the workgroup, the logs
 must hold enough data to understand how it happened: which process started, with what
 command line, under which user, what PowerShell did. Out of the box Windows logs the bare minimum.
 
@@ -38,8 +38,8 @@ command line, under which user, what PowerShell did. Out of the box Windows logs
   - `auditpol` changes the local audit policy. A domain Group Policy would override it, but
     there is no domain. In `secpol.msc` (Advanced Audit Policy Configuration) the values are visible and editable.
   - Correct time (`TimeZone`, section 02, and synchronization) is mandatory for correlating events.
-  - The logs are stored on the PC itself; if ransomware encrypts the drive, they are lost. Next step
-    (not in this version): forwarding events to a share or a collector (Windows Event Forwarding).
+  - The logs are stored on the PC itself; if ransomware encrypts the drive, they are lost. Forwarding events to a
+    share or a collector (Windows Event Forwarding) is not configured.
   - Removable storage auditing writes many events when large folders are copied to a flash drive.
 - Version differences: the «Съёмное хранилище» (Removable Storage) subcategory since Windows 8. The command line in 4688 since
   Windows 8.1 / KB3004375 for Windows 7. Subcategory GUIDs are the same in all versions.

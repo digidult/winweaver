@@ -1,5 +1,5 @@
 {
-  "comment": ["UAC, accounts, credential protection, remote access, encryption. Section 4 of the v0.2 machine script."],
+  "comment": ["UAC, accounts, credential protection, remote access, encryption."],
   "rules": [
     {
       "id": "uac.baseline",

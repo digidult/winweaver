@@ -1,7 +1,7 @@
-//! The editor of a catalog file (customer list of 18.10.2026, item 11): its groups and policies as a
-//! tree on the left, the selected policy as a form on the right. A change of the form reaches the
-//! file with Apply, which checks the whole file (`CatalogFile::put_rule`), and the file with Save;
-//! a loaded import is read again after it is saved.
+//! The editor of a catalog file: its groups and policies as a tree on the left, the selected policy
+//! as a form on the right. A change of the form reaches the file with Apply, which checks the whole
+//! file (`CatalogFile::put_rule`), and the file with Save; a loaded import is read again after it
+//! is saved.
 
 use std::collections::HashSet;
 use std::path::PathBuf;
@@ -59,6 +59,7 @@ pub struct EditorDoc {
     pub error: Option<String>,
     /// The title of a new group or policy, typed in the bar of the form.
     pub new_name: String,
+    pub draft: ww::DraftState,
 }
 
 fn value_text(value: &Value) -> String {
@@ -152,6 +153,7 @@ impl ActionRow {
 impl EditorDoc {
     pub fn new(file: CatalogFile, path: PathBuf, import: bool) -> Self {
         let expanded = file.groups.iter().map(|g| g.id.clone()).collect();
+        let draft = ww::DraftState::new(Some(&path));
         Self {
             file,
             path,
@@ -162,6 +164,7 @@ impl EditorDoc {
             expanded,
             error: None,
             new_name: String::new(),
+            draft,
         }
     }
 

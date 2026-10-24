@@ -2,7 +2,7 @@
   "_language": "Русский",
   "_disabled": "выключено",
   "_comment": [
-    "Russian texts of the rule catalog (rules/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
+    "Russian texts of the rule catalog (data/catalog/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
     "_disabled: the word after the title of the Disabled rule of an imported policy (<title>: <word>).",
     "Fields of a rule: title, summary, effect, risk, versions, verify, rollback (strings), tags (a list of strings),",
     "params {\"<name>\": text}, values {\"<name>\": {\"<value>\": text}}; any other field is an error.",
@@ -1056,7 +1056,7 @@
   },
   "apps.maps-broker-off": {
     "title": "Служба загрузки офлайн-карт отключена",
-    "summary": "MapsBroker обслуживает приложение «Карты»; без приложения служба не нужна. В файле v0.2 отключалась под условием Xbox, здесь привязана к удалению Карт.",
+    "summary": "MapsBroker обслуживает приложение «Карты»; без приложения служба не нужна. Правило привязано к удалению Карт.",
     "effect": "Одна автоматическая служба меньше.",
     "rollback": "Set-Service MapsBroker -StartupType Automatic",
     "tags": ["карты", "служба"]
@@ -2488,7 +2488,7 @@
   "install.skip-auto-activation": {
     "title": "Без автоматических попыток активации",
     "summary": "Windows не пытается активироваться сама, пока не введён ключ или активация не запущена вручную: значение Manual, которое пишет штатная настройка unattend SkipAutoActivation.",
-    "effect": "Двенадцать редакций, чей универсальный ключ в WinKickOff является клиентским ключом KMS, без хоста KMS остаются неактивированными, и автоматические попытки раз за разом заканчиваются ошибками активации на рабочем столе; с этим правилом Windows ждёт ключ лицензии. Pro и Education активируются цифровой лицензией и в правиле не нуждаются.",
+    "effect": "Двенадцать редакций, чей универсальный ключ в WinWeaver является клиентским ключом KMS, без хоста KMS остаются неактивированными, и автоматические попытки раз за разом заканчиваются ошибками активации на рабочем столе; с этим правилом Windows ждёт ключ лицензии. Pro и Education активируются цифровой лицензией и в правиле не нуждаются.",
     "versions": "Windows 8 и новее. Приёмка в ВМ не проведена: значение должно быть записано до первой попытки, которая происходит после OOBE.",
     "rollback": "Установить Manual в 0 (значение Windows по умолчанию).",
     "tags": ["активация", "лицензия"],

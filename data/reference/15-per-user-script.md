@@ -1,6 +1,7 @@
 # 15. Active Setup and Setup-User.ps1: first sign-in settings for each user
 
-Section 11 of `Setup-System.ps1` registers the mechanism; the script itself is embedded in the XML as
+`Setup-System.ps1` registers the mechanism when the phase user-first-logon has rules
+(`data/templates/section-active-setup.ps1`); the script itself is embedded in the XML as
 `C:\ProgramData\Unattend\Scripts\Setup-User.ps1`.
 
 ## The Active Setup mechanism
@@ -65,8 +66,8 @@ next sign-in. The customer's requirement "do not change the display language" re
   - Language packs for `ru-UA` are not needed: it is an input language, not a display language; Windows does not try
     to download an LXP.
   - Changes the user makes to the list in Settings persist: the script does not run again.
-  - A test on the customer's work PC on 12.09.2026 showed that `Set-WinUserLanguageList` changes the live
-    session not fully in sync with the registry; for a new user at first sign-in this does not
+  - On a running session `Set-WinUserLanguageList` changes the live session not fully in sync with the
+    registry; for a new user at first sign-in this does not
     show up, because the session is only being created.
 - Version differences: `ru-UA` as an input language is supported in Windows 10 1803+ and Windows 11 (the
   CLDR list); on older builds the fallback applies. The cmdlets of the International module

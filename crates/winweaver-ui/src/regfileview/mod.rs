@@ -1,10 +1,11 @@
-//! The tab of a registry file (`.reg`, list "Development further" of 18.10.2026, item 3), shown as
-//! a structure rather than as text: on the left the outline of the file, its keys and its comments
-//! in their order; on the right the selected key with its values in the types of regedit and the
-//! comments between them, the way to the registry tab and to the rules of the loaded catalogs that
-//! write it. A key, a value or a comment is edited in a window over the tab and lines are removed
-//! after a question; Save writes every line back, the ones the program does not read too.
+//! The tab of a registry file (`.reg`), shown as a structure rather than as text: on the left the
+//! outline of the file, its keys and its comments in their order; on the right the selected key
+//! with its values in the types of regedit and the comments between them, the way to the registry
+//! tab and to the rules of the loaded catalogs that write it. A key, a value or a comment is edited
+//! in a window over the tab and lines are removed after a question; Save writes every line back,
+//! the ones the program does not read too.
 
+use std::collections::{HashMap, HashSet};
 use std::ops::Range;
 use std::path::PathBuf;
 
@@ -12,7 +13,7 @@ use eframe::egui;
 use winweaver_core::admx::CatalogFile;
 use winweaver_core::catalog::Catalog;
 use winweaver_core::i18n::CatalogTexts;
-use winweaver_core::regfile::{Line, RegFile};
+use winweaver_core::regfile::{Change, Line, RegFile};
 use winweaver_core::registry::{self, Data, NEW_TYPES};
 
 use crate::i18n::{tr, trf};
@@ -31,6 +32,14 @@ mod view;
 pub(crate) use editor::*;
 pub(crate) use view::*;
 
+/// What of a registry file is applied to this PC.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ApplyScope {
+    Value,
+    Key,
+    File,
+}
+
 /// The types the editor of a value offers: the ones of the registry, and REG_NONE as a file may
 /// hold it.
 fn value_types() -> Vec<&'static str> {
@@ -38,8 +47,6 @@ fn value_types() -> Vec<&'static str> {
 }
 /// The most characters of data a row shows.
 const SHOWN_MAX: usize = 200;
-/// The most rules the head of a key lists.
-const RULES_MAX: usize = 12;
 /// Where the registry files of the plans load the default user profile.
 const DEFAULT_USER: &str = "HKEY_USERS\\UnattendDefault";
 
@@ -223,10 +230,14 @@ pub struct RegFileDoc {
     pub follow_line: bool,
     /// The rules of the catalog by the keys they write, with the count of rules it was made of.
     writers: Option<regview::Writers>,
+    /// The keys folded in the tree of the outline, in lower case.
+    pub closed: HashSet<String>,
+    pub draft: ww::DraftState,
 }
 
 impl RegFileDoc {
     pub fn new(file: RegFile, path: PathBuf) -> Self {
+        let draft = ww::DraftState::new(Some(&path));
         Self {
             path,
             file,
@@ -239,7 +250,59 @@ impl RegFileDoc {
             follow: false,
             follow_line: false,
             writers: None,
+            closed: HashSet::new(),
+            draft,
         }
+    }
+
+    /// The changes of the registry of the selected value, the selected key with its values, or
+    /// the whole file; `None` when that part is not selected.
+    pub fn changes(&self, scope: ApplyScope) -> Option<Vec<Change>> {
+        let changes = match scope {
+            ApplyScope::File => self.file.changes(None),
+            ApplyScope::Key => {
+                let items = items(&self.file.lines);
+                let item = &items[self.item(&items)?];
+                if !matches!(item, Item::Key { .. }) {
+                    return None;
+                }
+                self.file.changes(Some(item.lines()))
+            }
+            ApplyScope::Value => {
+                let line = self.line?;
+                if !matches!(self.file.lines.get(line), Some(Line::Value { .. })) {
+                    return None;
+                }
+                self.file.changes(Some(line..line + 1))
+            }
+        };
+        (!changes.is_empty()).then_some(changes)
+    }
+
+    /// The question before a part of the file changes this PC, with the act of a yes.
+    pub fn apply_question(&self, scope: ApplyScope) -> Option<Question> {
+        let changes = self.changes(scope)?;
+        let deleted = changes
+            .iter()
+            .filter(|c| matches!(c, Change::DeleteKey(_) | Change::DeleteValue { .. }))
+            .count();
+        let mut text = trf(
+            "Apply {n} changes of the registry to this PC? The keys of the computer need WinWeaver started as administrator.",
+            &[("n", &changes.len())],
+        );
+        if deleted > 0 {
+            text.push(' ');
+            text.push_str(&trf(
+                "{n} of them delete a key or a value, which no undo brings back.",
+                &[("n", &deleted)],
+            ));
+        }
+        Some(Question::new(
+            tr("Change this PC"),
+            text,
+            tr("Apply"),
+            RegFileAct::Apply(scope),
+        ))
     }
 
     /// The question before the removal of the selected key or line, with the act of a yes.

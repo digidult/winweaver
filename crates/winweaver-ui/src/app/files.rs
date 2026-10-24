@@ -5,7 +5,9 @@ use crate::*;
 impl WinWeaver {
     /// Opens a page of the documentation a link names, such as
     /// `docs/technical/reference/18-browsers.md#microsoft-edge`, at the heading of its anchor; a
-    /// link `#heading` goes to a heading of the Markdown tab that is open.
+    /// link `#heading` goes to a heading of the Markdown tab that is open. A page of a file links
+    /// to the files next to it first; a page of the program to the pages of the program, then to
+    /// the files of the program folder.
     pub(crate) fn open_doc(&mut self, shell: &mut Shell<WinWeaver>, link: &str) {
         let (file, anchor) = match link.split_once('#') {
             Some((f, a)) => (f, Some(a.to_owned())),
@@ -19,6 +21,31 @@ impl WinWeaver {
             }
             return;
         }
+        let file = shell.linked_file(link).filter(|(p, _)| p.is_file());
+        let from_file = shell.active_doc().and_then(ww::Document::path).is_some();
+        if from_file && let Some((path, anchor)) = file.clone() {
+            self.open_linked_file(shell, path, anchor);
+            return;
+        }
+        if self.open_page(shell, name, anchor) {
+            return;
+        }
+        match file {
+            Some((path, anchor)) => self.open_linked_file(shell, path, anchor),
+            None => {
+                shell.status = trf("No page {name} in the documentation", &[("name", &name)]);
+            }
+        }
+    }
+
+    /// Opens a page built into the executable by its file name (the guide in the language of the
+    /// interface, or a page of the reference) at a heading; false when there is no such page.
+    pub(crate) fn open_page(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        name: &str,
+        anchor: Option<String>,
+    ) -> bool {
         let (title, text) = if name.eq_ignore_ascii_case("guide.md") {
             (
                 pages::GUIDE_TITLE.to_owned(),
@@ -33,17 +60,8 @@ impl WinWeaver {
                     .map(|(_, t)| (*t).to_owned()),
             )
         };
-        // A page of a file links to the files next to it first; a page of the program to the
-        // pages of the program, then to the files of the program folder.
-        let file = shell.linked_file(link).filter(|(p, _)| p.is_file());
-        let from_file = shell.active_doc().and_then(ww::Document::path).is_some();
-        if let Some((path, anchor)) = file.clone().filter(|_| from_file || text.is_none()) {
-            self.open_linked_file(shell, path, anchor);
-            return;
-        }
         let Some(text) = text else {
-            shell.status = trf("No page {name} in the documentation", &[("name", &name)]);
-            return;
+            return false;
         };
         let i = shell.show_or_open(
             |d| matches!(d, Doc::Markdown(m) if m.path.is_none() && m.title == title),
@@ -53,6 +71,7 @@ impl WinWeaver {
             m.jump = anchor.is_some();
             m.anchor = anchor;
         }
+        true
     }
 
     pub(crate) fn open_any(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf) {
@@ -80,6 +99,13 @@ impl WinWeaver {
         }
         if path.extension().is_some_and(|e| e == users::EXTENSION) {
             self.open_users_path(shell, path);
+            return;
+        }
+        if path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case(winweaver_core::pol::EXTENSION))
+        {
+            self.open_pol_path(shell, path);
             return;
         }
         if path.extension().is_some_and(|e| e == themes::EXTENSION) {
@@ -291,6 +317,9 @@ impl WinWeaver {
             }
             FileAct::OpenReport => self.open_report(shell),
             FileAct::OpenGuide => self.open_guide(shell),
+            FileAct::OpenDocs => {
+                self.open_page(shell, pages::DOCS_ROOT, None);
+            }
             FileAct::OpenLicense => self.open_license(shell),
         }
     }

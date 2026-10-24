@@ -2,7 +2,7 @@
   "_language": "Français",
   "_disabled": "désactivé",
   "_comment": [
-    "French texts of the rule catalog (rules/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
+    "French texts of the rule catalog (data/catalog/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
     "_disabled: the word after the title of the Disabled rule of an imported policy (<title>: <word>).",
     "Fields of a rule: title, summary, effect, risk, versions, verify, rollback (strings), tags (a list of strings),",
     "params {\"<name>\": text}, values {\"<name>\": {\"<value>\": text}}; any other field is an error.",
@@ -153,7 +153,7 @@
   "install.skip-auto-activation": {
     "title": "Aucune tentative d'activation automatique",
     "summary": "Windows n'essaie pas de s'activer de lui-même tant qu'aucune clé n'a été saisie ou que l'activation n'a pas été lancée manuellement : c'est la valeur Manual qu'écrit le paramètre SkipAutoActivation du fichier de réponses.",
-    "effect": "Les douze éditions dont la clé générique dans WinKickOff est une clé client KMS restent non activées sans hôte KMS, et les tentatives automatiques échouent sans cesse en affichant des erreurs d'activation sur le Bureau ; avec cette règle, Windows attend la clé de la licence. Pro et Éducation s'activent avec une licence numérique et n'ont pas besoin de cette règle.",
+    "effect": "Les douze éditions dont la clé générique dans WinWeaver est une clé client KMS restent non activées sans hôte KMS, et les tentatives automatiques échouent sans cesse en affichant des erreurs d'activation sur le Bureau ; avec cette règle, Windows attend la clé de la licence. Pro et Éducation s'activent avec une licence numérique et n'ont pas besoin de cette règle.",
     "versions": "Windows 8 et versions ultérieures. Validation dans une machine virtuelle en attente : la valeur doit être en place avant la première tentative, qui a lieu après l'OOBE.",
     "verify": "Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SoftwareProtectionPlatform\\Activation' -Name Manual",
     "rollback": "Définissez Manual sur 0 (valeur par défaut de Windows).",
@@ -1967,7 +1967,7 @@
   },
   "apps.maps-broker-off": {
     "title": "Service de téléchargement des cartes hors connexion désactivé",
-    "summary": "MapsBroker sert l'application Cartes ; sans l'application, le service est inutile. Dans le fichier v0.2, il était désactivé avec la condition Xbox ; ici, il est lié à la suppression de Cartes.",
+    "summary": "MapsBroker sert l'application Cartes ; sans l'application, le service est inutile. La règle est liée à la suppression de Cartes.",
     "effect": "Un service automatique de moins.",
     "rollback": "Set-Service MapsBroker -StartupType Automatic",
     "tags": [

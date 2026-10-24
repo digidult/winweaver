@@ -59,9 +59,10 @@ pub(crate) fn open_dialog() -> rfd::FileDialog {
             ],
         )
         .add_filter(tr("Registry files"), &[regfile::EXTENSION])
+        .add_filter(tr("Group Policy files"), &[winweaver_core::pol::EXTENSION])
         .add_filter(tr("Policy templates (opened without importing)"), &["admx"])
         .add_filter(tr("Answer files (the profile they embed)"), &["xml"])
-        .add_filter(tr("WinKickOff profiles and audit reports"), &["json"])
+        .add_filter(tr("Older profiles and audit reports"), &["json"])
         .add_filter(tr("Markdown pages"), &["md"]);
     widgets::in_folder(dialog, &dir)
 }

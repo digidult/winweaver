@@ -2,7 +2,7 @@
   "_language": "Español",
   "_disabled": "deshabilitada",
   "_comment": [
-    "Spanish texts of the rule catalog (rules/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
+    "Spanish texts of the rule catalog (data/catalog/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
     "_disabled: the word after the title of the Disabled rule of an imported policy (<title>: <word>).",
     "Fields of a rule: title, summary, effect, risk, versions, verify, rollback (strings), tags (a list of strings),",
     "params {\"<name>\": text}, values {\"<name>\": {\"<value>\": text}}; any other field is an error.",
@@ -155,7 +155,7 @@
   "install.skip-auto-activation": {
     "title": "Sin intentos de activación automática",
     "summary": "Windows no intenta activarse por sí solo hasta que se escribe una clave o se inicia la activación manualmente: el valor Manual que escribe el ajuste de unattend SkipAutoActivation.",
-    "effect": "Las doce ediciones cuya clave genérica en WinKickOff es una clave de cliente KMS quedan sin activar si no hay un host KMS, y los intentos automáticos fallan una y otra vez con errores de activación en el escritorio; con esta regla, Windows espera la clave de la licencia. Pro y Education se activan con una licencia digital y no necesitan la regla.",
+    "effect": "Las doce ediciones cuya clave genérica en WinWeaver es una clave de cliente KMS quedan sin activar si no hay un host KMS, y los intentos automáticos fallan una y otra vez con errores de activación en el escritorio; con esta regla, Windows espera la clave de la licencia. Pro y Education se activan con una licencia digital y no necesitan la regla.",
     "versions": "Windows 8 y posteriores. Pendiente de validar en una máquina virtual: el valor debe estar presente antes del primer intento, que llega después de la OOBE.",
     "verify": "Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SoftwareProtectionPlatform\\Activation' -Name Manual",
     "rollback": "Establece Manual en 0 (el valor predeterminado de Windows).",
@@ -1973,7 +1973,7 @@
   },
   "apps.maps-broker-off": {
     "title": "Servicio de descarga de mapas sin conexión deshabilitado",
-    "summary": "MapsBroker da servicio a la aplicación Mapas; sin la aplicación, el servicio no es necesario. En el archivo v0.2 se deshabilitaba con la condición de Xbox; aquí va ligado a la eliminación de Mapas.",
+    "summary": "MapsBroker da servicio a la aplicación Mapas; sin la aplicación, el servicio no es necesario. La regla va ligada a la eliminación de Mapas.",
     "effect": "Un servicio automático menos.",
     "rollback": "Set-Service MapsBroker -StartupType Automatic",
     "tags": [

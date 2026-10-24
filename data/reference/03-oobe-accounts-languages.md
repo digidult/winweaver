@@ -44,8 +44,8 @@ is skipped only if all four are set; otherwise OOBE asks for whatever is missing
   "do not change the display language" is met: the value equals the image language rather than changing it.
 - Cross-links: `Setup-User.ps1` additionally pins the display language via
   `Set-WinUILanguageOverride`, so that reordering the input languages does not switch the interface.
-  If the ISO is replaced with an English one, the value must be changed to `en-US` (a constructor parameter,
-  derived from the ISO).
+  If the ISO is replaced with an English one, the value must be changed to `en-US` (the display language of the
+  profile, `languages.ui_language`).
 - Version differences: in Windows 11 22H2 and later, language packs are installed as LXPs via the Store;
   if a language that is not in the image is specified, the system stays in the image language without an error.
 - Verification: `Get-WinSystemLocale`, `dism /online /get-intl`, `[CultureInfo]::InstalledUICulture`.
@@ -85,10 +85,10 @@ is skipped only if all four are set; otherwise OOBE asks for whatever is missing
 - Verification: installation proceeds without a single screen after disk selection.
 - Rollback: not applicable.
 
-## Accounts asked during installation (WinKickOff, account mode "ask")
+## Accounts asked during installation (account mode "ask")
 
-Since WinKickOff 1.3 the form "Accounts" has the mode "Ask for the account during installation" (profile field
-`install.account_mode` = `"ask"`, profile format 3). The answer file then has no `UserAccounts` at all, so OOBE shows
+The form "Installation" has the account mode "Windows Setup asks for one" (profile field `install.account_mode` =
+`"ask"`). The answer file then has no `UserAccounts` at all, so OOBE shows
 the screen it does not get from the file: Microsoft documents that "OOBE screens that aren't configured in Unattend
 will display" (Automate OOBE). With `HideOnlineAccountScreens` and `BypassNRO` this is the local account screen: a
 name, then a password (it may stay empty); only when a password is typed, its confirmation and three security
@@ -101,13 +101,12 @@ combined: any `LocalAccount` makes the page automatic.
   OEM, network and privacy screens; specialize, the default profile, Active Setup and the Post-OOBE task do not depend
   on account names. `post-oobe.password-never-expires` has no account to act on (`$accounts = @()`); the machine-wide
   `accounts.password-never-expires` still applies.
-- The check of the editor warns when `oobe.hide-online-account` or `install.bypass-nro` is off in this mode (online,
-  Windows 11 Pro would ask for a Microsoft account; offline, OOBE may stop at the network screen).
-  `tools/Validate-Unattend.ps1` accepts a file without any `LocalAccount` ("none: OOBE asks").
+- The check of the profile warns when `oobe.hide-online-account` or `install.bypass-nro` is off in this mode
+  (online, Windows 11 Pro would ask for a Microsoft account; offline, OOBE may stop at the network screen).
 - Risks: one administrator for everyday work until a standard account is added; security questions let anyone who
   knows the answers reset the password from the sign-in screen; online, OOBE may download updates for 30 minutes or
-  more; Microsoft keeps closing ways to create local accounts in OOBE, so each new image needs a test. The separate
-  project that assigns passwords and groups can no longer rely on the names Admin and User.
+  more; Microsoft keeps closing ways to create local accounts in OOBE, so each new image needs a test. A users file
+  (`.wwusers`) that assigns passwords and groups afterwards cannot rely on the names Admin and User.
 
 ## UserAccounts / LocalAccounts
 
@@ -123,14 +122,14 @@ Two accounts; the order of the child elements follows the example in the Microso
 | Password/Value | empty | empty |
 | Password/PlainText | true | true |
 
-- Texts outside ASCII (08.10.2026): Windows Setup 24H2 and later writes the characters of an account that are not
-  ASCII as question marks. The customer saw it with a Cyrillic description; users of NTLite and Eleven Forum report it
-  for a Russian name of the built-in administrator and for a Czech display name, and say that 23H2 kept them. WinKickOff
-  therefore writes such a display name as the account name and leaves such a description out; `Post-OOBE.ps1` sets
-  both after OOBE through ADSI (`Set-AccountText`; `Set-LocalUser` takes at most 48 characters of a description), with
-  the text as UTF-8 in Base64, so the answer file stays ASCII. A name or a password outside ASCII cannot be repaired
-  that way (the profile folder takes the name at the first sign-in, a password must work at once): the check of the
-  profile refuses them, and `tools/Validate-Unattend.ps1` and the XML check refuse such texts in any file.
+- Texts outside ASCII: Windows Setup 24H2 and later writes the characters of an account that are not ASCII as
+  question marks. A Cyrillic description shows it; users of NTLite and Eleven Forum report it for a Russian name of
+  the built-in administrator and for a Czech display name, and say that 23H2 kept them. WinWeaver therefore writes such
+  a display name as the account name and leaves such a description out; `Post-OOBE.ps1` sets both after OOBE through
+  ADSI (`Set-AccountText`; `Set-LocalUser` takes at most 48 characters of a description), with the text as UTF-8 in
+  Base64, so the answer file stays ASCII. A name or a password outside ASCII cannot be repaired that way (the profile
+  folder takes the name at the first sign-in, a password must work at once): the check of the profile refuses them,
+  and the build refuses an answer file with any character outside ASCII.
 - What it does: OOBE creates both accounts before the first sign-in. The profiles (the `C:\Users\Admin`,
   `C:\Users\User` folders) are created at each account's first sign-in, so they inherit the default user profile
   modified in specialize (section 14).
@@ -140,8 +139,8 @@ Two accounts; the order of the child elements follows the example in the Microso
     confirmation with Admin credentials are impossible until passwords are assigned. The standard user User
     cannot elevate (error 1327). Until passwords are assigned, programs are installed under Admin.
   - `PasswordNeverExpires` (section 04) prevents a password change from being required after 42 days.
-  - The names `Admin` and `User` are duplicated in `$Config.AdminAccount` and `$Config.UserAccount`:
-    they are used by `Post-OOBE.ps1`. They must be changed in both places (the constructor will do this from a single field).
+  - The names `Admin` and `User` are the accounts of the profile: the build writes them to `LocalAccounts` and to
+    the list `$accounts` of `Post-OOBE.ps1`, so one change in the form changes both.
   - The `Administrators` group is specified by its English name; on localized images Setup
     maps the built-in groups correctly (check after installation with the command below).
   - The built-in `Administrator` (RID 500) and `Guest` (RID 501) remain disabled; Post-OOBE.ps1

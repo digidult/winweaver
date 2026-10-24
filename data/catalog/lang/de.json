@@ -2,7 +2,7 @@
   "_language": "Deutsch",
   "_disabled": "deaktiviert",
   "_comment": [
-    "German texts of the rule catalog (rules/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
+    "German texts of the rule catalog (data/catalog/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
     "_disabled: the word after the title of the Disabled rule of an imported policy (<title>: <word>).",
     "Fields of a rule: title, summary, effect, risk, versions, verify, rollback (strings), tags (a list of strings),",
     "params {\"<name>\": text}, values {\"<name>\": {\"<value>\": text}}; any other field is an error.",
@@ -159,7 +159,7 @@
   "install.skip-auto-activation": {
     "title": "Keine automatischen Aktivierungsversuche",
     "summary": "Windows versucht nicht selbstständig, sich zu aktivieren, bis ein Schlüssel eingegeben oder die Aktivierung manuell gestartet wird: der Wert Manual, den die Unattend-Einstellung SkipAutoActivation schreibt.",
-    "effect": "Die zwölf Editionen, deren generischer Schlüssel in WinKickOff ein KMS-Clientschlüssel ist, bleiben ohne KMS-Host unaktiviert, und die automatischen Versuche scheitern immer wieder mit Aktivierungsfehlern auf dem Desktop; mit dieser Regel wartet Windows auf den Schlüssel der Lizenz. Pro und Education werden mit einer digitalen Lizenz aktiviert und benötigen die Regel nicht.",
+    "effect": "Die zwölf Editionen, deren generischer Schlüssel in WinWeaver ein KMS-Clientschlüssel ist, bleiben ohne KMS-Host unaktiviert, und die automatischen Versuche scheitern immer wieder mit Aktivierungsfehlern auf dem Desktop; mit dieser Regel wartet Windows auf den Schlüssel der Lizenz. Pro und Education werden mit einer digitalen Lizenz aktiviert und benötigen die Regel nicht.",
     "versions": "Windows 8 und höher. Abnahme in einer VM steht noch aus: Der Wert muss vor dem ersten Versuch gesetzt sein, der nach OOBE erfolgt.",
     "verify": "Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SoftwareProtectionPlatform\\Activation' -Name Manual",
     "rollback": "Manual auf 0 setzen (Windows-Standard).",
@@ -2117,7 +2117,7 @@
   },
   "apps.maps-broker-off": {
     "title": "Dienst für den Download von Offlinekarten deaktiviert",
-    "summary": "MapsBroker bedient die App „Karten“; ohne die App wird der Dienst nicht benötigt. In der Datei von v0.2 wurde er unter der Xbox-Bedingung deaktiviert; hier ist er an das Entfernen von „Karten“ gebunden.",
+    "summary": "MapsBroker bedient die App „Karten“; ohne die App wird der Dienst nicht benötigt. Die Regel ist an das Entfernen von „Karten“ gebunden.",
     "effect": "Ein automatisch startender Dienst weniger.",
     "rollback": "Set-Service MapsBroker -StartupType Automatic",
     "tags": [

@@ -122,6 +122,138 @@ pub fn writers<'a>(catalog: &'a Catalog, key: &str, value: Option<&str>) -> Vec<
         .collect()
 }
 
+/// A registry value a rule writes or removes: its key in the form of regedit and its name, `None`
+/// for a list, which owns every value of its key.
+struct Written {
+    key: String,
+    name: Option<String>,
+}
+
+impl Written {
+    fn of(rule: &Rule) -> Vec<Self> {
+        rule.actions
+            .iter()
+            .filter_map(|a| {
+                let (path, name) = match a {
+                    Action::Reg { path, name, .. } | Action::RegRemove { path, name, .. } => {
+                        (path, Some(name.clone()))
+                    }
+                    Action::RegList { path, .. } => (path, None),
+                    _ => return None,
+                };
+                normalize(path).map(|key| Self { key, name })
+            })
+            .collect()
+    }
+
+    fn meets(&self, other: &Self) -> bool {
+        self.key.eq_ignore_ascii_case(&other.key)
+            && match (&self.name, &other.name) {
+                (Some(a), Some(b)) => a.eq_ignore_ascii_case(b),
+                _ => true,
+            }
+    }
+
+    fn text(&self) -> String {
+        match &self.name {
+            Some(name) if name.is_empty() => format!("{}\\(Default)", self.key),
+            Some(name) => format!("{}\\{name}", self.key),
+            None => self.key.clone(),
+        }
+    }
+}
+
+/// The other rules of the catalog (built in or imported) that write a registry value this rule
+/// writes, each with the values they share, in the order of the catalog. It works both ways: a
+/// rule is in the list of every rule in its own list. The two rules of one policy (`<id>` and
+/// `<id>.off`) are one, and so are the copies of a policy in several imports.
+pub fn same_values<'a>(catalog: &'a Catalog, rule: &Rule) -> Vec<(&'a Rule, Vec<String>)> {
+    let mine = Written::of(rule);
+    if mine.is_empty() {
+        return Vec::new();
+    }
+    let base = rule.id.trim_end_matches(".off");
+    catalog
+        .rules()
+        .iter()
+        .filter(|r| r.id.trim_end_matches(".off") != base)
+        .filter_map(|r| {
+            let mut shared: Vec<String> = Vec::new();
+            for w in Written::of(r) {
+                if mine.iter().any(|m| m.meets(&w)) {
+                    let text = w.text();
+                    if !shared.contains(&text) {
+                        shared.push(text);
+                    }
+                }
+            }
+            (!shared.is_empty()).then_some((r, shared))
+        })
+        .collect()
+}
+
+/// The path of a key renamed: its parent and the new name, which has no backslash.
+pub fn renamed_path(path: &str, new_name: &str) -> Result<String, String> {
+    let full = normalize(path).ok_or_else(|| format!("not a path of the registry: {path}"))?;
+    let new_name = new_name.trim();
+    if new_name.is_empty() || new_name.contains('\\') {
+        return Err("a name without backslashes is needed".to_owned());
+    }
+    match full.rsplit_once('\\') {
+        Some((parent, _)) => Ok(format!("{parent}\\{new_name}")),
+        None => Err(format!("{full}: a hive is not renamed")),
+    }
+}
+
+/// Copies a key with its values and every key under it, at most 64 levels deep.
+fn copy_key<R: Registry + ?Sized>(
+    reg: &R,
+    from: &str,
+    to: &str,
+    depth: usize,
+) -> Result<(), String> {
+    if depth > 64 {
+        return Err(format!("{from}: the keys go deeper than 64 levels"));
+    }
+    let key = reg.read(from)?;
+    reg.create_key(to)?;
+    for value in &key.values {
+        reg.set(to, &value.name, &value.data)?;
+    }
+    for sub in &key.subkeys {
+        copy_key(
+            reg,
+            &format!("{from}\\{sub}"),
+            &format!("{to}\\{sub}"),
+            depth + 1,
+        )?;
+    }
+    Ok(())
+}
+
+/// Renames a value of a key: its data under the new name, the old name deleted. A change of the
+/// case alone deletes first, since the names of values ignore case.
+pub fn rename_value(reg: &dyn Registry, path: &str, old: &str, new: &str) -> Result<(), String> {
+    if old == new {
+        return Ok(());
+    }
+    let key = reg.read(path)?;
+    let value = key
+        .values
+        .iter()
+        .find(|v| v.name.eq_ignore_ascii_case(old))
+        .ok_or_else(|| format!("{path}: no value {old}"))?;
+    if old.eq_ignore_ascii_case(new) {
+        reg.delete_value(path, old)?;
+        return reg.set(path, new, &value.data);
+    }
+    if key.values.iter().any(|v| v.name.eq_ignore_ascii_case(new)) {
+        return Err(format!("{path}: a value {new} is there already"));
+    }
+    reg.set(path, new, &value.data)?;
+    reg.delete_value(path, old)
+}
+
 /// Reading and changing the registry: the native one of Windows, or one in memory.
 pub trait Registry: Send + Sync {
     fn read(&self, path: &str) -> Result<Key, String>;
@@ -130,6 +262,18 @@ pub trait Registry: Send + Sync {
     fn create_key(&self, path: &str) -> Result<(), String>;
     /// Deletes a key with everything under it.
     fn delete_key(&self, path: &str) -> Result<(), String>;
+    /// Renames a key, `new_name` the new last part of its path, and gives its new path. This one
+    /// copies the key with everything under it and deletes the old one; Windows renames it in
+    /// place.
+    fn rename_key(&self, path: &str, new_name: &str) -> Result<String, String> {
+        let target = renamed_path(path, new_name)?;
+        if self.read(&target).is_ok() {
+            return Err(format!("{target}: a key of this name is there already"));
+        }
+        copy_key(self, path, &target, 0)?;
+        self.delete_key(path)?;
+        Ok(target)
+    }
     /// The owner and the access list of a key in SDDL (`security::Rights::parse` reads it).
     fn security(&self, path: &str) -> Result<String, String> {
         Err(format!("{path}: the rights of keys are not read here"))

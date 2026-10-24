@@ -8,9 +8,9 @@
 | LabConfig bypass | none | PreventAutoDeviceEncryption (redundant without TPM), LSAProtection (value 2 for PCs without UEFI) | the POPCNT/SSE4.2 requirement in 24H2 (cannot be bypassed) |
 | UILanguage | ISO language | OOBE language screen, Setup-User (override) | ISO in another language |
 | InputLocale | none | sign-in screen, default user profile | ru-UA (no LCID, only through Setup-User) |
-| LocalAccounts (empty passwords) | none | LimitBlankPasswordUse (network sign-in blocked), ConsentPromptBehaviorUser (UAC prompt for User cannot succeed), PasswordNeverExpires, AccountLockout, InactivityLockSeconds, RestrictPrinterDriverInstallToAdmins (User cannot connect a printer) | users project (will assign passwords, lift the restrictions) |
-| AdminAccount / UserAccount | LocalAccounts (same names) | Post-OOBE | name mismatch |
-| PasswordNeverExpires | LocalAccounts | net accounts, Post-OOBE | password policy of the users project |
+| LocalAccounts (empty passwords) | none | LimitBlankPasswordUse (network sign-in blocked), ConsentPromptBehaviorUser (UAC prompt for User cannot succeed), PasswordNeverExpires, AccountLockout, InactivityLockSeconds, RestrictPrinterDriverInstallToAdmins (User cannot connect a printer) | a users file (`.wwusers`) assigns passwords and lifts the restrictions |
+| AdminAccount / UserAccount | LocalAccounts (same names) | Post-OOBE | none: both come from the accounts of the profile |
+| PasswordNeverExpires | LocalAccounts | net accounts, Post-OOBE | password policy of a users file |
 | EnableNetFx3 | media attached in specialize | old programs, PowerShell 2.0 (unrelated) | stripped-down ISOs |
 | EnsurePrintSpooler | none | printing | RestrictPrinterDriverInstallToAdmins (who installs drivers) |
 | RestrictPrinterDriverInstallToAdmins | none | users connecting network printers | empty Admin password (UAC prompt cannot succeed) |
@@ -50,7 +50,7 @@
 | DisableCopilotAndRecall | 24H2, Copilot+ PC | Copilot, Recall, Click to Do | none |
 | DisableWidgetsAndNews | none | widgets panel, malvertising | none |
 | DisableWebSearchInStart | none | search in Start | none |
-| RemoveBloatApps | Store kept | 33 apps, MapsBroker | a feature update may bring some of them back |
+| RemoveBloatApps | Store kept | the apps of section 13 (`apps.remove.*`), MapsBroker | a feature update may bring some of them back |
 | RemoveQuickAssist | none | "tech support" scams | remote support (a dedicated tool is needed) |
 | RemoveXboxServices | none | Game Bar, Xbox Live | Store games |
 | TimeZone | none | audit logs (event times) | none |
@@ -58,7 +58,7 @@
 ## 2. Chains to keep in mind when changing a single parameter
 
 1. Starter accounts and passwords: `LocalAccounts` → `LimitBlankPasswordUse` → `ConsentPromptBehaviorUser`
-   → `RestrictPrinterDriverInstallToAdmins` → `PasswordNeverExpires` → users project.
+   → `RestrictPrinterDriverInstallToAdmins` → `PasswordNeverExpires` → users file (`.wwusers`).
    Assigning passwords lifts all restrictions of this chain.
 2. Legacy network protocols: `DisableSMB1` + `RequireSMBSigning` + `NTLMv2Only` + `DisableLLMNR`.
    Relax them only together with an inventory of old devices (MFPs, NAS).
@@ -76,18 +76,14 @@
 8. Default user profile: everything in section 14 applies only to profiles created after specialize.
    Rerunning the script on a configured system does not change existing profiles.
 
-## 3. Known inconsistencies and assumptions of version 0.2
+## 3. Known inconsistencies and assumptions
 
 | What | Where | Consequence | Plan |
 |---|---|---|---|
-| `MapsBroker` is disabled under the `RemoveXboxServices` condition inside `RemoveBloatApps` | Setup-System.ps1 section 9 | With non-default values the service may remain without the app (harmless) | Bind it to the Maps removal in the constructor |
-| The policies `DisableWindowsConsumerFeatures`, `DisableSoftLanding`, `DisableThirdPartySuggestions` have no effect on Pro | Section 8 | Harmless; the real work is done by the default user profile | Keep them, mark them in the constructor schema as "Enterprise only" |
-| `TurnOffWindowsCopilot` in HKLM has no effect | Section 8 | Harmless; the copy in the default user profile and the app removal take effect | Keep |
-| `AllowCortana`, `Windows Chat`, `ConfigureChatAutoInstall` relate to past versions | Section 8 | Harmless | Mark as "obsolete" in the schema |
-| The network profile (private/public) is not set | oobeSystem | Windows asks at the first connection or assigns public; shared folders will require switching | Constructor parameter |
-| The Setup language (WinPE) is not set | windowsPE | The first Setup screen remains | Constructor parameter, derived from the ISO |
-| Passwords in the answer file, if they appear, are stored in plain text | oobeSystem | Post-OOBE.ps1 deletes the copies; the media with the file must be kept as a secret | Requirement for the constructor: a warning when a password is set |
-| ASR rules for Office do not work if Office is not installed in Program Files | Section 3 | No protection against Office macros | Document it in the Office installation instructions |
-| The critic's report pointed to `DisableLockWorkstation` in Winlogon | Section 4 | Fixed in 0.2: the value is removed from both places | Closed |
-| Cleanup task on a laptop running on battery | Section 12 | Fixed in 0.2: task XML | Closed |
-| auditpol with English names on the Ukrainian image | Section 7 | Fixed in 0.2: GUIDs | Closed |
+| The policies `DisableWindowsConsumerFeatures`, `DisableSoftLanding`, `DisableThirdPartySuggestions` have no effect on Pro | Card 12 | Harmless; the real work is done by the default user profile | Kept for other editions |
+| `TurnOffWindowsCopilot` in HKLM has no effect | Card 12 | Harmless; the copy in the default user profile and the app removal take effect | Kept |
+| `AllowCortana`, `Windows Chat`, `ConfigureChatAutoInstall` relate to past versions of Windows | Card 12 | Harmless | Kept |
+| The network profile (private/public) is not set | oobeSystem | Windows asks at the first connection or assigns public; shared folders will require switching | Chosen on the PC |
+| The Setup language (WinPE) is not set | windowsPE | The first Setup screen remains | None: Setup takes the language of the ISO |
+| Passwords in the answer file, if they appear, are stored in plain text | oobeSystem | Post-OOBE.ps1 deletes the copies; the media with the file must be kept as a secret | The build warns when a password is set |
+| ASR rules for Office do not work if Office is not installed in Program Files | Card 07 | No protection against Office macros | Document it in the Office installation instructions |

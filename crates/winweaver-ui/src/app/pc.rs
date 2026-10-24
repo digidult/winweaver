@@ -93,6 +93,9 @@ impl WinWeaver {
             Ok(report) => {
                 if let Some(read) = self.pc_read.take() {
                     self.finish_pc_read(shell, read.job, &read.plan, &report);
+                    if shell.settings.extra.pol_with_pc {
+                        self.open_system_pols_behind(shell);
+                    }
                 }
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => {
@@ -233,50 +236,54 @@ impl WinWeaver {
         );
     }
 
-    /// Saves a stand-alone script for the selection into a folder the user picks; an apply or
-    /// return script gets the undo script next to it.
-    pub(crate) fn save_script(&mut self, shell: &mut Shell<WinWeaver>, kind: ScriptKind) {
-        let ids = self.selection_ids(shell);
+    /// The rules a command of This PC covers: the selection, or every rule for the whole profile.
+    fn pc_rules(&self, shell: &Shell<WinWeaver>, whole: bool) -> Vec<String> {
+        if whole {
+            export::all_rules(&self.catalog)
+        } else {
+            self.selection_ids(shell)
+        }
+    }
+
+    /// Saves a stand-alone script of the selection, or of the whole profile, of the profile in
+    /// front.
+    pub(crate) fn save_script(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        kind: ScriptKind,
+        whole: bool,
+    ) {
+        let ids = self.pc_rules(shell, whole);
         let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
             shell.status = tr("Save a script: the active tab is not a profile").to_owned();
             return;
         };
+        let profile = doc.profile.clone();
+        let stem = file_stem(&profile.name);
+        self.save_scripts_of(shell, &profile, &ids, kind, &stem);
+    }
+
+    /// Saves a stand-alone script of the rules `ids` of a profile into a folder the user picks; an
+    /// apply or return script gets the undo script next to it.
+    pub(crate) fn save_scripts_of(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        profile: &Profile,
+        ids: &[String],
+        kind: ScriptKind,
+        stem: &str,
+    ) {
         let version = winweaver_core::BUILD;
-        let stem = file_stem(&doc.profile.name);
-        let made = match kind {
-            ScriptKind::Apply => scripts::apply_script(&self.catalog, &doc.profile, &ids, version)
-                .map(|(t, p)| (t, summary_of(&p), format!("Apply-{stem}.ps1"), true)),
-            ScriptKind::Revert => {
-                scripts::revert_script(&self.catalog, &doc.profile, &ids, version)
-                    .map(|(t, p)| (t, summary_of(&p), format!("Revert-{stem}.ps1"), true))
-            }
-            ScriptKind::Audit => scripts::audit_script(&self.catalog, &doc.profile, &ids, version)
-                .map(|(t, p)| {
-                    (
-                        t,
-                        trf("{n} rules checked", &[("n", &p.rules.len())]),
-                        format!("Audit-{stem}.ps1"),
-                        false,
-                    )
-                }),
-        };
-        let (text, summary, name, with_undo) = match made {
+        let made = match export::scripts(&self.catalog, profile, ids, kind, stem, version) {
             Ok(m) => m,
             Err(e) => {
                 shell.status = trf("Script not made: {e}", &[("e", &e)]);
                 return;
             }
         };
-        let undo = if with_undo {
-            match scripts::undo_script(&doc.profile, version) {
-                Ok(u) => Some(u),
-                Err(e) => {
-                    shell.status = trf("Script not made: {e}", &[("e", &e)]);
-                    return;
-                }
-            }
-        } else {
-            None
+        let summary = match &made.done {
+            export::Done::Script(plan) => summary_of(plan),
+            export::Done::Audit(n) => trf("{n} rules checked", &[("n", n)]),
         };
         let start = output_dir();
         let dialog = rfd::FileDialog::new().set_title(tr("Choose the folder for the script"));
@@ -284,17 +291,17 @@ impl WinWeaver {
         let Some(dir) = dialog.pick_folder() else {
             return;
         };
-        let path = dir.join(&name);
-        if let Err(e) = write_file(&path, &scripts::file_bytes(&text)) {
-            shell.status = trf("Script not saved: {e}", &[("e", &e)]);
-            return;
+        for (i, file) in made.files.iter().enumerate() {
+            if let Err(e) = write_file(&dir.join(&file.name), &file.bytes) {
+                shell.status = if i == 0 {
+                    trf("Script not saved: {e}", &[("e", &e)])
+                } else {
+                    trf("Undo script not saved: {e}", &[("e", &e)])
+                };
+                return;
+            }
         }
-        if let Some(u) = undo
-            && let Err(e) = write_file(&dir.join(scripts::UNDO_NAME), &scripts::file_bytes(&u))
-        {
-            shell.status = trf("Undo script not saved: {e}", &[("e", &e)]);
-            return;
-        }
+        let path = dir.join(&made.files[0].name);
         shell.status = trf(
             "Saved {path} ({summary}); run it as administrator, first on a test PC",
             &[("path", &path.display()), ("summary", &summary)],
@@ -302,36 +309,36 @@ impl WinWeaver {
         shell.shown_file = Some((shell.status.clone(), path));
     }
 
-    /// Saves the registry steps of the apply or the return of the selection as a registry file, as
-    /// the scripts are saved; the steps a registry file cannot hold are comments in it.
-    pub(crate) fn save_plan_reg(&mut self, shell: &mut Shell<WinWeaver>, revert: bool) {
-        let ids = self.selection_ids(shell);
+    /// Saves the registry steps of the apply or the return of the selection, or of the whole
+    /// profile, as a registry file, as the scripts are saved; the steps a registry file cannot hold
+    /// are comments in it.
+    pub(crate) fn save_plan_reg(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        revert: bool,
+        whole: bool,
+    ) {
+        let ids = self.pc_rules(shell, whole);
         let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
             shell.status = tr("Save a registry file: the active tab is not a profile").to_owned();
             return;
         };
-        let stem = file_stem(&doc.profile.name);
-        let profile = &doc.profile.name;
-        let (plan, title, name) = if revert {
-            (
-                winweaver_core::apply::plan_revert(&self.catalog, &ids, "reg"),
-                format!("Return the rules of {profile} to the defaults of Windows"),
-                format!("Revert-{stem}.{}", regfile::EXTENSION),
-            )
-        } else {
-            (
-                winweaver_core::apply::plan_apply(&self.catalog, &doc.profile, &ids, "reg"),
-                format!("Apply the profile {profile}"),
-                format!("Apply-{stem}.{}", regfile::EXTENSION),
-            )
-        };
-        let file = RegFile::from_plan(&plan, &title);
-        let values = file
-            .lines
-            .iter()
-            .filter(|l| matches!(l, Line::Value { .. }))
-            .count();
-        if values == 0 {
+        let profile = doc.profile.clone();
+        let stem = file_stem(&profile.name);
+        self.save_reg_of(shell, &profile, &ids, revert, &stem);
+    }
+
+    /// Saves the registry file of the apply or the return of the rules `ids` of a profile.
+    pub(crate) fn save_reg_of(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        profile: &Profile,
+        ids: &[String],
+        revert: bool,
+        stem: &str,
+    ) {
+        let reg = export::reg(&self.catalog, profile, ids, revert, stem);
+        if reg.values == 0 {
             let text = tr("Nothing for a registry file: the selection writes no registry value");
             shell.status = text.to_owned();
             return;
@@ -340,19 +347,19 @@ impl WinWeaver {
         let dialog = rfd::FileDialog::new()
             .set_title(tr("Save the registry file"))
             .add_filter(tr("Registry files"), &[regfile::EXTENSION])
-            .set_file_name(name);
+            .set_file_name(reg.name.clone());
         let dialog = widgets::in_folder(dialog, &start);
         let Some(path) = dialog.save_file() else {
             return;
         };
         let path = reg_extension(path);
-        if let Err(e) = file.save(&path) {
+        if let Err(e) = reg.file.save(&path) {
             shell.status = trf("Registry file not saved: {e}", &[("e", &e)]);
             return;
         }
         shell.status = trf(
             "Saved {path} ({n} values); import it as administrator, first on a test PC",
-            &[("path", &path.display()), ("n", &values)],
+            &[("path", &path.display()), ("n", &reg.values)],
         );
         shell.shown_file = Some((shell.status.clone(), path));
     }
@@ -646,8 +653,10 @@ impl WinWeaver {
             PcAct::Read => self.read_pc(shell, false),
             PcAct::ReadSelection => self.read_pc(shell, true),
             PcAct::Check => self.check_on_pc(shell),
-            PcAct::SaveScript(kind) => self.save_script(shell, kind),
-            PcAct::SaveRegFile(revert) => self.save_plan_reg(shell, revert),
+            PcAct::SaveScript(kind) => self.save_script(shell, kind, false),
+            PcAct::SaveScriptAll(kind) => self.save_script(shell, kind, true),
+            PcAct::SaveRegFile(revert) => self.save_plan_reg(shell, revert, false),
+            PcAct::SaveRegFileAll(revert) => self.save_plan_reg(shell, revert, true),
             PcAct::PlanNative(revert) => self.plan_native(shell, revert),
             PcAct::PlanUndo => self.plan_undo(shell),
             PcAct::Confirm => self.run_plan(shell),

@@ -18,6 +18,7 @@ mod importlist;
 mod marksview;
 mod mcpview;
 mod pages;
+mod polview;
 mod question;
 mod regedit;
 mod regfileview;
@@ -35,11 +36,12 @@ use winweaver_core::bookmarks::{self, Bookmark, Bookmarks};
 use winweaver_core::catalog::{Catalog, TREE_ROOTS, check};
 use winweaver_core::clock;
 use winweaver_core::diff::{self, Diff};
+use winweaver_core::export;
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::import;
 use winweaver_core::jsonfile;
 use winweaver_core::profile::{self, Profile};
-use winweaver_core::regfile::{self, Line, RegFile};
+use winweaver_core::regfile::{self, RegFile};
 use winweaver_core::render;
 use winweaver_core::resolver::{self, Resolution};
 use winweaver_core::scripts;
@@ -48,8 +50,8 @@ use winweaver_core::users::{self, UsersFile};
 use winweaver_core::validate::{self, Issue, Severity, Target};
 
 pub use act::{
-    Act, CatalogAct, DiffAct, FileAct, ImportAct, MarksAct, McpAct, PcAct, ProfileAct, RegFileAct,
-    RegistryAct, SettingsAct, UsersAct,
+    Act, CatalogAct, DiffAct, FileAct, ImportAct, MarksAct, McpAct, PcAct, PolAct, ProfileAct,
+    RegFileAct, RegistryAct, SettingsAct, UsersAct,
 };
 pub(crate) use app::show_single;
 pub use catalogview::TreeKey;
@@ -104,7 +106,7 @@ pub const LANGUAGES: [(&str, &str); 8] = [
     ("tr", include_str!("../../../data/lang/tr/ui.json")),
 ];
 
-/// The themes WinWeaver embeds besides Light and Dark of WW: the colours of the first version.
+/// The themes WinWeaver embeds besides Light and Dark of WW: Latte and Matrix.
 pub const THEMES: [(&str, &str); 2] = [
     ("latte", include_str!("../../../data/themes/latte.wwtheme")),
     (
@@ -212,12 +214,7 @@ impl ProfileDoc {
 }
 
 /// The stand-alone scripts the window saves.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ScriptKind {
-    Apply,
-    Revert,
-    Audit,
-}
+pub use winweaver_core::export::ScriptKind;
 
 /// Where an import of policy templates comes from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -299,6 +296,8 @@ impl WinWeaver {
     pub fn new(catalog: Catalog, texts: Vec<CatalogTexts>) -> Self {
         // The input languages and layouts of this Windows, read at the first check of a profile.
         winweaver_core::resources::set_locale_reader(winweaver_win::locales);
+        // The colours of the parts of the description, in every theme.
+        style::install_colors(&views::SECTION_COLORS);
         Self {
             base_catalog: catalog.clone(),
             base_texts: texts.clone(),

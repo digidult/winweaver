@@ -1,17 +1,14 @@
 # WinWeaver specification
 
-Clean room specification of WinWeaver, draft 0.1 of 14.10.2026. It describes what the program does and how
-it looks, written from the requirements and from the behaviour the predecessor showed to its users, not from
-its code.
+The specification of WinWeaver: what the program does and how it looks. It describes the program as it
+is and, marked as planned, what comes next. The history of the changes is in `../releases/`.
 
 | File | Content |
 |---|---|
 | [00-scope.md](00-scope.md) | Purpose, non-goals, stack, principles, licence, process |
-| [01-ui.md](01-ui.md) | The window: tabs, toolbar, breadcrumb and navigation, search, menu, views, description panel, documentation, bookmarks, MCP tab, keyboard |
-| [02-documents.md](02-documents.md) | Document types and files: profiles, diffs, catalogs, bookmarks, Markdown, settings, presets, what lives next to the executable |
-| [03-features.md](03-features.md) | Feature inventory: everything carried over from the predecessor and what is new |
+| [01-ui.md](01-ui.md) | The window: tabs, command bar, navigation row, search, menu, the views of each tab, settings, MCP tab, keyboard, messages, themes |
+| [02-documents.md](02-documents.md) | Document types and files: profiles, diffs, catalog files, bookmarks, settings, drafts, presets, users files, registry files, themes, MCP configurations, what lives next to the executable |
+| [03-features.md](03-features.md) | Feature inventory, and the planned changes |
 | [04-architecture.md](04-architecture.md) | Crates, modules, threads, Windows API use, elevation, build and CI, testing |
 
-The UI design variants that illustrate `01-ui.md` are in [../design/](../design/README.md).
-
-Open questions to the customer are collected at the end of each file under "Open questions".
+The framework the window is built on, W#, is described for its users in [../ww.md](../ww.md).

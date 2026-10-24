@@ -86,6 +86,8 @@ pub(crate) fn writes(ui: &mut egui::Ui, rule: &Rule, acts: &mut Vec<Act>) {
                             let value = (!name.is_empty()).then(|| name.clone());
                             acts.push(Act::Registry(RegistryAct::Open((*path).to_owned(), value)));
                         }
+                        let value = (!name.is_empty()).then_some(name.as_str());
+                        crate::polview::link(ui, path, value, acts);
                     });
                     cell(ui, name, false, false, widths[1]);
                     cell(ui, value, false, false, widths[2]);
@@ -166,6 +168,72 @@ pub(crate) fn other_catalogs(
                     }
                 }
             });
+        }
+    });
+}
+
+/// The rules of every catalog that write a registry value this rule writes, as links: the rule
+/// selects it in the profile, the catalog opens its tab at it. Kept in the memory of egui while
+/// the rule and the count of the rules stay.
+pub(crate) fn same_values(
+    ui: &mut egui::Ui,
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    imports: &[CatalogFile],
+    rule: &Rule,
+    acts: &mut Vec<Act>,
+) {
+    let key = egui::Id::new(("same-values", rule.id.as_str(), catalog.rules().len()));
+    let found: Vec<(String, Vec<String>)> = match ui.memory(|m| m.data.get_temp(key)) {
+        Some(found) => found,
+        None => {
+            let found: Vec<(String, Vec<String>)> =
+                winweaver_core::registry::same_values(catalog, rule)
+                    .into_iter()
+                    .map(|(r, values)| (r.id.clone(), values))
+                    .collect();
+            ui.memory_mut(|m| m.data.insert_temp(key, found.clone()));
+            found
+        }
+    };
+    if found.is_empty() {
+        return;
+    }
+    const SHOWN: usize = 30;
+    block(ui, |ui| {
+        style::section_title(ui, tr("Rules that write the same values"));
+        ui.add_space(4.0);
+        for (id, values) in found.iter().take(SHOWN) {
+            let Some(other) = catalog.rule(id) else {
+                continue;
+            };
+            ui.horizontal_wrapped(|ui| {
+                if ui.link(rtitle(texts, other)).clicked() {
+                    acts.push(Act::Profile(ProfileAct::Reveal(Sel::Rule(id.clone()))));
+                }
+                let name = if id.starts_with("admx.") {
+                    import_of(catalog, texts, &other.group)
+                } else {
+                    tr("Built-in catalog")
+                };
+                let holds = |f: &&CatalogFile| f.rules.iter().any(|r| &r.id == id);
+                match imports.iter().find(holds) {
+                    Some(f) => {
+                        if ui.link(name).clicked() {
+                            acts.push(Act::Catalog(CatalogAct::OpenAt(f.id.clone(), id.clone())));
+                        }
+                    }
+                    None => {
+                        ui.weak(name);
+                    }
+                }
+            });
+            for value in values.iter().take(3) {
+                ui.label(style::muted(ui, value.as_str(), 11.0));
+            }
+        }
+        if found.len() > SHOWN {
+            ui.weak(trf("and {n} more", &[("n", &(found.len() - SHOWN))]));
         }
     });
 }
@@ -267,13 +335,17 @@ pub(crate) fn rule_detail(
                 });
         });
     }
+    let on_pc = winweaver_core::thispc::exclusion(rule).is_none();
     block(ui, |ui| {
-        style::section_title(ui, tr("This PC, this rule"));
-        ui.add_space(4.0);
-        this_pc_buttons(ui, acts);
+        if on_pc {
+            style::section_title(ui, tr("This PC, this rule"));
+            ui.add_space(4.0);
+            this_pc_buttons(ui, acts);
+        }
         catalog_links(ui, imports, &rule.id, acts);
     });
     other_catalogs(ui, catalog, texts, imports, rule, acts);
+    same_values(ui, catalog, texts, imports, rule, acts);
     rule_description(ui, catalog, texts, rule, settings, RuleLink::Profile, acts);
 }
 

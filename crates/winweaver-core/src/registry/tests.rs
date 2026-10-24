@@ -144,3 +144,53 @@ fn the_rules_that_write_a_key_are_found() {
     assert!(!found.is_empty(), "{path} {name}");
     assert!(writers(&catalog, "HKLM\\Software\\NobodyWritesThis", None).is_empty());
 }
+
+#[test]
+fn the_rules_that_write_the_same_values_link_both_ways() {
+    let catalog = Catalog::embedded().unwrap();
+    for rule in catalog.rules() {
+        for (other, values) in same_values(&catalog, rule) {
+            assert_ne!(other.id, rule.id, "a rule does not name itself");
+            assert!(!values.is_empty());
+            assert!(
+                same_values(&catalog, other)
+                    .iter()
+                    .any(|(r, _)| r.id == rule.id),
+                "{} names {} but not back",
+                rule.id,
+                other.id
+            );
+        }
+    }
+}
+
+#[test]
+fn keys_and_values_are_renamed() {
+    let reg = MemoryRegistry::default();
+    let key = "HKEY_CURRENT_USER\\Software\\WinWeaverRename\\Old";
+    reg.create_key(&format!("{key}\\Inner")).unwrap();
+    reg.set(key, "Size", &Data::Dword(7)).unwrap();
+    reg.set(&format!("{key}\\Inner"), "Text", &Data::Sz("x".to_owned()))
+        .unwrap();
+    rename_value(&reg, key, "Size", "Width").unwrap();
+    rename_value(&reg, key, "Width", "WIDTH").unwrap();
+    let read = reg.read(key).unwrap();
+    assert_eq!(read.values.len(), 1);
+    assert_eq!(read.values[0].name, "WIDTH");
+    assert_eq!(read.values[0].data, Data::Dword(7));
+    reg.set(key, "Other", &Data::Dword(1)).unwrap();
+    assert!(
+        rename_value(&reg, key, "Other", "width").is_err(),
+        "a name taken"
+    );
+    let new = reg.rename_key(key, "New").unwrap();
+    assert_eq!(new, "HKEY_CURRENT_USER\\Software\\WinWeaverRename\\New");
+    assert!(reg.read(key).is_err(), "the old key is gone");
+    let inner = reg.read(&format!("{new}\\Inner")).unwrap();
+    assert_eq!(inner.values[0].data, Data::Sz("x".to_owned()));
+    assert!(reg.rename_key(&new, "a\\b").is_err());
+    assert!(
+        reg.rename_key("HKEY_CURRENT_USER", "X").is_err(),
+        "a hive stays"
+    );
+}

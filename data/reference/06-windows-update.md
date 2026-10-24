@@ -1,6 +1,6 @@
 # 06. Windows Update and Delivery Optimization
 
-Section 2 of `Setup-System.ps1`. Customer requirement: updates must work. All settings
+Rules of `Setup-System.ps1` (specialize). Customer requirement: updates must work. All settings
 only speed up and organize updates; they do not disable anything.
 
 ## Unconditional actions of the section
@@ -54,9 +54,8 @@ it is changed to 3 (manual; normally they are started by triggers).
 - Version differences: none.
 - Verification: `(New-Object -ComObject Microsoft.Update.ServiceManager).Services | ? IsDefaultAUService`.
 - Rollback: delete the value.
-- WinKickOff: rule `update.other-microsoft-products`, off by default since 26.09.2026 (the "Office" preset
-  as chosen in the repository, commit d33fc41); the "Strict" preset keeps it on. Without the policy the
-  toggle stays as Windows leaves it (off) and users may switch it themselves. v0.2 set 1.
+- Rule: `update.other-microsoft-products`, off by default (so in the "Office" preset); the "Strict" preset
+  turns it on. Without the policy the toggle stays as Windows leaves it (off) and users may switch it themselves.
 
 ## DeferFeatureUpdatesDays
 

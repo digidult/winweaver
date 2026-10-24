@@ -24,6 +24,7 @@ pub enum Act {
     Import(ImportAct),
     Registry(RegistryAct),
     RegFile(RegFileAct),
+    Pol(PolAct),
     /// An act of the window itself, run by the shell.
     Shell(ShellAct<WinWeaver>),
 }
@@ -31,6 +32,12 @@ pub enum Act {
 impl From<ShellAct<WinWeaver>> for Act {
     fn from(act: ShellAct<WinWeaver>) -> Self {
         Act::Shell(act)
+    }
+}
+
+impl From<PolAct> for Act {
+    fn from(act: PolAct) -> Self {
+        Act::Pol(act)
     }
 }
 
@@ -140,6 +147,9 @@ pub enum FileAct {
     NewProfile(Option<&'static str>),
     OpenReport,
     OpenGuide,
+    /// Opens the root page of the documentation built into the executable, the reference of the
+    /// parameters, from which its other pages are linked.
+    OpenDocs,
     /// Opens the license, built into the executable, in a Markdown tab.
     OpenLicense,
 }
@@ -160,9 +170,13 @@ pub enum PcAct {
     /// Compare the selected rules with this PC in the messages panel.
     Check,
     SaveScript(ScriptKind),
+    /// A stand-alone script of the whole profile: every rule, the ones off return to the defaults.
+    SaveScriptAll(ScriptKind),
     /// Saves the registry steps of the apply (false) or the return (true) of the selection as a
     /// registry file.
     SaveRegFile(bool),
+    /// The registry file of the apply (false) or the return (true) of the whole profile.
+    SaveRegFileAll(bool),
     /// Prepare the native apply (false) or the return to the defaults (true) of the selection.
     PlanNative(bool),
     PlanUndo,
@@ -213,6 +227,11 @@ pub enum DiffAct {
     GoTo(String, bool),
     /// Sets one item of the active diff in the profile of its base.
     ApplyItem(String),
+    /// Saves the stand-alone script that applies the other side of the active diff to a PC.
+    SaveScript(ScriptKind),
+    /// Saves the registry file of the apply (false) or the return (true) of the rules of the
+    /// active diff.
+    SaveReg(bool),
 }
 
 /// The acts of the bookmarks.
@@ -286,6 +305,8 @@ pub enum RegistryAct {
     New(regview::EditKind, &'static str),
     /// Writes what the editor of the registry tab holds.
     Save,
+    /// Renames the selected value of the registry tab, or its key without one.
+    Rename,
     /// Asks before the selected value, or the key without one, is deleted.
     AskDelete,
     Delete(String, Option<String>),
@@ -304,6 +325,16 @@ pub enum RegistryAct {
     RightsSave,
 }
 
+/// The acts of the Group Policy files (`.pol`).
+pub enum PolAct {
+    /// Opens the file of the computer or of the users of this Windows, at a key and a value.
+    OpenSystem(winweaver_core::pol::Scope, Option<String>, Option<String>),
+    /// Opens a file chosen in a dialog.
+    OpenFile,
+    /// Reads the file of the tab in front again.
+    Refresh,
+}
+
 /// The acts of the tab of a registry file.
 pub enum RegFileAct {
     /// Edits the selected line of the registry file in front.
@@ -311,4 +342,10 @@ pub enum RegFileAct {
     /// Starts a new key or a new value in the registry file in front.
     New(regfileview::EditKind),
     Remove(Vec<usize>),
+    /// Shows the outline as a tree of the keys (true) or as a list in the order of the file.
+    Outline(bool),
+    /// Asks before the selected value, the selected key or the whole file is applied to this PC.
+    AskApply(regfileview::ApplyScope),
+    /// Applies the selected value, key or the whole file to the registry of this PC.
+    Apply(regfileview::ApplyScope),
 }

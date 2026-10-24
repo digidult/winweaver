@@ -6,7 +6,7 @@ document tabs, a menu, a command bar of the active tab, a navigation row where a
 message bar, a status bar, a settings tab, themes with their fonts and an editor, translations,
 drafts of unsaved changes and the tabs of the last session. The program brings its documents, its
 acts and what it draws inside a tab; the shell does the rest. This page is for the people who write
-such a program. The plan the framework came from is `docs/framework.md`.
+such a program.
 
 ## 1. The crates
 
@@ -57,7 +57,9 @@ and the file its button opens), `question`, `messages_open`, `themes`, `drafts_d
 frame). Its methods do what every program needs: `open_tab`, `open_file` (a file in a tab, once),
 `show_or_open` and `focus_tab`, `close_tab`, `move_tab`, `active_doc`, `active_doc_mut`,
 `active_search`, `saved`, `opened`, `save_failed`, `open_failed` (the messages of the status bar),
-`remember_recent`, `ask` and `discard_act` (a question before an act), `open_settings`,
+`remember_recent`, `ask` (a question before an act), `close_question` (Save, Don't save or Cancel
+before a tab with changes closes), `linked_file` (the file a link of the active page names,
+relative to the page), `about_lines` (the lines every About has), `open_settings`,
 `effective_language`, `apply_language`, `log`.
 
 `Window<P>` holds the shell and the program apart, so a method of the program takes `&mut self`
@@ -68,7 +70,9 @@ test builds; `window.apply(acts)` runs acts as a frame would; `window.shell.docs
 `ShellAct<P>` names the acts of the window: `Activate`, `MoveTab`, `CloseTab`, `New`, `Open`,
 `OpenPath`, `Save`, `SaveAs`, `ForgetRecent`, `OpenSettings`, `OpenSection`, `EditTheme`,
 `OpenThemeFile`, `UseTheme`, `ToggleMessages`, `SearchCleared`, `Revealed`, `Follow`, `Message`,
-`ShowInFolder`, `OpenLink`, `Exit`, `Ask`, `Answer`. The keys of the window (`ww::keys`): Ctrl+N,
+`ShowInFolder`, `OpenLink`, `OpenWeb`, `About`, `SaveAndClose`, `Exit`, `Ask`, `Answer`,
+`AnswerAlt`. A question (`ww::Question`) has a title, a text, the yes and its act, and with
+`Question::or` a second answer beside it. The keys of the window (`ww::keys`): Ctrl+N,
 Ctrl+O, Ctrl+S, Ctrl+Shift+S, Ctrl+W, Ctrl+comma, Ctrl+F, Ctrl+Tab and Ctrl+Shift+Tab,
 Ctrl+Shift+PgUp and PgDn; the program adds its own in `shortcuts`.
 
@@ -92,10 +96,22 @@ Ctrl+Shift+PgUp and PgDn; the program adds its own in `shortcuts`.
   gives the one of the theme shown, a theme file overrides it by name, and the editor lists it after
   the palette. The palette has `code_bg` for the code of a page.
 - `Settings::wrap_lines` (General, Wrap lines to the width of the view) is what a text or a page
-  follows: `ww::mdview::md_view(ui, doc, wrap, tables)` folds the lines or scrolls sideways, and
+  follows: `ww::mdview::md_view(ui, doc, wrap, page)` folds the lines or scrolls sideways, and
   makes the page as wide as `Settings::page_width` (`PageWidth`: the view, or at most so many pixels
   or characters, Width of pages in General): its text wraps at that width, its tables fill it with their cells
   wrapped.
+- About is a window over the tabs (`ShellAct::About`): the name of the program and the lines of
+  `about`, by default the version, the settings file and the renderer.
+- Every link of a page goes through the window: a heading scrolls the page, a `.md` or `.txt`
+  file or a file without an extension goes to `open_link` (the program opens it, relative to the
+  page through `Shell::linked_file`), a web link or a file of another kind is asked first and
+  goes to the browser. `MdDoc::plain` shows a text file as it is. A page scrolls with the arrows,
+  the page keys, Home and End while no text field has the focus, and keeps its place and its
+  selected text when another tab comes in front.
+- A theme names the font of the icons (Segoe UI Emoji by default, or Segoe UI Symbol). With Segoe
+  UI Emoji, `style::paint_icon` draws an icon as a picture in the colours of the font
+  (`ww::coloricons`, DirectWrite); the command bar and the tabs use it, any other text keeps the
+  glyph in one colour, since egui draws glyphs in one colour.
 - `Settings::window` is where the window was at the last close; `run` opens it there and the first
   frame fits it to its monitor.
 - The look comes from `ww::style`: `palette(ui)` for the colours, `font`, `strong`, `muted`,

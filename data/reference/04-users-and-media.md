@@ -1,27 +1,28 @@
-# 04. Accounts in $Config and .NET Framework 3.5
+# 04. Accounts and .NET Framework 3.5
 
-The `$Config` section in `Setup-System.ps1`, groups "Users" and "Installation media".
+The accounts of the profile, the password age, and what `Setup-System.ps1` takes from the installation media.
 
 ## AdminAccount, UserAccount
 
-- Value: `'Admin'`, `'User'`.
-- Where applied: saved to `C:\ProgramData\Unattend\config.json` at the end of `Setup-System.ps1`;
-  read by `Post-OOBE.ps1`.
-- What it does: tells Post-OOBE.ps1 the names of the accounts whose password expiration must be removed.
-  The accounts themselves are created by the XML (section 03), not by these parameters.
+- Value: `Admin`, `User` (the accounts of a new profile).
+- Where applied: the list `$accounts` of `Post-OOBE.ps1`, which the build writes from the accounts of the profile
+  (account mode `file`; in mode `ask` the list is empty).
+- What it does: tells Post-OOBE.ps1 the names of the accounts whose password expiration must be removed
+  (`post-oobe.password-never-expires`). The accounts themselves are created by the XML (section 03).
 - Expected effect: `Set-LocalUser -PasswordNeverExpires $true` for both names after OOBE completes.
-- Cross-links: the names must match `<Name>` in `<LocalAccounts>`; if they differ, Post-OOBE.ps1
-  writes "user not found" to the log and does not remove the expiration, but the global `net accounts`
-  command (see below) still takes effect. The constructor must drive both places from a single field.
+- Cross-links: the list and `<Name>` in `<LocalAccounts>` come from the same accounts of the profile; an account
+  that is not found is written to the log and keeps its expiration, but the global `net accounts` command (see
+  below) still takes effect.
 - Version differences: none.
-- Verification: `Get-Content C:\ProgramData\Unattend\config.json`.
+- Verification: the line `$accounts = @(...)` of `C:\ProgramData\Unattend\Scripts\Post-OOBE.ps1`.
 - Rollback: not applicable.
 
 ## PasswordNeverExpires
 
-- Value: `$true`.
-- Where applied: two places. `Setup-System.ps1` section 4 (specialize, always runs) and
-  `Post-OOBE.ps1` (after OOBE, for each account).
+- Value: on (the rules `accounts.password-never-expires` and `post-oobe.password-never-expires`, both on by
+  default).
+- Where applied: two places. `Setup-System.ps1` (specialize, always runs) and `Post-OOBE.ps1` (after OOBE, for
+  each account).
 - What it does:
   1. `net.exe accounts /maxpwage:unlimited`: the maximum password age for all local
      accounts is removed (the default is 42 days).
@@ -30,8 +31,8 @@ The `$Config` section in `Setup-System.ps1`, groups "Users" and "Installation me
 - Expected effect: Windows will never show "Your password has expired and must be changed". For empty
   passwords this is critical: a non-professional user will not understand what is being asked of them.
 - Cross-links:
-  - Starter accounts without passwords (section 03). A separate user management project
-    assigns passwords and may restore password expiration (`net accounts /maxpwage:90`).
+  - Starter accounts without passwords (section 03). A users file (`.wwusers`) assigns passwords; password
+    expiration can then be restored (`net accounts /maxpwage:90`).
   - `AccountLockout` (section 08) is set by the same `net accounts` utility; the order of calls does not matter.
   - If Post-OOBE.ps1 does not run (the PC was switched off before it completed), the global setting from
     specialize still applies.
@@ -43,8 +44,8 @@ The `$Config` section in `Setup-System.ps1`, groups "Users" and "Installation me
 
 ## EnableNetFx3
 
-- Value: `$true`.
-- Where applied: `Setup-System.ps1` section 0, specialize, SYSTEM.
+- Value: on (the rule `install.netfx3`, on by default).
+- Where applied: `Setup-System.ps1`, specialize, SYSTEM.
 - What it does: goes through all ready drives looking for a `sources\sxs` folder with `.cab` files inside (the installation
   media: USB, DVD, an ISO mounted by Ventoy). If found:
   `dism.exe /Online /Enable-Feature /FeatureName:NetFx3 /All /LimitAccess /Source:<path> /NoRestart /Quiet`.
@@ -67,8 +68,7 @@ The `$Config` section in `Setup-System.ps1`, groups "Users" and "Installation me
 
 ## DriversFromMedia
 
-- Rule: `install.drivers-from-media` (off by default; branch `unattend-tree`, stage 7 of the plan of 13.10.2026,
-  customer decision 4: the folder is `\Drivers` next to `autounattend.xml`).
+- Rule: `install.drivers-from-media` (off by default; the folder is `\Drivers` next to `autounattend.xml`).
 - What it does: `Setup-System.ps1` (specialize) searches every ready drive for a `Drivers` folder that holds an `.inf`
   file, the same walk as `EnableNetFx3` uses for `sources\sxs`, and runs
   `pnputil.exe /add-driver <drive>:\Drivers\*.inf /subdirs /install`: every driver package of the folder and its

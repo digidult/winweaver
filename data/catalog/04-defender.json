@@ -1,6 +1,6 @@
 {
   "comment": [
-    "Microsoft Defender, ASR rules, SmartScreen. Section 3 of the v0.2 machine script.",
+    "Microsoft Defender, ASR rules, SmartScreen.",
     "Every setting is written as a policy (HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender):",
     "Defender reads them without its service running, and the matching switches in the interface turn grey."
   ],

@@ -2,7 +2,7 @@
   "_language": "Türkçe",
   "_disabled": "devre dışı",
   "_comment": [
-    "Turkish texts of the rule catalog (rules/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
+    "Turkish texts of the rule catalog (data/catalog/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
     "_disabled: the word after the title of the Disabled rule of an imported policy (<title>: <word>).",
     "Fields of a rule: title, summary, effect, risk, versions, verify, rollback (strings), tags (a list of strings),",
     "params {\"<name>\": text}, values {\"<name>\": {\"<value>\": text}}; any other field is an error.",
@@ -156,7 +156,7 @@
   "install.skip-auto-activation": {
     "title": "Otomatik etkinleştirme denemesi yok",
     "summary": "Windows, bir anahtar girilene veya etkinleştirme el ile başlatılana kadar kendiliğinden etkinleştirmeyi denemez: SkipAutoActivation unattend ayarının yazdığı Manual değeri.",
-    "effect": "WinKickOff'taki genel anahtarı bir KMS istemci anahtarı olan on iki sürüm, KMS ana bilgisayarı olmadan etkinleştirilmemiş kalır ve otomatik denemeler masaüstünde etkinleştirme hatalarıyla tekrar tekrar başarısız olur; bu kuralla Windows lisansın anahtarını bekler. Pro ve Education dijital lisansla etkinleşir ve bu kurala ihtiyaç duymaz.",
+    "effect": "WinWeaver'daki genel anahtarı bir KMS istemci anahtarı olan on iki sürüm, KMS ana bilgisayarı olmadan etkinleştirilmemiş kalır ve otomatik denemeler masaüstünde etkinleştirme hatalarıyla tekrar tekrar başarısız olur; bu kuralla Windows lisansın anahtarını bekler. Pro ve Education dijital lisansla etkinleşir ve bu kurala ihtiyaç duymaz.",
     "versions": "Windows 8 ve sonrası. Sanal makinede kabul testi bekleniyor: değer, OOBE'den sonra gelen ilk denemeden önce yerinde olmalıdır.",
     "verify": "Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SoftwareProtectionPlatform\\Activation' -Name Manual",
     "rollback": "Manual değerini 0 yapın (Windows varsayılanı).",
@@ -1978,7 +1978,7 @@
   },
   "apps.maps-broker-off": {
     "title": "Çevrimdışı harita indirme hizmeti devre dışı",
-    "summary": "MapsBroker, Haritalar uygulamasına hizmet verir; uygulama olmadan hizmete gerek yoktur. v0.2 dosyasında Xbox koşuluyla devre dışı bırakılıyordu; burada Haritalar'ın kaldırılmasına bağlıdır.",
+    "summary": "MapsBroker, Haritalar uygulamasına hizmet verir; uygulama olmadan hizmete gerek yoktur. Kural, Haritalar'ın kaldırılmasına bağlıdır.",
     "effect": "Bir otomatik hizmet daha az.",
     "rollback": "Set-Service MapsBroker -StartupType Automatic",
     "tags": [

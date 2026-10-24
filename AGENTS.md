@@ -1,26 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 22.10.2026 (0.24.0: the framework W# (`ww-base`, `ww`) with the shell of the window, WinWeaver on it as `ww::App`, the editor wedit as the second program and its archive, `docs/ww.md`; 0.23.0: the refactoring of October 2026 done, the code by theme in folders, the same behaviour, pull request #59; the refactoring plan `docs/refactoring.md`, the Linux job checks the whole workspace for Windows; 0.22.1: a profile named outside ASCII builds its answer file, the form names the sample values of the example of a name template, the script of a users file takes any name of the file; 0.22.0: a users file of the accounts of a profile, the password of an account shown and copied, the unsaved changes of a profile as a diff; 0.21.0: users files (.wwusers) with their passwords encrypted, read from this PC, made natively, as a script and into a profile; 0.20.0: every input language and keyboard layout of Windows in the form Languages, no embedded list; 0.19.1: the placeholders of the computer name template described in the form and the guide; 0.19.0: files inside the program folder kept relative to it in the settings, bookmarks, drafts and diffs; 0.18.3: the answer of the question that closes a tab no longer reads as Cancel in uk, ru and be, the release notes of 0.18.3; 0.18.2: the acceptance of 0.18.1 recorded, the release notes of 0.18.2; 0.18.1: the acceptance of 0.16.1 recorded, the messages of the status bar translated, Open the folder after every save, the release notes of 0.18.1; 0.18.0: Open the folder of a built or saved file and of the folders of the program; 0.17.0: the MCP tools of the permissions of registry keys; 0.16.2: the acceptance of 0.11.0 recorded, the release notes of 0.16.2; 0.16.1: the unknown options and the groups of the diff and bookmark tabs as links; 0.16.0: the permissions of registry keys; 0.15.0: the script steps of the catalog applied natively; 0.14.0: links to every rule, group, catalog and key a view names; 0.13.0: registry files, their tab and their save from This PC; 0.12.0: MCP configuration files,
-the details of a call, the JSON lines log, the mockups removed; 0.11.0: the search of the registry; 0.10.0: apps removed natively through the package API; 0.9.0: capabilities removed natively through DISM; 0.8.1: This PC read in the background; 0.8.0: features and capabilities read natively through DISM; 0.7.0: the editor of a catalog; 0.6.0: the MCP tools
-of the bookmarks and the catalogs; 0.5.0: the registry
-tab, registry bookmarks, the MCP tools of the registry; 0.4.0: links to the
-catalogs from an option and a bookmark, the same policy in the trees of other imports, the policy of a catalog
-tab in the cards of a profile, the parts of the description open at first, wider editors of lists, the guide
-and the README with the organization and the way of work; before it on 17.10.2026 0.3.0: templates in
-UTF-16, policies of two imports in both trees, ids by namespace for a shared prefix, the comparison of
-catalogs, a question before every removal; before it on 16.10.2026 version 0.2.0 with
-the commit in every build, CI only for pull requests that are ready, archives of templates, the license in the
-executable; two renderers,
-OpenGL and DirectX 12, with Automatic, the setting and --renderer; the imports read only when checked in the
-settings, the unknown options of a profile with Load catalogs; eight built-in
-languages besides English, the MCP log and the crash handlers, the files for AI
-agents in `agents/`, the README and the Belarusian example of the archive in `package/`, one archive from CI;
-before it on 15.10.2026 the list of
-the customer of 15.10.2026: the chrome of each tab, the painted tree and lists with the keyboard, the
-diff tab with comments, bookmarks of options, theme files with fonts and their editor; before it on
-14.10.2026 lists of values, linked policies, the default user profile applied natively, the local
-accounts read natively, the colour themes, and the map rewritten after the first day).
+Updated with every change of structure, commands or task status. Last update: 24.10.2026.
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -28,12 +9,12 @@ A commit made by an agent ends with the line `Co-Authored-By: <agent model> <nor
 
 ## 1. The project in three sentences
 
-WinWeaver is the successor of WinKickOff: a portable editor of Windows 11 installation profiles that builds
-`autounattend.xml`, compares profiles, reads the settings of this PC natively, generates stand-alone scripts
-that apply and revert them, and serves an MCP server; importing ADMX policy templates and applying natively
-come next. It is written in Rust with eframe (egui + glow and wgpu + winit) for Windows 10 and 11, one executable with
-data folders next to it. The data of the predecessor's rule catalog, its runtime templates and its whole
-functionality carry over; the file formats are new and no program code is ported (clean room).
+WinWeaver is a portable editor of Windows 11 installation profiles: it builds `autounattend.xml`, compares
+profiles, reads the settings of this PC natively, applies them natively or through generated stand-alone
+scripts, imports ADMX policy templates as catalogs, edits the registry, registry files and users files, and
+serves an MCP server. It is written in Rust with eframe (egui + glow and wgpu + winit) for Windows 10 and
+11, one executable with data folders next to it, on its own framework W# (`ww`), which also carries the
+text editor wedit.
 
 ## 2. What to read first
 
@@ -46,7 +27,6 @@ functionality carry over; the file formats are new and no program code is ported
 | Crates, modules, threads, build | `docs/spec/04-architecture.md` |
 | Use or change the MCP server | `crates/winweaver-mcp/src/lib.rs`, `tools/mod.rs` (the table of the tools), then `agents/skills/winweaver/SKILL.md` |
 | Change what an AI agent or the archive gets | `agents/README.md`, `package/README.md` |
-| Refactor the code (the plan of October 2026, its steps and its CI rules) | `docs/refactoring.md` |
 | Write a program on W#, or change the shell of the window | `docs/ww.md`, then `crates/ww/src/shell/mod.rs` (the trait `App`), `crates/wedit` (the example) |
 | Change wedit | `crates/wedit/src/app.rs`, `package-wedit/README.md` |
 
@@ -77,7 +57,8 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      smoke_window::<A>), doc.rs (Document, Search, Draft, Scrolled), settings.rs
 │   │                      (Settings<X: Extra>), session.rs (drafts, the log), style.rs, themes.rs,
 │   │                      themeview.rs, i18n.rs, tree.rs, list.rs, widgets.rs, mdview.rs, renderer.rs,
-│   │                      commands.rs, keys.rs, icons.rs, dialogs.rs, folders.rs; data/themes (Light, Dark)
+│   │                      commands.rs, keys.rs, icons.rs, coloricons.rs (the icons in colour through
+│   │                      DirectWrite), dialogs.rs, folders.rs; data/themes (Light, Dark)
 │   ├── wedit/             the editor on W#: main.rs (the command line, ww::run), app.rs (Wedit: Doc, Act,
 │   │                      Extra, impl ww::App), textdoc.rs (a text file in the editor of egui)
 │   ├── winweaver-core/    pure Rust, compiles everywhere: catalog/ (model, embedded data, checks, values: the
@@ -93,7 +74,7 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      pass), thispc/ (plan, report, evaluate, judge, capture, memory: the checks of a
 │   │                      running Windows, the judgement of the rules, the capture into a profile, the report
 │   │                      of the audit script, an in-memory machine), scripts (stand-alone Apply, Revert,
-│   │                      Audit and Undo scripts), import (an answer file or a WinKickOff profile as a
+│   │                      Audit and Undo scripts), import (an answer file or an old JSON profile as a
 │   │                      profile), apply (the plan of a native apply, return or undo, the backup format of
 │   │                      the scripts), admx/ (xml, templates, rules, file, compare, archive, merge: ADMX and
 │   │                      ADML to rules, catalog files .wwcatalog, their check, merge), registry/ (data: the
@@ -102,7 +83,9 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      files: every line kept, the registry steps of a plan as a file), security (the
 │   │                      owner and the access list of a key in SDDL), users (.wwusers files: the accounts,
 │   │                      the checks, the plan of an operation, the script), userstore (their passwords
-│   │                      encrypted); tests/ on the real data, src/<module>/tests.rs for the folders
+│   │                      encrypted), export (the scripts and registry files of a profile, a selection
+│   │                      or a diff, for the window and the command line), pol (Group Policy files,
+│   │                      PReg); tests/ on the real data, src/<module>/tests.rs for the folders
 │   ├── winweaver-win/     the Windows API: ffi.rs (the wrappers once: wide strings, the NetApi buffer, a
 │   │                      SID, the accounts enumerated, the text of an error, a DACL set), native.rs
 │   │                      (thispc::Machine: the elevation, the locale names, the language of Windows, the
@@ -118,7 +101,7 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      config.rs (the .wwmcp configuration files), log.rs (the JSON lines log, the crash
 │   │                      handlers), tools/ (mod.rs: the table TOOLS of the 36 tools, each with its name,
 │   │                      description, schema, what it needs and its handler; Args, ToolError with its Kind;
-│   │                      profiles, rules, bookmarks, catalogs, registry: the handlers by theme; the 3
+│   │                      profiles, rules, bookmarks, catalogs, registry: the handlers by theme; the 4
 │   │                      resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and Origin checks);
 │   │                      tests/server.rs (both transports on a free loopback port)
 │   ├── winweaver-ui/      WinWeaver on the window of W#: lib.rs (the types: Sel, ProfileDoc, WinWeaver and
@@ -131,6 +114,7 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      row, the menus This PC, Compare and Catalogs), frame (the active tab drawn by
 │   │                      its kind), profile, files (open_any: a file of any kind), pc, users, diff,
 │   │                      imports, registry, marks, session (one tab of a kind, a draft restored), mcp,
+│   │                      pol (the Group Policy files in tabs),
 │   │                      settings (the lines of WinWeaver in General, the section Files, the rename of
 │   │                      an import)), act.rs (Act: Shell(ShellAct<WinWeaver>) for the acts of the window,
 │   │                      one variant a subsystem for the rest: ProfileAct, FileAct, SettingsAct, PcAct,
@@ -146,21 +130,24 @@ functionality carry over; the file formats are new and no program code is ported
 │   │                      rule), forms.rs, diffview.rs, marksview.rs, mcpview.rs, settings.rs (Extra:
 │   │                      the fields of WinWeaver in settings.json), pages.rs (the guide, the license,
 │   │                      the reference), catalogview.rs, regview.rs, regedit.rs, cataledit.rs,
-│   │                      regfileview/, usersview.rs, tests/ (the window tests: a Window of WinWeaver,
+│   │                      regfileview/, usersview.rs, polview.rs (the tab of a .pol file, the files of
+│   │                      this Windows read once, the links of the other tabs), tests/ (the window
+│   │                      tests: a Window of WinWeaver,
 │   │                      `w.shell` and `w.app`), translations.rs (the test of the texts of winweaver-ui
 │   │                      and ww)
-│   ├── reference/         the parameter reference of the predecessor (00-20 and README), carried over with the
-│   │                      catalog data; the `doc` field of a rule links into it with a heading anchor
-│   ├── catalog/           groups.json, 00-17 rules files, lang/<code>.json for uk, ru, de, es, fr, id, it, tr (catalog 0.11 of the
-│   │                      predecessor)
-│   ├── presets/           office, strict, laptop, home .wwprofile (converted once from the predecessor)
+│   ├── reference/         the parameter reference of the catalog (00-20 and README, the root page of the
+│   │                      documentation in the executable); the `doc` field of a rule links into it with a
+│   │                      heading anchor
+│   ├── catalog/           groups.json, 00-17 rules files, lang/<code>.json for uk, ru, de, es, fr, id, it, tr
+│   │                      (catalog 0.11)
+│   ├── presets/           office, strict, laptop, home .wwprofile
 │   ├── resources/         timezones.json
-│   ├── templates/         the runtime templates of the predecessor carried over as data: the answer file
-│   │                      skeleton and the scripts with {{slot}}s (they name WinWeaver now), VERSION 0.11;
+│   ├── templates/         the runtime templates: the answer file skeleton and the scripts with {{slot}}s,
+│   │                      VERSION 0.11;
 │   │                      Create-Users.runtime.ps1, the stand-alone script of a users file
 │   ├── lang/<code>/       ui.json: the translations of the interface (uk, ru, de, es, fr, id, it, tr); guide.md: the guide translated
 │   ├── themes/            light, dark, latte, matrix .wwtheme: the embedded themes (a base, the colours it
-│   │                      changes, the fonts); Latte and Matrix are the colours of the predecessor
+│   │                      changes, the fonts and the font of the icons)
 │   └── docs/              guide.md, the English guide shown at the first start
 ├── agents/                shipped in the archive: AGENTS.md (the assistant for any agent, short for small
 │                          contexts), README.md, skills/ (winweaver: the tools, served as winweaver://skill;
@@ -172,8 +159,8 @@ functionality carry over; the file formats are new and no program code is ported
 │                          (Belarusian, every text: the example of a language, checked by a test of i18n.rs)
 └── docs/
     ├── releases/          release notes v<version>.md
-    ├── framework.md       the plan of W# (part 2 of the refactoring), ww.md the framework for its users
-    └── spec/              clean room specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
+    ├── ww.md              the framework W# for the programs written on it
+    └── spec/              the specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
 ```
 
 Next to the executable at run time (never versioned): `settings.json`, `bookmarks.wwmarks`, `profiles/`,
@@ -181,7 +168,7 @@ Next to the executable at run time (never versioned): `settings.json`, `bookmark
 the imported policy templates), `drafts/` (unsaved profiles), `mcp/` (MCP configurations, `default.wwmcp` of the
 MCP tab), `logs/` (winweaver-<date>.log, mcp-<date>.jsonl),
 `lang/<code>/` (more or overriding translations), `themes/` (more themes, `<id>.wwtheme`, also `<id>.json`
-of the predecessor; the id of an embedded theme replaces it).
+of the older format; the id of an embedded theme replaces it).
 
 ## 4. Project rules
 
@@ -190,25 +177,23 @@ of the predecessor; the id of an embedded theme replaces it).
    files built in for Ukrainian, Russian, German, Spanish, French, Indonesian, Italian and Turkish; other languages are files added next to the executable.
 2. No em dash (U+2014) and no en dash (U+2013) in any text we create, in any language: documents, code,
    data, comments, interface strings, translations, commit messages. Number ranges use a hyphen.
-3. Clean room: no program code of WinKickOff is copied or translated into this repository. Its data is
-   carried over: the rule catalog, the translations, the presets, the time zones (the keyboards were
-   replaced by the lists of Windows on 19.10.2026), and, by the
-   customer's decision of 14.10.2026, the runtime templates (PowerShell of the answer file and of the
-   stand-alone scripts). Behaviour is written from the specification and from the output of the predecessor.
+3. The program code is the project's own; the rule catalog, its translations, the presets, the time
+   zones and the runtime templates (PowerShell of the answer file and of the stand-alone scripts) are data.
+   Behaviour is written from the specification. Old profiles of JSON and their answer files are still
+   read (`winweaver_core::import`).
 4. Dependencies: popular, well known, open source Rust crates that need no extra DLL next to the executable.
    The executable and its configuration stay portable: nothing is installed, nothing is written outside the
    program folder and the system temp folder.
-5. No PowerShell inside the program: reading this PC uses the Windows API; the apply and the revert run as
-   generated stand-alone scripts until the native elevated apply exists. PowerShell appears only in the
-   generated answer file and in those scripts. The program never runs a script itself.
+5. No PowerShell inside the program: reading and applying on this PC use the Windows API (the native
+   elevated apply); PowerShell appears only in the generated answer file and the stand-alone scripts. The
+   program never runs a script itself.
 6. The customer's work PC is untouchable: only reading there. Rust is not installed on it and must not be:
    builds and tests run in CI or in a VM, and the program is not started on that PC by an agent.
 7. Text files are UTF-8 without a byte order mark with LF line endings; `rustfmt` and `clippy -D warnings`.
-8. Untrusted input (profiles, diffs, reports, answer files, MCP requests, later policy templates) is read
+8. Untrusted input (profiles, diffs, reports, answer files, MCP requests, policy templates) is read
    with size, depth and character limits and turned into a message, never into a crash.
-9. Every feature is developed in its own branch and reaches `main` through a pull request (the rule of the
-   predecessor). The first day (14.10.2026) went straight to `main` while the repository was being created;
-   from the branch `docs-refresh` on, work goes through pull requests, which the customer merges.
+9. Every feature is developed in its own branch and reaches `main` through a pull request, which the
+   customer merges.
 10. Every text of the interface is wrapped in `tr("English")` or `trf("English {name}", &[("name", &v)])` and
     has a translation in `data/lang/<code>/ui.json` of every built-in language (uk, ru, de, es, fr, id, it,
     tr); the test `every_text_of_the_interface_is_translated` fails otherwise. It finds only the literals of
@@ -216,7 +201,7 @@ of the predecessor; the id of an embedded theme replaces it).
     files and logs, which stay English). A new rule needs its texts in
     every `data/catalog/lang/<code>.json` (`translations_cover_every_rule`); `package/lang/be/ui.json` may
     lag (English fills the gaps).
-11. Versions (the customer's rule of 16.10.2026): `version` of the workspace `Cargo.toml` grows with every
+11. Versions: `version` of the workspace `Cargo.toml` grows with every
     pull request that reaches `main`: the second number for a feature (0.2.0 to 0.3.0, the third back to 0),
     the third for fixes only (0.2.0 to 0.2.1); a pull request with both counts as a feature. Every build
     names its commit: `winweaver_core::BUILD` is `<version>+<12 digits of the commit>` (`build.rs` of the core,
@@ -253,7 +238,7 @@ CI does not run at every push, since its Windows minutes are the dear ones:
    link) or a test of the core that fails, stops before Windows. A run on demand with `-f windows=false`
    stops after the Linux job: the cheap check of a change, about two minutes.
 6. `main` runs after every merge (its archive is the build for the acceptance), a tag `v*` for the release.
-7. The mirror (the rule of 18.10.2026): when the Actions minutes of digidult/winweaver are used up, its run
+7. The mirror: when the Actions minutes of digidult/winweaver are used up, its run
    fails in a few seconds with the annotation "The job was not started because recent account payments have
    failed or your spending limit needs to be increased". Only then the same commit runs in the private
    mirror https://github.com/stanislavperec-ua/winweaver (the remote `mirror` of the clone): `git push mirror
@@ -266,8 +251,8 @@ CI does not run at every push, since its Windows minutes are the dear ones:
 
 When `cargo fmt` finds differences, the Linux job fails and uploads `fmt.patch` with `Cargo.lock` in the
 artifact `ci-files`: `gh run download <run id> -n ci-files -D <folder>`, then `git apply <folder>/fmt.patch`.
-The patch goes into the commit it belongs to, never into a commit of its own (the customer's rule of
-23.10.2026): `git commit -a --amend --no-edit`, then `git push --force-with-lease` of the feature branch
+The patch goes into the commit it belongs to, never into a commit of its own: `git commit -a --amend
+--no-edit`, then `git push --force-with-lease` of the feature branch
 (origin and mirror), never of `main`. rustfmt cannot run on the customer's PC (rule 6), so the code is
 written in the widths of rustfmt from the start and checked by the Linux run before the full one.
 
@@ -316,8 +301,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   named `this-pc` (`App::start_pc_read`, `poll_pc_read`, a `PcJob`; the machine is `App::pc`, one in memory
   for the tests), one read at a time with a spinner in the status bar; the result goes to the tab the read
   started from, found by its draft key, and a tab closed meanwhile is only named in the status.
-- Input languages and keyboard layouts (the user's rule of 19.10.2026: from the system, no list of the
-  program): `resources::Locales` holds what Windows lists, read once at the first use by the reader the
+- Input languages and keyboard layouts come from the system, the program has no list of them:
+  `resources::Locales` holds what Windows lists, read once at the first use by the reader the
   window and the MCP server name (`set_locale_reader(winweaver_win::locales)` in `App::new` and
   `Server::new`): every locale of `EnumSystemLocalesEx` with its locale id (empty for one Windows numbers
   at the first sign-in, such as `ru-UA`), its localized name, its parent and the first input profile of
@@ -350,7 +335,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   (`EXAMPLE_SERIAL`, `EXAMPLE_MAC`, named under the example); the form shows it with the description of
   every placeholder (`forms::name_template_help`), and the guide
   has the section The name of the computer in every language. A change of the script changes all three.
-- The editions and their keys are the 14 of the predecessor (`resources::EDITION_KEYS`); `ASK_KEY` is
+- The editions and their keys are 14 (`resources::EDITION_KEYS`); `ASK_KEY` is
   `00000-00000-00000-00000-00000` with `WillShowUI` Always.
 - The answer file is ASCII: account display names and descriptions outside ASCII go to Post-OOBE.ps1 as
   Base64 (`Set-AccountText`), the profile is embedded as ASCII JSON in `Extensions/Profile` (`\uXXXX`,
@@ -368,8 +353,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   request is caught (`Server::handle_text`): the request gets the error -32603 and the server goes on; a
   release build has no console, so `eprintln!` of a headless process also goes to the log (`refuse`).
 - MCP: every setting of a server is a configuration file `mcp/<name>.wwmcp` (`config::Config`, strict, saved by the
-  MCP tab at every change through `App::persist_mcp`; `settings.json` keeps no MCP field any more, an old
-  `mcp_token` is read once into `mcp/default.wwmcp`): the transport for a start without the window, port, token,
+  MCP tab at every change through `App::persist_mcp`; `settings.json` keeps no MCP field (an
+  `mcp_token` of an older file is read once into `mcp/default.wwmcp`): the transport for a start without the window, port, token,
   mode, read_pc, registry, edit_library, the first profile and `detailed_log`. `winweaver --mcp FILE` serves as the
   file says, `--mcp stdio|http --config FILE` too, and the other options change it for that start
   (`mcp_config` of `main.rs`). The journal keeps every call with its arguments and answer (`redact` leaves out
@@ -477,10 +462,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   EXPAND_SZ with keys in the form of regedit (`admx::catalog_path` turns them into `HKLM:\` or `DU:\`);
   other actions are kept as they are. Apply goes through `CatalogFile::put_rule`, Save (Ctrl+S) checks and
   writes the file and loads a loaded import again; a removal asks first.
-- Links (the list of 18.10.2026, item 4): a rule named in a view leads where `views::RuleLink` says
+- Links: a rule named in a view leads where `views::RuleLink` says
   (`Profile`: `Act::Reveal`, select and open the tree down to it; `Catalog(file)`: `Act::CatalogReveal`
   in the tree of the catalog tab for a policy of its file; `Elsewhere`: `Act::ShowInProfile` in the first
-  profile tab, which now scrolls to it). `rule_description` takes the `RuleLink` of its tab and lists the
+  profile tab, which scrolls to it). `rule_description` takes the `RuleLink` of its tab and lists the
   rules a rule needs, the ones that need it and its conflicts both ways. `views::linked_text` turns the
   ids of rules and the registry paths of a text into links (the message bar); the crumbs of a catalog tab
   select every group above, the crumb of a rule of a profile keeps the group it is shown in. The registry
@@ -518,7 +503,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   such a rule (the Disabled rule clears a list that is not additive), `multiText` a MultiString value; lists
   come before the other values of a policy. The read of this PC checks lists but reads no list parameters.
 - Renderers (`renderer.rs`, the features `glow` and `wgpu` of winweaver-ui and winweaver, both by default):
-  OpenGL through glow took half the memory of the full wgpu (the customer, 16.10.2026); DirectX 12 is wgpu with its `dx12` backend alone (no
+  OpenGL through glow takes half the memory of the full wgpu; DirectX 12 is wgpu with its `dx12` backend alone (no
   Vulkan, no OpenGL of wgpu) and draws without a driver of the graphics card on WARP (the CI runner shows
   `Microsoft Basic Render Driver (Dx12, Cpu)`). Automatic tries OpenGL, then DirectX 12; a choice of the
   settings (`Settings::renderer`) or of `--renderer` is tried first and the others follow. A renderer fails
@@ -537,7 +522,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   with its eframe feature) draws whole frames without a screen and clicks by the labels of AccessKit, so no
   window ever opens. A test that needs a label finds it with `query_all_by_label`, since a text can appear
   twice (a tab and a breadcrumb).
-- The chrome follows the active tab (customer list of 15.10.2026, items 6, 9 to 11): the command bar holds the
+- The chrome follows the active tab: the command bar holds the
   commands of that tab (icons above labels; none for Settings; icons alone at the end of the
   navigation row below 1100 px), the navigation row appears only for a profile and a catalog tab (the
   history, the breadcrumb, the star); the other tabs keep their search at the right end of the command
@@ -545,22 +530,20 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   of a catalog tab, the differences, the blocks of a Markdown page, the bookmarks, the MCP journal. Clearing
   a search opens the groups above the selection and scrolls it into view (`Act::SearchCleared`,
   `reveal`). The message bar folds to one line or opens with a height the user drags.
-- The look comes from `style.rs`: the palette of light and dark of variant A (the HTML mockups it came from
-  were removed on 18.10.2026, when the design had settled; a
-  theme overrides its tokens, `style::COLOR_NAMES`, also with the names of the first version) and the
-  fonts of the theme. `install_fonts` (before the first frame) names the families `light`, `light-strong`,
+- The look comes from `style.rs`: the palette of light and dark (a theme overrides its tokens,
+  `style::COLOR_NAMES`, also with the names of the older format) and the fonts of the theme. `install_fonts` (before the first frame) names the families `light`, `light-strong`,
   `light-mono` and the same for `dark`; `style::apply` loads the files of the families of the two themes
   into them (`style::FAMILIES`, `MONO_FAMILIES` in the fonts folder of Windows, egui's fonts as the
   fallback) and scales the text styles by the size of the theme. Painted widgets take their fonts and
   sizes from `style::font`, `strong_font`, `mono`, `size` and `row_height`, never `FontId::proportional`;
   without `install_fonts` (tests) the families of egui are used.
-- Themes (`themes.rs`, item 4 of the list): a `.wwtheme` file is a name, a base, colours and fonts; the
+- Themes (`themes.rs`): a `.wwtheme` file is a name, a base, colours and fonts; the
   window keeps the list in `App::themes` (read at the start, when the settings open and after a save) and
   applies `wanted_theme` whenever it changes: the theme of an editor tab in front (a live preview), else
   the one of the settings, else Light and Dark as Windows shows its apps. A change of a font in the
   settings saves the file of the shown theme (`Theme::file_in`: an embedded theme gets
   `themes/<id>.wwtheme`).
-- Lists (`list::show`, item 5): one stop of Tab like the tree; the arrows, Home, End and the page keys move
+- Lists (`list::show`): one stop of Tab like the tree; the arrows, Home, End and the page keys move
   the selection and set `follow`, Enter or a double click opens, Delete removes where the tab allows it,
   the widths of the columns change by dragging the lines between their titles (kept in the memory of egui).
   In the diff and bookmark tabs the list is the resizable side panel and the item on the right is the
@@ -573,7 +556,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - Bookmarks are options (`Bookmark::option`, `is_option`): the id and the profile as a link, no title; one
   option is one bookmark in every profile. Removing one with a comment asks first (`App::ask`, a question
   over the window, Escape says no).
-- Keyboard (items 2 and 5 of the list): a tree is one stop of Tab (`tree::show` makes a focusable area,
+- Keyboard: a tree is one stop of Tab (`tree::show` makes a focusable area,
   the rows sense clicks only); a click on a row gives it the focus, so the keys go on from the clicked
   row: arrows, Home, End, Page Up and Down, Left and Right fold and go to the parent or child, Space
   toggles, Enter opens a group. A move with the keys sets `follow`, and the row comes into view at the next
@@ -607,15 +590,14 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   model: the person chooses it.
 - Drafts: `drafts/<key>.json`, key `p-<fnv of the path as it is kept>` or `n-<time>-<n>`; written 2 s after
   the last change and at the close; a save or a discard deletes them.
-- Users files (`winweaver_core::users` and `userstore`, `winweaver_win::users`, `usersview.rs`; the
-  user's list of 20.10.2026, after the project WindowsUserManager, with a format of its own): one `.wwusers`
+- Users files (`winweaver_core::users` and `userstore`, `winweaver_win::users`, `usersview.rs`): one `.wwusers`
   file holds the accounts and their passwords encrypted (PBKDF2-SHA256, AES-256-CBC, HMAC-SHA256 over salt,
   iv and data, checked first; the reference vector of `userstore::tests` came from Python). The passwords
   live in `Passwords` (wiped on drop) only while the tab is unlocked, with the master password for the
   save (`UsersDoc::seal` encrypts them with a new salt and vector); nothing of them reaches the status bar,
   the logs or a plan file. The operations run in the process (`winweaver_win::run_users_plan`) and need
   the window to be elevated (`winweaver_win::elevated`), so the master password crosses no process: no
-  helper and no plan file for them. The semantics of the predecessor hold: an account that exists changes
+  helper and no plan file for them. The semantics: an account that exists changes
   only by its orders, no account is deleted, a profile elsewhere is kept, the account of the process stays
   in Administrators; a change of them changes `winweaver_win::users` and
   `data/templates/Create-Users.runtime.ps1` together. The script names its users file in Base64
@@ -628,7 +610,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   `show_password`, off at a lock). Compare, Unsaved changes (`Act::DiffUnsaved`) opens a diff of the
   profile in front against its file, or the preset of its name when it has none, through
   `compare_active`: the current profile left, the saved one right.
-- Paths in the files of the program (`winweaver_core::paths`, the user's rule of 19.10.2026): a file inside
+- Paths in the files of the program (`winweaver_core::paths`): a file inside
   the program folder is kept relative to it and starts with `.` (`.\profiles\Office.wwprofile`), any other
   file keeps its absolute path, and in memory every path is absolute. `Settings::load_from` and `save_to`
   (recent, open_tabs; relative to the folder of the settings), `Bookmarks::load` and `save` (the path of
@@ -638,7 +620,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   separator. The ids of imports made of a folder, an archive or an ADMX file hash the kept form too
   (`kept_name` of the window). A new file that keeps a path converts the same way.
 
-- The structure of 0.23.0 (the refactoring, `docs/refactoring.md`): a change of the window is an `Act`
+- The structure of the code: a change of the window is an `Act`
   of one subsystem (`act.rs`), run by the `apply_<subsystem>` method in `app/<theme>.rs`; a question before
   a removal is `Act::Ask(Question)` built where the data is (`question.rs`, `remove_question` of a users
   file, a registry file and the bookmarks) and answered by `Act::Answer`; the only acts that still ask by
@@ -650,13 +632,15 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   new JSON document implements `jsonfile::Document`; a new value of an action is read through
   `catalog::values`; in the Windows crate a new API call takes its wrappers from `ffi.rs`; in the MCP
   server a new tool is one row of `TOOLS` with its handler in `tools/<theme>.rs`.
-- W# (0.24.0, `docs/ww.md`): `ww::Window<WinWeaver>` owns `shell: Shell<WinWeaver>` (the tabs, the
+- W# (`docs/ww.md`): `ww::Window<WinWeaver>` owns `shell: Shell<WinWeaver>` (the tabs, the
   settings, the status, the themes, the session) and `app: WinWeaver` apart, so every method of
   WinWeaver takes `shell: &mut Shell<WinWeaver>` (or `&Shell`) beside `self`; an act of the window
   is `Act::Shell(ShellAct::..)` (open, save, the tabs, the settings, the themes, `Ask` and `Answer`,
-  `Message`, `ShowInFolder`, `OpenLink`), run by the shell, the others by `WinWeaver::apply`. A
-  question is `Question::into()` (`Act::Shell(ShellAct::Ask)`); closing a tab with changes and
-  forgetting the recent files ask through `shell.discard_act` and `shell.forget_recent_act`. The
+  `Message`, `ShowInFolder`, `OpenLink`, `About`), run by the shell, the others by `WinWeaver::apply`. A
+  question is `Question::into()` (`Act::Shell(ShellAct::Ask)`), with a second answer by
+  `Question::or` (`ShellAct::AnswerAlt`); closing a tab with changes asks Save, Don't save or Cancel
+  (`Shell::close_question`, `ShellAct::SaveAndClose`), forgetting the recent files asks through
+  `shell.forget_recent_act`. About is a window over the tabs (`App::about` gives its lines). The
   settings tab and the editor of a theme are `Doc::Shell(ShellDoc)`, drawn by the shell; a program
   section of the settings is `SettingsSection` with its `index()` for `ShellAct::OpenSection`. The
   tests build `Window::new(WinWeaver::new(catalog, texts), settings)` and read `w.shell.docs`,
@@ -664,10 +648,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   shell (`crates/ww/src`) are in every `ui.json` of WinWeaver (the test reads both crates) and in
   `package-wedit/lang/uk/ui.json`. wedit is built by the release build of the workspace and packaged
   by the job Package as `wedit-<version>.zip` (the exe, its README, `lang/`).
-- The settings file (0.24.0, the customer's item 3 of 22.10.2026): `Settings::load(program)` reads the
+- The settings file: `Settings::load(program)` reads the
   first of `<exe stem>.settings.json`, `<program>.settings.json` and `settings.json` that exists and
   writes back to it (`Shell::settings_path`), so two copies of an executable with different names keep
-  their own settings and a `settings.json` of 0.23.0 goes on. `Settings::wrap_lines` folds the lines of
+  their own settings and a plain `settings.json` goes on. `Settings::wrap_lines` folds the lines of
   a text or a page to the width of the view (the setting Wrap lines of General); off, the view scrolls
   sideways (a `layouter` of infinite width in wedit, an infinite width for the page). A page always
   scrolls sideways for a table or a block of code wider than the view, and its code takes the colour
@@ -676,55 +660,90 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   them after the palette, and `style::extra(ui, name)` gives the one of the theme shown. The fields of
   the form Languages (display language, system and user locale) are typed freely with the list of the
   languages of Windows beside them (`forms::locale_field`).
-- Markdown pages (0.24.0): WW draws them itself (`ww::markdown`; pulldown-cmark parses, egui_commonmark is
-  gone): every paragraph, heading and cell is one `LayoutJob`, so text, code (`code_bg`, valign BOTTOM) and
+- Markdown pages: WW draws them itself (`ww::markdown`; pulldown-cmark parses): every paragraph, heading and cell is one `LayoutJob`, so text, code (`code_bg`, valign BOTTOM) and
   links share a baseline and wrap at the width of the view (`Settings::wrap_lines`; off, an infinite width
   and the view scrolls sideways); a link is found under the pointer by `Galley::cursor_from_pos`, a link
-  `#anchor` scrolls the page to its heading, any other goes to `open_url` (the shell takes the pages of the
-  program). Lists put their markers in a column of their own on the baseline of the first line; blocks of
+  `#anchor` scrolls the page to its heading, any other goes to `open_url`, and the shell takes it
+  (`ShellAct::OpenLink`): a `.md` or `.txt` file or a file without an extension opens in the program,
+  relative to the page (`Shell::linked_file`; WinWeaver shows a text file as it is, `MdDoc::plain`), a
+  web link or a file of another kind is asked first and goes to the browser. A page scrolls with the
+  arrows, the page keys, Home and End (`mdview::key_offset`), keeps its place a tab (its own scroll id)
+  and its selected text when another tab comes in front (`LabelSelectionState` saved and given back). Lists put their markers in a column of their own on the baseline of the first line; blocks of
   code have a copy button; the whole page (its text, its blocks of code, its tables) is as wide as
   `Settings::page_width` (`PageWidth`: the view, or at most so many pixels or characters, never wider
-  than the view; Width of pages in General, the customer's item of 23.10.2026); a table is bands of cells of that width, its columns shared by the
+  than the view; Width of pages in General); a table is bands of cells of that width, its columns shared by the
   length of their text and never narrower than their longest word (`markdown::column_widths`), every row
   as high as its highest cell. The scroll bars are solid (`ScrollStyle::solid`): visible whenever the
   content is larger than the view. The screenshots of CI draw the sample page `ww::sample::PAGE` and
-  AGENTS.md at several widths and settings in both programs (`13-` to `19-`, `w1-` to `w8-`): look at them
+  AGENTS.md at several widths and settings in both programs (`13-` to `20-`, `w1-` to `w11-`): look at them
   after every change of the drawing. `Settings::window` (`WindowPlace`) is
   where the window was at the close; `run` opens it there, and the first frame fits it to the monitor
   it opened on (`window::fit_window`: moved inside, shrunk to the monitor, never below
   `WINDOW_MIN_SIZE`); a maximized window keeps the place it had before.
-- The CI way of the refactoring: the Linux job checks the whole workspace for Windows (clippy on the
+- Icons: a theme names the font of the icons (`icon_font`, `style::ICON_FAMILIES`: Segoe UI Emoji by
+  default, or Segoe UI Symbol), loaded after the font of the texts and before Segoe UI Symbol. egui draws a
+  glyph in one colour, so with Segoe UI Emoji the icons of the command bar and the tabs are pictures drawn by
+  DirectWrite through Direct2D into WIC with the colours of the font (`ww::coloricons`, once a size and a
+  colour, as textures; `style::paint_icon`); without them, or when DirectWrite fails, an icon is a glyph.
+- The editor of wedit: egui's TextEdit moves with the arrows, Home and End itself; Page Up and Page Down
+  move the cursor by the height of the view through the layout of the last frame (`TextDoc::page_keys`,
+  with Shift they select) and the view follows; the editor takes the focus at its first frame and again
+  whenever its tab comes back to the front (a gap in `cumulative_pass_nr`).
+- Scripts and registry files (`winweaver_core::export`): one place makes them for the selection of a
+  profile, the whole profile (every rule; the ones off return to the defaults), a diff (its other
+  side, `export::diff_profile`) and the command line (`--script apply|revert|audit FILE`, `--reg
+  apply|revert FILE`, `--only IDS`, `--out FOLDER`, FILE a `.wwprofile` or a `.wwdiff`). A selection
+  of only passes of the installation, the first sign-in or the sign-in screen has nothing for a PC
+  (`export::applicable`): the block This PC of the detail panel is not drawn and its items of the
+  menu This PC are off.
+- Rules that write the same values (`registry::same_values`): the detail of a rule lists every rule
+  of every catalog that writes or removes one of its registry values, which is the same both ways
+  (a test checks it); the list is kept in the memory of egui by the rule and the count of rules.
+- The parts of the description of an option have the colours `section-what`, `-risk`, `-writes`,
+  `-deps`, `-more`, `-ref` (`views::SECTION_COLORS`, installed by `WinWeaver::new` with
+  `style::install_colors`): a stripe on the left and a faint tint of the card.
+- The registry tab: the values are `list::show` (the arrows, Home, End, the page keys, Enter edits,
+  Delete asks), Rename (F2) renames the selected value or else the key (`registry::rename_value`;
+  `Registry::rename_key` copies and deletes, `NativeRegistry` uses `RegRenameKey`).
+- Registry files: the outline is a tree of the keys by default (`regfileview::tree_rows`, the folded
+  keys in `RegFileDoc::closed`; List and Tree in the command bar set `Extra::regfile_tree`), the
+  rules that write a key fold (`Extra::writers_open` at first) and scroll inside a third of the
+  window. Apply to this PC applies the selected value, key or the whole file
+  (`RegFile::changes`, `regfile::apply_changes` with the registry of the window) after a question
+  that counts the changes and the deletions; the keys of the computer need the window as
+  administrator.
+- Group Policy files (`winweaver_core::pol`, `polview.rs`, `app/pol.rs`): `Registry.pol` of the
+  computer (`Machine`, HKLM) and of the users (`User`, HKCU) of this Windows or any `.pol` file in a
+  tab: the keys as a tree, the entries with what each does (set, set when absent, delete, delete
+  every value, the lists of `**DeleteValues` and `**DeleteKeys`, `**SecureKey`). The files of this
+  Windows are read once (`polview::system`, again at Read again) for `polview::link`, the small button
+  beside a key or a value that Group Policy sets in the detail of a rule, the registry tab and a
+  registry file. The menu, the command bars of a profile, a catalog and the registry have Group
+  Policy; `Extra::pol_with_pc` opens the files of this Windows behind the tab in front after a read
+  of this PC.
+- The cheap check: the Linux job checks the whole workspace for Windows (clippy on the
   target `x86_64-pc-windows-gnu`), so `gh workflow run ci.yml --ref <branch> -f windows=false` is the
   cheap check of a change of any crate; the Windows job runs when the tests of the window, the runner's
   registry or the archive are needed.
 
 ## 7. Work status
 
-| Area | State | Date |
-|---|---|---|
-| Specification | Draft 0.1; decisions of 14.10.2026 recorded in `docs/spec/01-ui.md` and below | 14.10.2026 |
-| UI design | Variant A with the compact layout and the row switches of C and the secondary tabs of D (decided) | 14.10.2026 |
-| Core | Catalog, profiles, resolver, check, diff, bookmarks, build of the answer file, This PC (plan, judgement, capture, reports), stand-alone scripts, import of answer files and WinKickOff profiles; tests on the real data | 14.10.2026 |
-| Windows API | Reading the registry, the elevation, the locales, the Windows language and the local accounts with their groups; the native read of the whole catalog is tested on the Windows runner | 14.10.2026 |
-| Window | Tabs, menu, command bar of each tab (icons above labels), navigation, search per tab, the painted tree and lists with the keyboard, detail panel with copy and selectable texts, forms, check, build, diff tab with comments, bookmarks of options, Markdown tabs with anchors, This PC (read, check, scripts, reports), MCP tab with its journal, settings, translations uk, ru, de, es, fr, id, it and tr, drafts, restored tabs, log, themes with fonts (Light, Dark, Latte, Matrix, more as files) and their editor, the title bar in their colours; pull requests #13 to #17 for the list of 15.10.2026 | 15.10.2026 |
-| MCP server | stdio and HTTP, 36 tools, 3 resources, modes, journal, token; tests of both transports | 14.10.2026 |
-| Native apply | Plans, the elevated helper, the backup and undo (pull request #2), the default user profile loaded and unloaded by the helper; tested in a test key of HKCU and of the default profile on the runner | 14.10.2026 |
-| Policy templates | ADMX import, catalog files, the settings section (pull request #3), lists and multi-line texts (`reg-list`, list parameters), policies linked to built-in rules; only the checked imports read, the unknown options of a profile in their group with Load catalogs | 16.10.2026 |
-| This PC | Features and capabilities read natively through DISM as administrator (0.8.0) | 18.10.2026 |
-| Native apply | Capabilities removed through DISM (0.9.0) and apps through the package API (0.10.0), named in the backup, not restored by an undo | 18.10.2026 |
-| Native apply | The script steps of the catalog applied natively (0.15.0): media, services, keys, accounts, the copies of the answer file | 18.10.2026 |
-| Registry | The permissions of keys: owner, access list, own entries changed after a question (0.16.0) | 18.10.2026 |
-| Users files | `.wwusers`: the accounts of a PC with their passwords encrypted, the tab, read from this PC, created natively, the stand-alone script, into a profile (0.21.0) | 20.10.2026 |
-| Refactoring | Part 1 done 21.10.2026 on the branch `refactor`, pull request #59 (0.23.0): the plan `docs/refactoring.md`, its section 10 for what was done and what was left. Part 2 done 22.10.2026 on the branch `ww` (0.24.0): the plan `docs/framework.md`; the crates `ww-base` and `ww`, WinWeaver as `ww::App`, the editor `wedit` with its archive, `docs/ww.md` | 22.10.2026 |
-| Not yet | Nothing of the plan; what comes next comes from the use | |
-| Acceptance | Build 0.11.0 accepted by the customer in a VM on 18.10.2026: all 31 steps of the scenario passed, the four stand-alone scripts (apply, undo, return to defaults, audit) checked for the first time, with the native apply and undo, This PC, the registry search and the catalog editor; earlier the answer file and a `.wwdiff` of a real PC. Build 0.16.1 accepted on 19.10.2026: all 16 steps of parts G, E and F of the same page (the links, registry files and their save from This PC, the script steps applied natively, the permissions of keys). Build 0.18.1 accepted on 19.10.2026: all 19 steps of parts H, I and J (the build, Open the folder, the permissions of a key through MCP from PowerShell 5.1 with a refused SDDL text, the translated messages of the status bar); every step of the page passed. Build 0.20.0 accepted on 20.10.2026: the 23 steps of parts K to P (paths inside the program folder, the help of the name template, the languages and layouts of Windows, a VM installed with that answer file; three steps of the VM skipped, the name checked before), with two notes answered on the page of 0.22.1 (the sample serial number of the example; a `Setup-User.ps1` of three languages, checked again in part R). Parts Q to V of 0.22.1 wait: a profile named outside ASCII, users files in a VM | 20.10.2026 |
+| Area | State |
+|---|---|
+| Specification | `docs/spec/`: the scope, the interface, the documents, the features and the architecture as they are |
+| Core | Catalog, profiles, resolver, check, diff, bookmarks, build of the answer file, This PC (plan, judgement, capture, reports), stand-alone scripts, import of answer files and old JSON profiles, ADMX import and catalog files, registry files, users files; tests on the real data |
+| Windows API | The registry with the permissions of keys, the elevation, the locales and layouts, the language of Windows, the local accounts, DISM, the package API, the native apply with its backup and undo, the default user profile, the users of a users file |
+| Window | WinWeaver on W#: tabs, menu, command bar of each tab, navigation, search per tab, the painted tree and lists, detail panel, forms, check, build, diff tab, bookmarks, Markdown pages, This PC, registry, registry files, catalogs and their editor, users files, MCP tab, settings, nine languages, drafts, restored tabs, log, themes with fonts and icons in colour |
+| MCP server | stdio and HTTP, 36 tools, 4 resources, modes, journal, token, configuration files; tests of both transports |
+| W# and wedit | The crates `ww-base` and `ww`, the editor `wedit` with its archive, `docs/ww.md` |
+| In work (pull request #60, 0.24.0) | The current list of the customer in six groups: the shell (keys, focus, About, links, icons, the question of a closing tab), the documents, the profile (links between catalogs, colours of the panels, `.reg` and `.ps1` of a diff and a whole profile, the command line), the registry and `.pol` files, drafts of every document, `wwlite` and a study of a Wasm edition |
+| Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
-Decisions of the customer (14.10.2026): the UI is variant A with the compact layout of C for narrow windows and
-its inline toggles, and the secondary tabs of D; the search field grows into the free width of the navigation
-row; the extensions `.wwprofile`, `.wwdiff`, `.wwcatalog`, `.wwmarks`; the runtime scripts of the predecessor are
-carried over as data (`data/templates/`); the minimum Windows version is the agent's choice guided by the
-versions in use: Windows 10 and 11, the systems the Rust toolchain supports (Windows 7 and 8.1 are not); among
-the Windows desktops online these are almost all, so nothing older is supported.
+Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the
+secondary tabs; the search field grows into the free width of the navigation row; the extensions
+`.wwprofile`, `.wwdiff`, `.wwcatalog`, `.wwmarks`, `.wwusers`, `.wwtheme`, `.wwmcp`; the runtime scripts are
+data (`data/templates/`); Windows 10 and 11 are supported, the systems the Rust toolchain supports (Windows 7
+and 8.1 are not).
 
 ## 8. How to update this file
 

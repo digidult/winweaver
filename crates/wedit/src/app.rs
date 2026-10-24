@@ -108,14 +108,16 @@ impl Document for Doc {
     fn draft_key(&self) -> Option<String> {
         match self {
             Doc::Text(d) => Some(d.draft_key.clone()),
-            _ => None,
+            Doc::Shell(d) => d.draft_key(),
+            Doc::Page(_) => None,
         }
     }
 
     fn draft_due(&mut self, all: bool) -> Option<Draft> {
         match self {
             Doc::Text(d) => d.draft_due(all),
-            _ => None,
+            Doc::Shell(d) => d.draft_due(all),
+            Doc::Page(_) => None,
         }
     }
 

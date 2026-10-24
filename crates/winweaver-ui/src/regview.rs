@@ -1,9 +1,9 @@
-//! The registry tab (customer list of 18.10.2026, item 9): the keys of this PC as a tree on the left,
-//! the values of the selected key on the right, an address row on top, an editor of a value in the
-//! types of regedit and a search under the selected key at the bottom, which runs in a thread of
-//! its own, the rules that write the selection above the values, and the permissions of the key in
-//! a window. Reading and writing go through acts applied after the frame, with the registry of the
-//! window (`WinWeaver::registry`).
+//! The registry tab: the keys of this PC as a tree on the left, the values of the selected key on
+//! the right, an address row on top, an editor of a value in the types of regedit and a search
+//! under the selected key at the bottom, which runs in a thread of its own, the rules that write
+//! the selection above the values, and the permissions of the key in a window. Reading and writing
+//! go through acts applied after the frame, with the registry of the window
+//! (`WinWeaver::registry`).
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -80,7 +80,7 @@ impl Search {
 }
 
 use crate::i18n::{tr, trf};
-use crate::{Act, RegistryAct, icons, regedit, style, tree, views, widgets};
+use crate::{Act, RegistryAct, icons, list, regedit, style, tree, views, widgets};
 
 /// The most rules the line above the values names.
 const WRITERS_MAX: usize = 12;
@@ -138,12 +138,18 @@ pub enum EditKind {
     Value,
     NewValue,
     NewKey,
+    /// A new name of the selected value.
+    RenameValue,
+    /// A new name of the selected key.
+    RenameKey,
 }
 
 /// The editor over the tab.
 pub struct Edit {
     pub kind: EditKind,
     pub name: String,
+    /// The name before a rename.
+    pub old: String,
     pub type_name: String,
     pub text: String,
     pub error: Option<String>,
@@ -165,6 +171,8 @@ pub struct RegistryDoc {
     pub edit: Option<Edit>,
     /// The selected key comes into view at the next frame.
     pub reveal: bool,
+    /// The selected value moved with the keys: it comes into view at the next frame.
+    pub follow_value: bool,
     pub search: Search,
     writers: Option<Writers>,
     /// The window of the rights of the selected key.
@@ -192,6 +200,7 @@ impl RegistryDoc {
             value: None,
             edit: None,
             reveal: false,
+            follow_value: false,
             search: Search::default(),
             writers: None,
             rights: None,
@@ -281,14 +290,43 @@ impl RegistryDoc {
                 Edit {
                     kind,
                     name: v.name.clone(),
+                    old: v.name.clone(),
                     type_name: v.data.type_name(),
                     text: v.data.edit_text(),
+                    error: None,
+                }
+            }
+            EditKind::RenameValue => {
+                let Some(v) = self.selected() else {
+                    return;
+                };
+                Edit {
+                    kind,
+                    name: v.name.clone(),
+                    old: v.name.clone(),
+                    type_name: String::new(),
+                    text: String::new(),
+                    error: None,
+                }
+            }
+            EditKind::RenameKey => {
+                let Some((_, name)) = self.path.rsplit_once('\\') else {
+                    self.error = Some(tr("A hive is not renamed.").to_owned());
+                    return;
+                };
+                Edit {
+                    kind,
+                    name: name.to_owned(),
+                    old: name.to_owned(),
+                    type_name: String::new(),
+                    text: String::new(),
                     error: None,
                 }
             }
             EditKind::NewValue | EditKind::NewKey => Edit {
                 kind,
                 name: String::new(),
+                old: String::new(),
                 type_name: type_name.to_owned(),
                 text: String::new(),
                 error: None,
@@ -451,6 +489,9 @@ pub fn registry_view(
         )
         .show(ui, |ui| {
             writers_line(ui, doc, catalog, texts, acts);
+            ui.horizontal(|ui| {
+                crate::polview::link(ui, &doc.path, doc.value.as_deref(), acts);
+            });
             values(ui, doc, acts);
         });
     editor(ui.ctx(), doc, acts);
@@ -551,49 +592,61 @@ fn values(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
     let Some(key) = &doc.key else {
         return;
     };
-    let mut select = None;
-    let mut edit = false;
-    egui::ScrollArea::both().auto_shrink(false).show(ui, |ui| {
-        egui::Grid::new("registry-values")
-            .num_columns(3)
-            .striped(true)
-            .spacing([18.0, 4.0])
-            .show(ui, |ui| {
-                ui.strong(tr("Name"));
-                ui.strong(tr("Type"));
-                ui.strong(tr("Data"));
-                ui.end_row();
-                for v in &key.values {
-                    let on = doc
-                        .value
-                        .as_ref()
-                        .is_some_and(|s| s.eq_ignore_ascii_case(&v.name));
-                    let r = ui.selectable_label(on, value_title(&v.name));
-                    if r.clicked() {
-                        select = Some(v.name.clone());
-                    }
-                    if r.double_clicked() {
-                        select = Some(v.name.clone());
-                        edit = true;
-                    }
-                    ui.monospace(v.data.type_name());
-                    let mut shown = v.data.display();
-                    if shown.chars().count() > 200 {
-                        shown = shown.chars().take(200).collect::<String>() + "...";
-                    }
-                    ui.label(egui::RichText::new(shown).monospace());
-                    ui.end_row();
-                }
-            });
-        if key.values.is_empty() {
-            ui.weak(tr("This key has no values."));
-        }
-    });
-    if let Some(name) = select {
-        doc.value = Some(name);
+    if key.values.is_empty() {
+        ui.weak(tr("This key has no values."));
+        return;
     }
-    if edit {
-        acts.push(Act::Registry(RegistryAct::Edit));
+    let columns = [
+        list::Column::new(tr("Name"), 220.0),
+        list::Column::new(tr("Type"), 140.0),
+        list::Column::new(tr("Data"), 400.0),
+    ];
+    let rows: Vec<list::Row<String>> = key
+        .values
+        .iter()
+        .map(|v| {
+            let mut shown = v.data.display();
+            if shown.chars().count() > 200 {
+                shown = shown.chars().take(200).collect::<String>() + "...";
+            }
+            list::Row {
+                key: v.name.clone(),
+                cells: vec![
+                    list::Cell::new(value_title(&v.name)),
+                    list::Cell::new(v.data.type_name()).muted(),
+                    list::Cell::new(shown),
+                ],
+                button: None,
+            }
+        })
+        .collect();
+    let selected = doc.value.as_ref().and_then(|s| {
+        key.values
+            .iter()
+            .position(|v| v.name.eq_ignore_ascii_case(s))
+    });
+    let scroll = tree::Scroll::wanted(false, doc.follow_value);
+    let id = egui::Id::new("registry-values");
+    let shown = list::show(ui, id, tr("Values"), &columns, &rows, selected, scroll);
+    if shown.scrolled || selected.is_none() {
+        doc.follow_value = false;
+    }
+    if shown.moved {
+        doc.follow_value = true;
+    }
+    for event in shown.events {
+        match event {
+            list::Event::Select(name) => doc.value = Some(name),
+            list::Event::Open(name) => {
+                doc.value = Some(name);
+                acts.push(Act::Registry(RegistryAct::Edit));
+            }
+            list::Event::Delete(name) => {
+                doc.value = Some(name);
+                acts.push(Act::Registry(RegistryAct::AskDelete));
+            }
+            list::Event::Button(_) => {}
+        }
     }
 }
 
@@ -606,7 +659,10 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
         EditKind::Value => tr("Edit the value"),
         EditKind::NewValue => tr("New value"),
         EditKind::NewKey => tr("New key"),
+        EditKind::RenameValue => tr("Rename the value"),
+        EditKind::RenameKey => tr("Rename the key"),
     };
+    let rename = matches!(edit.kind, EditKind::RenameValue | EditKind::RenameKey);
     let mut close = false;
     widgets::Modal::new(title).width(560.0).show(ctx, |ui| {
         ui.weak(&doc.path);
@@ -616,12 +672,15 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
             .spacing([12.0, 8.0])
             .show(ui, |ui| {
                 ui.label(tr("Name"));
-                ui.add_enabled(
+                let name = ui.add_enabled(
                     edit.kind != EditKind::Value,
                     egui::TextEdit::singleline(&mut edit.name).desired_width(380.0),
                 );
+                if rename && ui.input(|i| i.key_pressed(egui::Key::Enter)) && name.lost_focus() {
+                    acts.push(Act::Registry(RegistryAct::Save));
+                }
                 ui.end_row();
-                if edit.kind != EditKind::NewKey {
+                if edit.kind != EditKind::NewKey && !rename {
                     let types = (edit.kind == EditKind::NewValue).then_some(&NEW_TYPES[..]);
                     regedit::type_and_data(
                         ui,

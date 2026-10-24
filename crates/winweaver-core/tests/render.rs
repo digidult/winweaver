@@ -228,7 +228,7 @@ fn an_unknown_edition_or_language_is_an_error() {
     assert!(render::build(&catalog, &p, "t").is_err());
 }
 
-/// A profile named outside ASCII (as one imported from WinKickOff) builds: the header comment
+/// A profile named outside ASCII (as an older profile may be) builds: the header comment
 /// shows `?` for each other character, the file stays ASCII and the embedded profile keeps the
 /// name whole.
 #[test]

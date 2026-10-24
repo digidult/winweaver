@@ -188,8 +188,8 @@ ou avec le préréglage dont il vient : à gauche le profil tel qu'il est mainte
 ## Ouvrir d'autres fichiers
 
 Ouvrir accepte les profils (`.wwprofile`), les fichiers de différences (`.wwdiff`), les fichiers de
-signets (`.wwmarks`), les pages Markdown, les fichiers de réponses générés par WinWeaver ou WinKickOff
-(le profil qu'ils contiennent), les profils WinKickOff et les rapports d'audit (`.json`).
+signets (`.wwmarks`), les pages Markdown, les fichiers de réponses avec un profil intégré (le profil
+qu'ils contiennent), les anciens profils en JSON et les rapports d'audit (`.json`).
 
 Un fichier de registre (`.reg`) s'ouvre dans un onglet à lui, comme le décrit la section sur le registre.
 
@@ -286,6 +286,10 @@ démarrage. Le journal de `logs/` indique avec quoi la fenêtre dessine.
 | `--detailed-log` | Avec `--mcp` : le journal garde chaque requête et réponse en entier, sans mots de passe, clés ni jetons |
 | `--version` | Affiche la version |
 | `--check-catalog` | Charge le catalogue intégré avec ses traductions et affiche leurs problèmes |
+| `--script KIND FILE` | Écrit sans la fenêtre le script autonome d'un profil (`.wwprofile`) ou d'une différence (`.wwdiff`) : `apply`, `revert` (retour aux valeurs par défaut de Windows) ou `audit` ; un script d'application ou de retour reçoit `Undo-Apply.ps1` à côté de lui |
+| `--reg KIND FILE` | Écrit le fichier de registre de l'application (`apply`) ou du retour aux valeurs par défaut (`revert`) d'un profil ou d'une différence |
+| `--only IDS` | Avec `--script` ou `--reg` : seulement ces règles ou groupes, leurs identifiants séparés par des virgules |
+| `--out FOLDER` | Avec `--script` ou `--reg` : le dossier des fichiers, `output` à côté du programme par défaut |
 | `--help` | Affiche la liste des paramètres |
 | `--smoke-window` | Ouvre une petite fenêtre, dessine deux images et affiche avec quoi elles ont été dessinées (aussi avec `--renderer`) : une vérification de l'affichage |
 | `--elevated-apply PLAN DIGEST` | La fenêtre se démarre ainsi elle-même pour appliquer un plan confirmé en administrateur ; pas pour un démarrage à la main |

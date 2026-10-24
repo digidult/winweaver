@@ -1,13 +1,13 @@
 //! The build of `autounattend.xml` from a profile (`docs/spec/03-features.md` section 3).
 //!
-//! The runtime templates of `data/templates/` (carried over from the predecessor as data) hold the
-//! fixed parts; this module fills their `{{slot}}`s with the passes, the blocks of the rules in
-//! effect and the profile data, and embeds the scripts and the profile into the `Extensions`.
-//! Everything the generator itself writes is ASCII.
+//! The runtime templates of `data/templates/` hold the fixed parts; this module fills their
+//! `{{slot}}`s with the passes, the blocks of the rules in effect and the profile data, and embeds
+//! the scripts and the profile into the `Extensions`. Everything the generator itself writes is
+//! ASCII.
 //!
-//! The folder: `text` (the escapes), `params` (the placeholders and the parameter values),
-//! `ps` (the script lines of the actions), `xml` (the pieces of the passes), `languages`, `name`
-//! (the computer name template), `accounts` and `answer` (the build itself).
+//! The folder: `text` (the escapes), `params` (the placeholders and the parameter values), `ps`
+//! (the script lines of the actions), `xml` (the pieces of the passes), `languages`, `name` (the
+//! computer name template), `accounts` and `answer` (the build itself).
 
 use crate::catalog::Rule;
 

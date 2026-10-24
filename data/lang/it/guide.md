@@ -177,8 +177,8 @@ preimpostazione da cui viene: a sinistra il profilo com'è ora, a destra com'è 
 ## Apertura di altri file
 
 Apri accetta profili (`.wwprofile`), confronti (`.wwdiff`), file di segnalibri (`.wwmarks`), pagine
-Markdown, file di risposte generati da WinWeaver o WinKickOff (il profilo che incorporano), profili di
-WinKickOff e report di controllo (`.json`).
+Markdown, file di risposte con un profilo incorporato (il profilo che incorporano), vecchi profili in
+JSON e report di controllo (`.json`).
 
 Un file di registro (`.reg`) si apre in una scheda propria, come descrive la sezione sul registro.
 
@@ -272,6 +272,10 @@ in `logs/` indica con che cosa disegna la finestra.
 | `--detailed-log` | Con `--mcp`: il log conserva ogni richiesta e risposta per intero, senza password, chiavi e token |
 | `--version` | Stampa la versione |
 | `--check-catalog` | Carica il catalogo integrato con le sue traduzioni e stampa i loro problemi |
+| `--script KIND FILE` | Scrive senza la finestra lo script autonomo di un profilo (`.wwprofile`) o di una differenza (`.wwdiff`): `apply`, `revert` (ritorno ai valori predefiniti di Windows) o `audit`; accanto a uno script di applicazione o di ritorno va `Undo-Apply.ps1` |
+| `--reg KIND FILE` | Scrive il file di registro dell'applicazione (`apply`) o del ritorno ai valori predefiniti (`revert`) di un profilo o di una differenza |
+| `--only IDS` | Con `--script` o `--reg`: solo queste regole o gruppi, i loro id separati da virgole |
+| `--out FOLDER` | Con `--script` o `--reg`: la cartella dei file, per impostazione predefinita `output` accanto al programma |
 | `--help` | Stampa l'elenco dei parametri |
 | `--smoke-window` | Apre una piccola finestra, disegna due fotogrammi e stampa con che cosa sono stati disegnati (anche con `--renderer`): un controllo della grafica |
 | `--elevated-apply PLAN DIGEST` | La finestra avvia così se stessa per applicare un piano confermato come amministratore; non va avviato a mano |

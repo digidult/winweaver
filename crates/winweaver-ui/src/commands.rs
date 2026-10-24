@@ -6,8 +6,9 @@ use ww::commands::{cmd, cmd_if, keyed, when};
 
 use crate::i18n::tr;
 use crate::{
-    Act, CatalogAct, CatalogRef, DiffAct, Doc, FileAct, ImportAct, McpAct, ProfileAct, RegFileAct,
-    RegistryAct, Shell, ShellAct, ShellDoc, UsersAct, WinWeaver, icons, regfileview, regview,
+    Act, CatalogAct, CatalogRef, DiffAct, Doc, FileAct, ImportAct, McpAct, PolAct, ProfileAct,
+    RegFileAct, RegistryAct, ScriptKind, Shell, ShellAct, ShellDoc, UsersAct, WinWeaver, icons,
+    regfileview, regview,
 };
 
 /// The keys of the commands of WinWeaver beyond the ones of WW, each named once.
@@ -23,6 +24,7 @@ pub mod keys {
     pub const FOLD: Keys = Keys::new("Ctrl+D", Modifiers::CTRL, Key::D);
     pub const BACK: Keys = Keys::new("Alt+Left", Modifiers::ALT, Key::ArrowLeft);
     pub const FORWARD: Keys = Keys::new("Alt+Right", Modifiers::ALT, Key::ArrowRight);
+    pub const RENAME: Keys = Keys::new("F2", Modifiers::NONE, Key::F2);
 }
 
 /// An item of the command bar of WinWeaver.
@@ -35,14 +37,18 @@ pub enum Menu {
     CompareProfile,
     Catalogs,
     CompareCatalog,
+    RegFileApply,
+    Pol,
 }
 
 impl Menu {
-    const ALL: [Menu; 4] = [
+    const ALL: [Menu; 6] = [
         Menu::ThisPc,
         Menu::CompareProfile,
         Menu::Catalogs,
         Menu::CompareCatalog,
+        Menu::RegFileApply,
+        Menu::Pol,
     ];
 
     /// The menu by the number of its button.
@@ -57,6 +63,8 @@ impl Menu {
             Menu::CompareProfile => (icons::COMPARE, tr("Compare"), 220.0),
             Menu::Catalogs => (icons::PACKAGE, tr("Catalogs"), 300.0),
             Menu::CompareCatalog => (icons::COMPARE, tr("Compare"), 300.0),
+            Menu::RegFileApply => (icons::THIS_PC, tr("Apply to this PC"), 280.0),
+            Menu::Pol => (icons::SCRIPT, tr("Group Policy"), 280.0),
         };
         ww::commands::menu(icon, label, width, self as usize)
     }
@@ -80,6 +88,17 @@ fn save_as() -> Item {
 
 impl WinWeaver {
     /// The command bar of the active tab, in its order.
+    /// Whether the diff in front changes a rule a PC can apply.
+    fn diff_applicable(&self, shell: &Shell<WinWeaver>) -> bool {
+        match shell.docs.get(shell.active) {
+            Some(Doc::Diff(d)) => {
+                let ids: Vec<String> = d.diff.rules.keys().cloned().collect();
+                winweaver_core::export::applicable(&self.catalog, &ids)
+            }
+            _ => false,
+        }
+    }
+
     pub(crate) fn tab_commands(&self, shell: &Shell<WinWeaver>) -> Vec<Item> {
         match shell.docs.get(shell.active) {
             Some(Doc::Profile(_)) => vec![
@@ -94,6 +113,7 @@ impl WinWeaver {
                 Menu::CompareProfile.item(),
                 Item::Separator,
                 Menu::Catalogs.item(),
+                Menu::Pol.item(),
             ],
             Some(Doc::Diff(_)) => vec![
                 open(),
@@ -101,6 +121,19 @@ impl WinWeaver {
                 keyed(icons::SAVE, tr("Save as"), &keys::SAVE_AS, DiffAct::SaveAs),
                 Item::Separator,
                 cmd(icons::CHECK, tr("Apply"), DiffAct::Apply),
+                Item::Separator,
+                when(
+                    icons::SCRIPT,
+                    tr("Script"),
+                    self.diff_applicable(shell),
+                    DiffAct::SaveScript(ScriptKind::Apply),
+                ),
+                when(
+                    icons::REGISTRY,
+                    tr("Registry file"),
+                    self.diff_applicable(shell),
+                    DiffAct::SaveReg(false),
+                ),
             ],
             Some(Doc::Markdown(_)) | Some(Doc::Bookmarks(_)) => vec![open()],
             Some(Doc::Mcp(_)) => {
@@ -130,6 +163,7 @@ impl WinWeaver {
                     tr("Edit"),
                     CatalogAct::Edit(CatalogRef::Tab(shell.active)),
                 ),
+                Menu::Pol.item(),
             ],
             Some(Doc::Catalog(c)) => vec![
                 open(),
@@ -148,6 +182,7 @@ impl WinWeaver {
                     tr("Edit"),
                     CatalogAct::Edit(CatalogRef::Import(c.id.clone())),
                 ),
+                Menu::Pol.item(),
             ],
             Some(Doc::CatalogEdit(_)) => vec![save()],
             Some(Doc::RegFile(d)) => {
@@ -185,6 +220,13 @@ impl WinWeaver {
                         tr("Open in the registry"),
                         key.map(|(_, path)| RegistryAct::Open(path, d.selected_value()).into()),
                     ),
+                    Menu::RegFileApply.item(),
+                    Item::Separator,
+                    if shell.settings.extra.regfile_tree {
+                        cmd(icons::PAGE, tr("List"), RegFileAct::Outline(false))
+                    } else {
+                        cmd(icons::FOLDER, tr("Tree"), RegFileAct::Outline(true))
+                    },
                 ]
             }
             Some(Doc::Users(d)) => {
@@ -260,12 +302,35 @@ impl WinWeaver {
                     d.selected().is_some(),
                     RegistryAct::Edit,
                 ),
+                keyed(
+                    icons::RENAME,
+                    tr("Rename"),
+                    &keys::RENAME,
+                    RegistryAct::Rename,
+                ),
                 cmd(icons::DELETE, tr("Delete"), RegistryAct::AskDelete),
                 Item::Separator,
                 cmd(icons::STAR, tr("Bookmark"), RegistryAct::Bookmark),
                 cmd(icons::FIND, tr("Find"), RegistryAct::Search),
                 cmd(icons::LOCKED, tr("Permissions"), RegistryAct::Rights),
+                Menu::Pol.item(),
             ],
+            Some(Doc::Pol(d)) => {
+                let key = d.sel.as_ref().map(|k| d.pol.full_key(k));
+                let known = d.pol.scope.hive().is_some();
+                vec![
+                    open(),
+                    cmd(icons::REFRESH, tr("Read again"), PolAct::Refresh),
+                    Item::Separator,
+                    cmd_if(
+                        icons::REGISTRY,
+                        tr("Open in the registry"),
+                        key.filter(|_| known)
+                            .map(|k| RegistryAct::Open(k, None).into()),
+                    ),
+                    Menu::Pol.item(),
+                ]
+            }
             Some(Doc::Shell(ShellDoc::Settings(_))) => Vec::new(),
             None => vec![new_profile(), open()],
         }

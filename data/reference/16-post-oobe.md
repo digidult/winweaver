@@ -1,6 +1,7 @@
 # 16. Scheduled task and Post-OOBE.ps1: cleanup after OOBE
 
-Section 12 of `Setup-System.ps1` creates the task; the script is embedded in the XML as
+`Setup-System.ps1` creates the task when the phase post-oobe has rules or an account needs its texts set
+(`data/templates/section-post-oobe-task.ps1`); the script is embedded in the XML as
 `C:\ProgramData\Unattend\Scripts\Post-OOBE.ps1`.
 
 ## Why a separate stage
@@ -43,21 +44,24 @@ Log: `C:\ProgramData\Unattend\Logs\Post-OOBE.log`.
    The limit is 5 hours; if the state is not reached, `exit 0` and a retry at the next boot (the task remains).
    Usually the first boot after specialize is OOBE itself; the state becomes COMPLETE a
    minute after the sign-in screen appears.
-2. A 2-minute pause after COMPLETE: so that the user's first sign-in (if it is already happening) does not
+2. The texts of the accounts outside ASCII: `Set-AccountText` sets the display names and descriptions that the
+   answer file cannot hold (section 03), when the profile has such texts.
+3. A 2-minute pause after COMPLETE: so that the user's first sign-in (if it is already happening) does not
    compete for the disk and the registry.
-3. Reading `C:\ProgramData\Unattend\config.json`: account names and the `PasswordNeverExpires` flag.
-   If the file is unreadable, the names `Admin` and `User` are used.
-4. For each account: `Set-LocalUser -PasswordNeverExpires $true` (if the flag is on).
-   A missing account is logged and skipped.
-5. Built-in accounts by SID: all local users with RID 500 (Administrator) and 501 (Guest)
-   are disabled if they are enabled. The lookup is by SID rather than by name, because on the Ukrainian image they
-   are named «Адміністратор» (Administrator) and «Гість» (Guest).
-6. Carrying over specialize errors: if `C:\Windows\Temp\ua.err` exists (it is written by the command wrappers of
-   Order 1 and 3, section 02), each line goes to the log marked `SPECIALIZE ERROR`, and the file is deleted.
-   This is the only way to learn that the machine script was not extracted or crashed at startup.
-7. Removing copies of the answer file: `C:\Windows\Panther\unattend.xml`, `C:\Windows\Panther\unattend-original.xml`,
-   `C:\Windows\Panther\Unattend\unattend.xml`, `C:\Windows\System32\Sysprep\unattend.xml`,
-   `C:\unattend.xml`, `C:\autounattend.xml`. Existing ones are deleted, the others are skipped.
+4. The rules of the phase post-oobe (steps 4 to 7, each on by default). For each account of the list `$accounts`
+   (the accounts of the profile, section 04): `Set-LocalUser -PasswordNeverExpires $true`
+   (`post-oobe.password-never-expires`). A missing account is logged and skipped.
+5. Built-in accounts by SID (`post-oobe.disable-builtin-accounts`): all local users with RID 500 (Administrator)
+   and 501 (Guest) are disabled if they are enabled. The lookup is by SID rather than by name, because on the
+   Ukrainian image they are named «Адміністратор» (Administrator) and «Гість» (Guest).
+6. Carrying over specialize errors (`post-oobe.collect-specialize-errors`): if `C:\Windows\Temp\ua.err` exists (it
+   is written by the command wrappers of Order 1 and 3, section 02), each line goes to the log marked
+   `SPECIALIZE ERROR`, and the file is deleted. This is the only way to learn that the machine script was not
+   extracted or crashed at startup.
+7. Removing copies of the answer file (`post-oobe.delete-answer-file-copies`): `C:\Windows\Panther\unattend.xml`,
+   `C:\Windows\Panther\unattend-original.xml`, `C:\Windows\Panther\Unattend\unattend.xml`,
+   `C:\Windows\System32\Sysprep\unattend.xml`, `C:\unattend.xml`, `C:\autounattend.xml`. Existing ones are
+   deleted, the others are skipped.
 8. Removing the task: `schtasks.exe /Delete /TN Unattend-PostOOBE /F`.
 9. `exit 0`.
 
@@ -66,8 +70,8 @@ Log: `C:\ProgramData\Unattend\Logs\Post-OOBE.log`.
   the built-in accounts are disabled, and the task has disappeared from Task Scheduler.
 - Cross-links:
   - Windows 11 24H2 keeps a full copy of the file in `unattend-original.xml`, including passwords in plain
-    text if they were set. The passwords are empty now, but the constructor may set them in the future:
-    removal is mandatory.
+    text if they were set. The starter accounts have empty passwords, but a profile may give passwords (the build
+    then warns that the answer file holds them in plain text): removal is mandatory.
   - The scripts in `C:\ProgramData\Unattend` are not removed: they contain no secrets and serve as
     documentation of what was applied.
   - If an image capture with Sysprep is planned after installation, the absence of `unattend.xml` in Panther

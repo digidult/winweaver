@@ -1,6 +1,6 @@
 # 05. Printing
 
-Section 1 of `Setup-System.ps1`. Customer requirement: printing must work right after installation.
+Rules of `Setup-System.ps1` (specialize). Customer requirement: printing must work right after installation.
 With the print spooler on manual start, printing does not work until the service is started
 manually.
 
@@ -46,9 +46,9 @@ manually.
   - For networks with a print server or a shared printer on another PC of the workgroup: on the first
     connection User will see a prompt for administrator credentials; with Admin's empty password the prompt
     will fail (section 03). Solution: Admin connects the printer under their own account once
-    for each user, or the users project assigns passwords.
-  - A future constructor parameter: a list of trusted print servers
-    (`PackagePointAndPrintServerList`) for which installation is allowed for everyone.
+    for each user, or a users file (`.wwusers`) assigns passwords.
+  - Not written: a list of trusted print servers (`PackagePointAndPrintServerList`), for which installation would
+    be allowed for everyone.
 - Version differences: the policy applies to Windows 10 1507+ and Windows 11 after KB5005652;
   on older builds the value is ignored.
 - Verification: `Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Printers\PointAndPrint'`.

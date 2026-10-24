@@ -12,11 +12,23 @@ use crate::diffview::DiffDoc;
 use crate::i18n::tr;
 use crate::marksview::MarksDoc;
 use crate::mcpview::McpDoc;
+use crate::polview::PolDoc;
 use crate::regfileview::RegFileDoc;
 use crate::regview::RegistryDoc;
 use crate::usersview::UsersDoc;
 use crate::{MdDoc, ProfileDoc, Search, Tab, icons};
 use winweaver_core::{diff, profile};
+
+/// The kinds of the drafts beside the ones of profiles (a profile is its JSON as it is).
+pub const REGFILE_DRAFT: &str = "regfile";
+pub const DIFF_DRAFT: &str = "diff";
+pub const CATALOG_DRAFT: &str = "catalog-edit";
+pub const USERS_DRAFT: &str = "users";
+
+/// The document of a draft: its kind and its text.
+fn draft_json(kind: &str, text: String) -> serde_json::Value {
+    serde_json::json!({ "kind": kind, "text": text })
+}
 
 /// A draft is written this long after the last change.
 const DRAFT_DELAY: std::time::Duration = std::time::Duration::from_secs(2);
@@ -36,6 +48,7 @@ pub enum DocKind {
     CatalogEdit,
     RegFile,
     Users,
+    Pol,
 }
 
 impl DocKind {
@@ -53,6 +66,7 @@ impl DocKind {
             DocKind::CatalogEdit => icons::EDIT,
             DocKind::RegFile => icons::PAGE,
             DocKind::Users => icons::PEOPLE,
+            DocKind::Pol => icons::SCRIPT,
         }
     }
 
@@ -67,6 +81,7 @@ impl DocKind {
             DocKind::Catalog => "Search policies (Ctrl+F)",
             DocKind::RegFile => "Search the keys, values and comments (Ctrl+F)",
             DocKind::Users => "Search the accounts (Ctrl+F)",
+            DocKind::Pol => "Search the keys, values and data (Ctrl+F)",
             DocKind::Settings | DocKind::Theme | DocKind::Registry | DocKind::CatalogEdit => "",
         }
     }
@@ -134,6 +149,8 @@ pub enum Doc {
     RegFile(Box<RegFileDoc>),
     /// A users file (`.wwusers`).
     Users(Box<UsersDoc>),
+    /// A Group Policy file (`.pol`).
+    Pol(Box<PolDoc>),
     /// A document of the window itself: the settings, the editor of a theme.
     Shell(ShellDoc),
 }
@@ -151,6 +168,7 @@ impl Doc {
             Doc::CatalogEdit(_) => DocKind::CatalogEdit,
             Doc::RegFile(_) => DocKind::RegFile,
             Doc::Users(_) => DocKind::Users,
+            Doc::Pol(_) => DocKind::Pol,
             Doc::Shell(ShellDoc::Settings(_)) => DocKind::Settings,
             Doc::Shell(ShellDoc::Theme(_)) => DocKind::Theme,
         }
@@ -169,6 +187,7 @@ impl Doc {
             Doc::CatalogEdit(d) => &**d,
             Doc::RegFile(d) => &**d,
             Doc::Users(d) => &**d,
+            Doc::Pol(d) => &**d,
             Doc::Shell(d) => d,
         }
     }
@@ -185,6 +204,7 @@ impl Doc {
             Doc::CatalogEdit(d) => &mut **d,
             Doc::RegFile(d) => &mut **d,
             Doc::Users(d) => &mut **d,
+            Doc::Pol(d) => &mut **d,
             Doc::Shell(d) => d,
         }
     }
@@ -243,13 +263,60 @@ impl Tab for Doc {
     fn draft_key(&self) -> Option<String> {
         match self {
             Doc::Profile(d) => Some(d.draft_key.clone()),
+            Doc::RegFile(d) => Some(d.draft.key.clone()),
+            Doc::Diff(d) => Some(d.draft.key.clone()),
+            Doc::CatalogEdit(d) => Some(d.draft.key.clone()),
+            Doc::Users(d) => Some(d.draft.key.clone()),
+            Doc::Shell(d) => d.draft_key(),
             _ => None,
         }
     }
 
-    /// The draft of a modified profile: two seconds after the last change, or at once when the
-    /// window closes.
+    /// The draft of a document with unsaved changes: a profile two seconds after its last change,
+    /// the others at most every two seconds when they changed, all at once when the window
+    /// closes. A users file keeps the passwords of its last save, encrypted.
     fn draft_due(&mut self, all: bool) -> Option<Draft> {
+        let other = match self {
+            Doc::RegFile(d) => {
+                if d.draft.ready(d.dirty, all) {
+                    let document = draft_json(REGFILE_DRAFT, d.file.to_text());
+                    d.draft.offer(Some(d.path.clone()), document)
+                } else {
+                    None
+                }
+            }
+            Doc::Diff(d) => {
+                if d.draft.ready(d.dirty, all) {
+                    let document = draft_json(DIFF_DRAFT, d.diff.to_json());
+                    d.draft.offer(d.path.clone(), document)
+                } else {
+                    None
+                }
+            }
+            Doc::CatalogEdit(d) => {
+                if d.draft.ready(d.dirty, all) {
+                    let text = serde_json::to_string(&d.file).unwrap_or_default();
+                    let mut document = draft_json(CATALOG_DRAFT, text);
+                    document["import"] = serde_json::Value::Bool(d.import);
+                    d.draft.offer(Some(d.path.clone()), document)
+                } else {
+                    None
+                }
+            }
+            Doc::Users(d) => {
+                if d.draft.ready(d.dirty, all) {
+                    let document = draft_json(USERS_DRAFT, d.file.to_json());
+                    d.draft.offer(d.path.clone(), document)
+                } else {
+                    None
+                }
+            }
+            Doc::Shell(d) => d.draft_due(all),
+            _ => None,
+        };
+        if other.is_some() {
+            return other;
+        }
         let Doc::Profile(d) = self else {
             return None;
         };

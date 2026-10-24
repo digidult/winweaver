@@ -15,6 +15,78 @@ pub(crate) fn show_single(
 impl WinWeaver {
     /// Opens a draft of the last session: the profile into the tab of its file when one is
     /// open, else into a new tab; `false` for a document that is not a profile.
+    /// A draft of a registry file, a diff, a catalog in its editor or a users file: into the tab
+    /// of its file when it is open, else a new tab, with its changes unsaved.
+    pub(crate) fn restore_other_draft(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        kind: &str,
+        key: String,
+        path: Option<PathBuf>,
+        document: &serde_json::Value,
+    ) -> bool {
+        let text = document
+            .get("text")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default();
+        let draft = ww::DraftState::with_key(key);
+        let same_path = |d: &Doc| path.is_some() && d.path() == path.as_deref();
+        let restored = match kind {
+            doc::REGFILE_DRAFT => {
+                let (Ok(file), Some(path)) = (RegFile::parse(text), path.clone()) else {
+                    return false;
+                };
+                let mut d = regfileview::RegFileDoc::new(file, path);
+                d.dirty = true;
+                d.draft = draft;
+                Doc::RegFile(Box::new(d))
+            }
+            doc::DIFF_DRAFT => {
+                let Ok(diff) = Diff::parse(text, "draft") else {
+                    return false;
+                };
+                let mut d = DiffDoc::new(diff, path.clone().filter(|p| p.exists()));
+                d.dirty = true;
+                d.draft = draft;
+                Doc::Diff(Box::new(d))
+            }
+            doc::CATALOG_DRAFT => {
+                let Ok(file) = serde_json::from_str::<CatalogFile>(text) else {
+                    return false;
+                };
+                if file.check().is_err() {
+                    return false;
+                }
+                let Some(path) = path.clone() else {
+                    return false;
+                };
+                let import = document
+                    .get("import")
+                    .and_then(serde_json::Value::as_bool)
+                    .unwrap_or(false);
+                let mut d = cataledit::EditorDoc::new(file, path, import);
+                d.dirty = true;
+                d.draft = draft;
+                Doc::CatalogEdit(Box::new(d))
+            }
+            doc::USERS_DRAFT => {
+                let Ok(file) = UsersFile::parse(text, "draft") else {
+                    return false;
+                };
+                let mut d = usersview::UsersDoc::new(file, path.clone().filter(|p| p.exists()));
+                d.dirty = true;
+                d.draft = draft;
+                Doc::Users(Box::new(d))
+            }
+            _ => return false,
+        };
+        match shell.docs.iter().position(same_path) {
+            Some(i) => shell.docs[i] = restored,
+            None => shell.docs.push(restored),
+        }
+        true
+    }
+
     pub(crate) fn restore_profile_draft(
         &self,
         shell: &mut Shell<WinWeaver>,

@@ -1,5 +1,5 @@
 {
-  "comment": ["Logging for incident investigation. Section 7 of the v0.2 machine script."],
+  "comment": ["Logging for incident investigation."],
   "rules": [
     {
       "id": "logging.eventlog-sizes",

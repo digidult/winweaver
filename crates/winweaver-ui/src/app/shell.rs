@@ -114,7 +114,14 @@ impl App for WinWeaver {
         path: Option<PathBuf>,
         document: serde_json::Value,
     ) -> bool {
-        self.restore_profile_draft(shell, key, path, document)
+        let kind = document
+            .get("kind")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned);
+        match kind {
+            Some(kind) => self.restore_other_draft(shell, &kind, key, path, &document),
+            None => self.restore_profile_draft(shell, key, path, document),
+        }
     }
 
     fn open_link(&mut self, shell: &mut Shell<Self>, link: &str) {
@@ -141,6 +148,7 @@ impl App for WinWeaver {
             Some(DocKind::CatalogEdit) => self.draw_catalog_editor(shell, ui, acts),
             Some(DocKind::RegFile) => self.draw_reg_file(shell, ui, acts),
             Some(DocKind::Users) => self.draw_users(shell, ui, acts),
+            Some(DocKind::Pol) => self.draw_pol(shell, ui, acts),
             // The settings and the editor of a theme are drawn by the window.
             Some(DocKind::Settings | DocKind::Theme) | None => {}
         }
@@ -319,7 +327,7 @@ impl App for WinWeaver {
 
     /// The keys of WinWeaver beyond the ones of the window; Escape cancels a plan waiting for
     /// its confirmation.
-    fn shortcuts(&self, _shell: &Shell<Self>, input: &mut egui::InputState) -> Vec<Act> {
+    fn shortcuts(&self, shell: &Shell<Self>, input: &mut egui::InputState) -> Vec<Act> {
         let mut acts = Vec::new();
         let keyed: [(&keys::Keys, Act); 7] = [
             (&keys::FOLD, Act::Profile(ProfileAct::Fold)),
@@ -335,6 +343,12 @@ impl App for WinWeaver {
                 acts.push(act);
             }
         }
+        // F2 renames in the registry tab while no field takes the keys.
+        if matches!(shell.active_doc(), Some(Doc::Registry(d)) if d.edit.is_none())
+            && input.consume_shortcut(&keys::RENAME.shortcut())
+        {
+            acts.push(Act::Registry(RegistryAct::Rename));
+        }
         if self.confirm.is_some() && input.consume_key(Modifiers::NONE, Key::Escape) {
             acts.push(Act::Pc(PcAct::Cancel));
         }
@@ -348,6 +362,7 @@ impl App for WinWeaver {
             Act::Settings(a) => self.apply_settings(a),
             Act::Pc(a) => self.apply_pc(shell, a),
             Act::Users(a) => self.apply_users(shell, a),
+            Act::Pol(a) => self.apply_pol(shell, a),
             Act::Diff(a) => self.apply_diff(shell, a),
             Act::Marks(a) => self.apply_marks(shell, a),
             Act::Mcp(a) => self.apply_mcp(shell, a),

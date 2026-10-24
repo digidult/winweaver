@@ -1,6 +1,6 @@
 {
   "comment": [
-    "Removable media, script files, Microsoft Edge. Section 6 of the v0.2 machine script.",
+    "Removable media, script files, Microsoft Edge.",
     "The Edge rules belong to the group browsers.edge (the \"Browsers\" section)."
   ],
   "rules": [

@@ -1,4 +1,4 @@
-//! Tests of the stand-alone scripts against lines of the predecessor's scripts.
+//! Tests of the stand-alone scripts against the lines they must hold.
 
 use std::path::Path;
 

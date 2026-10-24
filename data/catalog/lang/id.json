@@ -2,7 +2,7 @@
   "_language": "Bahasa Indonesia",
   "_disabled": "dinonaktifkan",
   "_comment": [
-    "Indonesian texts of the rule catalog (rules/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
+    "Indonesian texts of the rule catalog (data/catalog/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
     "_disabled: the word after the title of the Disabled rule of an imported policy (<title>: <word>).",
     "Fields of a rule: title, summary, effect, risk, versions, verify, rollback (strings), tags (a list of strings),",
     "params {\"<name>\": text}, values {\"<name>\": {\"<value>\": text}}; any other field is an error.",
@@ -155,7 +155,7 @@
   "install.skip-auto-activation": {
     "title": "Tanpa upaya aktivasi otomatis",
     "summary": "Windows tidak mencoba aktivasi sendiri sampai kunci diketik atau aktivasi dimulai secara manual: nilai Manual yang ditulis oleh pengaturan unattend SkipAutoActivation.",
-    "effect": "Dua belas edisi yang kunci generiknya di WinKickOff adalah kunci klien KMS tetap tidak teraktivasi tanpa host KMS, dan upaya otomatis gagal berulang kali dengan kesalahan aktivasi di desktop; dengan aturan ini Windows menunggu kunci lisensi. Pro dan Education teraktivasi dengan lisensi digital dan tidak memerlukan aturan ini.",
+    "effect": "Dua belas edisi yang kunci generiknya di WinWeaver adalah kunci klien KMS tetap tidak teraktivasi tanpa host KMS, dan upaya otomatis gagal berulang kali dengan kesalahan aktivasi di desktop; dengan aturan ini Windows menunggu kunci lisensi. Pro dan Education teraktivasi dengan lisensi digital dan tidak memerlukan aturan ini.",
     "versions": "Windows 8 dan yang lebih baru. Uji penerimaan di VM belum dilakukan: nilai harus sudah ada sebelum upaya pertama, yang terjadi setelah OOBE.",
     "verify": "Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SoftwareProtectionPlatform\\Activation' -Name Manual",
     "rollback": "Atur Manual ke 0 (default Windows).",
@@ -1978,7 +1978,7 @@
   },
   "apps.maps-broker-off": {
     "title": "Layanan unduhan peta offline dinonaktifkan",
-    "summary": "MapsBroker melayani aplikasi Peta; tanpa aplikasi tersebut layanan ini tidak diperlukan. Di file v0.2 layanan ini dinonaktifkan dengan syarat Xbox; di sini dikaitkan dengan penghapusan Peta.",
+    "summary": "MapsBroker melayani aplikasi Peta; tanpa aplikasi tersebut layanan ini tidak diperlukan. Aturan ini dikaitkan dengan penghapusan Peta.",
     "effect": "Satu layanan otomatis lebih sedikit.",
     "rollback": "Set-Service MapsBroker -StartupType Automatic",
     "tags": [

@@ -237,8 +237,13 @@ impl WinWeaver {
         acts: &mut Vec<Act>,
     ) {
         let texts = texts_for(&self.texts, &i18n::current());
+        let options = regfileview::Options {
+            tree: shell.settings.extra.regfile_tree,
+            writers_open: shell.settings.extra.writers_open,
+        };
         if let Some(Doc::RegFile(doc)) = shell.docs.get_mut(shell.active) {
-            regfileview::regfile_view(ui, doc, &self.catalog, texts, &self.imports, acts);
+            let (catalog, imports) = (&self.catalog, &self.imports);
+            regfileview::regfile_view(ui, doc, catalog, texts, imports, &options, acts);
         }
     }
 

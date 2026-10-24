@@ -38,7 +38,7 @@ pub use eframe;
 pub use rfd;
 
 pub use commands::{Command, Item, MenuButton};
-pub use doc::{Document, Draft, Scrolled, Search, matches_words, remember_search};
+pub use doc::{Document, Draft, DraftState, Scrolled, Search, matches_words, remember_search};
 pub use question::Question;
 pub use run::{run, smoke_window};
 pub use settings::{Extra, PageWidth, Settings, ThemeChoice, WindowPlace};

@@ -2,9 +2,18 @@
 
 use super::*;
 
-/// The row of an entry in the outline.
-pub(crate) fn outline_row(lines: &[Line], item: &Item, index: usize) -> tree::Row<Option<usize>> {
-    let (title, right, icon, muted) = match item {
+/// A row of the outline: the whole file, an entry of the file, or a part of a path no key of the
+/// file names (a folder of the tree).
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum Node {
+    File,
+    Item(usize),
+    Folder(String),
+}
+
+/// The title, the count, the icon and whether an entry is shown muted.
+fn row_parts(lines: &[Line], item: &Item) -> (String, String, &'static str, bool) {
+    match item {
         Item::Key { line, lines: range } => {
             let (path, delete) = match &lines[*line] {
                 Line::Key { path, delete } => (short_path(path), *delete),
@@ -34,9 +43,14 @@ pub(crate) fn outline_row(lines: &[Line], item: &Item, index: usize) -> tree::Ro
             };
             (first.unwrap_or_default(), right, ";", true)
         }
-    };
+    }
+}
+
+/// The row of an entry in the list of the outline.
+pub(crate) fn outline_row(lines: &[Line], item: &Item, index: usize) -> tree::Row<Node> {
+    let (title, right, icon, muted) = row_parts(lines, item);
     tree::Row {
-        key: Some(index),
+        key: Node::Item(index),
         depth: 0,
         title,
         right,
@@ -48,12 +62,121 @@ pub(crate) fn outline_row(lines: &[Line], item: &Item, index: usize) -> tree::Ro
     }
 }
 
-/// The outline: the whole file first, then the entries the search finds.
+/// The path of the key of an entry, in lower case, for the folded keys of the tree.
+fn item_path(lines: &[Line], item: &Item) -> Option<String> {
+    match item {
+        Item::Key { line, .. } => match &lines[*line] {
+            Line::Key { path, .. } => Some(path.to_lowercase()),
+            _ => None,
+        },
+        Item::Notes { .. } => None,
+    }
+}
+
+/// The keys of the file as a tree of their paths, as regedit shows them: a part of a path no key
+/// of the file names is a folder; the comments outside the keys follow at the end.
+pub(crate) fn tree_rows(
+    lines: &[Line],
+    items: &[Item],
+    closed: &HashSet<String>,
+) -> Vec<tree::Row<Node>> {
+    struct Part {
+        name: String,
+        path: String,
+        item: Option<usize>,
+        children: Vec<usize>,
+    }
+    let mut parts: Vec<Part> = Vec::new();
+    let mut roots: Vec<usize> = Vec::new();
+    let mut index: HashMap<String, usize> = HashMap::new();
+    for (i, item) in items.iter().enumerate() {
+        let Item::Key { line, .. } = item else {
+            continue;
+        };
+        let Line::Key { path, .. } = &lines[*line] else {
+            continue;
+        };
+        let mut parent: Option<usize> = None;
+        let mut current = String::new();
+        for name in path.split('\\').filter(|p| !p.is_empty()) {
+            if !current.is_empty() {
+                current.push('\\');
+            }
+            current.push_str(name);
+            let known = index.get(&current.to_lowercase()).copied();
+            let n = match known {
+                Some(n) => n,
+                None => {
+                    parts.push(Part {
+                        name: name.to_owned(),
+                        path: current.clone(),
+                        item: None,
+                        children: Vec::new(),
+                    });
+                    let n = parts.len() - 1;
+                    index.insert(current.to_lowercase(), n);
+                    match parent {
+                        Some(p) => parts[p].children.push(n),
+                        None => roots.push(n),
+                    }
+                    n
+                }
+            };
+            parent = Some(n);
+        }
+        if let Some(n) = parent
+            && parts[n].item.is_none()
+        {
+            parts[n].item = Some(i);
+        }
+    }
+    let mut rows = Vec::new();
+    let mut stack: Vec<(usize, usize)> = roots.iter().rev().map(|&n| (n, 0)).collect();
+    while let Some((n, depth)) = stack.pop() {
+        let part = &parts[n];
+        let open = !closed.contains(&part.path.to_lowercase());
+        let (right, icon, muted) = match part.item {
+            Some(i) => {
+                let (_, right, icon, muted) = row_parts(lines, &items[i]);
+                (right, icon, muted)
+            }
+            None => (String::new(), icons::FOLDER, true),
+        };
+        rows.push(tree::Row {
+            key: part
+                .item
+                .map_or(Node::Folder(part.path.clone()), Node::Item),
+            depth,
+            title: part.name.clone(),
+            right,
+            check: tree::Check::None,
+            open: (!part.children.is_empty()).then_some(open),
+            muted,
+            icon: Some(icon),
+            switch: None,
+        });
+        if open {
+            for &c in part.children.iter().rev() {
+                stack.push((c, depth + 1));
+            }
+        }
+    }
+    for (i, item) in items.iter().enumerate() {
+        if matches!(item, Item::Notes { .. }) {
+            rows.push(outline_row(lines, item, i));
+        }
+    }
+    rows
+}
+
+/// The outline: the whole file first, then its keys as a tree (`as_tree`) or the entries as a
+/// list in the order of the file; a search lists the entries it finds.
 pub(crate) fn outline(
     ui: &mut egui::Ui,
     doc: &mut RegFileDoc,
     items: &[Item],
     selected: Option<usize>,
+    as_tree: bool,
 ) {
     let lines = &doc.file.lines;
     let words = doc.search.words();
@@ -62,7 +185,7 @@ pub(crate) fn outline(
         .filter(|l| matches!(l, Line::Key { .. }))
         .count();
     let mut rows = vec![tree::Row {
-        key: None,
+        key: Node::File,
         depth: 0,
         title: tr("The whole file").to_owned(),
         right: keys.to_string(),
@@ -72,17 +195,22 @@ pub(crate) fn outline(
         icon: Some(icons::NEW),
         switch: None,
     }];
-    for (i, item) in items.iter().enumerate() {
-        if !words.is_empty() {
-            let text: Vec<String> = lines[item.lines()].iter().map(search_text).collect();
-            let text = text.join("\n");
-            if !matches_words(&text, &words) {
-                continue;
+    if as_tree && words.is_empty() {
+        rows.extend(tree_rows(lines, items, &doc.closed));
+    } else {
+        for (i, item) in items.iter().enumerate() {
+            if !words.is_empty() {
+                let text: Vec<String> = lines[item.lines()].iter().map(search_text).collect();
+                let text = text.join("\n");
+                if !matches_words(&text, &words) {
+                    continue;
+                }
             }
+            rows.push(outline_row(lines, item, i));
         }
-        rows.push(outline_row(lines, item, i));
     }
-    let shown_at = rows.iter().position(|r| r.key == selected);
+    let wanted = selected.map_or(Node::File, Node::Item);
+    let shown_at = rows.iter().position(|r| r.key == wanted);
     let scroll = tree::Scroll::wanted(false, doc.follow);
     let id = egui::Id::new(("regfile-outline", doc.path.display().to_string()));
     let shown = tree::show(ui, id, &rows, shown_at, scroll);
@@ -93,10 +221,32 @@ pub(crate) fn outline(
         doc.follow = true;
     }
     for event in shown.events {
-        if let tree::Event::Select(key) = event {
-            doc.at = key.map(|i| items[i].anchor());
-            doc.line = None;
-            doc.error = None;
+        match event {
+            tree::Event::Select(Node::File) => {
+                doc.at = None;
+                doc.line = None;
+                doc.error = None;
+            }
+            tree::Event::Select(Node::Item(i)) => {
+                doc.at = Some(items[i].anchor());
+                doc.line = None;
+                doc.error = None;
+            }
+            tree::Event::Expand(node, open) => {
+                let path = match node {
+                    Node::Folder(path) => Some(path.to_lowercase()),
+                    Node::Item(i) => item_path(&doc.file.lines, &items[i]),
+                    Node::File => None,
+                };
+                if let Some(path) = path {
+                    if open {
+                        doc.closed.remove(&path);
+                    } else {
+                        doc.closed.insert(path);
+                    }
+                }
+            }
+            _ => {}
         }
     }
 }
@@ -135,6 +285,7 @@ pub(crate) fn key_head(
     catalog: &Catalog,
     texts: Option<&CatalogTexts>,
     imports: &[CatalogFile],
+    writers_open: bool,
     acts: &mut Vec<Act>,
 ) {
     let Some(Line::Key { path, delete }) = doc.file.lines.get(line) else {
@@ -167,6 +318,7 @@ pub(crate) fn key_head(
                     value.clone(),
                 )));
             }
+            crate::polview::link(ui, path, value.as_deref(), acts);
         });
         if in_default_user(path) {
             let text = tr(
@@ -176,29 +328,38 @@ pub(crate) fn key_head(
         }
     });
     let rules = doc.rules_of(path, value.as_deref());
+    // A panel that folds, at most a third of the window high and scrolled inside, so the lines
+    // of the key stay in view however many rules write it.
+    let most = (ui.ctx().content_rect().height() / 3.0).max(120.0);
     views::block(ui, |ui| {
-        match &value {
+        let title = match &value {
             Some(v) => {
                 let name = value_title(v);
-                style::section_title(ui, &trf("Rules that write {name}", &[("name", &name)]));
+                trf(
+                    "Rules that write {name} ({n})",
+                    &[("name", &name), ("n", &rules.len())],
+                )
             }
-            None => style::section_title(ui, tr("Rules that write it")),
-        }
-        ui.add_space(4.0);
-        if rules.is_empty() {
-            ui.weak(tr("No rule of the loaded catalogs writes it."));
-        }
-        for id in rules.iter().take(RULES_MAX) {
-            rule_link(ui, catalog, texts, imports, id, acts);
-        }
-        if rules.len() > RULES_MAX {
-            let more = rules.len() - RULES_MAX;
-            ui.collapsing(trf("and {n} more", &[("n", &more)]), |ui| {
-                for id in &rules[RULES_MAX..] {
-                    rule_link(ui, catalog, texts, imports, id, acts);
+            None => trf("Rules that write it ({n})", &[("n", &rules.len())]),
+        };
+        egui::CollapsingHeader::new(style::strong(ui, title, 13.0))
+            .id_salt(("regfile-writers", writers_open))
+            .default_open(writers_open)
+            .show(ui, |ui| {
+                if rules.is_empty() {
+                    ui.weak(tr("No rule of the loaded catalogs writes it."));
+                    return;
                 }
+                egui::ScrollArea::vertical()
+                    .id_salt("regfile-writers-scroll")
+                    .max_height(most)
+                    .auto_shrink([false, true])
+                    .show(ui, |ui| {
+                        for id in &rules {
+                            rule_link(ui, catalog, texts, imports, id, acts);
+                        }
+                    });
             });
-        }
     });
     ui.add_space(10.0);
 }
@@ -380,12 +541,21 @@ pub(crate) fn lines_list(
 }
 
 /// The tab: the outline on the left, the selected entry on the right, the editor over them.
+/// What the settings say of the tab of a registry file.
+pub struct Options {
+    /// The outline is a tree of the keys.
+    pub tree: bool,
+    /// The rules that write a key are open at first.
+    pub writers_open: bool,
+}
+
 pub fn regfile_view(
     ui: &mut egui::Ui,
     doc: &mut RegFileDoc,
     catalog: &Catalog,
     texts: Option<&CatalogTexts>,
     imports: &[CatalogFile],
+    options: &Options,
     acts: &mut Vec<Act>,
 ) {
     if let Some((_, path)) = doc.selected_key() {
@@ -401,7 +571,7 @@ pub fn regfile_view(
     let selected = doc.item(&items);
     let p = style::palette(ui);
     widgets::side_panel(ui, "regfile-outline", 380.0, |ui| {
-        outline(ui, doc, &items, selected);
+        outline(ui, doc, &items, selected, options.tree);
     });
     egui::CentralPanel::default()
         .frame(egui::Frame::new().fill(p.bg))
@@ -424,7 +594,17 @@ pub fn regfile_view(
                         .clone()
                         .filter(|&i| matches!(doc.file.lines[i], Line::Value { .. }))
                         .count();
-                    key_head(ui, doc, *line, values, catalog, texts, imports, acts);
+                    key_head(
+                        ui,
+                        doc,
+                        *line,
+                        values,
+                        catalog,
+                        texts,
+                        imports,
+                        options.writers_open,
+                        acts,
+                    );
                     lines_list(ui, doc, lines.clone(), Some(*line), catalog, acts);
                 }
                 Some(Item::Notes { lines }) => {

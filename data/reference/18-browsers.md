@@ -1,19 +1,17 @@
 # 18. Browsers: Microsoft Edge, Google Chrome, Brave
 
-Browser policies from issue #1 of the repository ("Web Browsers debloat"). The issue attached three .cmd
-scripts (`DebloatEdge.cmd`, `DebloatChrome.cmd`, `DebloatBrave.cmd`); every policy name and value was checked
-on 25.09.2026 against the vendors' definitions (see Sources). WinKickOff turns each working policy into a
-separate rule of the "Browsers" section, so any of them can be disabled. The rules are generated
-by `WinKickOff/tools/make_browser_rules.py`.
+Browser policies from the request "Web Browsers debloat", which came with three .cmd scripts (`DebloatEdge.cmd`,
+`DebloatChrome.cmd`, `DebloatBrave.cmd`); every policy name and value was checked against the vendors' definitions
+(see Sources). Each working policy is a separate rule of the "Browsers" section (`data/catalog/14-browsers.json`),
+so any of them can be disabled.
 
 All rules write machine policies (`HKLM`) in the specialize pass, apply to every user and cannot be changed
-by users in the browser settings. A policy of a browser that is not installed has no effect. Since
-26.09.2026 (commit d33fc41) a part of the rules is on by default and so in every preset built from the
-defaults: telemetry, advertising, shopping and rewards, AI features, page translation, card autofill, the
-Brave wallet, VPN, news, Tor and the like (`DEFAULT_ON` in `WinKickOff/tools/make_browser_rules.py`). Sync,
-browser sign-in, the Edge sidebar and web capture, search suggestions, address autofill, the Chrome Lens
-overlay and built-in DNS client and the password managers stay off. The two Edge
-rules of v0.2 (`edge.smartscreen-locked`, `edge.baseline`, card 10) moved into the same section and stay on.
+by users in the browser settings. A policy of a browser that is not installed has no effect. A part of the rules
+is on by default and so in every preset built from the defaults: telemetry, advertising, shopping and rewards, AI
+features, page translation, card autofill, the Brave wallet, VPN, news, Tor and the like, and the Edge browser
+sign-in and sidebar (section "AI policies" below). Sync, the Edge web capture, search suggestions, address
+autofill, the Chrome sign-in, Lens overlay and built-in DNS client and the password managers stay off. The two
+Edge rules of card 10 (`edge.smartscreen-locked`, `edge.baseline`) are in the same section and are on.
 
 ## Microsoft Edge
 
@@ -39,11 +37,11 @@ Key: `HKLM\SOFTWARE\Policies\Microsoft\Edge`, all values REG_DWORD.
 
 `BackgroundModeEnabled = 0` and `HideFirstRunExperience = 1` of the script are already set by `edge.baseline`.
 
-### AI policies (customer list of 28.09.2026)
+### AI policies
 
 On by default. Most Edge AI policies say "Applies to a profile that is signed in with a Microsoft account: No":
 a profile signed in with a personal Microsoft account escapes them. That is why `edge.signin-off`
-(`BrowserSignin = 0`) and `edge.sidebar-off` are on by default since 28.09.2026 as well.
+(`BrowserSignin = 0`) and `edge.sidebar-off` are on by default as well.
 
 | Rule | Value | Effect | Edge |
 |---|---|---|---|
@@ -66,9 +64,9 @@ a profile signed in with a personal Microsoft account escapes them. That is why 
 | `edge.visual-search-off` (off by default) | `VisualSearchEnabled = 0` | No Bing visual search | 95+ |
 | `edge.search-in-sidebar-off` (off by default) | `SearchInSidebarEnabled = 2` | Search results not in the sidebar | 110+ |
 
-The Entra ID policies have no effect with local accounts and browser sign-in blocked; they are generated because
-the customer's list names them. `CopilotCDPPageContext` (obsolete after Edge 132) and `DevToolsGenAiSettings` (a
-Chrome policy, not an Edge one) of the list are not generated. No documented policy exists for the Copilot button
+The Entra ID policies have no effect with local accounts and browser sign-in blocked; they are rules because the
+customer's list names them. `CopilotCDPPageContext` (obsolete after Edge 132) and `DevToolsGenAiSettings` (a
+Chrome policy, not an Edge one) of the list have no rule. No documented policy exists for the Copilot button
 on unsigned profiles since Edge 141, for Copilot Mode and for "Explain this error" in DevTools: check `edge://policy`
 and the toolbar in a VM.
 
@@ -118,31 +116,31 @@ such as `TranslateEnabled` from this key.
 | `brave.translate-off` | `TranslateEnabled = 0` | No page translation offers |
 | `brave.tor-off` | `TorDisabled = 1` | Private windows with Tor unavailable; level recommended: Tor traffic bypasses the organisation's filtering |
 
-## Corrections to the scripts of issue #1
+## Policies that are not rules
 
-Lines of the scripts that are not turned into rules, or are turned into rules with another name or value:
+Policies that are often recommended but are not rules of the catalog, or are rules with another name or value:
 
-| Script line | Finding | In WinKickOff |
+| Policy | Finding | In the catalog |
 |---|---|---|
 | Edge `MetricsReportingEnabled = 0` | Obsolete policy | Replaced by `DiagnosticData = 0` |
 | Edge `SendSiteInfoToImproveServices = 0` | Obsolete policy | Replaced by `DiagnosticData = 0` |
 | Edge `DiagnosticDataEnabled = 0` | No such policy | `DiagnosticData = 0` |
-| Edge `EdgeCopilotEnabled = 0` | Android and iOS only | Not generated; on Windows `HubsSidebarEnabled` hides the Copilot button before Edge 141 |
-| Edge `CopilotPageContext = 0` | Applies only to Microsoft Entra ID profiles | Not generated: no effect in a workgroup |
-| Edge `Microsoft365CopilotChatIconEnabled = 0` | Applies only to Microsoft Entra ID profiles | Not generated: no effect in a workgroup |
-| Edge `EdgeCollectionsEnabled = 0` | Obsolete: Collections removed in Edge 153 | Not generated |
+| Edge `EdgeCopilotEnabled = 0` | Android and iOS only | No rule; on Windows `HubsSidebarEnabled` hides the Copilot button before Edge 141 |
+| Edge `CopilotPageContext = 0` | Applies only to Microsoft Entra ID profiles | No rule: no effect in a workgroup |
+| Edge `Microsoft365CopilotChatIconEnabled = 0` | Applies only to Microsoft Entra ID profiles | No rule: no effect in a workgroup |
+| Edge `EdgeCollectionsEnabled = 0` | Obsolete: Collections removed in Edge 153 | No rule |
 | Edge `ShoppingAssistantEnabled = 0` | No such policy | `EdgeShoppingAssistantEnabled = 0` |
 | Edge `RewardsEnabled = 0` | No such policy | `ShowMicrosoftRewards = 0` |
-| Edge `PrintPDFAsImageEnabled = 0` | No such policy; the closest, `PrintPdfAsImageDefault`, is off by default | Not generated |
+| Edge `PrintPDFAsImageEnabled = 0` | No such policy; the closest, `PrintPdfAsImageDefault`, is off by default | No rule |
 | Edge `BackgroundModeEnabled = 0`, `HideFirstRunExperience = 1` | Already in `edge.baseline` | Not duplicated |
 | Chrome `ReportingEnabled = 0`, `UserMetricsReportingEnabled = 0` | No such policies | Covered by `MetricsReportingEnabled = 0` |
 | Chrome `ChromeVariationsEnabled = 0` | No such policy | `ChromeVariations`, default 1 |
 | Chrome `SyncDisabled = 0` | Leaves the choice to the user, which is the behaviour without the policy | Parameter of `chrome.sync`, default 1 as for Edge |
 | Chrome `LensOverlaySettings = 0` | 0 means "Allow" | `LensOverlaySettings = 1` |
-| Chrome `LensSettings = 0` | No such policy | Not generated |
-| Chrome `AutofillPaymentCardBenefitsEnabled = 0` | No such policy | Not generated |
+| Chrome `LensSettings = 0` | No such policy | No rule |
+| Chrome `AutofillPaymentCardBenefitsEnabled = 0` | No such policy | No rule |
 | Chrome `PromotionalTabsEnabled = 0` | Deprecated | `PromotionsEnabled = 0` |
-| Chrome `NTPShortcutsEnabled = 0` | No such policy (`NTPShortcuts` is a list of shortcuts, not a switch) | Not generated |
+| Chrome `NTPShortcutsEnabled = 0` | No such policy (`NTPShortcuts` is a list of shortcuts, not a switch) | No rule |
 | Brave `BraveP3ADisabled = 1` | No such policy | `BraveP3AEnabled = 0` |
 | Brave `BraveStatsPingDisabled = 1` | No such policy | Covered by `BraveStatsPingEnabled = 0` |
 | Brave `BraveLeoEnabled = 0` | No such policy; Leo is controlled by AI Chat | Covered by `BraveAIChatEnabled = 0` |
@@ -150,7 +148,7 @@ Lines of the scripts that are not turned into rules, or are turned into rules wi
 ## Verification and rollback
 
 - Verification: `edge://policy`, `chrome://policy` or `brave://policy` lists every applied policy with its
-  source "Platform" and status; in the registry, `reg query` of the key above. WinKickOff shows the exact
+  source "Platform" and status; in the registry, `reg query` of the key above. WinWeaver shows the exact
   command for each rule and can check the selection on a running PC (menu "This PC").
 - Rollback: delete the value from the policy key; the browser returns to its default behaviour and the
   setting becomes editable again after a restart of the browser.

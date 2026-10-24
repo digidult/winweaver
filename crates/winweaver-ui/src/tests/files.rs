@@ -87,6 +87,71 @@ fn bookmarks_toggle_and_lead_back() {
 }
 
 #[test]
+fn a_registry_file_and_a_diff_come_back_from_their_drafts() {
+    let catalog = Catalog::embedded().unwrap();
+    let dir = std::env::temp_dir().join(format!("winweaver-drafts-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let mut app = Window::new(
+        WinWeaver::new(catalog.clone(), Vec::new()),
+        Settings::default(),
+    );
+    app.shell.drafts_dir = dir.join("drafts");
+    let reg = dir.join("x.reg");
+    let text = "Windows Registry Editor Version 5.00\r\n\r\n[HKEY_CURRENT_USER\\Software\\X]\r\n\"N\"=dword:00000001\r\n";
+    std::fs::write(&reg, text).unwrap();
+    app.apply(vec![Act::Shell(ShellAct::OpenPath(reg.clone()))]);
+    if let Some(Doc::RegFile(d)) = app.shell.docs.last_mut() {
+        d.file.lines.push(Line::Comment("; a change".to_owned()));
+        d.dirty = true;
+    }
+    let base = Profile::new("Base", catalog.version());
+    let mut other = Profile::new("Other", catalog.version());
+    other.rules.insert(
+        "install.bypass-tpm".to_owned(),
+        winweaver_core::profile::Choice {
+            on: true,
+            ..Default::default()
+        },
+    );
+    let diff = Diff::between(
+        &base,
+        &other,
+        diff::Side::of(&base, None),
+        diff::Side::of(&other, None),
+    );
+    let mut d = DiffDoc::new(diff, None);
+    d.dirty = true;
+    app.shell.open_tab(Doc::Diff(Box::new(d)));
+    app.shell.write_drafts(true);
+    let (drafts, _) = session::read_drafts(&app.shell.drafts_dir);
+    assert_eq!(drafts.len(), 2, "a draft of each");
+    let mut next = Window::new(WinWeaver::new(catalog, Vec::new()), Settings::default());
+    next.shell.drafts_dir = app.shell.drafts_dir.clone();
+    next.restore_session();
+    let file = next.shell.docs.iter().find_map(|d| match d {
+        Doc::RegFile(f) => Some(f),
+        _ => None,
+    });
+    let file = file.expect("the registry file is back");
+    assert!(file.dirty);
+    assert!(
+        file.file
+            .lines
+            .iter()
+            .any(|l| l == &Line::Comment("; a change".to_owned()))
+    );
+    assert!(
+        next.shell
+            .docs
+            .iter()
+            .any(|d| matches!(d, Doc::Diff(x) if x.dirty && x.diff.rules.len() == 1)),
+        "the diff is back"
+    );
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
 fn drafts_come_back_after_a_restart() {
     let catalog = Catalog::embedded().unwrap();
     let dir = std::env::temp_dir().join(format!("winweaver-session-{}", std::process::id()));

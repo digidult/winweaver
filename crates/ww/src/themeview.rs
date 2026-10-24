@@ -12,13 +12,16 @@ use crate::themes::{self, Theme};
 pub struct ThemeDoc {
     pub theme: Theme,
     pub dirty: bool,
+    pub draft: crate::doc::DraftState,
 }
 
 impl ThemeDoc {
     pub fn new(theme: Theme) -> Self {
+        let draft = crate::doc::DraftState::new(theme.path.as_deref());
         Self {
             theme,
             dirty: false,
+            draft,
         }
     }
 
@@ -278,7 +281,8 @@ pub fn theme_view<A: App>(
                                 .get(extra.name)
                                 .and_then(|t| themes::color(t))
                                 .unwrap_or(base);
-                            changed |= color_row(ui, theme, extra.name, extra.label, c);
+                            let label = crate::i18n::tr(extra.label);
+                            changed |= color_row(ui, theme, extra.name, label, c);
                         }
                     });
             });

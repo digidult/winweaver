@@ -64,6 +64,60 @@ pub struct Draft {
     pub document: serde_json::Value,
 }
 
+/// The draft of a document that changes in many places: offered while the document has unsaved
+/// changes, at most every two seconds (at once when the window closes), and written only when it
+/// differs from the last draft.
+#[derive(Debug, Clone)]
+pub struct DraftState {
+    pub key: String,
+    written: Option<u64>,
+    checked: Option<std::time::Instant>,
+}
+
+impl DraftState {
+    /// The draft of a file, or of a document without one.
+    pub fn new(path: Option<&Path>) -> Self {
+        Self::with_key(path.map_or_else(crate::session::new_key, crate::session::key_for_path))
+    }
+
+    pub fn with_key(key: String) -> Self {
+        Self {
+            key,
+            written: None,
+            checked: None,
+        }
+    }
+
+    /// Whether to make the draft now: the document has changes and the last look is two seconds
+    /// old, or the window closes.
+    pub fn ready(&mut self, dirty: bool, all: bool) -> bool {
+        if !dirty {
+            self.written = None;
+            return false;
+        }
+        let delay = std::time::Duration::from_secs(2);
+        if !all && self.checked.is_some_and(|t| t.elapsed() < delay) {
+            return false;
+        }
+        self.checked = Some(std::time::Instant::now());
+        true
+    }
+
+    /// The draft of a document, unless the last one written holds the same.
+    pub fn offer(&mut self, path: Option<PathBuf>, document: serde_json::Value) -> Option<Draft> {
+        let hash = crate::session::fnv(&document.to_string());
+        if self.written == Some(hash) {
+            return None;
+        }
+        self.written = Some(hash);
+        Some(Draft {
+            key: self.key.clone(),
+            path,
+            document,
+        })
+    }
+}
+
 /// What every tab answers, so the window draws it without knowing the document.
 pub trait Document {
     /// The title of the tab: the name of its file, else `name`.

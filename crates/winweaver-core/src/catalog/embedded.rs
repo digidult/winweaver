@@ -6,7 +6,7 @@
 use super::{Catalog, CatalogError};
 use crate::jsonfile;
 
-/// The version of the catalog data (the predecessor's catalog 0.11 carried over).
+/// The version of the catalog data.
 pub const CATALOG_VERSION: &str = "0.11";
 
 pub const GROUPS_FILE: &str = "groups.json";

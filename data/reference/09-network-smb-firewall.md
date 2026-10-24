@@ -1,6 +1,6 @@
 # 09. SMB, name resolution, firewall
 
-Section 5 of `Setup-System.ps1`. Notation: `Srv` = `HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters`,
+Rules of `Setup-System.ps1` (specialize). Notation: `Srv` = `HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters`,
 `Wks` = `HKLM\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters`.
 
 General context: a workgroup without a domain relies on SMB (shared folders, printers), NetBIOS and mDNS
@@ -102,7 +102,7 @@ while keeping sharing functional.
     program installers are applied (local policy merge is enabled by default).
   - The file does not set the network profile (private/public): on the first connection Windows 11 asks
     "Allow discovery?" for a wired network or assigns the public profile. Folder sharing
-    requires the private profile: a parameter of the future constructor.
+    requires the private profile, which is chosen on the PC itself.
   - Successful connections are not logged (`LogSuccessfulConnections` is not set): there are too many of them.
 - Version differences: the policy has been the same since Windows Vista. Unchanged on 24H2.
 - Verification: `Get-NetFirewallProfile | Select Name, Enabled, DefaultInboundAction, LogBlocked`;

@@ -67,10 +67,12 @@ pub struct UsersDoc {
     /// The password of the selected account is shown instead of dots.
     pub show_password: bool,
     pub error: String,
+    pub draft: ww::DraftState,
 }
 
 impl UsersDoc {
     pub fn new(file: UsersFile, path: Option<PathBuf>) -> Self {
+        let draft = ww::DraftState::new(path.as_deref());
         Self {
             path,
             file,
@@ -86,6 +88,7 @@ impl UsersDoc {
             password_edit: None,
             show_password: false,
             error: String::new(),
+            draft,
         }
     }
 

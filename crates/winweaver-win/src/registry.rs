@@ -8,7 +8,7 @@ use std::io;
 
 use winreg::enums::{
     HKEY_CLASSES_ROOT, HKEY_CURRENT_CONFIG, HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, HKEY_USERS,
-    KEY_READ, KEY_SET_VALUE, RegType,
+    KEY_CREATE_SUB_KEY, KEY_READ, KEY_SET_VALUE, RegType,
 };
 use winreg::{RegKey, RegValue};
 use winweaver_core::registry::{self, Data, Key, Registry, Value};
@@ -129,6 +129,25 @@ impl Registry for NativeRegistry {
             return Err(format!("{full}: a hive is not deleted"));
         }
         root.delete_subkey_all(&sub).map_err(|e| error(e, &full))
+    }
+
+    /// Renames a key in place with `RegRenameKey`, its rights and everything under it kept.
+    fn rename_key(&self, path: &str, new_name: &str) -> Result<String, String> {
+        use windows_sys::Win32::System::Registry::{HKEY, RegRenameKey};
+        let target = registry::renamed_path(path, new_name)?;
+        let full = registry::normalize(path).unwrap_or_default();
+        let (parent, old) = full.rsplit_once('\\').unwrap_or((full.as_str(), ""));
+        if Self::open(&target, KEY_READ).is_ok() {
+            return Err(format!("{target}: a key of this name is there already"));
+        }
+        let (key, _) = Self::open(parent, KEY_READ | KEY_SET_VALUE | KEY_CREATE_SUB_KEY)?;
+        let (old, new) = (wide(old), wide(new_name.trim()));
+        // SAFETY: the handle is an open key of winreg, the names are wide strings with their end.
+        let code = unsafe { RegRenameKey(key.raw_handle() as HKEY, old.as_ptr(), new.as_ptr()) };
+        if code != 0 {
+            return Err(error(io::Error::from_raw_os_error(code as i32), &full));
+        }
+        Ok(target)
     }
 
     fn security(&self, path: &str) -> Result<String, String> {

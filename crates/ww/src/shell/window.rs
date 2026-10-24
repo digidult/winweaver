@@ -229,6 +229,13 @@ impl<A: App> Window<A> {
             Some(ShellDoc::Settings(_)) => {}
             None => self.app.save(&mut self.shell, ask),
         }
+        // A document saved has no draft any more.
+        if let Some(doc) = self.shell.active_doc()
+            && !doc.dirty()
+            && let Some(key) = doc.draft_key()
+        {
+            session::remove_draft(&self.shell.drafts_dir, &key);
+        }
     }
 
     /// The keys of the window and of the program, the question answered with Escape, the files
@@ -382,9 +389,13 @@ impl<A: App> Window<A> {
         let mut restored = 0;
         for (key, draft) in drafts {
             let path = (!draft.path.is_empty()).then(|| Path::new(&draft.path).to_path_buf());
-            if self
-                .app
-                .restore_draft(&mut self.shell, key.clone(), path, draft.document)
+            let shell_draft = self
+                .shell
+                .restore_shell_draft(&key, path.clone(), &draft.document);
+            if shell_draft
+                || self
+                    .app
+                    .restore_draft(&mut self.shell, key.clone(), path, draft.document)
             {
                 restored += 1;
             } else {

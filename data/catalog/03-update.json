@@ -1,5 +1,5 @@
 {
-  "comment": ["Windows Update. Section 2 of the v0.2 machine script. Order: blocks are removed before the settings."],
+  "comment": ["Windows Update. Order: blocks are removed before the settings."],
   "rules": [
     {
       "id": "update.unblock",

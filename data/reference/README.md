@@ -1,8 +1,7 @@
-# autounattend.xml v0.2 settings reference
+# autounattend.xml settings reference
 
-Documentation for the answer file `autounattend.xml` (version 0.2 of 13.09.2026, located in
-[Appendix B](../../appendices/B-autounattend-v0.2/README.md)); WinKickOff rules link to these cards. Every area
-and every parameter is described: what exactly is written, by what method, what effect is expected, what it affects
+Documentation for the answer file `autounattend.xml` that WinWeaver builds; the rules of the catalog
+(`data/catalog/*.json`) link to these cards through their `doc` field. Every area and every parameter is described: what exactly is written, by what method, what effect is expected, what it affects
 in other subsystems, how the behavior differs across Windows versions, how to verify it and how to roll it back.
 
 ## How to read a parameter card
@@ -11,7 +10,7 @@ Every parameter is described using the same scheme:
 
 | Field | Contents |
 |---|---|
-| Default value | What is set in `$Config` (or in the XML) in version 0.2 |
+| Default value | What a new profile sets: the default of the rule or of the profile field |
 | Where applied | Setup pass, script and script section, the account it runs as |
 | What it does | Exact registry keys, values, commands, including unconditional actions of the same section |
 | Expected effect | What the user or administrator will see |
@@ -33,7 +32,7 @@ Registry paths are abbreviated: `HKLM` = `HKEY_LOCAL_MACHINE`, `Pol` = `HKLM\SOF
 | [01-windows-pe.md](01-windows-pe.md) | windowsPE pass: key, edition, license, hardware check bypass | ProductKey, WillShowUI, AcceptEula, LabConfig, SkipAutoActivation, DynamicUpdate, Diagnostics, InstallTo |
 | [02-specialize-xml.md](02-specialize-xml.md) | specialize pass in XML: script extraction, BypassNRO, launching Setup-System.ps1, time zone, computer name | Order 1..3, TimeZone, ComputerName, JoinWorkgroup |
 | [03-oobe-accounts-languages.md](03-oobe-accounts-languages.md) | oobeSystem pass: languages and region, OOBE screens, starter accounts | InputLocale, SystemLocale, UILanguage, UserLocale, OOBE, LocalAccounts |
-| [04-users-and-media.md](04-users-and-media.md) | Accounts in `$Config`, .NET 3.5 from the installation media | AdminAccount, UserAccount, PasswordNeverExpires, EnableNetFx3, DriversFromMedia |
+| [04-users-and-media.md](04-users-and-media.md) | Accounts of the profile, .NET 3.5 from the installation media | AdminAccount, UserAccount, PasswordNeverExpires, EnableNetFx3, DriversFromMedia |
 | [05-printing.md](05-printing.md) | Printing | EnsurePrintSpooler, RestrictPrinterDriverInstallToAdmins |
 | [06-windows-update.md](06-windows-update.md) | Windows updates and Delivery Optimization | WindowsUpdateAutomatic, UpdateOtherMicrosoftProducts, DeferFeatureUpdatesDays, DeliveryOptimizationLANOnly |
 | [07-defender.md](07-defender.md) | Microsoft Defender, ASR rules, SmartScreen | DefenderCloudProtection, DefenderPUAProtection, DefenderNetworkProtection, DefenderASRRules, ControlledFolderAccess, SmartScreenLevel |
@@ -42,18 +41,18 @@ Registry paths are abbreviated: `HKLM` = `HKEY_LOCAL_MACHINE`, `Pol` = `HKLM\SOF
 | [10-removable-scripts-browser.md](10-removable-scripts-browser.md) | Removable media, script files, Edge | DisableAutoRun, ScriptFilesOpenInNotepad, RemoveVBScript, EdgeSmartScreenLocked |
 | [11-logging-audit.md](11-logging-audit.md) | Logging for investigations | AuditLogging, PowerShellLogging, DisablePowerShellV2 |
 | [12-telemetry-consumer-ai.md](12-telemetry-consumer-ai.md) | Telemetry, advertising, Copilot and Recall, widgets, web search | MinimalTelemetry, DisableConsumerContent, DisableCopilotAndRecall, DisableWidgetsAndNews, DisableWebSearchInStart |
-| [13-services-apps.md](13-services-apps.md) | Services and app removal | RemoveBloatApps ($AppsToRemove), RemoveQuickAssist, RemoveXboxServices, SupportInformation |
+| [13-services-apps.md](13-services-apps.md) | Services and app removal | RemoveBloatApps (`apps.remove.*`), RemoveQuickAssist, RemoveXboxServices, SupportInformation |
 | [14-default-user-profile.md](14-default-user-profile.md) | Default user profile (inherited by all accounts) | DU hive values |
 | [15-per-user-script.md](15-per-user-script.md) | Active Setup and Setup-User.ps1: input languages for each user | no parameters, mechanism |
 | [16-post-oobe.md](16-post-oobe.md) | Scheduled task and Post-OOBE.ps1: cleanup after OOBE | no parameters, mechanism |
-| [17-cross-links.md](17-cross-links.md) | Summary cross-link matrix and known inconsistencies of version 0.2 | none |
-| [18-browsers.md](18-browsers.md) | Browser policies for Microsoft Edge, Google Chrome and Brave (issue #1), corrections to the issue scripts | WinKickOff rules only, not in v0.2 |
-| [19-more-privacy.md](19-more-privacy.md) | AI, telemetry, advertising, search, speech, Microsoft Office, OneDrive, drivers, This PC and navigation pane folders (customer list of 28.09.2026), corrections to the list | WinKickOff rules only, not in v0.2 |
-| [20-explorer-namespaces.md](20-explorer-namespaces.md) | File Explorer namespaces (This PC, navigation pane) and desktop icons (customer request of 04.10.2026) | WinKickOff rules only, not in v0.2 |
+| [17-cross-links.md](17-cross-links.md) | Summary cross-link matrix and known inconsistencies | none |
+| [18-browsers.md](18-browsers.md) | Browser policies for Microsoft Edge, Google Chrome and Brave, corrections to the scripts they came from | the rules of `14-browsers.json` |
+| [19-more-privacy.md](19-more-privacy.md) | AI, telemetry, advertising, search, speech, Microsoft Office, OneDrive, drivers, This PC and navigation pane folders (customer list), corrections to the list | rules of `09-privacy.json`, `10-apps.json`, `15-office.json`, `16-explorer.json` |
+| [20-explorer-namespaces.md](20-explorer-namespaces.md) | File Explorer namespaces (This PC, navigation pane) and desktop icons (customer request) | the rules of `17-shell.json` |
 
 ## Windows version conventions
 
-The file targets Windows 11 Pro 24H2 and later (tested on the Ukrainian 25H2 ISO, build 26200).
+The answer file targets Windows 11 Pro 24H2 and later (verified on the Ukrainian 25H2 ISO, build 26200).
 The cards mention:
 
 - Windows 10 (1809 and later): the file is formally compatible but has not been tested; differences are noted.
@@ -67,5 +66,4 @@ The cards mention:
 ## Sources
 
 Microsoft Learn documentation (Unattended Windows Setup Reference, Group Policy reference, Defender ASR reference),
-results of the 13.09.2026 installation (setupact.log, setuperr.log), verification on build 26200, the report of the independent
-critic ([Appendix C](../../appendices/C-critical-review/03-critic-report-v0.2.docx)).
+the logs of a test installation (setupact.log, setuperr.log), verification on build 26200.

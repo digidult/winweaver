@@ -1,6 +1,6 @@
 # 14. Default user profile
 
-Section 10 of `Setup-System.ps1`. Mechanism: the hive `C:\Users\Default\NTUSER.DAT` is mounted with
+Rules of the phase default-user, in `Setup-System.ps1` (specialize). Mechanism: the hive `C:\Users\Default\NTUSER.DAT` is mounted with
 `reg.exe load HKU\UnattendDefault`, values are written into it, then the hive is unloaded
 (`reg.exe unload`, with a retry after 3 seconds if it is busy). Windows copies this hive into the `HKCU`
 of every new profile at first sign-in. Admin and User are created in oobeSystem, and their profiles at
@@ -71,7 +71,7 @@ documents), but without app advertising.
 
 ## Keys that switch the input language
 
-Rule `default-user.input-switch-keys` (WinKickOff only, not in v0.2; customer request of 04.10.2026), off by default.
+Rule `default-user.input-switch-keys`, off by default.
 No answer file setting exists for these keys: Microsoft-Windows-International-Core has only InputLocale,
 SystemLocale, UILanguage, UILanguageFallback and UserLocale, the `intl.cpl` XML has no keys and no ADMX policy sets
 them. So the rule writes the registry, like the "Input language hot keys" dialog of Windows:

@@ -29,10 +29,12 @@ pub struct DiffDoc {
     pub follow: bool,
     /// The search was cleared: the selection comes to the middle of the list.
     pub reveal: bool,
+    pub draft: ww::DraftState,
 }
 
 impl DiffDoc {
     pub fn new(diff: Diff, path: Option<PathBuf>) -> Self {
+        let draft = ww::DraftState::new(path.as_deref());
         Self {
             diff,
             path,
@@ -41,6 +43,7 @@ impl DiffDoc {
             sel: None,
             follow: false,
             reveal: false,
+            draft,
         }
     }
 }

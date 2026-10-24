@@ -18,6 +18,8 @@ pub const GUIDES: [(&str, &str); 8] = [
 ];
 
 pub const GUIDE_TITLE: &str = "Guide.md";
+/// The root page of the documentation built into the executable: the reference of the parameters.
+pub const DOCS_ROOT: &str = "README.md";
 /// The parameter reference of the catalog, carried over with its data (`data/reference/`): the
 /// file name and the page. The `doc` field of a rule links into it, a heading as `#anchor`.
 pub const REFERENCE: [(&str, &str); 22] = [

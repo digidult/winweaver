@@ -1,6 +1,6 @@
 # 08. UAC, credential protection, lockout, remote access, BitLocker
 
-Section 4 of `Setup-System.ps1`. Notation: `Sys` = `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System`,
+Rules of `Setup-System.ps1` (specialize). Notation: `Sys` = `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System`,
 `Lsa` = `HKLM\SYSTEM\CurrentControlSet\Control\Lsa`.
 
 ## Unconditional actions in this section
@@ -43,9 +43,8 @@ devices (printers, NAS) that look for shares anonymously; in that case use the v
   elevate silently (Task Manager via Ctrl+Shift+Esc, Registry Editor, Computer Management) show a prompt when
   an administrator opens them. A standard user (User) gets no prompt: for such an account these tools open
   without elevation.
-- WinKickOff: rule `uac.admin-always-notify`, off by default since 26.09.2026 at the customer's request (no
-  prompt for Task Manager), so the "Office" and "Laptop" presets leave Windows at 5; the
-  "Strict" preset turns it on with level 2. v0.2 set 2.
+- Rule: `uac.admin-always-notify`, off by default (no prompt for Task Manager), so the "Office" and "Laptop"
+  presets leave Windows at 5; the "Strict" preset turns it on with level 2.
 - Verification: Control Panel → User Accounts → Change User Account Control settings: slider at the top.
 - Rollback: value 5.
 
@@ -120,7 +119,7 @@ devices (printers, NAS) that look for shares anonymously; in that case use the v
 - Expected effect: Remote Assistance invitations (msra.exe) are impossible; the firewall rule
   «Удалённый помощник» (Remote Assistance) is not activated.
 - Cross-links: Quick Assist is removed separately (section 13). Remote support by your own administrator
-  requires a separate tool (the "remote administration" constructor parameter).
+  requires a separate tool.
 - Version differences: none.
 - Verification: System Properties → Remote: the check box is cleared and unavailable.
 - Rollback: `fAllowToGetHelp = 1`.
@@ -157,12 +156,10 @@ devices (printers, NAS) that look for shares anonymously; in that case use the v
   Modern Standby and HSTI requirements have been dropped). With a local account the drive stays encrypted with a "clear
   key", waiting for a sign-in to a Microsoft account. Consequences: cloning and restoring the drive
   become harder, and after a TPM failure or a motherboard replacement data may be lost without the key.
-- Expected effect: the drive is not encrypted. Protection against laptop theft is enabled deliberately (the
-  "BitLocker for laptops" constructor parameter, with mandatory saving of the recovery key to USB
-  or printing it before the reboot).
-- WinKickOff: rule `encryption.prevent-auto-bitlocker` is on in every preset, "Laptop" included, since
-  28.09.2026 (customer decision: BitLocker is off everywhere; disk encryption comes as a separate task together
-  with the escrow of recovery keys and user passwords). The editor warns when the rule is turned off.
+- Expected effect: the drive is not encrypted. Protection against laptop theft is a deliberate step: full
+  BitLocker, with the recovery key saved to USB or printed before the reboot.
+- Rule: `encryption.prevent-auto-bitlocker` is on in every preset, "Laptop" included (BitLocker is off everywhere;
+  disk encryption is planned as a separate task together with the escrow of recovery keys and user passwords).
 - Cross-links: on PCs without TPM (check bypassed in section 01) device encryption is unavailable even
   without this key. The key does not prevent full BitLocker enabled manually (`manage-bde`, Control Panel).
 - Version differences: the key works since Windows 8.1. Automatic encryption on Pro 24H2 on a clean install
@@ -173,17 +170,17 @@ devices (printers, NAS) that look for shares anonymously; in that case use the v
 
 ## AutoLogon
 
-- Rule: `accounts.autologon` (off by default, level risky; branch `unattend-tree`, stage 4 of the plan of 13.10.2026).
+- Rule: `accounts.autologon` (off by default, level risky).
 - Values in `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon`: `AutoAdminLogon = "1"` (a string; the
   Windows default is "0"), `DefaultUserName = <account>` (the parameter; Windows keeps the last account there, so the
   default is unknown and the revert leaves it), `AutoLogonCount = <count>` (DWord, absent by default). No
-  `DefaultPassword`: customer decision 3 of 13.10.2026 allows the automatic sign-in only for an account without a
-  password, and the profile check refuses an account that has one or that the profile does not list.
+  `DefaultPassword`: the automatic sign-in is allowed only for an account without a password, and the profile check
+  refuses an account that has one or that the profile does not list.
 - What it does: Winlogon signs the account in by itself at the next starts, counts `AutoLogonCount` down and turns
   `AutoAdminLogon` off when it reaches 0. A blank password works at the console because the policy "Limit local
   account use of blank passwords to console logon only" (`LimitBlankPasswordUse`, 1 by default) limits only network use.
 - Why the registry and not the unattend setting `Microsoft-Windows-Shell-Setup\AutoLogon`: the same values, and they
-  work on a running Windows ("This PC") and can be reverted (customer decision 5).
+  work on a running Windows ("This PC") and can be reverted.
 - Expected effect: after OOBE the account signs in without anybody at the keyboard, so Setup-User.ps1 and the post-OOBE
   task run right away; with a large count a kiosk stays signed in.
 - Cross-links: `install.account_mode` `ask` (Windows Setup asks for the account): the check warns that the account made

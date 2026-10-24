@@ -3,7 +3,7 @@
 ## 1. What the answer file is and where Setup finds it
 
 `autounattend.xml` sits in the root of the USB media. Windows Setup searches all removable drives for it at startup
-(the 13.09.2026 log: `UnattendSearchExplicitPath: Found unattend file at [E:\autounattend.xml]`).
+(the log of Setup: `UnattendSearchExplicitPath: Found unattend file at [E:\autounattend.xml]`).
 After copying the files, Setup saves it as `C:\Windows\Panther\unattend.xml` and reads it from there in
 subsequent passes. This is the path the script extraction command uses.
 
@@ -12,7 +12,9 @@ A single file contains two parts:
 1. The actual answers to Setup: elements in the `urn:schemas-microsoft-com:unattend` namespace,
    split by pass (`<settings pass="...">`).
 2. The `<Extensions xmlns="urn:workgroup-unattend">` section: a namespace of its own, which Setup neither
-   parses nor validates. It holds three PowerShell scripts in CDATA blocks and the extraction script.
+   parses nor validates. It holds the PowerShell scripts in CDATA blocks (Setup-System, Setup-User and Post-OOBE,
+   each when the profile gives it something to do), the extraction script and the profile as ASCII JSON
+   (`Extensions/Profile`, so the file can be opened again in WinWeaver).
 
 ## 2. Setup passes and what happens in them
 
@@ -33,12 +35,12 @@ installation terminated").
 ## 3. Hard constraints of Windows Setup
 
 Violating any of them stops the installation with the message "The provided unattend file is not valid"
-(code 0x80220005). The first of them is what caused the failure on 13.09.2026.
+(code 0x80220005).
 
 | Constraint | Source | How it is met |
 |---|---|---|
-| `RunSynchronousCommand/Path` length at most 259 characters | Path documentation | Commands shortened, heavy logic moved into the script; the maximum in 0.2 is 241 characters |
-| `Description` length at most 259 characters | Description documentation | Maximum 111 |
+| `RunSynchronousCommand/Path` length at most 259 characters | Path documentation | Commands shortened, heavy logic moved into the script; the build refuses a longer command |
+| `Description` length at most 259 characters | Description documentation | The descriptions of the rules are under 60 characters |
 | XML comments inside `<component>` are not allowed | Observation (the SMI validator rejects them) | The only comment is in the file header |
 | A synchronous command must return 0 | WillReboot documentation | `try{...}catch{...};exit 0` wrappers, `trap` inside the script, `exit 0` at the end of each script |
 | All four International-Core values must be set, otherwise OOBE shows the language screen | Automate OOBE | InputLocale, SystemLocale, UILanguage, UserLocale are set |
@@ -72,7 +74,6 @@ are listed in the cards.
 | `C:\ProgramData\Unattend\Scripts\Setup-User.ps1` | First sign-in script, run by Active Setup for each user | Same |
 | `C:\ProgramData\Unattend\Scripts\Post-OOBE.ps1` | Cleanup after OOBE | Same |
 | `C:\ProgramData\Unattend\Scripts\Post-OOBE.task.xml` | Scheduled task definition | Same |
-| `C:\ProgramData\Unattend\config.json` | Snapshot of `$Config` for Post-OOBE.ps1 and for auditing | Same |
 | `C:\ProgramData\Unattend\Logs\Setup-System.log` | Machine log: every registry write with an OK/WARN/ERROR result | Same |
 | `C:\ProgramData\Unattend\Logs\Setup-User.<name>.log` | First sign-in log, one file per user | Same |
 | `C:\ProgramData\Unattend\Logs\Post-OOBE.log` | Cleanup log, including errors carried over from specialize | Same |
@@ -100,7 +101,7 @@ The detailed matrix is in [17-cross-links.md](17-cross-links.md). The main chain
 
 1. Starter accounts without a password → `LimitBlankPasswordUse` (Windows default) → network sign-in and UAC prompts
    for User are unavailable until passwords are assigned → `PasswordNeverExpires` prevents Windows from demanding a change
-   of the blank password → a separate user management project assigns passwords and groups.
+   of the blank password → a users file of WinWeaver (`.wwusers`) assigns passwords and groups.
 2. `UILanguage` = ISO language → all four language values are set → OOBE does not show the language screen →
    `Setup-User.ps1` pins the display language and reorders the input languages.
 3. `LSAProtection` → the ASR rule for LSASS is not needed → digital signature token drivers must be signed

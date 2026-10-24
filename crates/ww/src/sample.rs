@@ -12,7 +12,7 @@ the lines wrap.
 
 | Area | State | Date |
 |---|---|---|
-| Specification | Draft 0.1; the decisions of 14.10.2026 recorded in `docs/spec/01-ui.md` and below, a long cell that has to wrap over several lines in its column | 14.10.2026 |
+| Specification | The scope and the interface recorded in `docs/spec/01-ui.md` and the files below, a long cell that has to wrap over several lines in its column | 14.10.2026 |
 | Window | Tabs, menu, the command bar of each tab with icons above labels, navigation, search per tab, the painted tree and lists with the keyboard, the detail panel with copy and selectable texts, forms, check, build, the diff tab with comments, bookmarks of options, Markdown tabs with anchors, This PC, the MCP tab with its journal, settings, translations, drafts, restored tabs, the log, themes with fonts and their editor | 15.10.2026 |
 | Short | one word | 16.10.2026 |
 

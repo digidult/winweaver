@@ -138,6 +138,10 @@ effect at the next start. For one start only: `winweaver.exe --renderer directx`
 | `--detailed-log` | With `--mcp`: the log keeps every request and answer whole, without passwords, keys and tokens |
 | `--version` | Prints the version |
 | `--check-catalog` | Loads the built-in catalog with its translations and prints their problems |
+| `--script KIND FILE` | Writes the stand-alone script of a profile (`.wwprofile`) or a diff (`.wwdiff`) without the window: `apply`, `revert` (back to the defaults of Windows) or `audit`; an apply or a return gets `Undo-Apply.ps1` beside it |
+| `--reg KIND FILE` | Writes the registry file of the apply (`apply`) or of the return to the defaults (`revert`) of a profile or a diff |
+| `--only IDS` | With `--script` or `--reg`: only these rules or groups, their ids separated by commas |
+| `--out FOLDER` | With `--script` or `--reg`: the folder of the files, `output` next to the program by default |
 | `--help` | Prints the list of parameters |
 | `--smoke-window` | Opens a small window, draws two frames and prints what drew them (also with `--renderer`): a check of the graphics |
 | `--elevated-apply PLAN DIGEST` | The window starts itself so to apply a confirmed plan as administrator; not for starting by hand |

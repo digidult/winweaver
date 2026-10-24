@@ -2,7 +2,7 @@
   "_language": "Italiano",
   "_disabled": "disattivato",
   "_comment": [
-    "Italian texts of the rule catalog (rules/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
+    "Italian texts of the rule catalog (data/catalog/NN-*.json). Key: the rule id; _groups: group titles and summaries.",
     "_disabled: the word after the title of the Disabled rule of an imported policy (<title>: <word>).",
     "Fields of a rule: title, summary, effect, risk, versions, verify, rollback (strings), tags (a list of strings),",
     "params {\"<name>\": text}, values {\"<name>\": {\"<value>\": text}}; any other field is an error.",
@@ -156,7 +156,7 @@
   "install.skip-auto-activation": {
     "title": "Nessun tentativo di attivazione automatica",
     "summary": "Windows non tenta di attivarsi da solo finché non viene immesso un codice o l'attivazione non viene avviata manualmente: il valore Manual scritto dall'impostazione di installazione automatica SkipAutoActivation.",
-    "effect": "Le dodici edizioni il cui codice generico in WinKickOff è un codice client KMS restano non attivate senza un host KMS, e i tentativi automatici falliscono di continuo con errori di attivazione sul desktop; con questa regola Windows attende il codice della licenza. Pro ed Education si attivano con una licenza digitale e non hanno bisogno della regola.",
+    "effect": "Le dodici edizioni il cui codice generico in WinWeaver è un codice client KMS restano non attivate senza un host KMS, e i tentativi automatici falliscono di continuo con errori di attivazione sul desktop; con questa regola Windows attende il codice della licenza. Pro ed Education si attivano con una licenza digitale e non hanno bisogno della regola.",
     "versions": "Windows 8 e versioni successive. Verifica di accettazione in una macchina virtuale in sospeso: il valore deve essere presente prima del primo tentativo, che avviene dopo la OOBE.",
     "verify": "Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SoftwareProtectionPlatform\\Activation' -Name Manual",
     "rollback": "Imposta Manual su 0 (il valore predefinito di Windows).",
@@ -1978,7 +1978,7 @@
   },
   "apps.maps-broker-off": {
     "title": "Servizio di download delle mappe offline disabilitato",
-    "summary": "MapsBroker serve l'app Mappe; senza l'app il servizio non è necessario. Nel file v0.2 veniva disabilitato insieme alla condizione Xbox; qui è legato alla rimozione di Mappe.",
+    "summary": "MapsBroker serve l'app Mappe; senza l'app il servizio non è necessario. La regola è legata alla rimozione di Mappe.",
     "effect": "Un servizio automatico in meno.",
     "rollback": "Set-Service MapsBroker -StartupType Automatic",
     "tags": [

@@ -270,6 +270,39 @@ impl WinWeaver {
             }
             DiffAct::GoTo(key, other) => self.go_to_diff_item(shell, &key, other),
             DiffAct::ApplyItem(key) => self.apply_diff_item(shell, &key),
+            DiffAct::SaveScript(kind) => self.save_diff_files(shell, Some(kind), false),
+            DiffAct::SaveReg(revert) => self.save_diff_files(shell, None, revert),
+        }
+    }
+
+    /// Saves a script or a registry file that brings a PC to the other side of the active diff:
+    /// the rules it turns on are applied, the ones it turns off return to the defaults.
+    fn save_diff_files(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        script: Option<ScriptKind>,
+        revert: bool,
+    ) {
+        let Some(Doc::Diff(d)) = shell.docs.get(shell.active) else {
+            return;
+        };
+        let (profile, ids) = export::diff_profile(&d.diff);
+        let stem = match d.path.as_ref().and_then(|p| p.file_stem()) {
+            Some(s) => file_stem(&s.to_string_lossy()),
+            None => format!(
+                "{}-vs-{}",
+                file_stem(&d.diff.base.name),
+                file_stem(&d.diff.other.name)
+            ),
+        };
+        if !export::applicable(&self.catalog, &ids) {
+            shell.status =
+                tr("Nothing for this PC: the diff changes only the answer file").to_owned();
+            return;
+        }
+        match script {
+            Some(kind) => self.save_scripts_of(shell, &profile, &ids, kind, &stem),
+            None => self.save_reg_of(shell, &profile, &ids, revert, &stem),
         }
     }
 }

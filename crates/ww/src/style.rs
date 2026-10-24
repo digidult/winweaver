@@ -1,7 +1,6 @@
-//! The look of variant A, the layout the customer chose: the palette of light and dark, the
-//! fonts of the theme from the fonts of Windows (Segoe UI and Consolas by default), the spacing,
-//! and the small painted widgets egui has no style for: the buttons of the command bar, icon
-//! buttons, cards, section titles and chips.
+//! The look of the window: the palette of light and dark, the fonts of the theme from the fonts of
+//! Windows (Segoe UI and Consolas by default), the spacing, and the small painted widgets egui has
+//! no style for: the buttons of the command bar, icon buttons, cards, section titles and chips.
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -542,8 +541,12 @@ pub fn apply(ctx: &egui::Context, light: (Palette, Fonts), dark: (Palette, Fonts
             s.spacing.button_padding = egui::vec2(10.0, 4.0);
             s.spacing.interact_size.y = (24.0 * scale).max(24.0);
             s.spacing.menu_margin = Margin::same(6);
-            // Scroll bars that stay visible while the content is larger than the view.
-            s.spacing.scroll = egui::style::ScrollStyle::solid();
+            // Scroll bars that stay visible while the content is larger than the view, the
+            // handle in the colour of the text: the colours of the widgets of a theme are too
+            // close to the colour of the track to be seen.
+            let mut scroll = egui::style::ScrollStyle::solid();
+            scroll.foreground_color = true;
+            s.spacing.scroll = scroll;
             s.spacing.window_margin = Margin::same(10);
             for (style, size, family) in [
                 (egui::TextStyle::Body, 13.0, &body),

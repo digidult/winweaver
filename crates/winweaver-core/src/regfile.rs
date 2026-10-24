@@ -12,7 +12,7 @@ use serde_json::Value;
 use crate::apply::{self, Op, Plan};
 use crate::catalog::{RegKind, values};
 use crate::jsonfile;
-use crate::registry::{self, Data};
+use crate::registry::{self, Data, Registry};
 
 pub const EXTENSION: &str = "reg";
 pub const HEADER: &str = "Windows Registry Editor Version 5.00";
@@ -48,6 +48,43 @@ impl Line {
     pub fn parse(text: &str) -> Self {
         line_of(text)
     }
+}
+
+/// A change of the registry a line of a registry file makes.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Change {
+    CreateKey(String),
+    /// Deletes a key with everything under it.
+    DeleteKey(String),
+    Set {
+        key: String,
+        name: String,
+        data: Data,
+    },
+    DeleteValue {
+        key: String,
+        name: String,
+    },
+}
+
+/// Makes the changes in a registry, in their order: the number made and the errors, one a change
+/// that failed.
+pub fn apply_changes(reg: &dyn Registry, changes: &[Change]) -> (usize, Vec<String>) {
+    let mut done = 0;
+    let mut errors = Vec::new();
+    for change in changes {
+        let result = match change {
+            Change::CreateKey(key) => reg.create_key(key),
+            Change::DeleteKey(key) => reg.delete_key(key),
+            Change::Set { key, name, data } => reg.set(key, name, data),
+            Change::DeleteValue { key, name } => reg.delete_value(key, name),
+        };
+        match result {
+            Ok(()) => done += 1,
+            Err(e) => errors.push(e),
+        }
+    }
+    (done, errors)
 }
 
 /// A registry file: its header and its lines.
@@ -200,6 +237,55 @@ pub fn value_text(name: &str, data: Option<&Data>) -> String {
 }
 
 impl RegFile {
+    /// The changes of the lines `range` of the file, every line for `None`. A value is set in the
+    /// key above it, which is made first when its line is outside the range; a value before any
+    /// key or under a deleted key changes nothing, as regedit does.
+    pub fn changes(&self, range: Option<std::ops::Range<usize>>) -> Vec<Change> {
+        let range = range.unwrap_or(0..self.lines.len());
+        let mut out = Vec::new();
+        let mut key: Option<(&str, bool)> = None;
+        let mut made = false;
+        for (i, line) in self.lines.iter().enumerate() {
+            if let Line::Key { path, delete } = line {
+                key = Some((path.as_str(), *delete));
+                made = false;
+            }
+            if !range.contains(&i) {
+                continue;
+            }
+            match line {
+                Line::Key { path, delete } => {
+                    out.push(if *delete {
+                        Change::DeleteKey(path.clone())
+                    } else {
+                        Change::CreateKey(path.clone())
+                    });
+                    made = true;
+                }
+                Line::Value { name, data } => {
+                    let Some((path, false)) = key else {
+                        continue;
+                    };
+                    if !made {
+                        out.push(Change::CreateKey(path.to_owned()));
+                        made = true;
+                    }
+                    let (key, name) = (path.to_owned(), name.clone());
+                    out.push(match data {
+                        Some(data) => Change::Set {
+                            key,
+                            name,
+                            data: data.clone(),
+                        },
+                        None => Change::DeleteValue { key, name },
+                    });
+                }
+                Line::Blank | Line::Comment(_) | Line::Other(_) => {}
+            }
+        }
+        out
+    }
+
     /// Reads the text of a registry file; it starts with the header of regedit.
     pub fn parse(text: &str) -> Result<Self, String> {
         let mut raw = text.lines();
@@ -469,6 +555,27 @@ mod tests {
         "",
         "[-HKEY_CURRENT_USER\\Software\\Old]",
     ];
+
+    #[test]
+    fn a_file_a_key_or_a_value_is_applied_to_a_registry() {
+        let file = RegFile::parse(&(SAMPLE.join("\r\n") + "\r\n")).unwrap();
+        let all = file.changes(None);
+        assert_eq!(all.len(), 7, "{all:?}");
+        assert_eq!(
+            all[0],
+            Change::CreateKey("HKEY_CURRENT_USER\\Software\\WinWeaver".to_owned())
+        );
+        assert!(matches!(&all[6], Change::DeleteKey(k) if k.ends_with("Old")));
+        // One value: its key is made first.
+        let one = file.changes(Some(4..5));
+        assert_eq!(one.len(), 2);
+        let reg = registry::MemoryRegistry::default();
+        let (done, errors) = apply_changes(&reg, &one);
+        assert_eq!((done, errors.len()), (2, 0));
+        let key = reg.read("HKEY_CURRENT_USER\\Software\\WinWeaver").unwrap();
+        assert_eq!(key.values[0].name, "Number");
+        assert_eq!(key.values[0].data, Data::Dword(42));
+    }
 
     #[test]
     fn a_file_is_read_with_its_comments_and_written_back() {

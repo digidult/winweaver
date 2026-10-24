@@ -1,5 +1,6 @@
 use super::*;
 use winweaver_core::diff::ItemKey;
+use winweaver_core::regfile::Line;
 
 mod catalogs;
 mod files;

@@ -1,5 +1,5 @@
 {
-  "comment": ["SMB, name resolution, firewall. Section 5 of the v0.2 machine script."],
+  "comment": ["SMB, name resolution, firewall."],
   "rules": [
     {
       "id": "network.smb1-off",

@@ -271,20 +271,69 @@ fn form_icon(form: Form) -> &'static str {
     }
 }
 
-/// A part of the description: a card that folds.
+/// The colours of the parts of the description of an option, added to the themes: a stripe on
+/// the left of each part and a faint tint of its card, so that the eye finds a part without
+/// reading its title. The part `desc-<kind>` takes the colour `section-<kind>`.
+pub const SECTION_COLORS: [style::ExtraColor; 6] = [
+    style::ExtraColor {
+        name: "section-what",
+        label: "Part of the description: what it does",
+        light: egui::Color32::from_rgb(0x3b, 0x82, 0xf6),
+        dark: egui::Color32::from_rgb(0x60, 0xa5, 0xfa),
+    },
+    style::ExtraColor {
+        name: "section-risk",
+        label: "Part of the description: risk",
+        light: egui::Color32::from_rgb(0xdc, 0x26, 0x26),
+        dark: egui::Color32::from_rgb(0xf8, 0x71, 0x71),
+    },
+    style::ExtraColor {
+        name: "section-writes",
+        label: "Part of the description: what it writes",
+        light: egui::Color32::from_rgb(0x0d, 0x94, 0x88),
+        dark: egui::Color32::from_rgb(0x2d, 0xd4, 0xbf),
+    },
+    style::ExtraColor {
+        name: "section-deps",
+        label: "Part of the description: dependencies and conflicts",
+        light: egui::Color32::from_rgb(0x7c, 0x3a, 0xed),
+        dark: egui::Color32::from_rgb(0xa7, 0x8b, 0xfa),
+    },
+    style::ExtraColor {
+        name: "section-more",
+        label: "Part of the description: versions, check and rollback",
+        light: egui::Color32::from_rgb(0xd9, 0x77, 0x06),
+        dark: egui::Color32::from_rgb(0xfb, 0xbf, 0x24),
+    },
+    style::ExtraColor {
+        name: "section-ref",
+        label: "Part of the description: reference",
+        light: egui::Color32::from_rgb(0x64, 0x74, 0x8b),
+        dark: egui::Color32::from_rgb(0x94, 0xa3, 0xb8),
+    },
+];
+
+/// A part of the description: a card that folds, with the colour of its kind on its left edge.
 fn section(ui: &mut egui::Ui, id: &str, title: &str, open: bool, add: impl FnOnce(&mut egui::Ui)) {
     let p = style::palette(ui);
-    egui::Frame::new()
+    let kind = id.strip_prefix("desc-").unwrap_or(id);
+    let color = style::extra(ui, &format!("section-{kind}"));
+    let shown = egui::Frame::new()
         .outer_margin(Margin {
             left: 18,
             right: 18,
             top: 0,
             bottom: 6,
         })
-        .fill(p.card)
+        .fill(p.card.lerp_to_gamma(color, 0.05))
         .stroke(Stroke::new(1.0, p.border))
         .corner_radius(CornerRadius::same(6))
-        .inner_margin(Margin::symmetric(12, 6))
+        .inner_margin(Margin {
+            left: 16,
+            right: 12,
+            top: 6,
+            bottom: 6,
+        })
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             // The state of the setting is part of the id, so a change of it shows at once.
@@ -293,6 +342,15 @@ fn section(ui: &mut egui::Ui, id: &str, title: &str, open: bool, add: impl FnOnc
                 .default_open(open)
                 .show(ui, add);
         });
+    let rect = shown.response.rect;
+    let stripe = egui::Rect::from_min_size(rect.min, egui::vec2(4.0, rect.height()));
+    let corners = CornerRadius {
+        nw: 6,
+        sw: 6,
+        ne: 0,
+        se: 0,
+    };
+    ui.painter().rect_filled(stripe, corners, color);
 }
 
 /// The id of an item, selectable, with a button that copies it.

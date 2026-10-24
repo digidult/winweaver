@@ -4,7 +4,7 @@
   "catalog": "0.11",
   "name": "Office",
   "author": "",
-  "comment": "Security and updatability for workgroups without a domain; equals the catalog defaults. Based on the tested answer file v0.2 with the later changes: browser policies, AI and telemetry off, OneDrive not installed, administrator UAC as in Windows (no prompt for Task Manager), no ASR rule for USB, no updates of other Microsoft products, drives not encrypted. Starter accounts Admin and User without passwords.",
+  "comment": "Security and updatability for workgroups without a domain; equals the catalog defaults. It holds: browser policies, AI and telemetry off, OneDrive not installed, administrator UAC as in Windows (no prompt for Task Manager), no ASR rule for USB, no updates of other Microsoft products, drives not encrypted. Starter accounts Admin and User without passwords.",
   "created": "2026-09-25T00:00:00",
   "modified": "2026-09-25T00:00:00",
   "install": {

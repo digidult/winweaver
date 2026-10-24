@@ -184,8 +184,8 @@ se guardó.
 ## Abrir otros archivos
 
 Abrir acepta perfiles (`.wwprofile`), comparaciones (`.wwdiff`), archivos de marcadores (`.wwmarks`),
-páginas Markdown, archivos de respuesta generados por WinWeaver o WinKickOff (el perfil que incluyen),
-perfiles de WinKickOff e informes de auditoría (`.json`).
+páginas Markdown, archivos de respuesta con un perfil incluido (el perfil que incluyen), perfiles
+antiguos en JSON e informes de auditoría (`.json`).
 
 Un archivo de registro (`.reg`) se abre en una pestaña propia, como describe la sección sobre el
 registro.
@@ -281,6 +281,10 @@ registro de `logs/` indica con qué dibuja la ventana.
 | `--detailed-log` | Con `--mcp`: el registro guarda cada solicitud y respuesta completas, sin contraseñas, claves ni tokens |
 | `--version` | Muestra la versión |
 | `--check-catalog` | Carga el catálogo integrado con sus traducciones y muestra sus problemas |
+| `--script KIND FILE` | Escribe sin la ventana el script independiente de un perfil (`.wwprofile`) o de una diferencia (`.wwdiff`): `apply`, `revert` (vuelta a los valores predeterminados de Windows) o `audit`; junto a un script de aplicación o de vuelta queda `Undo-Apply.ps1` |
+| `--reg KIND FILE` | Escribe el archivo de registro de la aplicación (`apply`) o de la vuelta a los valores predeterminados (`revert`) de un perfil o de una diferencia |
+| `--only IDS` | Con `--script` o `--reg`: solo estas reglas o grupos, sus identificadores separados por comas |
+| `--out FOLDER` | Con `--script` o `--reg`: la carpeta de los archivos, por defecto `output` junto al programa |
 | `--help` | Muestra la lista de parámetros |
 | `--smoke-window` | Abre una ventana pequeña, dibuja dos fotogramas y muestra con qué se dibujaron (también con `--renderer`): una comprobación de los gráficos |
 | `--elevated-apply PLAN DIGEST` | Así se inicia la propia ventana para aplicar un plan confirmado como administrador; no es para iniciarlo a mano |

@@ -1,6 +1,6 @@
 # 10. Removable media, script files, Microsoft Edge
 
-Section 6 of `Setup-System.ps1`. The three vectors through which a non-professional user most often
+Rules of `Setup-System.ps1` (specialize). The three vectors through which a non-professional user most often
 runs malicious code: a USB flash drive, a script attachment, a downloaded file.
 
 ## DisableAutoRun
