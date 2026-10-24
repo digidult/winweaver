@@ -44,6 +44,14 @@ pub(crate) fn pick_profile() -> Option<PathBuf> {
 /// The open dialog for every kind of file the program opens.
 pub(crate) fn open_dialog() -> rfd::FileDialog {
     let dir = profiles_dir();
+    if crate::lite() {
+        let dialog = rfd::FileDialog::new()
+            .set_title(tr("Open"))
+            .add_filter(tr("Profiles"), &[profile::EXTENSION])
+            .add_filter(tr("Answer files (the profile they embed)"), &["xml"])
+            .add_filter(tr("Older profiles and audit reports"), &["json"]);
+        return widgets::in_folder(dialog, &dir);
+    }
     let dialog = rfd::FileDialog::new()
         .set_title(tr("Open"))
         .add_filter(

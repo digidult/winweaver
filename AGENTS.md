@@ -29,6 +29,7 @@ text editor wedit.
 | Change what an AI agent or the archive gets | `agents/README.md`, `package/README.md` |
 | Write a program on W#, or change the shell of the window | `docs/ww.md`, then `crates/ww/src/shell/mod.rs` (the trait `App`), `crates/wedit` (the example) |
 | Change wedit | `crates/wedit/src/app.rs`, `package-wedit/README.md` |
+| Change wwlite, the light edition | `crates/wwlite`, `winweaver_ui::lite` and its uses, `package-wwlite/README.md`; a browser edition: `docs/wasm.md` |
 
 ## 3. Folder structure
 
@@ -148,11 +149,16 @@ text editor wedit.
 │   ├── lang/<code>/       ui.json: the translations of the interface (uk, ru, de, es, fr, id, it, tr); guide.md: the guide translated
 │   ├── themes/            light, dark, latte, matrix .wwtheme: the embedded themes (a base, the colours it
 │   │                      changes, the fonts and the font of the icons)
-│   └── docs/              guide.md, the English guide shown at the first start
+│   └── docs/              guide.md, the English guide shown at the first start; guide-lite.txt, the plain
+│                          guide of wwlite (its Ukrainian one in lang/uk/guide-lite.txt)
 ├── agents/                shipped in the archive: AGENTS.md (the assistant for any agent, short for small
 │                          contexts), README.md, skills/ (winweaver: the tools, served as winweaver://skill;
 │                          winweaver-review, -change, -this-pc), pi-agent/ (Dockerfile of the latest pi and
 │                          Node.js LTS, its AGENTS.md, README.md)
+├── crates/wwlite/         the light edition: main.rs (the command line, winweaver_ui::run_lite), tests.rs
+│                          (what it leaves out, the screenshots l1- to l4-)
+├── package-wwlite/        what the archive of wwlite adds: README.md, lang/de/guide-lite.txt (German, with
+│                          data/lang/de/ui.json copied by CI)
 ├── package-wedit/         what the archive of wedit adds: README.md for its user, lang/uk/ui.json (every
 │                          text of wedit and of WW in Ukrainian, the example of a language file)
 ├── package/               what the archive adds: README.md for the user (not this repository's), lang/be/ui.json
@@ -160,6 +166,7 @@ text editor wedit.
 └── docs/
     ├── releases/          release notes v<version>.md
     ├── ww.md              the framework W# for the programs written on it
+    ├── wasm.md            the study of wwlite in a browser (WebAssembly)
     └── spec/              the specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
 ```
 
@@ -721,6 +728,16 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   registry file. The menu, the command bars of a profile, a catalog and the registry have Group
   Policy; `Extra::pol_with_pc` opens the files of this Windows behind the tab in front after a read
   of this PC.
+- wwlite (`crates/wwlite`): the same window as WinWeaver with `winweaver_ui::lite()` set once a
+  process (`enter_lite`, `run_lite`): `App::name` gives `wwlite` (its title, its About, the
+  settings file `wwlite.settings.json`), `App::edits_themes` is off (no theme editor, no fonts of a
+  theme in the settings), `languages` is Ukrainian alone, the command bar of a profile has New,
+  Open, Save, Check and Build, the menu has New, Open, Save, Guide (plain text, `pages::
+  guide_lite_text`), License (plain), Settings (General and Files), About and Exit, `open_any`
+  takes profiles, answer files and old JSON profiles only, the detail panel has no This PC, no
+  registry buttons, no catalog links and no Reference, and every act of the parts left out does
+  nothing (`App::apply`). Its tests run in their own process, since the edition is a static of the
+  process; never call `enter_lite` in a test of winweaver-ui. CI packages `wwlite-<version>.zip`.
 - The cheap check: the Linux job checks the whole workspace for Windows (clippy on the
   target `x86_64-pc-windows-gnu`), so `gh workflow run ci.yml --ref <branch> -f windows=false` is the
   cheap check of a change of any crate; the Windows job runs when the tests of the window, the runner's
@@ -736,6 +753,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Window | WinWeaver on W#: tabs, menu, command bar of each tab, navigation, search per tab, the painted tree and lists, detail panel, forms, check, build, diff tab, bookmarks, Markdown pages, This PC, registry, registry files, catalogs and their editor, users files, MCP tab, settings, nine languages, drafts, restored tabs, log, themes with fonts and icons in colour |
 | MCP server | stdio and HTTP, 36 tools, 4 resources, modes, journal, token, configuration files; tests of both transports |
 | W# and wedit | The crates `ww-base` and `ww`, the editor `wedit` with its archive, `docs/ww.md` |
+| wwlite | The light edition for Windows with its archive; a browser edition studied in `docs/wasm.md` |
 | In work (pull request #60, 0.24.0) | The current list of the customer in six groups: the shell (keys, focus, About, links, icons, the question of a closing tab), the documents, the profile (links between catalogs, colours of the panels, `.reg` and `.ps1` of a diff and a whole profile, the command line), the registry and `.pol` files, drafts of every document, `wwlite` and a study of a Wasm edition |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 

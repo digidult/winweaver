@@ -100,6 +100,20 @@ impl WinWeaver {
     }
 
     pub(crate) fn tab_commands(&self, shell: &Shell<WinWeaver>) -> Vec<Item> {
+        if crate::lite() {
+            return match shell.docs.get(shell.active) {
+                Some(Doc::Profile(_)) => vec![
+                    new_profile(),
+                    open(),
+                    save(),
+                    Item::Separator,
+                    keyed(icons::CHECK, tr("Check"), &keys::CHECK, ProfileAct::Check),
+                    keyed(icons::GEAR, tr("Build"), &keys::BUILD, ProfileAct::Build),
+                ],
+                Some(Doc::Shell(ShellDoc::Settings(_))) => Vec::new(),
+                _ => vec![new_profile(), open()],
+            };
+        }
         match shell.docs.get(shell.active) {
             Some(Doc::Profile(_)) => vec![
                 new_profile(),

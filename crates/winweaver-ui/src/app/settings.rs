@@ -20,7 +20,9 @@ impl WinWeaver {
             ui.checkbox(&mut parts.writes, tr("What it writes"));
             ui.checkbox(&mut parts.deps, tr("Dependencies and conflicts"));
             ui.checkbox(&mut parts.more, tr("Versions, check and rollback"));
-            ui.checkbox(&mut parts.reference, tr("Reference"));
+            if !lite() {
+                ui.checkbox(&mut parts.reference, tr("Reference"));
+            }
         });
         ui.checkbox(
             &mut extra.show_guide_at_start,
@@ -34,14 +36,16 @@ impl WinWeaver {
             &mut extra.hide_unknown,
             tr("Hide the options of the profile whose catalog is not loaded"),
         );
-        ui.checkbox(
-            &mut extra.writers_open,
-            tr("Show the rules that write a key of a registry file open"),
-        );
-        ui.checkbox(
-            &mut extra.pol_with_pc,
-            tr("Open the Group Policy files of this Windows when this PC is read"),
-        );
+        if !lite() {
+            ui.checkbox(
+                &mut extra.writers_open,
+                tr("Show the rules that write a key of a registry file open"),
+            );
+            ui.checkbox(
+                &mut extra.pol_with_pc,
+                tr("Open the Group Policy files of this Windows when this PC is read"),
+            );
+        }
         ui.add_space(4.0);
     }
 

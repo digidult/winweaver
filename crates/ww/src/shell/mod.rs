@@ -219,6 +219,17 @@ pub trait App: Sized + 'static {
     const NAME: &'static str;
     /// The version of the program with its commit, for the first line of the log.
     const BUILD: &'static str = env!("CARGO_PKG_VERSION");
+
+    /// The name of the program at run time: `NAME`, or the name of an edition of it.
+    fn name() -> &'static str {
+        Self::NAME
+    }
+
+    /// Whether the settings offer the editor of a theme and the fonts of a theme; off, the themes
+    /// of the folder are only chosen.
+    fn edits_themes() -> bool {
+        true
+    }
     /// The hint of the button that opens a new tab.
     const NEW_HINT: &'static str;
 
@@ -433,7 +444,7 @@ impl<A: App> Shell<A> {
             active: 0,
             settings,
             settings_dirty: false,
-            settings_path: Settings::<A::Extra>::candidates(A::NAME).remove(0),
+            settings_path: Settings::<A::Extra>::candidates(A::name()).remove(0),
             search_history,
             question: None,
             messages_open: true,
@@ -456,7 +467,7 @@ impl<A: App> Shell<A> {
 
     /// The name of the log file of the program.
     fn log_name() -> String {
-        A::NAME.to_lowercase()
+        A::name().to_lowercase()
     }
 
     pub fn active_doc(&self) -> Option<&A::Doc> {
@@ -730,8 +741,8 @@ impl<A: App> Shell<A> {
 
     pub fn window_title(&self) -> String {
         match self.active_doc() {
-            Some(doc) => format!("{} - {}", doc.title(), A::NAME),
-            None => A::NAME.to_owned(),
+            Some(doc) => format!("{} - {}", doc.title(), A::name()),
+            None => A::name().to_owned(),
         }
     }
 

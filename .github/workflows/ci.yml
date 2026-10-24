@@ -133,6 +133,14 @@ jobs:
           Copy-Item target/release/wedit.exe "$wedit/"
           Copy-Item package-wedit/README.md "$wedit/README.md"
           Copy-Item -Recurse package-wedit/lang "$wedit/lang"
+          # The light edition wwlite: the profile editor and the build of the answer file.
+          $lite = 'dist-wwlite/wwlite'
+          New-Item -ItemType Directory -Force "$lite/lang/de" | Out-Null
+          Copy-Item target/release/wwlite.exe "$lite/"
+          Copy-Item package-wwlite/README.md "$lite/README.md"
+          Copy-Item -Recurse data/presets "$lite/profiles"
+          Copy-Item data/lang/de/ui.json "$lite/lang/de/ui.json"
+          Copy-Item package-wwlite/lang/de/guide-lite.txt "$lite/lang/de/guide-lite.txt"
           "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append
       - uses: actions/upload-artifact@v4
         with:
@@ -142,6 +150,10 @@ jobs:
         with:
           name: wedit-${{ env.VERSION }}
           path: dist-wedit/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wwlite-${{ env.VERSION }}
+          path: dist-wwlite/
 
   release:
     name: Release
@@ -162,11 +174,17 @@ jobs:
           pattern: wedit-*
           merge-multiple: true
           path: dist-wedit
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wwlite-*
+          merge-multiple: true
+          path: dist-wwlite
       - name: Archive
         run: |
           v="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
           (cd dist && zip -qr "WinWeaver-$v.zip" WinWeaver)
           (cd dist-wedit && zip -qr "../dist/wedit-$v.zip" wedit)
+          (cd dist-wwlite && zip -qr "../dist/wwlite-$v.zip" wwlite)
       - name: Release notes file
         id: notes
         run: |

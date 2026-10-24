@@ -50,10 +50,10 @@ pub fn smoke_window<A: App>(cli_renderer: Option<&str>) -> Result<String, String
             }
         }
     }
-    let settings = Settings::<A::Extra>::load(A::NAME).0.unwrap_or_default();
+    let settings = Settings::<A::Extra>::load(A::name()).0.unwrap_or_default();
     let order = renderer::order(chosen_renderer(cli_renderer, &settings.renderer)?);
     let info = std::sync::Arc::new(std::sync::Mutex::new(String::new()));
-    let title = format!("{} smoke test", A::NAME);
+    let title = format!("{} smoke test", A::name());
     let viewport = egui::ViewportBuilder::default()
         .with_title(&title)
         .with_inner_size(SMOKE_WINDOW_SIZE);
@@ -62,7 +62,7 @@ pub fn smoke_window<A: App>(cli_renderer: Option<&str>) -> Result<String, String
         Box::new(move |cc| {
             *seen.lock().unwrap_or_else(|e| e.into_inner()) = renderer::graphics_text(cc);
             Ok(Box::new(Smoke {
-                name: A::NAME,
+                name: A::name(),
                 frames: 0,
             }))
         })
@@ -82,14 +82,14 @@ pub fn run<A: App>(
     cli_renderer: Option<&str>,
     make: impl Fn(&Settings<A::Extra>) -> A + Clone + 'static,
 ) -> Result<(), String> {
-    let (loaded, settings_path) = Settings::<A::Extra>::load(A::NAME);
+    let (loaded, settings_path) = Settings::<A::Extra>::load(A::name());
     let (settings, warning) = match loaded {
         Ok(s) => (s, None),
         Err(e) => (Settings::default(), Some(e)),
     };
     let order = renderer::order(chosen_renderer(cli_renderer, &settings.renderer)?);
     let mut viewport = egui::ViewportBuilder::default()
-        .with_title(A::NAME)
+        .with_title(A::name())
         .with_inner_size(WINDOW_SIZE)
         .with_min_inner_size(WINDOW_MIN_SIZE);
     // Where the window was at the last close; the first frame fits it to the monitor.
@@ -99,7 +99,7 @@ pub fn run<A: App>(
             .with_position([w.x, w.y])
             .with_maximized(w.maximized);
     }
-    renderer::start(A::NAME, &viewport, &order, |drawn, failures| {
+    renderer::start(A::name(), &viewport, &order, |drawn, failures| {
         let make = make.clone();
         let settings = settings.clone();
         let settings_path = settings_path.clone();
@@ -115,7 +115,7 @@ pub fn run<A: App>(
                 "INFO",
                 &format!(
                     "{} {} started; graphics: {}",
-                    A::NAME,
+                    A::name(),
                     A::BUILD,
                     window.shell.graphics
                 ),

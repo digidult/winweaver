@@ -34,7 +34,15 @@ impl App for WinWeaver {
     const NEW_HINT: &'static str = "New profile (Ctrl+N)";
 
     fn languages() -> &'static [(&'static str, &'static str)] {
-        &LANGUAGES
+        if lite() { &LANGUAGES_LITE } else { &LANGUAGES }
+    }
+
+    fn name() -> &'static str {
+        if lite() { "wwlite" } else { Self::NAME }
+    }
+
+    fn edits_themes() -> bool {
+        !lite()
     }
 
     fn themes() -> &'static [(&'static str, &'static str)] {
@@ -182,6 +190,7 @@ impl App for WinWeaver {
         };
         let star = self
             .current_bookmark(shell)
+            .filter(|_| !lite())
             .map(|b| (self.marks.find(&b).is_some(), Act::Marks(MarksAct::Toggle)));
         Some(Nav {
             history,
@@ -300,7 +309,11 @@ impl App for WinWeaver {
     }
 
     fn settings_sections(&self) -> Vec<&'static str> {
-        SettingsSection::ALL.iter().map(|s| s.title()).collect()
+        SettingsSection::ALL
+            .iter()
+            .filter(|s| !lite() || **s == SettingsSection::Files)
+            .map(|s| s.title())
+            .collect()
     }
 
     fn settings_general(&mut self, shell: &mut Shell<Self>, ui: &mut egui::Ui) {
@@ -314,7 +327,11 @@ impl App for WinWeaver {
         ui: &mut egui::Ui,
         acts: &mut Vec<Act>,
     ) {
-        match SettingsSection::ALL.get(section) {
+        let shown: Vec<SettingsSection> = SettingsSection::ALL
+            .into_iter()
+            .filter(|s| !lite() || *s == SettingsSection::Files)
+            .collect();
+        match shown.get(section) {
             Some(SettingsSection::Templates) => {
                 style::block(ui, |ui| self.imports_view(ui, acts));
             }
@@ -356,6 +373,24 @@ impl App for WinWeaver {
     }
 
     fn apply(&mut self, shell: &mut Shell<Self>, act: Act) {
+        // The light edition has none of these: an act of them, from a key or a link, does nothing.
+        if lite()
+            && matches!(
+                act,
+                Act::Pc(_)
+                    | Act::Users(_)
+                    | Act::Diff(_)
+                    | Act::Marks(_)
+                    | Act::Mcp(_)
+                    | Act::Catalog(_)
+                    | Act::Import(_)
+                    | Act::Registry(_)
+                    | Act::RegFile(_)
+                    | Act::Pol(_)
+            )
+        {
+            return;
+        }
         match act {
             Act::Profile(a) => self.apply_profile(shell, a),
             Act::File(a) => self.apply_file(shell, a),

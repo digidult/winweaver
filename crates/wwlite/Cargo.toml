@@ -1,0 +1,31 @@
+[package]
+name = "wwlite"
+description = "wwlite: the light edition of WinWeaver, the profile editor and the build of autounattend.xml"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "wwlite"
+path = "src/main.rs"
+
+[features]
+default = ["glow", "wgpu"]
+# The renderers of the window: OpenGL (glow), DirectX 12 (wgpu); at least one.
+glow = ["winweaver-ui/glow"]
+wgpu = ["winweaver-ui/wgpu"]
+
+[dependencies]
+winweaver-core = { path = "../winweaver-core" }
+winweaver-ui = { path = "../winweaver-ui", default-features = false }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_System_Console"] }
+
+[dev-dependencies]
+# The tests and the screenshots of the window, drawn without a screen (src/tests.rs).
+egui_kittest = { version = "0.36", features = ["eframe", "wgpu", "snapshot"] }
+ww = { path = "../ww", default-features = false }

@@ -337,7 +337,7 @@ impl<A: App> Window<A> {
         widgets::Modal::new(tr("About"))
             .id("about")
             .show(ctx, |ui| {
-                ui.label(crate::style::strong(ui, A::NAME, 18.0));
+                ui.label(crate::style::strong(ui, A::name(), 18.0));
                 ui.add_space(6.0);
                 for line in &lines {
                     ui.add(egui::Label::new(line.as_str()).selectable(true));
@@ -399,7 +399,7 @@ impl<A: App> Window<A> {
             {
                 restored += 1;
             } else {
-                broken.push(format!("{key}: not a draft of {}", A::NAME));
+                broken.push(format!("{key}: not a draft of {}", A::name()));
             }
         }
         if start_tab_untouched && (restored_tabs > 0 || restored > 0) && self.shell.docs.len() > 1 {

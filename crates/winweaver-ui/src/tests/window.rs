@@ -263,6 +263,41 @@ fn screenshots_of_the_window() {
         d.at = d.file.lines.iter().position(key);
     }
     shot(&mut harness, "12-regfile");
+    // A Group Policy file of the computer, made here in the folder Machine.
+    let machine = dir.join("Machine");
+    std::fs::create_dir_all(&machine).unwrap();
+    let pol = machine.join("Registry.pol");
+    std::fs::write(&pol, sample_pol()).unwrap();
+    harness
+        .state_mut()
+        .apply(vec![Act::Shell(ShellAct::OpenPath(pol))]);
+    if let Some(Doc::Pol(d)) = harness.state_mut().shell.docs.last_mut() {
+        d.select(
+            "HKEY_LOCAL_MACHINE\\Software\\Policies\\Microsoft\\Windows\\DataCollection",
+            Some("AllowTelemetry"),
+        );
+    }
+    shot(&mut harness, "21-pol");
+    // The registry tab on a registry in memory: the values as a list.
+    {
+        use winweaver_core::registry::{Data, MemoryRegistry, Registry};
+        let reg = std::sync::Arc::new(MemoryRegistry::default());
+        let key = "HKEY_CURRENT_USER\\Software\\WinWeaverShots";
+        reg.create_key(&format!("{key}\\Inner")).unwrap();
+        reg.set(key, "Size", &Data::Dword(42)).unwrap();
+        reg.set(key, "Name", &Data::Sz("WinWeaver".to_owned()))
+            .unwrap();
+        reg.set(key, "", &Data::Sz("the default value".to_owned()))
+            .unwrap();
+        harness.state_mut().app.registry = reg;
+        harness
+            .state_mut()
+            .apply(vec![Act::Registry(RegistryAct::Open(
+                key.to_owned(),
+                Some("Size".to_owned()),
+            ))]);
+    }
+    shot(&mut harness, "22-registry");
     // Pages: the sample at several widths and settings, and AGENTS.md at its status table.
     let sample = dir.join("sample.md");
     std::fs::write(&sample, ww::sample::PAGE).unwrap();
@@ -441,4 +476,39 @@ fn a_group_shows_in_the_profile_from_another_tab() {
     };
     assert_eq!(doc.sel, Sel::Group(group));
     assert!(doc.reveal);
+}
+
+/// A small Group Policy file: a value set, a value deleted, values of a key deleted.
+fn sample_pol() -> Vec<u8> {
+    let wide = |s: &str| -> Vec<u8> {
+        s.encode_utf16()
+            .chain([0])
+            .flat_map(u16::to_le_bytes)
+            .collect()
+    };
+    let ch = |c: char| (c as u16).to_le_bytes().to_vec();
+    let entry = |key: &str, name: &str, kind: u32, data: &[u8]| {
+        let mut out = ch('[');
+        out.extend(wide(key));
+        out.extend(ch(';'));
+        out.extend(wide(name));
+        out.extend(ch(';'));
+        out.extend(kind.to_le_bytes());
+        out.extend(ch(';'));
+        out.extend((data.len() as u32).to_le_bytes());
+        out.extend(ch(';'));
+        out.extend(data);
+        out.extend(ch(']'));
+        out
+    };
+    let mut bytes = b"PReg".to_vec();
+    bytes.extend(1u32.to_le_bytes());
+    let telemetry = "Software\\Policies\\Microsoft\\Windows\\DataCollection";
+    bytes.extend(entry(telemetry, "AllowTelemetry", 4, &0u32.to_le_bytes()));
+    bytes.extend(entry(telemetry, "**del.MaxTelemetryAllowed", 1, &[0, 0]));
+    let update = "Software\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU";
+    bytes.extend(entry(update, "NoAutoUpdate", 4, &1u32.to_le_bytes()));
+    let names: Vec<u8> = "A;B\0".encode_utf16().flat_map(u16::to_le_bytes).collect();
+    bytes.extend(entry(update, "**DeleteValues", 1, &names));
+    bytes
 }

@@ -1,0 +1,39 @@
+wwlite, the light edition of WinWeaver
+======================================
+
+wwlite prepares an unattended installation of Windows 11: it edits a profile of installation
+rules and builds the answer file autounattend.xml from it. It reads nothing from this PC and
+changes nothing on it.
+
+1. A profile
+   New (Ctrl+N) starts an empty profile; the menu New also offers the presets Office, Strict,
+   Laptop and Home. Open (Ctrl+O) opens a profile (.wwprofile), an answer file with an embedded
+   profile (.xml) or an older profile (.json). Save (Ctrl+S) writes the profile; the folder
+   profiles next to the program is offered first.
+
+2. The tree and the forms
+   On the left the rules in their groups: a check box turns a rule on or off, a click shows the
+   rule on the right with its parameters and its description. At the top of the tree the forms
+   Installation, Accounts and Languages hold the edition, the key, the disk, the computer name,
+   the accounts and the languages of the installation.
+
+3. Check and build
+   Check (F7) lists the problems of the profile under the command bar. Build (F9) writes
+   autounattend.xml; copy it to the root of the installation USB stick.
+
+4. Catalogs and themes
+   The catalog of rules is built in. More catalogs (.wwcatalog files made by WinWeaver or by
+   hand) are read from the folder imports next to the program, and their rules join the tree and
+   the answer file. Themes (.wwtheme files) are read from the folder themes and chosen in
+   Settings, General.
+
+5. Languages
+   English and Ukrainian are built in. Another language is a folder lang\<code> next to the
+   program with its ui.json and, if wanted, its guide-lite.txt; German comes this way. Choose
+   the language in Settings, General.
+
+6. Unsaved changes
+   A profile with unsaved changes is kept as a draft in the folder drafts and comes back at the
+   next start. Closing a tab with changes asks: Save, Don't save or Cancel.
+
+Command line: wwlite --version, wwlite --help, wwlite --renderer opengl|directx|auto.

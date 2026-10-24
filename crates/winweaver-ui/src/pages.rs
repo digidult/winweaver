@@ -136,6 +136,28 @@ pub fn license_text() -> String {
     }
 }
 
+/// The short guide of wwlite, plain text: the title of its tab and the embedded texts.
+pub const GUIDE_LITE_TITLE: &str = "Guide.txt";
+const GUIDE_LITE: &str = include_str!("../../../data/docs/guide-lite.txt");
+const GUIDE_LITE_UK: &str = include_str!("../../../data/lang/uk/guide-lite.txt");
+
+/// The guide of wwlite in a language: a file `lang/<code>/guide-lite.txt` next to the
+/// executable, the Ukrainian one, or the English one.
+pub fn guide_lite_text(code: &str) -> String {
+    let file = lang_dir().join(code).join("guide-lite.txt");
+    if code != "en"
+        && let Ok(text) = winweaver_core::jsonfile::read_text_bom(&file, MARKDOWN_MAX_BYTES)
+    {
+        return text;
+    }
+    if code == "uk" {
+        GUIDE_LITE_UK
+    } else {
+        GUIDE_LITE
+    }
+    .to_owned()
+}
+
 /// The guide in a language: a file `lang/<code>/guide.md` next to the executable, the embedded
 /// translation, or the English page.
 pub fn guide_text(code: &str) -> String {

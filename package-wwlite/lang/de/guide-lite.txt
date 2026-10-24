@@ -1,0 +1,40 @@
+wwlite, die leichte Ausgabe von WinWeaver
+=========================================
+
+wwlite bereitet eine unbeaufsichtigte Installation von Windows 11 vor: es bearbeitet ein Profil
+von Installationsregeln und erstellt daraus die Antwortdatei autounattend.xml. Es liest nichts
+von diesem PC und ändert nichts an ihm.
+
+1. Ein Profil
+   Neu (Ctrl+N) beginnt ein leeres Profil; das Menü Neu bietet auch die Vorlagen Office,
+   Strict, Laptop und Home. Öffnen (Ctrl+O) öffnet ein Profil (.wwprofile), eine Antwortdatei
+   mit eingebettetem Profil (.xml) oder ein älteres Profil (.json). Speichern (Ctrl+S) schreibt
+   das Profil; zuerst wird der Ordner profiles neben dem Programm angeboten.
+
+2. Der Baum und die Formulare
+   Links die Regeln in ihren Gruppen: ein Kontrollkästchen schaltet eine Regel ein oder aus, ein
+   Klick zeigt die Regel rechts mit ihren Parametern und ihrer Beschreibung. Oben im Baum halten
+   die Formulare Installation, Konten und Sprachen die Edition, den Schlüssel, den Datenträger,
+   den Computernamen, die Konten und die Sprachen der Installation.
+
+3. Prüfen und Erstellen
+   Prüfen (F7) listet die Probleme des Profils unter der Befehlsleiste. Erstellen (F9) schreibt
+   autounattend.xml; kopieren Sie sie in das Stammverzeichnis des Installations-USB-Sticks.
+
+4. Kataloge und Designs
+   Der Regelkatalog ist eingebaut. Weitere Kataloge (.wwcatalog-Dateien, von WinWeaver oder von
+   Hand erstellt) werden aus dem Ordner imports neben dem Programm gelesen, und ihre Regeln
+   kommen in den Baum und in die Antwortdatei. Designs (.wwtheme-Dateien) werden aus dem Ordner
+   themes gelesen und in den Einstellungen, Allgemein, gewählt.
+
+5. Sprachen
+   Englisch und Ukrainisch sind eingebaut. Eine andere Sprache ist ein Ordner lang\<Code> neben
+   dem Programm mit ihrer ui.json und, falls gewünscht, ihrer guide-lite.txt; Deutsch kommt so.
+   Die Sprache wird in den Einstellungen, Allgemein, gewählt.
+
+6. Nicht gespeicherte Änderungen
+   Ein Profil mit nicht gespeicherten Änderungen wird als Entwurf im Ordner drafts gehalten und
+   kommt beim nächsten Start zurück. Das Schließen eines Tabs mit Änderungen fragt: Speichern,
+   Nicht speichern oder Abbrechen.
+
+Befehlszeile: wwlite --version, wwlite --help, wwlite --renderer opengl|directx|auto.

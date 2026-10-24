@@ -227,7 +227,7 @@ pub(crate) fn group_detail(
         .iter()
         .map(|r| r.id.clone())
         .collect();
-    if winweaver_core::export::applicable(catalog, &ids) {
+    if !crate::lite() && winweaver_core::export::applicable(catalog, &ids) {
         block(ui, |ui| {
             style::section_title(ui, tr("This PC, this selection"));
             ui.add_space(4.0);

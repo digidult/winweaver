@@ -509,6 +509,37 @@ fn summary_of(plan: &scripts::ScriptPlan) -> String {
 
 /// Opens the window with the renderer of `--renderer` or of the settings first; returns the
 /// error text when the catalog or the window cannot start.
+/// The light edition wwlite is running: set once at its start, before the window.
+static LITE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Whether the program is the light edition wwlite: the profile editor, the check and the build
+/// of the answer file only.
+pub fn lite() -> bool {
+    LITE.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// The translations wwlite embeds: Ukrainian (English is the source); others are files next to it.
+pub const LANGUAGES_LITE: [(&str, &str); 1] =
+    [("uk", include_str!("../../../data/lang/uk/ui.json"))];
+
+/// Makes this process the light edition wwlite, before its window is made; for the process
+/// alone (its tests run in a process of their own).
+pub fn enter_lite() {
+    LITE.store(true, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Opens the window of the light edition wwlite.
+pub fn run_lite(cli_renderer: Option<&str>) -> Result<(), String> {
+    enter_lite();
+    run(cli_renderer)
+}
+
+/// The smoke test of the light edition.
+pub fn smoke_window_lite(cli_renderer: Option<&str>) -> Result<String, String> {
+    enter_lite();
+    smoke_window(cli_renderer)
+}
+
 pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
     let catalog = Catalog::embedded().map_err(|e| format!("catalog: {e}"))?;
     let texts = CatalogTexts::embedded().map_err(|e| format!("translations: {e}"))?;

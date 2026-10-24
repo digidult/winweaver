@@ -13,7 +13,8 @@ The window is built on W# (`ww` in the code, WW in the documents), a small frame
 programs that analyse and manage a system: a window with document tabs, a command bar, a navigation row,
 themes, translations, drafts and the session, with the program bringing its documents and acts
 ([docs/ww.md](docs/ww.md)). Its second program is `wedit`, a portable text editor with a Markdown viewer,
-shipped as `wedit-<version>.zip` beside WinWeaver.
+shipped as `wedit-<version>.zip` beside WinWeaver. The light edition `wwlite` (`wwlite-<version>.zip`)
+keeps the profile editor and the build of `autounattend.xml` alone.
 
 Licence: [MIT](LICENSE).
 

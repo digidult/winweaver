@@ -343,6 +343,9 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>, acts: &mut Vec<
                 password: String::new(),
             });
         }
+        if crate::lite() {
+            return;
+        }
         if ui
             .button(tr("From a users file..."))
             .on_hover_text(tr("Replaces the accounts with the ones of a .wwusers file, with their passwords when its master password is given"))

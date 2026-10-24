@@ -155,8 +155,11 @@ The unsaved state of a modified profile is written to `drafts/<key>.json` two se
 and at the close: `format` `ww-draft`, `version`, `path` (the file of the profile, kept as section 2 says,
 empty for a profile never saved), `saved` and `document` (the profile). The key is `p-<FNV-1a of the path as
 it is kept>` for a file and `n-<time>-<n>` for a new profile. At the next start the window restores every
-draft into its tab and says how many it restored. A save or a discard deletes the draft. Drafts of the
-other kinds of documents are planned (`03-features.md` section 17).
+draft into its tab and says how many it restored. A save or a discard deletes the draft. The other
+documents with unsaved changes write drafts too, at most every two seconds while they change and
+at the close: their `document` is `{"kind": ..., "text": ...}` with the kind `regfile` (the text of
+the file), `diff`, `catalog-edit` (the catalog file and whether it is an import), `users` (the users
+file with the passwords of its last save, encrypted) or `ww-theme` (the theme and its id).
 
 ## 9. Presets
 
@@ -179,7 +182,7 @@ WinWeaver/
 │                              (the archive brings Belarusian, be, as the example)
 ├── themes/                    <id>.wwtheme: more themes, or one replacing an embedded theme
 ├── imports/                   <id>.wwcatalog: the catalog files of the imported policy templates
-├── drafts/                    the drafts of unsaved profiles
+├── drafts/                    the drafts of unsaved documents
 ├── mcp/                       <name>.wwmcp; default.wwmcp is the one the MCP tab opens first
 ├── logs/                      winweaver-<date>.log (the window), mcp-<date>.jsonl (the MCP server, its crashes)
 ├── output/                    autounattend.xml, the scripts and registry files, the plans, backups and

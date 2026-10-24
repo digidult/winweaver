@@ -119,7 +119,10 @@ impl<A: App> Window<A> {
             ui.add_space(4.0);
             self.language_and_theme(ui, acts);
         });
-        style::block(ui, |ui| self.theme_fonts(ui));
+        // The fonts are a change of the theme file: only where themes are edited.
+        if A::edits_themes() {
+            style::block(ui, |ui| self.theme_fonts(ui));
+        }
         style::block(ui, |ui| {
             style::section_title(ui, tr("Window"));
             ui.add_space(4.0);
@@ -265,16 +268,17 @@ impl<A: App> Window<A> {
                     shell.settings.custom_theme = choice;
                 }
             }
-            if ui
-                .button(tr("Edit the theme"))
-                .on_hover_text(tr(
-                    "Opens the theme file in its editor: colours, fonts, Save as",
-                ))
-                .clicked()
+            if A::edits_themes()
+                && ui
+                    .button(tr("Edit the theme"))
+                    .on_hover_text(tr(
+                        "Opens the theme file in its editor: colours, fonts, Save as",
+                    ))
+                    .clicked()
             {
                 acts.push(ShellAct::EditTheme(shown.clone()).into());
             }
-            if ui.button(tr("Open a theme file...")).clicked() {
+            if A::edits_themes() && ui.button(tr("Open a theme file...")).clicked() {
                 acts.push(ShellAct::OpenThemeFile.into());
             }
         });

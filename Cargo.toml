@@ -9,6 +9,7 @@ members = [
     "crates/winweaver-mcp",
     "crates/winweaver-ui",
     "crates/winweaver",
+    "crates/wwlite",
 ]
 
 [workspace.package]

@@ -79,6 +79,9 @@ pub(crate) fn writes(ui: &mut egui::Ui, rule: &Rule, acts: &mut Vec<Act>) {
                 for (path, name, value, default) in &rows {
                     ui.horizontal(|ui| {
                         cell(ui, path, true, false, widths[0] - 24.0);
+                        if crate::lite() {
+                            return;
+                        }
                         let open = ui
                             .small_button(icons::GO_TO)
                             .on_hover_text(tr("Open in the registry"));
@@ -217,7 +220,7 @@ pub(crate) fn same_values(
                     tr("Built-in catalog")
                 };
                 let holds = |f: &&CatalogFile| f.rules.iter().any(|r| &r.id == id);
-                match imports.iter().find(holds) {
+                match imports.iter().find(holds).filter(|_| !crate::lite()) {
                     Some(f) => {
                         if ui.link(name).clicked() {
                             acts.push(Act::Catalog(CatalogAct::OpenAt(f.id.clone(), id.clone())));
@@ -336,15 +339,19 @@ pub(crate) fn rule_detail(
         });
     }
     let on_pc = winweaver_core::thispc::exclusion(rule).is_none();
-    block(ui, |ui| {
-        if on_pc {
-            style::section_title(ui, tr("This PC, this rule"));
-            ui.add_space(4.0);
-            this_pc_buttons(ui, acts);
-        }
-        catalog_links(ui, imports, &rule.id, acts);
-    });
-    other_catalogs(ui, catalog, texts, imports, rule, acts);
+    if !crate::lite() {
+        block(ui, |ui| {
+            if on_pc {
+                style::section_title(ui, tr("This PC, this rule"));
+                ui.add_space(4.0);
+                this_pc_buttons(ui, acts);
+            }
+            catalog_links(ui, imports, &rule.id, acts);
+        });
+    }
+    if !crate::lite() {
+        other_catalogs(ui, catalog, texts, imports, rule, acts);
+    }
     same_values(ui, catalog, texts, imports, rule, acts);
     rule_description(ui, catalog, texts, rule, settings, RuleLink::Profile, acts);
 }
@@ -462,7 +469,7 @@ pub(crate) fn rule_description(
             },
         );
     }
-    if !rule.doc.is_empty() {
+    if !rule.doc.is_empty() && !crate::lite() {
         section(ui, "desc-ref", tr("Reference"), parts.reference, |ui| {
             if ui.link(rule.doc.as_str()).clicked() {
                 acts.push(Act::Shell(ShellAct::OpenLink(rule.doc.clone())));

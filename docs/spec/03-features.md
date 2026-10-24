@@ -271,14 +271,28 @@ status bar, Save and Save as with the line ends the file came with, drafts and t
 a `.md` file as a page with the search of its text and Edit as text; Light and Dark built in, more themes
 and languages as files; files dropped on the window or named on the command line.
 
-## 17. Planned
+## 17. More of the window
 
-- A tree view of the keys in the tab of a registry file.
-- Renaming keys and values in the registry tab.
-- Applying a registry file on this PC.
-- `.pol` files shown as a tree.
-- Drafts for every kind of unsaved document, not only profiles.
-- `.reg` and `.ps1` files generated from a diff, and for a whole profile, also from the command line.
-- Links between the options of different catalogs in both directions.
-- Colours of the folding panels of an option.
-- A light edition, `wwlite`.
+- Registry files: the keys as a tree (by default) or a list; a value, a key or the whole file
+  applied to this PC after a question that counts the changes and the deletions.
+- The registry tab: the values as a list with the keyboard; a value or a key renamed (F2).
+- Group Policy files (`.pol`): the files of the computer and of the users of this Windows, or any
+  file, as a tree of keys with what each entry does; a button beside a key or a value that Group
+  Policy sets in the detail of a rule, the registry tab and a registry file; a setting opens them
+  with a read of this PC.
+- Drafts of every document with unsaved changes: profiles, registry files, diffs, the catalog
+  editor, users files (with the passwords of their last save, encrypted) and the theme editor.
+- `.reg` and `.ps1` files of the selection, of the whole profile and of a diff, in the window and
+  from the command line (`--script`, `--reg`, `--only`, `--out`).
+- The detail of a rule lists the rules of every catalog that write the same registry values, both
+  ways; the parts of the description have colours of the theme.
+
+## 18. wwlite
+
+The light edition `wwlite.exe`: the window of WinWeaver with the profile editor, the forms, the
+check, the build of `autounattend.xml`, the presets, the catalogs of the folder `imports` and the
+themes of the folder `themes`, a short guide as plain text, English and Ukrainian built in and
+other languages as files (German in its archive). It has nothing of This PC, the MCP server, the
+registry, registry and Group Policy files, diffs, bookmarks, imports of policy templates, the
+catalog views and editor, users files, the theme editor and Markdown pages. It is built for
+Windows; `docs/wasm.md` studies an edition for the browser.

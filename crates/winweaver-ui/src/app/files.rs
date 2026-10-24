@@ -75,6 +75,19 @@ impl WinWeaver {
     }
 
     pub(crate) fn open_any(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf) {
+        if lite() {
+            let ext = path
+                .extension()
+                .map(|e| e.to_string_lossy().to_ascii_lowercase())
+                .unwrap_or_default();
+            if ext != profile::EXTENSION && ext != "xml" && ext != "json" {
+                shell.status = trf(
+                    "wwlite opens profiles and answer files, not {path}",
+                    &[("path", &path.display())],
+                );
+                return;
+            }
+        }
         if path.extension().is_some_and(|e| e == diff::EXTENSION) {
             self.open_diff_path(shell, path);
             return;
@@ -204,6 +217,14 @@ impl WinWeaver {
     }
 
     pub(crate) fn open_license(&mut self, shell: &mut Shell<WinWeaver>) {
+        if lite() {
+            let text = include_str!("../../../../LICENSE").to_owned();
+            shell.show_or_open(
+                |d| matches!(d, Doc::Markdown(m) if m.title == "LICENSE.txt"),
+                || Doc::Markdown(Box::new(MdDoc::plain("LICENSE.txt", None, text))),
+            );
+            return;
+        }
         shell.show_or_open(
             |d| matches!(d, Doc::Markdown(m) if m.page == Some(pages::LICENSE_ID)),
             || Doc::Markdown(Box::new(pages::license())),
@@ -211,6 +232,14 @@ impl WinWeaver {
     }
 
     pub(crate) fn open_guide(&mut self, shell: &mut Shell<WinWeaver>) {
+        if lite() {
+            let text = pages::guide_lite_text(&i18n::current());
+            shell.show_or_open(
+                |d| matches!(d, Doc::Markdown(m) if m.title == pages::GUIDE_LITE_TITLE),
+                || Doc::Markdown(Box::new(MdDoc::plain(pages::GUIDE_LITE_TITLE, None, text))),
+            );
+            return;
+        }
         shell.show_or_open(
             |d| matches!(d, Doc::Markdown(m) if m.page == Some(pages::GUIDE_ID)),
             || Doc::Markdown(Box::new(pages::guide())),

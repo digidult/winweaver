@@ -32,6 +32,9 @@ impl WinWeaver {
                     acts,
                 );
             }
+            if lite() {
+                return;
+            }
             ui.separator();
             menu_item(ui, tr("Users file"), "", Act::Users(UsersAct::New), acts);
             menu_item(
@@ -91,6 +94,20 @@ impl WinWeaver {
             Act::File(FileAct::OpenGuide),
             acts,
         );
+        if lite() {
+            menu_item(ui, tr("License"), "", Act::File(FileAct::OpenLicense), acts);
+            menu_item(
+                ui,
+                tr("Settings"),
+                keys::SETTINGS.text,
+                Act::Shell(ShellAct::OpenSettings),
+                acts,
+            );
+            ui.separator();
+            menu_item(ui, tr("About"), "", Act::Shell(ShellAct::About), acts);
+            menu_item(ui, tr("Exit"), "", Act::Shell(ShellAct::Exit), acts);
+            return;
+        }
         menu_item(
             ui,
             tr("Documentation"),

@@ -821,5 +821,7 @@
   "{n} entries": "{n} girdi",
   "{n} of them delete a key or a value, which no undo brings back.": "Bunlardan {n} tanesi bir anahtarı veya değeri siler; hiçbir geri alma bunları geri getirmez.",
   "{path} is not there: no policy of Group Policy is set for it": "{path} yok: bunun için hiçbir Grup İlkesi ilkesi ayarlanmamış",
-  "Search the keys, values and data (Ctrl+F)": "Anahtarları, değerleri ve verileri ara (Ctrl+F)"
+  "Search the keys, values and data (Ctrl+F)": "Anahtarları, değerleri ve verileri ara (Ctrl+F)",
+  "Profiles": "Profiller",
+  "wwlite opens profiles and answer files, not {path}": "wwlite profilleri ve yanıt dosyalarını açar, {path} dosyasını değil"
 }
