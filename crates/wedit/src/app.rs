@@ -238,16 +238,6 @@ impl Wedit {
         }
         shell.open_tab(Doc::Text(TextDoc::new(text, path)));
     }
-
-    fn about(&self, shell: &Shell<Self>) -> String {
-        trf(
-            "wedit {version}, settings {path}",
-            &[
-                ("version", &VERSION),
-                ("path", &shell.settings_path.display()),
-            ],
-        )
-    }
 }
 
 impl App for Wedit {
@@ -329,6 +319,22 @@ impl App for Wedit {
             shell.open_theme_path(path);
         } else {
             self.open_text(shell, path);
+        }
+    }
+
+    /// A file a page links to opens in a tab: a page, or a text file to edit.
+    fn open_link(&mut self, shell: &mut Shell<Self>, link: &str) {
+        let Some((path, anchor)) = shell.linked_file(link) else {
+            return;
+        };
+        if !path.is_file() {
+            shell.status = trf("{path} was not found", &[("path", &path.display())]);
+            return;
+        }
+        self.open_path(shell, path);
+        if let Some(Doc::Page(page)) = shell.active_doc_mut() {
+            page.jump = anchor.is_some();
+            page.anchor = anchor;
         }
     }
 
@@ -514,13 +520,6 @@ impl App for Wedit {
             Act::Shell(ShellAct::CloseTab(shell.active, false)),
             acts,
         );
-        menu_item(
-            ui,
-            tr("Close tab, discard changes"),
-            "",
-            shell.discard_act(shell.active),
-            acts,
-        );
         ui.separator();
         menu_item(
             ui,
@@ -529,13 +528,7 @@ impl App for Wedit {
             Act::Shell(ShellAct::OpenSettings),
             acts,
         );
-        menu_item(
-            ui,
-            tr("About"),
-            "",
-            Act::Shell(ShellAct::Message(self.about(shell))),
-            acts,
-        );
+        menu_item(ui, tr("About"), "", Act::Shell(ShellAct::About), acts);
         menu_item(ui, tr("Exit"), "", Act::Shell(ShellAct::Exit), acts);
     }
 

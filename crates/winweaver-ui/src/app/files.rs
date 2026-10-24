@@ -33,6 +33,14 @@ impl WinWeaver {
                     .map(|(_, t)| (*t).to_owned()),
             )
         };
+        // A page of a file links to the files next to it first; a page of the program to the
+        // pages of the program, then to the files of the program folder.
+        let file = shell.linked_file(link).filter(|(p, _)| p.is_file());
+        let from_file = shell.active_doc().and_then(ww::Document::path).is_some();
+        if let Some((path, anchor)) = file.clone().filter(|_| from_file || text.is_none()) {
+            self.open_linked_file(shell, path, anchor);
+            return;
+        }
         let Some(text) = text else {
             shell.status = trf("No page {name} in the documentation", &[("name", &name)]);
             return;
@@ -183,6 +191,36 @@ impl WinWeaver {
         );
     }
 
+    /// A file a page links to: a Markdown page at its heading, else the text as it is.
+    fn open_linked_file(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        path: PathBuf,
+        anchor: Option<String>,
+    ) {
+        let md = path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("md"));
+        if md {
+            self.open_md_path(shell, path);
+        } else {
+            let title = path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_else(|| "text".to_owned());
+            shell.open_file(
+                &path,
+                |d| matches!(d, Doc::Markdown(m) if m.path.as_ref() == Some(&path)),
+                |p| winweaver_core::jsonfile::read_text(p, MARKDOWN_MAX_BYTES),
+                |text, path| Doc::Markdown(Box::new(MdDoc::plain(title, Some(path), text))),
+            );
+        }
+        if let Some(Doc::Markdown(m)) = shell.docs.get_mut(shell.active) {
+            m.jump = anchor.is_some();
+            m.anchor = anchor;
+        }
+    }
+
     pub(crate) fn open_md_path(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf) {
         let title = path
             .file_name()
@@ -190,7 +228,7 @@ impl WinWeaver {
             .unwrap_or_else(|| "page.md".to_owned());
         shell.open_file(
             &path,
-            |_| false,
+            |d| matches!(d, Doc::Markdown(m) if m.path.as_ref() == Some(&path)),
             |p| winweaver_core::jsonfile::read_text(p, MARKDOWN_MAX_BYTES),
             |text, path| Doc::Markdown(Box::new(MdDoc::new(title, Some(path), text))),
         );

@@ -28,5 +28,15 @@ serde.workspace = true
 serde_json.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-# The colours of the title bar (src/shell/themes.rs).
+# The colours of the title bar (src/shell/theme.rs).
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm"] }
+# The icons in colour (src/coloricons.rs): DirectWrite draws them through Direct2D into WIC.
+windows = { version = "0.62.2", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct2D",
+    "Win32_Graphics_Direct2D_Common",
+    "Win32_Graphics_DirectWrite",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Imaging",
+    "Win32_System_Com",
+] }

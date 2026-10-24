@@ -266,6 +266,10 @@ CI does not run at every push, since its Windows minutes are the dear ones:
 
 When `cargo fmt` finds differences, the Linux job fails and uploads `fmt.patch` with `Cargo.lock` in the
 artifact `ci-files`: `gh run download <run id> -n ci-files -D <folder>`, then `git apply <folder>/fmt.patch`.
+The patch goes into the commit it belongs to, never into a commit of its own (the customer's rule of
+23.10.2026): `git commit -a --amend --no-edit`, then `git push --force-with-lease` of the feature branch
+(origin and mirror), never of `main`. rustfmt cannot run on the customer's PC (rule 6), so the code is
+written in the widths of rustfmt from the start and checked by the Linux run before the full one.
 
 The MCP server without the window (the stdio transport is started by the client; the HTTP one needs a token
 of at least 32 characters):

@@ -8,6 +8,7 @@ use super::{App, Shell, ShellAct, ShellDoc};
 use crate::doc::{Document, Scrolled};
 use crate::folders::show_in_folder;
 use crate::i18n::{tr, trf};
+use crate::question::Question;
 use crate::{keys, session, widgets};
 
 /// Below this width of the window the command bar shows icons only, in the navigation row.
@@ -170,7 +171,44 @@ impl<A: App> Window<A> {
                     shell.status = trf("The folder was not opened: {e}", &[("e", &e)]);
                 }
             }
-            ShellAct::OpenLink(link) => self.app.open_link(shell, &link),
+            ShellAct::OpenLink(link) => {
+                if opens_inside(&link) {
+                    self.app.open_link(shell, &link);
+                } else {
+                    // A file of another kind goes to the browser as a file address.
+                    let target = match shell.linked_file(&link) {
+                        Some((path, _)) if !is_web(&link) => {
+                            let path = path.display().to_string().replace('\\', "/");
+                            format!("file:///{}", path.trim_start_matches('/'))
+                        }
+                        _ => link,
+                    };
+                    shell.ask(Question::new(
+                        tr("Open a link"),
+                        trf("Open {link} in the browser?", &[("link", &target)]),
+                        tr("Open"),
+                        A::Act::from(ShellAct::OpenWeb(target)),
+                    ));
+                }
+            }
+            ShellAct::OpenWeb(link) => shell.open_web = Some(link),
+            ShellAct::About => shell.about_open = true,
+            ShellAct::SaveAndClose(i) => {
+                if i < self.shell.docs.len() {
+                    self.shell.active = i;
+                    self.save(false);
+                    if self.shell.docs.get(i).is_some_and(|d| !d.dirty()) {
+                        self.shell.close_tab(i, true);
+                    }
+                }
+            }
+            ShellAct::AnswerAlt => {
+                if let Some(question) = self.shell.question.take()
+                    && let Some((_, act)) = question.alt
+                {
+                    self.apply(vec![act]);
+                }
+            }
             ShellAct::Exit => shell.exit = true,
             ShellAct::Ask(question) => shell.ask(*question),
             ShellAct::Answer(yes) => {
@@ -200,6 +238,8 @@ impl<A: App> Window<A> {
         let active = self.shell.active;
         let count = self.shell.docs.len();
         let asking = self.shell.question.is_some();
+        let about = self.shell.about_open;
+        let mut close_about = false;
         let mut focus_search = false;
         ctx.input_mut(|i| {
             if i.consume_shortcut(&keys::FIND.shortcut()) {
@@ -239,10 +279,16 @@ impl<A: App> Window<A> {
             if asking && i.consume_key(Modifiers::NONE, Key::Escape) {
                 acts.push(ShellAct::Answer(false).into());
             }
+            if about && i.consume_key(Modifiers::NONE, Key::Escape) {
+                close_about = true;
+            }
             for file in &i.raw.dropped_files {
                 acts.push(ShellAct::OpenPath(file.path().to_path_buf()).into());
             }
         });
+        if close_about {
+            self.shell.about_open = false;
+        }
         if focus_search && let Some(search) = self.shell.active_search() {
             search.open = true;
             search.focus = true;
@@ -262,11 +308,41 @@ impl<A: App> Window<A> {
                 if ui.button(ask.yes.as_str()).clicked() {
                     acts.push(ShellAct::Answer(true).into());
                 }
+                if let Some((label, _)) = &ask.alt
+                    && ui.button(label.as_str()).clicked()
+                {
+                    acts.push(ShellAct::AnswerAlt.into());
+                }
                 if ui.button(tr("Cancel")).clicked() {
                     acts.push(ShellAct::Answer(false).into());
                 }
             });
         });
+    }
+
+    /// The window About: the name of the program and the lines it gives, over the tabs.
+    fn about_view(&mut self, ctx: &egui::Context) {
+        if !self.shell.about_open {
+            return;
+        }
+        let lines = self.app.about(&self.shell);
+        let mut close = false;
+        widgets::Modal::new(tr("About"))
+            .id("about")
+            .show(ctx, |ui| {
+                ui.label(crate::style::strong(ui, A::NAME, 18.0));
+                ui.add_space(6.0);
+                for line in &lines {
+                    ui.add(egui::Label::new(line.as_str()).selectable(true));
+                }
+                ui.add_space(8.0);
+                if ui.button(tr("OK")).clicked() {
+                    close = true;
+                }
+            });
+        if close {
+            self.shell.about_open = false;
+        }
     }
 
     /// The active document: one of the window drawn here, else by the program.
@@ -347,13 +423,28 @@ impl<A: App> Window<A> {
     }
 }
 
-/// Whether a link points into the pages of the program (a Markdown page or a heading) rather
-/// than to the web.
-fn is_program_link(url: &str) -> bool {
-    !url.contains("://")
-        && (url.starts_with('#')
-            || url.to_ascii_lowercase().ends_with(".md")
-            || url.to_ascii_lowercase().contains(".md#"))
+/// Whether a link leads outside the files of this PC: a web address or a mail.
+fn is_web(link: &str) -> bool {
+    let link = link.to_ascii_lowercase();
+    (link.contains("://") && !link.starts_with("file:")) || link.starts_with("mailto:")
+}
+
+/// Whether a link opens inside the program: a heading, a `.md` or `.txt` file or a file without an
+/// extension, not a web address.
+fn opens_inside(link: &str) -> bool {
+    if is_web(link) {
+        return false;
+    }
+    let link = link.strip_prefix("file:///").unwrap_or(link);
+    let file = link.split('#').next().unwrap_or("");
+    let name = file.rsplit(['/', '\\']).next().unwrap_or(file);
+    match name.rsplit_once('.') {
+        None => true,
+        Some((_, ext)) => {
+            let ext = ext.to_ascii_lowercase();
+            ext == "md" || ext == "txt"
+        }
+    }
 }
 
 impl<A: App> eframe::App for Window<A> {
@@ -410,11 +501,14 @@ impl<A: App> eframe::App for Window<A> {
             .show(ui, |ui| self.status_bar(ui, &mut acts));
         self.draw_active(ui, &mut acts);
         self.ask_view(ui.ctx(), &mut acts);
+        self.about_view(ui.ctx());
         self.app.dialogs(&mut self.shell, ui.ctx(), &mut acts);
         let links: Vec<String> = ui.ctx().output_mut(|o| {
             let mut found = Vec::new();
             o.commands.retain(|c| match c {
-                egui::OutputCommand::OpenUrl(u) if is_program_link(&u.url) => {
+                // Every link goes through the window: a page of the program opens inside,
+                // any other one is asked first.
+                egui::OutputCommand::OpenUrl(u) => {
                     found.push(u.url.clone());
                     false
                 }
@@ -425,6 +519,9 @@ impl<A: App> eframe::App for Window<A> {
         acts.extend(links.into_iter().map(|l| ShellAct::OpenLink(l).into()));
         acts.append(&mut self.shell.pending);
         self.apply(acts);
+        if let Some(link) = self.shell.open_web.take() {
+            ui.ctx().open_url(egui::OpenUrl::new_tab(link));
+        }
         self.app.after_frame(&mut self.shell, ui.ctx());
         let closing = self.shell.exit || ui.ctx().input(|i| i.viewport().close_requested());
         self.shell.write_drafts(closing);

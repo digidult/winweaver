@@ -236,12 +236,14 @@ impl Palette {
     }
 }
 
-/// The fonts of a theme: the family of the texts, its size, the family of code and values.
+/// The fonts of a theme: the family of the texts, its size, the family of code and values, the
+/// family of the icons.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Fonts {
     pub family: String,
     pub size: f32,
     pub mono: String,
+    pub icons: String,
 }
 
 impl Default for Fonts {
@@ -250,7 +252,15 @@ impl Default for Fonts {
             family: String::new(),
             size: BASE_SIZE,
             mono: String::new(),
+            icons: String::new(),
         }
+    }
+}
+
+impl Fonts {
+    /// The icons of the command bar and the tabs are pictures in the colours of Segoe UI Emoji.
+    pub fn color_icons(&self) -> bool {
+        self.icons.is_empty() || self.icons.eq_ignore_ascii_case(ICON_FAMILIES[0].0)
     }
 }
 
@@ -280,6 +290,13 @@ pub const MONO_FAMILIES: [(&str, &str); 4] = [
     ("Lucida Console", "lucon.ttf"),
 ];
 
+/// The families of the icons: Segoe UI Emoji (the icons of the command bar and the tabs in
+/// colour) and Segoe UI Symbol (all in the colour of the text).
+pub const ICON_FAMILIES: [(&str, &str); 2] = [
+    ("Segoe UI Emoji", "seguiemj.ttf"),
+    ("Segoe UI Symbol", "seguisym.ttf"),
+];
+
 /// Segoe UI Symbol: the arrows, triangles, stars and marks the texts lack, before the fonts of
 /// egui.
 const SYMBOLS: &str = "seguisym.ttf";
@@ -306,6 +323,16 @@ pub fn installed_families() -> (Vec<&'static str>, Vec<&'static str>) {
             .map(|f| f.0)
             .collect(),
     )
+}
+
+/// The families of the icons this Windows has.
+pub fn installed_icon_families() -> Vec<&'static str> {
+    let dir = fonts_dir();
+    ICON_FAMILIES
+        .iter()
+        .filter(|f| dir.join(f.1).is_file())
+        .map(|f| f.0)
+        .collect()
 }
 
 /// The visuals of egui from a palette.
@@ -430,14 +457,28 @@ fn definitions(light: &Fonts, dark: &Fonts) -> egui::FontDefinitions {
         let regular = load(&mut defs, family.1).or_else(|| load(&mut defs, FAMILIES[0].1));
         let bold = load(&mut defs, family.2).or_else(|| load(&mut defs, FAMILIES[0].2));
         let code = load(&mut defs, mono);
+        let icon_file = ICON_FAMILIES
+            .iter()
+            .find(|f| f.0.eq_ignore_ascii_case(&fonts.icons))
+            .unwrap_or(&ICON_FAMILIES[0])
+            .1;
+        // The icons come after the text and before the symbols: a sign of the text font stays.
+        let icons = load(&mut defs, icon_file);
         let symbols = load(&mut defs, SYMBOLS);
         let list = |first: Vec<Option<String>>, rest: &Vec<String>| -> Vec<String> {
-            first
+            let mut keys: Vec<String> = Vec::new();
+            for key in first
                 .into_iter()
                 .flatten()
+                .chain(icons.clone())
                 .chain(symbols.clone())
                 .chain(rest.iter().cloned())
-                .collect()
+            {
+                if !keys.contains(&key) {
+                    keys.push(key);
+                }
+            }
+            keys
         };
         defs.families.insert(
             family_name(dark, ""),
@@ -658,12 +699,14 @@ pub fn tool_button(
         } else {
             rect.top() + 15.0
         };
-        painter.text(
+        paint_icon(
+            ui,
+            painter,
             egui::pos2(rect.center().x - shift, icon_y),
-            Align2::CENTER_CENTER,
             icon,
-            font(ui, if compact { 15.0 } else { 17.0 }),
+            if compact { 15.0 } else { 17.0 },
             color,
+            enabled,
         );
         if !compact {
             painter.text(
@@ -680,6 +723,37 @@ pub fn tool_button(
     }
     response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, label));
     response.on_hover_text(hint)
+}
+
+/// Paints an icon centred on a point: a picture in the colours of its font when the theme draws
+/// the icons in colour (faded when `enabled` is off), else its glyph in `color`. `size` is the
+/// size of the text of the icon in points of the layout.
+pub fn paint_icon(
+    ui: &egui::Ui,
+    painter: &egui::Painter,
+    center: egui::Pos2,
+    icon: &str,
+    size: f32,
+    color: Color32,
+    enabled: bool,
+) {
+    let at = self::size(ui, size);
+    if fonts(ui).color_icons() {
+        let side = (at * 1.3).round();
+        let px = (side * ui.ctx().pixels_per_point()).round() as u32;
+        if let Some(texture) = crate::coloricons::texture(ui.ctx(), icon, px, color) {
+            let rect = egui::Rect::from_center_size(center, egui::vec2(side, side));
+            let tint = if enabled {
+                Color32::WHITE
+            } else {
+                Color32::from_white_alpha(110)
+            };
+            let uv = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0));
+            painter.image(texture.id(), rect, uv, tint);
+            return;
+        }
+    }
+    painter.text(center, Align2::CENTER_CENTER, icon, font(ui, size), color);
 }
 
 /// A small square button with an icon, such as back, forward, the star or the search.

@@ -1,11 +1,15 @@
 //! A text file in a tab: the text editor of egui with its undo, the matches of the search, the
 //! position of the cursor, the draft of unsaved changes, the save with the line ends the file
-//! came with.
+//! came with. Page Up and Page Down move the cursor by the height of the view (with Shift they
+//! select), and the editor has the focus again when its tab comes back to the front.
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use ww::eframe::egui::{self, text::CCursor, text::CCursorRange, text_edit::TextEditState};
+use ww::eframe::egui::{
+    self, Galley, Key, Modifiers, text::CCursor, text::CCursorRange, text_edit::TextEditState,
+};
 use ww::i18n::tr;
 use ww::{Draft, Search, dialogs, session, style};
 
@@ -30,6 +34,12 @@ pub struct TextDoc {
     select: Option<(usize, usize)>,
     /// The start of the last match, so that the next one follows it.
     last_match: Option<usize>,
+    /// The text as laid out at the last frame, for the page keys.
+    galley: Option<Arc<Galley>>,
+    /// The height of the view at the last frame.
+    view_height: f32,
+    /// The last pass of egui that drew the tab: a gap means it came back to the front.
+    last_pass: Option<u64>,
 }
 
 impl TextDoc {
@@ -56,6 +66,9 @@ impl TextDoc {
             col: 1,
             select: None,
             last_match: None,
+            galley: None,
+            view_height: 0.0,
+            last_pass: None,
         }
     }
 
@@ -71,7 +84,7 @@ impl TextDoc {
     }
 
     /// The id of the editor widget, one a tab.
-    fn id(&self) -> egui::Id {
+    pub fn id(&self) -> egui::Id {
         egui::Id::new(("wedit-text", &self.draft_key))
     }
 
@@ -146,11 +159,70 @@ impl TextDoc {
         Some(next)
     }
 
+    /// Page Up and Page Down of the focused editor: the cursor goes up or down by the height of
+    /// the view, keeping its place in the row; with Shift the text between is selected. The
+    /// rows moved, in points, for the scroll of the view.
+    fn page_keys(&self, ctx: &egui::Context, id: egui::Id) -> Option<f32> {
+        if !ctx.memory(|m| m.has_focus(id)) {
+            return None;
+        }
+        let galley = self.galley.as_ref()?;
+        let step = (self.view_height - 2.0 * row_height(galley)).max(row_height(galley));
+        // Shift first: a key without modifiers matches a key with Shift too.
+        let (down, shift) = ctx.input_mut(|i| {
+            if i.consume_key(Modifiers::SHIFT, Key::PageDown) {
+                Some((true, true))
+            } else if i.consume_key(Modifiers::SHIFT, Key::PageUp) {
+                Some((false, true))
+            } else if i.consume_key(Modifiers::NONE, Key::PageDown) {
+                Some((true, false))
+            } else if i.consume_key(Modifiers::NONE, Key::PageUp) {
+                Some((false, false))
+            } else {
+                None
+            }
+        })?;
+        let mut state = TextEditState::load(ctx, id).unwrap_or_default();
+        let range = state
+            .cursor
+            .char_range()
+            .unwrap_or_else(|| CCursorRange::one(CCursor::new(0)));
+        let at = galley.pos_from_cursor(range.primary);
+        let dy = if down { step } else { -step };
+        let moved = galley.cursor_from_pos(egui::vec2(at.center().x, at.center().y + dy));
+        let new = if shift {
+            CCursorRange::two(range.secondary, moved)
+        } else {
+            CCursorRange::one(moved)
+        };
+        state.cursor.set_char_range(Some(new));
+        state.store(ctx, id);
+        Some(galley.pos_from_cursor(moved).center().y - at.center().y)
+    }
+
     /// The editor: a monospace text field over the whole tab; `wrap` folds the lines to the
     /// width of the view, else the view scrolls sideways.
     pub fn view(&mut self, ui: &mut egui::Ui, wrap: bool) {
         let p = style::palette(ui);
         let id = self.id();
+        // At the first frame and whenever the tab comes back to the front the editor takes the
+        // focus, with the cursor and the selection it had.
+        let pass = ui.ctx().cumulative_pass_nr();
+        if self.last_pass.is_none_or(|last| last + 1 < pass) {
+            ui.memory_mut(|m| m.request_focus(id));
+        }
+        // A text opened now starts with the cursor at its beginning, not at its end.
+        if self.last_pass.is_none() {
+            let mut state = TextEditState::load(ui.ctx(), id).unwrap_or_default();
+            if state.cursor.char_range().is_none() {
+                state
+                    .cursor
+                    .set_char_range(Some(CCursorRange::one(CCursor::new(0))));
+                state.store(ui.ctx(), id);
+            }
+        }
+        self.last_pass = Some(pass);
+        let paged = self.page_keys(ui.ctx(), id);
         let font = egui::TextStyle::Monospace.resolve(ui.style());
         let color = ui.visuals().text_color();
         let mut no_wrap = |ui: &egui::Ui, text: &dyn egui::TextBuffer, _width: f32| {
@@ -206,9 +278,26 @@ impl TextDoc {
                             (self.line, self.col) =
                                 position(&self.text, range.primary.index.into());
                         }
+                        // The view goes with the cursor of a page key, so the cursor keeps its
+                        // place on the screen.
+                        if let Some(dy) = paged {
+                            ui.scroll_with_delta(egui::vec2(0.0, -dy));
+                        }
+                        self.galley = Some(output.galley.clone());
                     });
+                self.view_height = fill.y;
             });
     }
+}
+
+/// The height of a row of the text.
+fn row_height(galley: &Galley) -> f32 {
+    galley
+        .rows
+        .first()
+        .map(|r| r.height())
+        .unwrap_or(14.0)
+        .max(1.0)
 }
 
 /// The line and the column of a character index, from 1.

@@ -83,13 +83,6 @@ impl WinWeaver {
             Act::Shell(ShellAct::CloseTab(shell.active, false)),
             acts,
         );
-        menu_item(
-            ui,
-            tr("Close tab, discard changes"),
-            "",
-            shell.discard_act(shell.active),
-            acts,
-        );
         ui.separator();
         menu_item(
             ui,
@@ -116,20 +109,7 @@ impl WinWeaver {
             acts,
         );
         ui.separator();
-        menu_item(
-            ui,
-            tr("About"),
-            "",
-            Act::Shell(ShellAct::Message(trf(
-                "WinWeaver {build}, catalog {catalog}, settings {path}",
-                &[
-                    ("build", &winweaver_core::BUILD),
-                    ("catalog", &self.catalog.version()),
-                    ("path", &shell.settings_path.display()),
-                ],
-            ))),
-            acts,
-        );
+        menu_item(ui, tr("About"), "", Act::Shell(ShellAct::About), acts);
         menu_item(ui, tr("Exit"), "", Act::Shell(ShellAct::Exit), acts);
     }
 

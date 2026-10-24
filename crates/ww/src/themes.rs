@@ -60,6 +60,9 @@ pub struct Theme {
     pub font_size: f32,
     /// The family of code and values, empty for Consolas ([`style::MONO_FAMILIES`]).
     pub mono_font: String,
+    /// The family of the icons, empty for Segoe UI Emoji ([`style::ICON_FAMILIES`]): the icons of
+    /// the command bar and the tabs in colour.
+    pub icon_font: String,
     /// Colours as `#rrggbb` by their names ([`style::COLOR_NAMES`]).
     pub colors: BTreeMap<String, String>,
 }
@@ -76,6 +79,7 @@ impl Default for Theme {
             font: String::new(),
             font_size: style::BASE_SIZE,
             mono_font: String::new(),
+            icon_font: String::new(),
             colors: BTreeMap::new(),
         }
     }
@@ -163,6 +167,7 @@ impl Theme {
             family: self.font.clone(),
             size: self.font_size,
             mono: self.mono_font.clone(),
+            icons: self.icon_font.clone(),
         }
     }
 

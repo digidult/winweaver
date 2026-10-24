@@ -9,6 +9,7 @@
 //! document (`doc`), a question over the window (`question`), the keys and the items of the
 //! command bar (`keys`, `commands`), the icons (`icons`).
 
+pub mod coloricons;
 pub mod commands;
 pub mod dialogs;
 pub mod doc;

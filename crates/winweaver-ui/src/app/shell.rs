@@ -16,6 +16,21 @@ impl App for WinWeaver {
 
     const NAME: &'static str = "WinWeaver";
     const BUILD: &'static str = winweaver_core::BUILD;
+
+    fn about(&self, shell: &Shell<Self>) -> Vec<String> {
+        let mut lines = shell.about_lines(Self::BUILD);
+        lines.insert(
+            1,
+            trf(
+                "Catalog {version}, {rules} rules",
+                &[
+                    ("version", &self.catalog.version()),
+                    ("rules", &self.catalog.rules().len()),
+                ],
+            ),
+        );
+        lines
+    }
     const NEW_HINT: &'static str = "New profile (Ctrl+N)";
 
     fn languages() -> &'static [(&'static str, &'static str)] {

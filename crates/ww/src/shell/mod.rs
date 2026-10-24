@@ -83,7 +83,7 @@ pub struct SettingsDoc {
 pub enum ShellDoc {
     Settings(SettingsDoc),
     /// The editor of a theme.
-    Theme(ThemeDoc),
+    Theme(Box<ThemeDoc>),
 }
 
 impl Document for ShellDoc {
@@ -166,7 +166,16 @@ pub enum ShellAct<A: App> {
     /// A link of a page that is not a web address: the program opens what it names.
     OpenLink(String),
     Exit,
+    /// Saves a tab, then closes it when the save left no changes (the question of a tab with
+    /// changes).
+    SaveAndClose(usize),
+    /// The window About over the tabs.
+    About,
+    /// Opens a link outside the program (the web, a file of another kind), after its question.
+    OpenWeb(String),
     Ask(Box<Question<A::Act>>),
+    /// The second answer of the question over the window.
+    AnswerAlt,
     /// The answer to the question over the window: yes or no.
     Answer(bool),
 }
@@ -246,8 +255,15 @@ pub trait App: Sized + 'static {
         false
     }
 
-    /// Opens what a link of a page names.
+    /// Opens a page or a file a link names: a `.md` or `.txt` file, a file without an extension
+    /// or a page of the program (the window asks before any other link and opens it outside).
     fn open_link(&mut self, _shell: &mut Shell<Self>, _link: &str) {}
+
+    /// The lines of the window About under the name of the program: the version, the settings
+    /// file, what the window draws with; a program adds its own.
+    fn about(&self, shell: &Shell<Self>) -> Vec<String> {
+        shell.about_lines(Self::BUILD)
+    }
 
     /// The search of the active tab was cleared.
     fn search_cleared(&mut self, _shell: &mut Shell<Self>) {}
@@ -368,6 +384,10 @@ pub struct Shell<A: App> {
     title_colors: Option<TitleColors>,
     last_title: String,
     pub exit: bool,
+    /// The window About is open.
+    pub about_open: bool,
+    /// A link outside the program the user agreed to open, handed to the system after the acts.
+    pub open_web: Option<String>,
     pub drafts_dir: PathBuf,
     pub logs_dir: PathBuf,
     /// What the window draws with (`renderer::graphics_text`), empty without a window.
@@ -398,6 +418,8 @@ impl<A: App> Shell<A> {
             title_colors: None,
             last_title: String::new(),
             exit: false,
+            about_open: false,
+            open_web: None,
             drafts_dir: exe_dir().join("drafts"),
             logs_dir: exe_dir().join("logs"),
             graphics: String::new(),
@@ -525,10 +547,8 @@ impl<A: App> Shell<A> {
             return;
         }
         if self.docs[i].dirty() && !force {
-            self.status = tr(
-                "The tab has unsaved changes: save it (Ctrl+S) or close it from the menu discarding them",
-            )
-            .to_owned();
+            let question = self.close_question(i);
+            self.ask(question);
             return;
         }
         if let Some(key) = self.docs[i].draft_key() {
@@ -570,21 +590,63 @@ impl<A: App> Shell<A> {
         self.question = Some(question);
     }
 
-    /// The act of closing a tab discarding its changes: a question first when it has some.
-    pub fn discard_act(&self, i: usize) -> A::Act {
-        match self.docs.get(i) {
-            Some(d) if d.dirty() => ShellAct::Ask(Box::new(Question::new(
-                tr("Discard the changes"),
-                trf(
-                    "Close {title} and discard its unsaved changes?",
-                    &[("title", &d.title())],
-                ),
-                tr("Discard"),
-                A::Act::from(ShellAct::CloseTab(i, true)),
-            )))
-            .into(),
-            _ => ShellAct::CloseTab(i, true).into(),
+    /// The file a link of the active page names, with the heading after `#`: a relative link
+    /// is taken from the folder of the page, or of the program for a page without a file.
+    /// `None` for a link to a heading of the page itself.
+    pub fn linked_file(&self, link: &str) -> Option<(PathBuf, Option<String>)> {
+        let (file, anchor) = match link.split_once('#') {
+            Some((f, a)) => (f, Some(a.to_owned())),
+            None => (link, None),
+        };
+        let file = file.strip_prefix("file:///").unwrap_or(file);
+        if file.is_empty() {
+            return None;
         }
+        let path = PathBuf::from(file.replace("%20", " "));
+        if path.is_absolute() {
+            return Some((path, anchor));
+        }
+        let base = self
+            .active_doc()
+            .and_then(Document::path)
+            .and_then(Path::parent)
+            .map(Path::to_path_buf)
+            .unwrap_or_else(exe_dir);
+        Some((base.join(path), anchor))
+    }
+
+    /// The question before a tab with unsaved changes closes: save them, close without them, or
+    /// keep the tab.
+    pub fn close_question(&self, i: usize) -> Question<A::Act> {
+        let title = self.docs.get(i).map(Document::title).unwrap_or_default();
+        Question::new(
+            tr("Unsaved changes"),
+            trf(
+                "Save the changes of {title} before the tab closes?",
+                &[("title", &title)],
+            ),
+            tr("Save"),
+            A::Act::from(ShellAct::SaveAndClose(i)),
+        )
+        .or(tr("Don't save"), A::Act::from(ShellAct::CloseTab(i, true)))
+    }
+
+    /// The lines of About every program has: the version, the settings file, the renderer.
+    pub fn about_lines(&self, build: &str) -> Vec<String> {
+        let mut lines = vec![
+            trf("Version {version}", &[("version", &build)]),
+            trf(
+                "Settings file: {path}",
+                &[("path", &self.settings_path.display())],
+            ),
+        ];
+        if !self.graphics.is_empty() {
+            lines.push(trf(
+                "Draws now with {graphics}",
+                &[("graphics", &self.graphics)],
+            ));
+        }
+        lines
     }
 
     /// The question before the recent files are forgotten.

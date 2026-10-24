@@ -167,7 +167,9 @@ fn every_text_of_the_interface_is_translated() {
 fn the_answers_of_a_dialog_do_not_read_as_cancel() {
     let answers = [
         "Remove",
-        "Discard",
+        "Save",
+        "Don't save",
+        "Open",
         "Forget",
         "Renew",
         "Change",

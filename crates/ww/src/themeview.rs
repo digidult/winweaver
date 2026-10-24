@@ -180,6 +180,15 @@ pub fn fonts_grid(
                 style::MONO_FAMILIES[0].0,
             );
             ui.end_row();
+            ui.label(tr("Font of icons"));
+            changed |= family_combo(
+                ui,
+                &format!("{id}-icons"),
+                &mut theme.icon_font,
+                &style::installed_icon_families(),
+                style::ICON_FAMILIES[0].0,
+            );
+            ui.end_row();
         });
     changed
 }

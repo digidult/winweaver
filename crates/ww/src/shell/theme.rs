@@ -65,7 +65,7 @@ impl<A: App> Shell<A> {
         let id = theme.id.clone();
         self.show_or_open(
             |d| matches!(d.shell_doc(), Some(ShellDoc::Theme(t)) if t.theme.id == id),
-            || A::shell_doc(ShellDoc::Theme(ThemeDoc::new(theme))),
+            || A::shell_doc(ShellDoc::Theme(Box::new(ThemeDoc::new(theme)))),
         );
     }
 

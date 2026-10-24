@@ -290,11 +290,19 @@ fn removals_ask_first_and_two_catalogs_compare() {
         "install.bypass-tpm".to_owned(),
         false,
     ))]);
-    let act = app.shell.discard_act(0);
-    app.apply(vec![act]);
-    assert!(app.shell.question.is_some(), "a tab with changes asks");
+    app.apply(vec![Act::Shell(ShellAct::CloseTab(0, false))]);
+    let question = app
+        .shell
+        .question
+        .as_ref()
+        .expect("a tab with changes asks");
+    assert!(question.alt.is_some(), "Don't save beside Save");
     app.apply(vec![Act::Shell(ShellAct::Answer(false))]);
     assert_eq!(app.shell.docs.len(), 1);
+    assert!(
+        app.shell.docs[0].dirty(),
+        "Cancel keeps the tab and its changes"
+    );
     app.apply(vec![
         app.shell.forget_recent_act(),
         Act::Shell(ShellAct::Answer(true)),

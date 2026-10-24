@@ -102,12 +102,14 @@ fn tab<A: App>(
         }
         let color = if active { p.text } else { p.muted };
         let mut x = rect.left() + TAB_PADDING;
-        painter.text(
+        style::paint_icon(
+            ui,
+            painter,
             egui::pos2(x + 6.0, rect.center().y),
-            Align2::CENTER_CENTER,
             doc.icon(),
-            style::font(ui, 12.0),
+            12.0,
             color,
+            true,
         );
         x += TAB_ICON;
         if dirty {

@@ -82,4 +82,33 @@ fn screenshots_of_wedit() {
         .state_mut()
         .apply(vec![Act::Shell(ShellAct::OpenSettings)]);
     shot(&mut harness, &dir, "w8-settings");
+    // A text longer than the view: the scroll bar, the cursor after Page Down.
+    let long: String = (1..=300)
+        .map(|n| format!("Line {n} of a long text\n"))
+        .collect();
+    let file = dir.join("wedit-long-text.txt");
+    std::fs::write(&file, long).unwrap();
+    harness
+        .state_mut()
+        .apply(vec![Act::Shell(ShellAct::UseTheme("light".to_owned()))]);
+    harness
+        .state_mut()
+        .apply(vec![Act::Shell(ShellAct::OpenPath(file))]);
+    shot(&mut harness, &dir, "w9-text-long");
+    harness.key_press(egui::Key::PageDown);
+    shot(&mut harness, &dir, "w9b-text-page-down");
+    if let Some(Doc::Text(doc)) = harness.state_mut().shell.active_doc_mut() {
+        doc.text.push_str("A change\n");
+        doc.dirty = true;
+    }
+    let active = harness.state().shell.active;
+    harness
+        .state_mut()
+        .apply(vec![Act::Shell(ShellAct::CloseTab(active, false))]);
+    shot(&mut harness, &dir, "w10-close-question");
+    harness
+        .state_mut()
+        .apply(vec![Act::Shell(ShellAct::Answer(false))]);
+    harness.state_mut().apply(vec![Act::Shell(ShellAct::About)]);
+    shot(&mut harness, &dir, "w11-about");
 }

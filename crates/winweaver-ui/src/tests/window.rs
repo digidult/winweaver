@@ -303,6 +303,9 @@ fn screenshots_of_the_window() {
         .apply(vec![Act::Shell(ShellAct::UseTheme("light".to_owned()))]);
     harness.set_size(egui::vec2(1000.0, 700.0));
     shot(&mut harness, "09-compact");
+    harness.set_size(egui::vec2(1440.0, 900.0));
+    harness.state_mut().apply(vec![Act::Shell(ShellAct::About)]);
+    shot(&mut harness, "20-about");
 }
 
 #[test]
