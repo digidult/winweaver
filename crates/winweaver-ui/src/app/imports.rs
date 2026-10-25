@@ -460,7 +460,7 @@ impl WinWeaver {
     /// The section of the settings that lists the imports of policy templates.
     pub(crate) fn imports_view(&mut self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         style::section_title(ui, tr("Policy templates"));
-        ui.weak(tr("Imported ADMX templates become rules under Standard policies. Only the checked catalogs are read and loaded; when two of them hold a policy, the templates of this Windows win."));
+        ui.weak(tr("Imported ADMX templates become rules under Policies. Only the checked catalogs are read and loaded; when two of them hold a policy, the templates of this Windows win."));
         let mut renaming = self.renaming.take();
         for entry in &self.import_list {
             let file = self.imports.iter().find(|f| f.id == entry.id);
