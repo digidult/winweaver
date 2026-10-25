@@ -1,7 +1,7 @@
 //! The menu of the tab row and the menus of the command bar (This PC, Compare, Catalogs).
 
 #[cfg(feature = "full")]
-use ww::shell::menu_entry;
+use ww::shell::{menu_entry, menu_entry_colored};
 use ww::shell::{menu_item, sub_menu};
 
 use crate::ShellAct;
@@ -288,14 +288,37 @@ impl WinWeaver {
     }
 
     #[cfg(feature = "full")]
-    /// The menu of the policy templates: the imports to open in a tab and the import commands.
+    /// The menu of the policy templates: every catalog file of the imports folder, a loaded one
+    /// with a mark and in the accent colour (a click opens its tab), another one plain (a click
+    /// loads it and opens its tab); then the import commands. The files are listed again each
+    /// time the menu opens.
     fn catalogs_menu(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
-        if self.imports.is_empty() {
+        // The menu opened this frame when it was not drawn in the frame before: the folder is
+        // read again once, since files may have come or gone meanwhile.
+        let drawn = egui::Id::new("catalogs-menu-drawn");
+        let now = ui.ctx().cumulative_pass_nr();
+        let last: Option<u64> = ui.data(|d| d.get_temp(drawn));
+        if last.is_none_or(|l| now > l + 1) {
+            acts.push(Act::Import(ImportAct::RefreshList));
+        }
+        ui.data_mut(|d| d.insert_temp(drawn, now));
+        let accent = style::palette(ui).accent;
+        if self.full.import_list.is_empty() {
             ui.weak(tr("No policy templates imported yet."));
         }
-        for f in &self.imports {
-            if menu_entry(ui, icons::PACKAGE, &f.name, "", true) {
-                acts.push(Act::Catalog(CatalogAct::Open(f.id.clone())));
+        for entry in &self.full.import_list {
+            let loaded = self.imports.iter().any(|f| f.id == entry.id);
+            let (icon, color) = if loaded {
+                (icons::CHECK, Some(accent))
+            } else {
+                ("", None)
+            };
+            if menu_entry_colored(ui, icon, &entry.name, "", true, color) {
+                acts.push(Act::Catalog(if loaded {
+                    CatalogAct::Open(entry.id.clone())
+                } else {
+                    CatalogAct::LoadAndOpen(entry.id.clone())
+                }));
             }
         }
         ui.separator();

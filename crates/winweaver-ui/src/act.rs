@@ -304,6 +304,9 @@ pub enum CatalogAct {
     Compare(CatalogRef),
     /// Opens the tab of an import.
     Open(String),
+    /// Loads a catalog file of the imports folder that is not loaded and opens its tab (the
+    /// menu Catalogs).
+    LoadAndOpen(String),
     /// A group, a policy, or (`None`) the catalog itself.
     Select(Option<TreeKey>),
     /// Selects a group (`g:<id>`) or a policy of the catalog tab in front and opens its tree down
@@ -335,6 +338,8 @@ pub enum ImportAct {
     Templates(ImportSource),
     /// Loads an import that is not loaded, or forgets one that is.
     Toggle(String),
+    /// Lists the catalog files of the imports folder again (the menu Catalogs, when it opens).
+    RefreshList,
     Remove(String),
     /// Looks for the catalogs of the unknown options of the active profile among the imports
     /// that are not loaded, and loads the ones that have them.

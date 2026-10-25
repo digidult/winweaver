@@ -757,6 +757,14 @@ impl WinWeaver {
                 }
             }
             CatalogAct::Open(id) => self.open_catalog(shell, &id),
+            CatalogAct::LoadAndOpen(id) => match self.load_import(shell, &id) {
+                Ok(()) => {
+                    self.refresh_import_list();
+                    self.rebuild_catalog(shell);
+                    self.open_catalog(shell, &id);
+                }
+                Err(e) => shell.status = trf("The import was not loaded: {e}", &[("e", &e)]),
+            },
             CatalogAct::Select(key) => {
                 if let Some(Doc::Catalog(c)) = shell.docs.get_mut(shell.active) {
                     let (group, sel) = match key {
@@ -797,6 +805,7 @@ impl WinWeaver {
                 self.refresh_import_list();
                 self.rebuild_catalog(shell);
             }
+            ImportAct::RefreshList => self.refresh_import_list(),
             ImportAct::Remove(id) => {
                 let _ = std::fs::remove_file(
                     self.full

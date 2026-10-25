@@ -94,6 +94,57 @@ fn only_the_checked_imports_load_and_unknown_options_find_their_catalog() {
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
+/// The menu Catalogs lists every catalog file of the imports folder, read again on request: a
+/// file that is not loaded loads at a click and opens its tab, marked among the loaded ones.
+#[test]
+fn a_catalog_that_is_not_loaded_loads_and_opens_from_the_menu() {
+    let dir = std::env::temp_dir().join(format!("winweaver-menu-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    sample_import(&dir);
+    let catalog = Catalog::embedded().unwrap();
+    let settings = Settings {
+        extra: Extra {
+            loaded_imports: Some(Vec::new()),
+            ..Extra::default()
+        },
+        ..Settings::default()
+    };
+    let mut app = Window::new(WinWeaver::new(catalog, Vec::new()), settings);
+    app.app.full.imports_dir = dir.join("imports");
+    app.app.load_imports(&mut app.shell);
+    assert!(app.app.imports.is_empty(), "nothing is loaded at the start");
+    assert_eq!(app.app.full.import_list.len(), 1);
+    // A file that came into the folder meanwhile is listed once the menu asks for the list.
+    let other = dir.join("imports").join("other.wwcatalog");
+    std::fs::copy(dir.join("imports").join("test.wwcatalog"), &other).unwrap();
+    assert_eq!(app.app.full.import_list.len(), 1);
+    app.apply(vec![Act::Import(ImportAct::RefreshList)]);
+    assert_eq!(app.app.full.import_list.len(), 2);
+    app.apply(vec![Act::Catalog(CatalogAct::LoadAndOpen(
+        "test".to_owned(),
+    ))]);
+    assert_eq!(app.app.imports.len(), 1, "{}", app.shell.status);
+    assert_eq!(
+        app.shell.settings.extra.loaded_imports,
+        Some(vec!["test".to_owned()])
+    );
+    assert!(
+        matches!(app.shell.active_doc(), Some(Doc::Catalog(c)) if c.id == "test"),
+        "its tab is in front"
+    );
+    assert!(app.app.catalog.rule("admx.sample.turnoff").is_some());
+    app.apply(vec![Act::Catalog(CatalogAct::LoadAndOpen(
+        "missing".to_owned(),
+    ))]);
+    assert_eq!(app.app.imports.len(), 1);
+    assert!(
+        app.shell.status.contains("not loaded"),
+        "{}",
+        app.shell.status
+    );
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
 /// The options of catalogs that are not loaded have their group at the end of the tree,
 /// unless the settings hide them.
 #[test]
