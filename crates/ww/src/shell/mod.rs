@@ -229,9 +229,15 @@ pub trait App: Sized + 'static {
         Self::NAME
     }
 
-    /// Whether the settings offer the editor of a theme and the fonts of a theme; off, the themes
-    /// of the folder are only chosen.
+    /// Whether the settings offer the editor of a theme; off, the themes of the folder are only
+    /// chosen.
     fn edits_themes() -> bool {
+        true
+    }
+
+    /// Whether the settings offer the fonts of the theme shown (the families and the size), saved
+    /// in its file; a program without the editor of themes may keep them, so the size can grow.
+    fn chooses_fonts() -> bool {
         true
     }
     /// The hint of the button that opens a new tab.

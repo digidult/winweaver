@@ -27,6 +27,10 @@ answer files you build where you choose.
 4. Check (F7), then Build (F9): `autounattend.xml` is written where you choose.
 5. Copy `autounattend.xml` to the root of the installation USB stick.
 
+## Fonts
+
+Settings, General: the font of the text, of the code and the size, kept in a theme file in `themes/`.
+
 ## Languages
 
 English and Ukrainian are built in. Another language is a folder `lang/<code>` with its `ui.json`

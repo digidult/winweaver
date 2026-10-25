@@ -88,7 +88,7 @@ Ctrl+Shift+PgUp and PgDn; the program adds its own in `shortcuts`.
   act that clears it); `messages_body` draws the list.
 - The status bar shows `status_left` (texts), then `status_right` (anything), the button of the
   folder of a saved file, the message, a spinner while `busy`.
-- The settings tab has the General section of the window (language, theme and its fonts, the
+- The settings tab has the General section of the window (language, theme and its fonts: `App::edits_themes` offers the editor of a theme, `App::chooses_fonts` the fonts alone, the
   window: the program's lines through `settings_general`, the renderer, the tabs of the last
   session) and the sections of the program (`settings_sections`, `settings_section`).
 - A program adds colours to the themes with `ww::style::install_colors` (`ExtraColor`: the name in a

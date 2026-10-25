@@ -326,6 +326,7 @@ check, the build of `autounattend.xml`, the presets, the catalogs of the folder 
 themes of the folder `themes`, a short guide as plain text, English and Ukrainian built in and
 other languages as files (German in its archive). It has nothing of This PC, the MCP server, the
 registry, registry and Group Policy files, diffs, bookmarks, imports of policy templates, the
-catalog views and editor, users files, the theme editor and Markdown pages: winweaver-ui is built
+catalog views and editor, users files, the theme editor (the fonts of the theme and their size stay
+in Settings) and Markdown pages: winweaver-ui is built
 without its feature `full`, so none of that code is in the executable. It is built for Windows;
 `docs/wasm.md` studies an edition for the browser.

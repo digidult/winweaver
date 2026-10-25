@@ -749,7 +749,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   of this PC.
 - wwlite (`crates/wwlite`): the window of WinWeaver built without the feature `full` of winweaver-ui
   (`winweaver_ui::lite()` is a const of the build): `App::name` gives `wwlite` (its title, its About,
-  the settings file `wwlite.settings.json`), `App::edits_themes` is off, `languages` is Ukrainian
+  the settings file `wwlite.settings.json`), `App::edits_themes` is off while the fonts of the theme
+  stay in the settings (`App::chooses_fonts`, item 15 of the list), `languages` is Ukrainian
   alone (`LANGUAGES_LITE`), the command bar of a profile has New, Open, Save, Check, Build and Only
   on, the menu has New, Open, Save, Guide (plain text, `pages::guide_lite_text`), License (plain),
   Settings (General and Files), About and Exit, `open_any` takes profiles, answer files and old JSON
