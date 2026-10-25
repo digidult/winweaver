@@ -29,7 +29,7 @@ text editor wedit.
 | Change what an AI agent or the archive gets | `agents/README.md`, `package/README.md` |
 | Write a program on W#, or change the shell of the window | `docs/ww.md`, then `crates/ww/src/shell/mod.rs` (the trait `App`), `crates/wedit` (the example) |
 | Change wedit | `crates/wedit/src/app.rs`, `package-wedit/README.md` |
-| Change wwlite, the light edition | `crates/wwlite`, `winweaver_ui::lite` and its uses, `package-wwlite/README.md`; a browser edition: `docs/wasm.md` |
+| Change wwlite, the light edition | `crates/wwlite`, the feature `full` of `crates/winweaver-ui` (`cfg(feature = "full")` marks what wwlite leaves out), `package-wwlite/README.md`; a browser edition: `docs/wasm.md` |
 
 ## 3. Folder structure
 
@@ -52,7 +52,7 @@ text editor wedit.
 │   │                      re-exports them as `winweaver_core::{jsonfile, paths, clock}`
 │   ├── ww/                W# (the framework, `docs/ww.md`): shell/ (mod: the trait App, Shell, ShellAct,
 │   │                      ShellDoc, Nav, Messages; window: Window<A> as eframe::App, the acts of the window,
-│   │                      the keys, the question, the session restored; tabs, bar, nav, status: the chrome
+│   │                      the keys, the question, the session restored; tabs, bar, nav, status, jobs: the chrome
 │   │                      drawn from what the program gives; settings: the settings tab with General;
 │   │                      theme: the theme shown, its editor, the title bar colours), run.rs (run::<A>,
 │   │                      smoke_window::<A>), doc.rs (Document, Search, Draft, Scrolled), settings.rs
@@ -130,7 +130,8 @@ text editor wedit.
 │   │                      titles, the links; header and block from ww::style; profile_tree, detail,
 │   │                      rule), forms.rs, diffview.rs, marksview.rs, mcpview.rs, settings.rs (Extra:
 │   │                      the fields of WinWeaver in settings.json), pages.rs (the guide, the license,
-│   │                      the reference), catalogview.rs, regview.rs, regedit.rs, cataledit.rs,
+│   │                      the reference), catalogview.rs, catalogdiff.rs (two catalogs compared in a
+│   │                      tab), regview.rs, regedit.rs, cataledit.rs,
 │   │                      regfileview/, usersview.rs, polview.rs (the tab of a .pol file, the files of
 │   │                      this Windows read once, the links of the other tabs), tests/ (the window
 │   │                      tests: a Window of WinWeaver,
@@ -155,8 +156,9 @@ text editor wedit.
 │                          contexts), README.md, skills/ (winweaver: the tools, served as winweaver://skill;
 │                          winweaver-review, -change, -this-pc), pi-agent/ (Dockerfile of the latest pi and
 │                          Node.js LTS, its AGENTS.md, README.md)
-├── crates/wwlite/         the light edition: main.rs (the command line, winweaver_ui::run_lite), tests.rs
-│                          (what it leaves out, the screenshots l1- to l4-)
+├── crates/wwlite/         the light edition: main.rs (the command line, winweaver_ui::run without the
+│                          feature full), tests.rs (what it leaves out, the screenshots l1- to l4-; run
+│                          alone: cargo test -p wwlite)
 ├── package-wwlite/        what the archive of wwlite adds: README.md, lang/de/guide-lite.txt (German, with
 │                          data/lang/de/ui.json copied by CI)
 ├── package-wedit/         what the archive of wedit adds: README.md for its user, lang/uk/ui.json (every
@@ -227,6 +229,10 @@ cargo run -p winweaver -- --check-catalog
 cargo build --release --workspace
 # one renderer only: the features glow (OpenGL) and wgpu (DirectX 12), both by default
 cargo build --release -p winweaver --no-default-features --features wgpu
+# wwlite alone: a build of the workspace gives winweaver-ui the feature full of WinWeaver
+cargo clippy -p wwlite --all-targets -- -D warnings
+cargo test -p wwlite
+cargo build --release -p wwlite
 ```
 
 CI does not run at every push, since its Windows minutes are the dear ones:
@@ -410,8 +416,14 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - A policy two imports hold is one rule of the first (`admx::merge`) and an alias in the groups of the
   others (`Catalog::with_aliases`, `rules_in` and `rules_under` include them), so every checked import
   shows its whole tree. `admx::compare` sets two catalog files side by side by policy (the `.off` rule
-  counts with its policy); Compare in the bar of a catalog tab opens it as a Markdown page
-  (`comparison_page`, at most 1000 lines a section).
+  counts with its policy); Compare in the bar of a catalog tab opens it as a tab (`Doc::Compare`,
+  `catalogdiff::CompareDoc`: the differing policies in the tree of their categories, switches for the
+  policies only in one catalog and the different ones, the selected policy as it is in both); Save the
+  report writes it as a Markdown file and As a page shows it (`comparison_page`, at most 1000 lines a
+  section). Copy to (`CatalogAct::CopyTo`, `CatalogFile::copy_from`) copies the selected policy with
+  its `.off` rule, or the selected group with the groups under it, into a catalog open in its editor
+  or a new one: ids kept (the same policy in two catalogs is one rule of the program), groups made
+  again by their titles, the texts of other languages along, the whole file checked first.
 - A policy of two imports shows twice in the profile tree, so the key of a row is `(Sel, Option<group>)` and
   `ProfileDoc::focus` keeps the group of the selected rule: `Act::SelectIn` from the tree, `Act::ShowIn`
   (select and reveal) from the links of the detail panel (`views::other_catalogs`: the same id in the groups
@@ -706,7 +718,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - Scripts and registry files (`winweaver_core::export`): one place makes them for the selection of a
   profile, the whole profile (every rule; the ones off return to the defaults), a diff (its other
   side, `export::diff_profile`) and the command line (`--script apply|revert|audit FILE`, `--reg
-  apply|revert FILE`, `--only IDS`, `--out FOLDER`, FILE a `.wwprofile` or a `.wwdiff`). A selection
+  apply|revert FILE`, `--only IDS`, `--out FILE|FOLDER`, FILE a `.wwprofile` or a `.wwdiff`). A selection
   of only passes of the installation, the first sign-in or the sign-in screen has nothing for a PC
   (`export::applicable`): the block This PC of the detail panel is not drawn and its items of the
   menu This PC are off.
@@ -735,16 +747,59 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   registry file. The menu, the command bars of a profile, a catalog and the registry have Group
   Policy; `Extra::pol_with_pc` opens the files of this Windows behind the tab in front after a read
   of this PC.
-- wwlite (`crates/wwlite`): the same window as WinWeaver with `winweaver_ui::lite()` set once a
-  process (`enter_lite`, `run_lite`): `App::name` gives `wwlite` (its title, its About, the
-  settings file `wwlite.settings.json`), `App::edits_themes` is off (no theme editor, no fonts of a
-  theme in the settings), `languages` is Ukrainian alone, the command bar of a profile has New,
-  Open, Save, Check and Build, the menu has New, Open, Save, Guide (plain text, `pages::
-  guide_lite_text`), License (plain), Settings (General and Files), About and Exit, `open_any`
-  takes profiles, answer files and old JSON profiles only, the detail panel has no This PC, no
-  registry buttons, no catalog links and no Reference, and every act of the parts left out does
-  nothing (`App::apply`). Its tests run in their own process, since the edition is a static of the
-  process; never call `enter_lite` in a test of winweaver-ui. CI packages `wwlite-<version>.zip`.
+- wwlite (`crates/wwlite`): the window of WinWeaver built without the feature `full` of winweaver-ui
+  (`winweaver_ui::lite()` is a const of the build): `App::name` gives `wwlite` (its title, its About,
+  the settings file `wwlite.settings.json`), `App::edits_themes` is off, `languages` is Ukrainian
+  alone (`LANGUAGES_LITE`), the command bar of a profile has New, Open, Save, Check, Build and Only
+  on, the menu has New, Open, Save, Guide (plain text, `pages::guide_lite_text`), License (plain),
+  Settings (General and Files), About and Exit, `open_any` takes profiles, answer files and old JSON
+  profiles only, the detail panel has no This PC, no registry buttons, no catalog links and no
+  Reference. Everything else (`cfg(feature = "full")`: the acts, the documents, the modules of
+  `app/` and the views of This PC, the registry, registry and Group Policy files, users files, the
+  catalogs, diffs, bookmarks and MCP, the fields of `WinWeaver::full`, the MCP crate, the crypto of
+  users files through the features `users` of the core and of the Windows crate) is not in its
+  executable. Cargo unifies the features of one build, so wwlite is checked, tested and built alone
+  (`-p wwlite`, the steps of CI); its tests say so and pass in a build with the feature. CI packages
+  `wwlite-<version>.zip` from the build of wwlite alone.
+- The catalog by mechanism (`Catalog::mechanism`, `Mechanism::roots`, the test
+  `every_rule_sits_under_a_root_of_its_mechanism`): a rule of answer file settings alone is
+  `Unattend` (under Installation), of registry actions alone `Registry` (under Policies, whatever
+  the key), of PowerShell steps alone `Script` (Installation or Other), anything else or a mix
+  `Other`. Installation holds `install`, `oobe`, `install.scripts`, `user-logon` and `post-oobe`;
+  Policies the groups of registry rules (`security`, `network`, `logging.policies`, `privacy` with
+  `ads` and `speech`, `system` with `explorer`, `apps.policies` with `onedrive`, `default-user`,
+  the imports); Other the mirror groups `security.other`, `network.other`, `logging`,
+  `privacy.other`, `system.other` and `apps` with `apps.remove`. No rule sits directly in a root.
+- Text parameters have `max_length` (`Param::Text`, checked by the catalog check and the check of a
+  profile, the field counts its characters against it; `set_param` of MCP takes it as its limit):
+  the support contacts have the limits of the answer file (256, the URL 2083), the autologon
+  account 20; an ADMX `maxLength` becomes it. The fields of the parameters take the width of the
+  panel, the title and the default above them.
+- Only on (`ProfileAct::OnlyOn`, `ProfileDoc::only_on`, `ProfileDoc::shows`): the tree shows the
+  rules that are on (chosen or shown on through a linked rule) with their groups open, like a
+  search; the switch of the command bar is `commands::toggle`, drawn pressed when on. MCP:
+  `only_on` of `list_groups` (with the count `on` of each group), `list_rules` and `search_rules`.
+- The panel of the work in the background (`App::jobs`, `ww::Job`, `shell/jobs.rs`): WinWeaver
+  lists the read of this PC, an import, a change of this PC and the search of the registry (with
+  its Stop, which stops the search of every registry tab), each with the time since it was first
+  seen (`WinWeaver::track_jobs`, `Full::jobs_since`); the panel folds (`ShellAct::FoldJobs`).
+- The Group Policy editor (`PolAct`, `polview::PolEdit`, `EntryKind`): entries made, changed (Enter
+  or a double click in the list) and removed after a question (Delete in the list), the root of a
+  file outside Group Policy chosen in the bar (`PolAct::Root`, a change of the view, not of the
+  file), the entries of another `.pol` file (`PolFile::merge`) or the changes of a `.reg` file of
+  that root (`PolFile::merge_reg`) added, the file written back as PReg (`PolFile::to_bytes`,
+  `save`) or as a registry file (`PolFile::to_reg`); the files of Group Policy of this Windows are
+  never written (`PolDoc::is_system`, `pol_is_system`): Save asks for a place for a copy. The draft
+  of a `.pol` tab is its bytes as hexadecimal with the root chosen (`POL_DRAFT`).
+- Menus (`ww::shell::menu_item`, `menu_entry`, `sub_menu`): every item keeps the place of an icon
+  at its left (`icon_place`, an empty image of the size), painted by `style::paint_icon`, so the
+  texts line up with or without one; the menus of WW itself (a tab, the breadcrumb, the recent
+  searches, the copy menus of texts) have icons too. The tab row (`shell/tabs.rs`) is a scroll area
+  without a bar when the tabs are wider than the window: the wheel scrolls it sideways, a new active
+  tab or count scrolls the active one into view, and a button after the new tab lists every tab.
+- The command line (`crates/winweaver/src/cli.rs`): `--build`, `--import-admx`, `--export-catalog`,
+  `--read-pc`, `--diff` beside `--script` and `--reg`; `--out` names the file when it ends with the
+  extension the command writes, else a folder for the default name (`export::out_path`).
 - The cheap check: the Linux job checks the whole workspace for Windows (clippy on the
   target `x86_64-pc-windows-gnu`), so `gh workflow run ci.yml --ref <branch> -f windows=false` is the
   cheap check of a change of any crate; the Windows job runs when the tests of the window, the runner's
@@ -760,8 +815,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Window | WinWeaver on W#: tabs, menu, command bar of each tab, navigation, search per tab, the painted tree and lists, detail panel, forms, check, build, diff tab, bookmarks, Markdown pages, This PC, registry, registry files, catalogs and their editor, users files, MCP tab, settings, nine languages, drafts, restored tabs, log, themes with fonts and icons in colour |
 | MCP server | stdio and HTTP, 36 tools, 4 resources, modes, journal, token, configuration files; tests of both transports |
 | W# and wedit | The crates `ww-base` and `ww`, the editor `wedit` with its archive, `docs/ww.md` |
-| wwlite | The light edition for Windows with its archive; a browser edition studied in `docs/wasm.md` |
+| wwlite | The light edition for Windows with its archive, built without the feature `full` of winweaver-ui; a browser edition studied in `docs/wasm.md` |
 | Done in pull request #61 (0.25.0) | The list of the customer of 24.10.2026 in six groups: the shell (keys, focus, About, links, icons, the question of a closing tab), the documents, the profile (links between catalogs, colours of the panels, `.reg` and `.ps1` of a diff and a whole profile, the command line), the registry and `.pol` files, drafts of every document, `wwlite` and a study of a Wasm edition |
+| Done in pull request #62 (0.26.0) | The list of the customer of 25.10.2026, 14 items: the command line (the answer file, the import and export of templates, a read of this PC, diffs, `--out` as a file), Open and Save as of the MCP tab, the comparison of catalogs as a tab with its report, the panel of the work in the background, the Group Policy editor, Copy to of a catalog, Only on, the scrolling tab row, the catalog by mechanism with the root Policies, icons in every menu, wwlite without the code of the full edition, the hammer of Build, the parameters in the width of the panel with their limits |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the
