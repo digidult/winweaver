@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 26.10.2026.
+Updated with every change of structure, commands or task status. Last update: 25.10.2026.
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -906,6 +906,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | wwlite | The light edition for Windows with its archive, built without the feature `full` of winweaver-ui; the browser edition (wasm32, `docs/wasm.md`) built by CI as `wwlite-web-<version>`: files from the browser and downloads, the settings and drafts in the storage of the page, the embedded list of input languages |
 | Done in pull request #61 (0.25.0) | The list of the customer of 24.10.2026 in six groups: the shell (keys, focus, About, links, icons, the question of a closing tab), the documents, the profile (links between catalogs, colours of the panels, `.reg` and `.ps1` of a diff and a whole profile, the command line), the registry and `.pol` files, drafts of every document, `wwlite` and a study of a Wasm edition |
 | Done in pull request #62 (0.26.0) | The list of the customer of 25.10.2026, 14 items: the command line (the answer file, the import and export of templates, a read of this PC, diffs, `--out` as a file), Open and Save as of the MCP tab, the comparison of catalogs as a tab with its report, the panel of the work in the background, the Group Policy editor, Copy to of a catalog, Only on, the scrolling tab row, the catalog by mechanism with the root Policies, icons in every menu, wwlite without the code of the full edition, the hammer of Build, the parameters in the width of the panel with their limits |
+| Done in pull request #63 (0.27.0) | The second list of the customer of 25.10.2026: the region of the default user profile from the list of Windows, the editors in the width they have, text sizes up to 36, every catalog file in the menu Catalogs, wwlite for the browser (the store, the web start, the embedded input languages, the artifact wwlite-web), the presentation of the screenshots |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the
