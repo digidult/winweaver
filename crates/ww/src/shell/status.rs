@@ -89,7 +89,10 @@ impl<A: App> Window<A> {
                         acts.push(ShellAct::ShowInFolder(path.clone()).into());
                     }
                 }
-                ui.label(style::muted(ui, self.shell.status.as_str(), 11.0));
+                // Cut at the room left after the texts of the program, so a large text size
+                // never lets the message run over them.
+                let status = style::muted(ui, self.shell.status.as_str(), 11.0);
+                ui.add(egui::Label::new(status).truncate());
                 if !self.app.jobs(&self.shell).is_empty() {
                     ui.add(egui::Spinner::new().size(style::size(ui, 12.0)));
                 }
