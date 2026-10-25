@@ -18,6 +18,10 @@ on:
         description: "Run the Windows job (tests, the build, the archive) after the Linux checks"
         type: boolean
         default: true
+      web:
+        description: "Build wwlite for the browser (wasm32, the archive wwlite-web) after the Linux checks"
+        type: boolean
+        default: true
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
@@ -39,7 +43,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-          targets: x86_64-pc-windows-gnu
+          targets: x86_64-pc-windows-gnu, wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
       - name: Format check
         id: fmt
@@ -59,6 +63,10 @@ jobs:
         # Built alone, so cargo does not give winweaver-ui the feature full of WinWeaver: the code
         # of the light edition is checked as it is built.
         run: cargo clippy -p wwlite --all-targets --target x86_64-pc-windows-gnu -- -D warnings
+      - name: Clippy (wwlite for the browser)
+        # The browser edition: the target wasm32-unknown-unknown with the renderer glow alone (the wgpu
+        # of WW is DirectX 12 only), the executable alone (its tests draw with the wgpu of egui_kittest).
+        run: cargo clippy -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown -- -D warnings
       - name: Tests (core)
         run: cargo test -p winweaver-core
       - name: CI files (Cargo.lock, the format patch)
@@ -226,10 +234,43 @@ jobs:
           name: wwlite-${{ env.VERSION }}
           path: dist-wwlite/
 
+  build-web:
+    name: Build wwlite for the browser
+    needs: check
+    if: github.event_name != 'workflow_dispatch' || inputs.web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - name: Release build (wasm32)
+        run: cargo build --release -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown
+      - name: Page of the browser edition
+        # wasm-bindgen of the version Cargo.lock names (its crate and its tool must match), the prebuilt
+        # binary of its release: it writes the module and the JavaScript glue next to index.html.
+        run: |
+          v="$(grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | grep '^version' | cut -d'"' -f2)"
+          tool="wasm-bindgen-$v-x86_64-unknown-linux-musl"
+          curl -sSL -o wasm-bindgen.tar.gz "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/$v/$tool.tar.gz"
+          tar xzf wasm-bindgen.tar.gz
+          out="dist-web/wwlite-web"
+          "./$tool/wasm-bindgen" --target web --no-typescript --out-dir "$out" target/wasm32-unknown-unknown/release/wwlite.wasm
+          cp crates/wwlite/web/index.html "$out/index.html"
+          cp package-wwlite/README.md "$out/README.md"
+          ls -l "$out"
+          version="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wwlite-web-${{ env.VERSION }}
+          path: dist-web/
+
   release:
     name: Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [check, build-windows]
+    needs: [check, build-windows, build-web]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -247,15 +288,21 @@ jobs:
           path: dist-wedit
       - uses: actions/download-artifact@v4
         with:
-          pattern: wwlite-*
+          pattern: wwlite-[0-9]*
           merge-multiple: true
           path: dist-wwlite
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wwlite-web-*
+          merge-multiple: true
+          path: dist-web
       - name: Archive
         run: |
           v="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
           (cd dist && zip -qr "WinWeaver-$v.zip" WinWeaver)
           (cd dist-wedit && zip -qr "../dist/wedit-$v.zip" wedit)
           (cd dist-wwlite && zip -qr "../dist/wwlite-$v.zip" wwlite)
+          (cd dist-web && zip -qr "../dist/wwlite-web-$v.zip" wwlite-web)
       - name: Release notes file
         id: notes
         run: |

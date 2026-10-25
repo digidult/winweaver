@@ -7,7 +7,10 @@ use eframe::egui;
 use super::{App, Shell, ShellDoc};
 use crate::doc::Document;
 use crate::folders::dir;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::i18n::tr;
+#[cfg(target_arch = "wasm32")]
+use crate::i18n::trf;
 use crate::settings::ThemeChoice;
 use crate::themes::{self, Theme};
 use crate::themeview::{self, ThemeDoc};
@@ -79,18 +82,31 @@ impl<A: App> Shell<A> {
         }
     }
 
-    /// Writes the theme of the active tab to its file, or to one the user names.
+    /// Writes the theme of the active tab to its file, or to one the user names (a download in
+    /// a browser).
     pub fn save_theme(&mut self, ask: bool) {
         let Some(ShellDoc::Theme(d)) = self.active_doc().and_then(Document::shell_doc) else {
             return;
         };
         let folder = dir("themes");
+        let proposed = format!(
+            "{}.{}",
+            dialogs::file_stem(&d.theme.name, "theme"),
+            themes::EXTENSION
+        );
+        #[cfg(target_arch = "wasm32")]
+        if ask {
+            let text = d.theme.to_json();
+            match crate::store::download(&proposed, text.as_bytes(), "application/json") {
+                Ok(()) => self.status = trf("Downloaded {name}", &[("name", &proposed)]),
+                Err(e) => self.save_failed(e),
+            }
+            return;
+        }
+        #[cfg(target_arch = "wasm32")]
+        let path = d.theme.file_in(&folder);
+        #[cfg(not(target_arch = "wasm32"))]
         let path = if ask {
-            let proposed = format!(
-                "{}.{}",
-                dialogs::file_stem(&d.theme.name, "theme"),
-                themes::EXTENSION
-            );
             let dialog = rfd::FileDialog::new()
                 .add_filter(tr("Theme files"), &[themes::EXTENSION])
                 .set_title(tr("Save the theme as"))
@@ -160,6 +176,7 @@ impl<A: App> Shell<A> {
 
     /// The title bar in the colours of the theme (Windows 11; the dark frame on Windows 10),
     /// given again whenever the colours change, also when the theme follows the system.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn color_title_bar(&mut self, ui: &egui::Ui, frame: &eframe::Frame) {
         use raw_window_handle::{HasWindowHandle, RawWindowHandle};
         let v = ui.visuals();
@@ -185,6 +202,7 @@ impl<A: App> Shell<A> {
 /// Colours the title bar of a window of this process: the dark frame for a dark theme (Windows
 /// 10 and 11), and on Windows 11 the caption, its text and the border, each `[red, green,
 /// blue]`. An attribute the system does not know is ignored; nothing outside the window changes.
+#[cfg(not(target_arch = "wasm32"))]
 fn title_bar_colors(hwnd: isize, dark: bool, caption: [u8; 3], text: [u8; 3], border: [u8; 3]) {
     #[cfg(windows)]
     {

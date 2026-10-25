@@ -13,6 +13,9 @@ use crate::{keys, session, widgets};
 
 /// Below this width of the window the command bar shows icons only, in the navigation row.
 pub const COMPACT_WIDTH: f32 = 1100.0;
+/// The size of the window at the first start, and the least size it takes.
+pub const WINDOW_SIZE: [f32; 2] = [1280.0, 800.0];
+pub const WINDOW_MIN_SIZE: [f32; 2] = [900.0, 560.0];
 
 /// The window of a program: its state and the program.
 pub struct Window<A: App> {
@@ -42,7 +45,7 @@ fn fit_window(ctx: &egui::Context) {
     }
     let frame = outer.size() - inner.size();
     let room = monitor - frame;
-    let least = egui::Vec2::from(crate::run::WINDOW_MIN_SIZE).min(room);
+    let least = egui::Vec2::from(WINDOW_MIN_SIZE).min(room);
     let size = inner.size().min(room).max(least);
     let pos = egui::pos2(
         outer
@@ -123,11 +126,16 @@ impl<A: App> Window<A> {
             ShellAct::CloseTab(i, force) => shell.close_tab(i, force),
             ShellAct::New => self.app.new_document(shell),
             ShellAct::Open => {
+                #[cfg(not(target_arch = "wasm32"))]
                 if let Some(path) = self.app.open_dialog(shell).pick_file() {
                     self.app.open_path(shell, path);
                 }
+                // The dialog of the page: the file comes to a later frame by its bytes.
+                #[cfg(target_arch = "wasm32")]
+                shell.pick_file(self.app.open_filters(shell));
             }
             ShellAct::OpenPath(path) => self.app.open_path(shell, path),
+            ShellAct::OpenBytes(name, bytes) => self.app.open_bytes(shell, &name, bytes),
             ShellAct::Save => self.save(false),
             ShellAct::SaveAs => self.save(true),
             ShellAct::ForgetRecent => {
@@ -147,6 +155,8 @@ impl<A: App> Window<A> {
                 let theme = crate::themes::find(&shell.themes, &id);
                 shell.edit_theme(theme);
             }
+            // A browser has no folder of themes: the item is not offered there.
+            #[cfg(not(target_arch = "wasm32"))]
             ShellAct::OpenThemeFile => {
                 let dir = crate::folders::dir("themes");
                 let dialog = rfd::FileDialog::new()
@@ -156,6 +166,8 @@ impl<A: App> Window<A> {
                     shell.open_theme_path(path);
                 }
             }
+            #[cfg(target_arch = "wasm32")]
+            ShellAct::OpenThemeFile => {}
             ShellAct::UseTheme(id) => shell.use_theme(id),
             ShellAct::ToggleMessages => shell.messages_open = !shell.messages_open,
             ShellAct::SearchCleared => self.app.search_cleared(shell),
@@ -291,7 +303,11 @@ impl<A: App> Window<A> {
                 close_about = true;
             }
             for file in &i.raw.dropped_files {
+                #[cfg(not(target_arch = "wasm32"))]
                 acts.push(ShellAct::OpenPath(file.path().to_path_buf()).into());
+                // A browser gives the name and, later, the bytes.
+                #[cfg(target_arch = "wasm32")]
+                self.shell.read_dropped(file.clone());
             }
         });
         if close_about {
@@ -469,7 +485,13 @@ impl<A: App> eframe::App for Window<A> {
             fit_window(ui.ctx());
         }
         self.shell.apply_visuals(ui.ctx());
+        #[cfg(not(target_arch = "wasm32"))]
         self.shell.color_title_bar(ui, frame);
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = frame;
+            self.shell.ctx = Some(ui.ctx().clone());
+        }
         let title = self.shell.window_title();
         if title != self.shell.last_title {
             ui.ctx()
@@ -477,6 +499,13 @@ impl<A: App> eframe::App for Window<A> {
             self.shell.last_title = title;
         }
         let mut acts = self.shortcuts(ui.ctx());
+        #[cfg(target_arch = "wasm32")]
+        acts.extend(
+            self.shell
+                .take_picked()
+                .into_iter()
+                .map(|(name, bytes)| ShellAct::OpenBytes(name, bytes).into()),
+        );
         let (tabs_frame, tool_frame, nav_frame, status_frame) = super::frames(ui);
         egui::Panel::top("tabs")
             .frame(tabs_frame)

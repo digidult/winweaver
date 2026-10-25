@@ -1,10 +1,48 @@
-# wwlite in a browser (WebAssembly): a study
+# wwlite in a browser (WebAssembly)
 
-Item 18 of the customer's list. Nothing was built: Rust does
-not run on the customer's PC (AGENTS.md, rule 6), so the findings come from reading the code and the
-sources at the end. "Not checked" marks what only a build would show.
+Item 18 of the customer's list of 24.10.2026 was the study below; item 6 of the list of 25.10.2026
+(the second part) built the edition. Rust does not run on the customer's PC (AGENTS.md, rule 6), so
+the code was checked and built in CI only; nobody has opened the page in a browser yet.
 
-## Summary
+## 0. What was built
+
+The job `build-web` of CI builds wwlite for `wasm32-unknown-unknown` with the renderer `glow` alone
+(WebGL), runs the wasm-bindgen of the version `Cargo.lock` names and uploads `wwlite-web-<version>`:
+`index.html` (`crates/wwlite/web/index.html`), `wwlite.js`, `wwlite_bg.wasm` and the README of wwlite.
+The folder is served over http from any static server (a page opened from `file://` cannot load the
+module); the Linux job checks the build with clippy at every run.
+
+The three blockers of the customer's words, as they were resolved:
+
+1. No logs. `ww::store::log_line` writes the log of the window to the console of the browser
+   (`console.log`) and the log of eframe goes there through `WebLogger`; no file is written.
+2. No file system. `ww::store` is the one door to the files of the window: natively the files next
+   to the executable as before; in a browser the `localStorage` of the page under the key `ww/<path>`
+   (the settings `wwlite.settings.json`, the drafts, a theme saved from the fonts of the settings). A
+   file to open comes by its bytes: `ShellAct::Open` runs `rfd::AsyncFileDialog` in a task of the page
+   (the kinds of `App::open_filters`), a drop on the page is read with `bytes_async`, and the next
+   frame hands the file to `App::open_bytes` as `ShellAct::OpenBytes(name, bytes)`; wwlite opens a
+   profile, an answer file with its profile or an older profile that way, in a tab without a path. A
+   save is a download (`ww::store::download`: a Blob and a link clicked, one click): Save and Save as
+   give the profile, Build gives `autounattend.xml` alone (the scripts are embedded in it; the copies
+   beside it stay a thing of Windows), Save as of a theme its file. `ww::web::start` replaces
+   `ww::run` (eframe's `WebRunner` in the canvas `wwlite`), `winweaver_ui::run_web` calls it from the
+   `main` of wwlite. The sync dialogs of rfd, `App::open_dialog`, the title bar colours and the
+   fallback of renderers are native only.
+3. The lists from the system. A build for wasm32 embeds `data/resources/locales.json`, the input
+   languages and keyboard layouts of a Windows 11 (build 26300) read once through the Windows API by a
+   PowerShell script that only reads, with the English display names; `resources::locales` takes it
+   when no reader is named, under `cfg(target_arch = "wasm32")` alone, so a build for Windows never
+   carries it (AGENTS.md, rule 3 and section 6; `02-documents.md` section 3). Against the native read
+   the list lacks the names in the language of the user's Windows and anything a newer Windows adds.
+
+What stays open: the keys Ctrl+N, Ctrl+W and Ctrl+Tab belong to the browser (the menu does the same),
+nothing asks before the page closes with unsaved changes (the drafts in the storage of the page come
+back at the next start), the recent files and the tabs of the last session have no meaning there, the
+fonts are the ones of egui (no Segoe UI), the input languages show their English names, and the host
+of the page is the customer's decision (section 5). The size of the module is read from the artifact.
+
+## The study of 24.10.2026
 
 **It can be done.** eframe 0.36 runs an `eframe::App` in a browser through `eframe::WebRunner`, and
 `ww::Window` is such an App. The core that builds `autounattend.xml` is pure Rust with its data
@@ -12,7 +50,7 @@ embedded. A web wwlite can open a `.wwprofile`, an older JSON profile or an answ
 embedded profile from the bytes the browser gives, and save the profile and `autounattend.xml`
 as downloads, with the built-in catalog.
 
-The blockers:
+The blockers (all resolved, section 0):
 
 1. The clock. `SystemTime::now()` and `Instant::now()` panic on `wasm32-unknown-unknown` [12], and `ww`
    calls them at the start (the first log line), for a new document and at every change.

@@ -13,10 +13,11 @@ such a program.
 | Crate | What it holds |
 |---|---|
 | `ww-base` | Pure Rust, no window: `jsonfile` (strict JSON documents with the trait `Document`, atomic saves), `paths` (a file inside the program folder kept relative to it), `clock`. |
-| `ww` | The window: `shell` (the trait `App`, `Shell`, `Window`, `ShellAct`, `ShellDoc`), `run` (`run::<A>`, `smoke_window::<A>`), `doc` (the trait `Document`, `Search`, `Draft`, `Scrolled`), `settings` (`Settings<X>` with the fields of the program flattened in), `session` (drafts, the log), `style` (the palette, the fonts, the painted buttons and cards), `themes` and `themeview` (theme files, the editor), `i18n` (`tr`, `trf`, the dictionaries), `tree` and `list` (the painted tree and list with the keyboard), `widgets` (a modal window, a side panel, a dialog in a folder), `mdview` (Markdown pages), `renderer` (OpenGL and DirectX 12), `commands` (the items of a command bar), `keys` (the keys of the window), `icons`, `dialogs`, `folders`. `ww` re-exports `eframe` (with `egui`) and `rfd`, so a program needs no other crate for its window. |
+| `ww` | The window: `shell` (the trait `App`, `Shell`, `Window`, `ShellAct`, `ShellDoc`), `run` (`run::<A>`, `smoke_window::<A>`), `web` (`start::<A>` in a browser, wasm32 only), `doc` (the trait `Document`, `Search`, `Draft`, `Scrolled`), `settings` (`Settings<X>` with the fields of the program flattened in), `session` (drafts, the log), `store` (the files of the window: next to the executable natively, the storage of the page and downloads in a browser), `style` (the palette, the fonts, the painted buttons and cards), `themes` and `themeview` (theme files, the editor), `i18n` (`tr`, `trf`, the dictionaries), `tree` and `list` (the painted tree and list with the keyboard), `widgets` (a modal window, a side panel, a dialog in a folder), `mdview` (Markdown pages), `renderer` (OpenGL and DirectX 12), `commands` (the items of a command bar), `keys` (the keys of the window), `icons`, `dialogs`, `folders`. `ww` re-exports `eframe` (with `egui`) and `rfd`, so a program needs no other crate for its window. |
 
 A program depends on `ww` with `default-features = false` and chooses its renderers with the
-features `glow` (OpenGL) and `wgpu` (DirectX 12), both by default.
+features `glow` (OpenGL) and `wgpu` (DirectX 12), both by default. Built for `wasm32-unknown-unknown`
+with `glow` alone, the same program runs in a browser (section 8).
 
 ## 2. A program in five parts
 
@@ -38,7 +39,8 @@ features `glow` (OpenGL) and `wgpu` (DirectX 12), both by default.
    conversions); `started` (the first tab, at every construction, the tests too), `load` (the
    files of the program at a start), `restored` (after the tabs of the last session and the drafts
    are back), `closing` (before the files of the tabs are remembered, for what the program keeps
-   beyond them); `new_document`, `open_path`, `open_dialog`, `save`, `restore_draft`; `draw` (the
+   beyond them); `new_document`, `open_path`, `open_dialog` (`open_filters` and `open_bytes` in a
+   browser), `save`, `restore_draft`; `draw` (the
    active tab), `commands`, `menu`, `menu_popup`, `nav`, `messages` and `messages_body`,
    `status_left`, `status_right`, `busy`; `settings_sections`, `settings_general`,
    `settings_section`, `settings_opened`; `shortcuts`, `apply`, `dialogs`, `after_frame`;
@@ -68,7 +70,8 @@ test builds; `window.apply(acts)` runs acts as a frame would; `window.shell.docs
 `window.app` are the state to assert on. `egui_kittest` draws a `Window` without a screen.
 
 `ShellAct<P>` names the acts of the window: `Activate`, `MoveTab`, `CloseTab`, `New`, `Open`,
-`OpenPath`, `Save`, `SaveAs`, `ForgetRecent`, `OpenSettings`, `OpenSection`, `EditTheme`,
+`OpenPath`, `OpenBytes` (a file by its name and bytes, from a browser), `Save`, `SaveAs`,
+`ForgetRecent`, `OpenSettings`, `OpenSection`, `EditTheme`,
 `OpenThemeFile`, `UseTheme`, `ToggleMessages`, `SearchCleared`, `Revealed`, `Follow`, `Message`,
 `ShowInFolder`, `OpenLink`, `OpenWeb`, `About`, `SaveAndClose`, `Exit`, `Ask`, `Answer`,
 `AnswerAlt`. A question (`ww::Question`) has a title, a text, the yes and its act, and with
@@ -143,6 +146,25 @@ new message of the status bar, through `Shell::log` too), `themes/` (`<id>.wwthe
 embedded ones are Light and Dark, and `App::themes` adds more), `lang/<code>/ui.json`
 (translations of every `tr` and `trf` text of the program and of WW; `App::languages` embeds
 some, a file adds or overrides one; English is the source and the fallback).
+
+The settings, the drafts and the themes go through `ww::store` (`exists`, `read`, `write`,
+`remove`, `list`, `log_line`): natively the files above, in a browser the `localStorage` of the
+page under the key `ww/<path>` and the console for the log. A program that keeps a file of its own
+next to the executable uses the store too when it wants it in a browser.
+
+## 8. In a browser
+
+Built for `wasm32-unknown-unknown` with the feature `glow` alone, a program starts with
+`ww::web::start::<P>(canvas_id, make).await` in a task of the page (`wasm_bindgen_futures::spawn_local`
+from `main`): eframe's `WebRunner` draws in the canvas of that id, the log of eframe goes to the
+console, and a failure of the start replaces the text of the element `loading_text` of the page.
+The page loads the module through the glue `wasm-bindgen --target web` writes (`crates/wwlite/web/
+index.html` is the example) and is served over http. Files come by their bytes: `ShellAct::Open`
+runs `rfd::AsyncFileDialog` with the kinds of `App::open_filters`, a drop on the page is read, and the
+next frame hands each file to `App::open_bytes(shell, name, bytes)` as `ShellAct::OpenBytes`; a save is a
+download through `ww::store::download(name, bytes, mime)` (the theme editor does it for Save as).
+`App::open_dialog`, the synchronous dialogs of rfd, `widgets::in_folder`, the title bar colours and
+`ww::run` are native only. The keys Ctrl+N, Ctrl+W and Ctrl+Tab belong to the browser.
 
 ## 6. Texts and translations
 

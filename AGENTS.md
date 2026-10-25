@@ -29,7 +29,7 @@ text editor wedit.
 | Change what an AI agent or the archive gets | `agents/README.md`, `package/README.md` |
 | Write a program on W#, or change the shell of the window | `docs/ww.md`, then `crates/ww/src/shell/mod.rs` (the trait `App`), `crates/wedit` (the example) |
 | Change wedit | `crates/wedit/src/app.rs`, `package-wedit/README.md` |
-| Change wwlite, the light edition | `crates/wwlite`, the feature `full` of `crates/winweaver-ui` (`cfg(feature = "full")` marks what wwlite leaves out), `package-wwlite/README.md`; a browser edition: `docs/wasm.md` |
+| Change wwlite, the light edition | `crates/wwlite`, the feature `full` of `crates/winweaver-ui` (`cfg(feature = "full")` marks what wwlite leaves out), `package-wwlite/README.md`; the browser edition: `docs/wasm.md`, `crates/wwlite/web`, `crates/ww/src/web.rs` and `store.rs` |
 
 ## 3. Folder structure
 
@@ -43,9 +43,11 @@ text editor wedit.
 ├── rustfmt.toml           max_width 100
 ├── .cargo/config.toml     static CRT for the Windows target
 ├── .gitattributes         LF for every text file (data/templates too)
-├── .github/workflows/ci.yml  CI: fmt (a patch artifact), clippy and tests of winweaver-core on Linux; clippy,
-│                          tests, the catalog check, the release build and the zip on Windows; a tag v<version>
-│                          publishes a release with docs/releases/v<version>.md
+├── .github/workflows/ci.yml  CI: fmt (a patch artifact), clippy (wwlite for wasm32 too) and tests of
+│                          winweaver-core on Linux; clippy, tests, the catalog check, the release build and
+│                          the zip on Windows; the job build-web (wwlite for the browser, the artifact
+│                          wwlite-web-<version>); a tag v<version> publishes a release with
+│                          docs/releases/v<version>.md
 ├── crates/
 │   ├── ww-base/           W# base, pure Rust: jsonfile (strict JSON, the trait Document, atomic saves),
 │   │                      paths (a file inside the program folder kept relative to it), clock; the core
@@ -56,7 +58,9 @@ text editor wedit.
 │   │                      drawn from what the program gives; settings: the settings tab with General;
 │   │                      theme: the theme shown, its editor, the title bar colours), run.rs (run::<A>,
 │   │                      smoke_window::<A>), doc.rs (Document, Search, Draft, Scrolled), settings.rs
-│   │                      (Settings<X: Extra>), session.rs (drafts, the log), style.rs, themes.rs,
+│   │                      (Settings<X: Extra>), session.rs (drafts, the log), store.rs (the files of the
+│   │                      window: next to the executable natively, the storage of the page in a browser,
+│   │                      downloads), web.rs (the start in a browser, wasm32), style.rs, themes.rs,
 │   │                      themeview.rs, i18n.rs, tree.rs, list.rs, widgets.rs, mdview.rs, renderer.rs,
 │   │                      commands.rs, keys.rs, icons.rs, coloricons.rs (the icons in colour through
 │   │                      DirectWrite), dialogs.rs, folders.rs; data/themes (Light, Dark)
@@ -145,7 +149,9 @@ text editor wedit.
 │   ├── catalog/           groups.json, 00-17 rules files, lang/<code>.json for uk, ru, de, es, fr, id, it, tr
 │   │                      (catalog 0.11)
 │   ├── presets/           office, strict, laptop, home .wwprofile
-│   ├── resources/         timezones.json
+│   ├── resources/         timezones.json; locales.json (the input languages and keyboard layouts of a
+│   │                      Windows 11 with English names, read once through the Windows API: embedded in a
+│   │                      browser build only, never in one for Windows, which asks the system)
 │   ├── templates/         the runtime templates: the answer file skeleton and the scripts with {{slot}}s,
 │   │                      VERSION 0.11;
 │   │                      Create-Users.runtime.ps1, the stand-alone script of a users file
@@ -159,8 +165,10 @@ text editor wedit.
 │                          winweaver-review, -change, -this-pc), pi-agent/ (Dockerfile of the latest pi and
 │                          Node.js LTS, its AGENTS.md, README.md)
 ├── crates/wwlite/         the light edition: main.rs (the command line, winweaver_ui::run without the
-│                          feature full), tests.rs (what it leaves out, the screenshots l1- to l4-; run
-│                          alone: cargo test -p wwlite)
+│                          feature full; on wasm32 the start in the canvas of the page through
+│                          winweaver_ui::run_web), web/index.html (the page of the browser edition, with
+│                          the module and the glue wasm-bindgen writes next to it), tests.rs (what it
+│                          leaves out, the screenshots l1- to l4-; run alone: cargo test -p wwlite)
 ├── package-wwlite/        what the archive of wwlite adds: README.md, lang/de/guide-lite.txt (German, with
 │                          data/lang/de/ui.json copied by CI)
 ├── package-wedit/         what the archive of wedit adds: README.md for its user, lang/uk/ui.json (every
@@ -172,7 +180,7 @@ text editor wedit.
     ├── presentation/      make_presentation.py: the slides for a prospective user from the screenshots
     │                      of CI (python-pptx), uploaded by the Windows job as presentation-<version>
     ├── ww.md              the framework W# for the programs written on it
-    ├── wasm.md            the study of wwlite in a browser (WebAssembly)
+    ├── wasm.md            wwlite in a browser (WebAssembly): what was built, what stays open, the study
     └── spec/              the specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
 ```
 
@@ -193,7 +201,10 @@ of the older format; the id of an embedded theme replaces it).
 3. The program code is the project's own; the rule catalog, its translations, the presets, the time
    zones and the runtime templates (PowerShell of the answer file and of the stand-alone scripts) are data.
    Behaviour is written from the specification. Old profiles of JSON and their answer files are still
-   read (`winweaver_core::import`).
+   read (`winweaver_core::import`). The lists of the system (the input languages and keyboard layouts)
+   are read from Windows at run time, never embedded, with one exception: the browser edition of wwlite
+   has no Windows to ask and embeds `data/resources/locales.json`, the list of a Windows 11 (section 6);
+   a build for Windows never carries it.
 4. Dependencies: popular, well known, open source Rust crates that need no extra DLL next to the executable.
    The executable and its configuration stay portable: nothing is installed, nothing is written outside the
    program folder and the system temp folder.
@@ -237,6 +248,13 @@ cargo build --release -p winweaver --no-default-features --features wgpu
 cargo clippy -p wwlite --all-targets -- -D warnings
 cargo test -p wwlite
 cargo build --release -p wwlite
+# the browser edition of wwlite (the target wasm32-unknown-unknown, the renderer glow alone): the check,
+# the build, then wasm-bindgen of the version Cargo.lock names writes the module and the glue next to
+# crates/wwlite/web/index.html; the folder is served over http (never opened from file://)
+rustup target add wasm32-unknown-unknown
+cargo clippy -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown -- -D warnings
+cargo build --release -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown
+wasm-bindgen --target web --no-typescript --out-dir dist-web/wwlite-web target/wasm32-unknown-unknown/release/wwlite.wasm
 ```
 
 CI does not run at every push, since its Windows minutes are the dear ones:
@@ -252,8 +270,10 @@ CI does not run at every push, since its Windows minutes are the dear ones:
    request or branch.
 5. The Linux job comes first and the Windows job only after it: an unformatted push, or clippy of any crate
    (the whole workspace is checked for the target `x86_64-pc-windows-gnu` there, tests included, without a
-   link) or a test of the core that fails, stops before Windows. A run on demand with `-f windows=false`
-   stops after the Linux job: the cheap check of a change, about two minutes.
+   link; wwlite for `wasm32-unknown-unknown` too) or a test of the core that fails, stops before Windows. A
+   run on demand with `-f windows=false` stops after the Linux job: the cheap check of a change, about two
+   minutes. The job `build-web` (Ubuntu: wwlite for the browser, the artifact `wwlite-web-<version>`) also
+   follows the Linux job; `-f web=false` leaves it out.
 6. `main` runs after every merge (its archive is the build for the acceptance), a tag `v*` for the release.
 7. The mirror: when the Actions minutes of digidult/winweaver are used up, its run
    fails in a few seconds with the annotation "The job was not started because recent account payments have
@@ -318,7 +338,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   named `this-pc` (`App::start_pc_read`, `poll_pc_read`, a `PcJob`; the machine is `App::pc`, one in memory
   for the tests), one read at a time with a spinner in the status bar; the result goes to the tab the read
   started from, found by its draft key, and a tab closed meanwhile is only named in the status.
-- Input languages and keyboard layouts come from the system, the program has no list of them:
+- Input languages and keyboard layouts come from the system, the program has no list of them (the one
+  exception is the browser edition, at the end of this fact):
   `resources::Locales` holds what Windows lists, read once at the first use by the reader the
   window and the MCP server name (`set_locale_reader(winweaver_win::locales)` in `App::new` and
   `Server::new`): every locale of `EnumSystemLocalesEx` with its locale id (empty for one Windows numbers
@@ -335,7 +356,17 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   tips of every language it adds. Windows shortens a tag whose region is the main one (`uk` for `uk-UA`):
   `Locales::read_items` turns a read language and its input method tips into items (the default tip is
   the tag of the language, another one a layout id, a tip of a locale id handed at the first sign-in,
-  `2000:00000419`, the tag as read). The check of a profile names an item Windows does not know.
+  `2000:00000419`, the tag as read). The check of a profile names an item Windows does not know. The
+  browser edition of wwlite has no Windows to ask, so a build for `wasm32` embeds
+  `data/resources/locales.json` (`resources::locales` takes it when no reader is named, under
+  `cfg(target_arch = "wasm32")` alone, so a build for Windows never carries it): 912 languages and 218
+  layouts of a Windows 11 (build 26300), read on 25.10.2026 through the Windows API by a PowerShell script
+  that only reads (`EnumSystemLocalesEx`, `GetLocaleInfoEx`, `LocaleNameToLCID`, the key `Keyboard
+  Layouts`), in the shape of `tests/data/locales.json`, ASCII, each list sorted by name as
+  `winweaver_win::locales` sorts it; the test `the_list_of_the_browser_edition_is_whole` checks the file.
+  What the list lacks against the native read: the names are the English display names
+  (`LOCALE_SENGLISHDISPLAYNAME`) and the `Layout Text` values, not the names in the language of the
+  user's Windows, and a language or layout a newer Windows adds is missing until the file is read again.
 - Of the actions of one rule on one value (a removal for a clean start, then the value) only the last is
   checked (`thispc::plan`). A rule partly in effect is read as off, and the read names what differs
   (`Reading::differing`, `CaptureSummary::partly`, a warning on the rule in the message bar).
@@ -839,6 +870,28 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   target `x86_64-pc-windows-gnu`), so `gh workflow run ci.yml --ref <branch> -f windows=false` is the
   cheap check of a change of any crate; the Windows job runs when the tests of the window, the runner's
   registry or the archive are needed.
+- The browser edition of wwlite (`docs/wasm.md`): the same window built for `wasm32-unknown-unknown`
+  with the feature `glow` alone (WebGL; the wgpu of WW is DirectX 12 only). `ww::web::start` (eframe's
+  `WebRunner`, the canvas `wwlite` of `crates/wwlite/web/index.html`, `WebLogger` for the console)
+  replaces `ww::run`, called by `winweaver_ui::run_web` from the `main` of wwlite as a task of the page.
+  The files of the window go through `ww::store` (`exists`, `read`, `write`, `remove`, `list`,
+  `log_line`): natively the files next to the executable as before, in a browser the `localStorage` of
+  the page under the key `ww/<path>` and the log in the console; the settings, the drafts and a theme the
+  fonts of the settings save live there (`Settings::load`, `session`, `themes` call the store). A file
+  comes by its bytes: Open runs `rfd::AsyncFileDialog` in a task of the page (`Shell::pick_file`, the
+  kinds of `App::open_filters`) and a drop reads `bytes_async` (`Shell::read_dropped`), both into
+  `Shell::picked`, which the next frame turns into `ShellAct::OpenBytes(name, bytes)` and
+  `App::open_bytes` (`open_any_bytes` of the light edition: a profile, an answer file with its profile,
+  an older profile; the tab has no path, so it shows the name of the profile). A save is a download
+  (`store::download`: a Blob and a link clicked): Save and Save as give the profile, Build the answer
+  file alone (the scripts are embedded in it), the fonts of a theme its file. `App::open_dialog`, the
+  sync dialogs of rfd, the title bar colours, `ww::run` and the fallback of renderers are native only
+  (`cfg(not(target_arch = "wasm32"))`). CI: the Linux job checks it with clippy, the job `build-web`
+  (Ubuntu, left out by `-f web=false`) builds it in release and runs the wasm-bindgen of the version
+  of Cargo.lock into the artifact `wwlite-web-<version>` (index.html, wwlite.js, wwlite_bg.wasm,
+  README.md), zipped by a tag. Open: the keys Ctrl+N, Ctrl+W and Ctrl+Tab belong to the browser (the
+  menu does the same), no question before the page closes, the page is served over http, never from
+  `file://`, and the names of the input languages are English (the embedded list).
 
 ## 7. Work status
 
@@ -850,7 +903,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Window | WinWeaver on W#: tabs, menu, command bar of each tab, navigation, search per tab, the painted tree and lists, detail panel, forms, check, build, diff tab, bookmarks, Markdown pages, This PC, registry, registry files, catalogs and their editor, users files, MCP tab, settings, nine languages, drafts, restored tabs, log, themes with fonts and icons in colour |
 | MCP server | stdio and HTTP, 36 tools, 4 resources, modes, journal, token, configuration files; tests of both transports |
 | W# and wedit | The crates `ww-base` and `ww`, the editor `wedit` with its archive, `docs/ww.md` |
-| wwlite | The light edition for Windows with its archive, built without the feature `full` of winweaver-ui; a browser edition studied in `docs/wasm.md` |
+| wwlite | The light edition for Windows with its archive, built without the feature `full` of winweaver-ui; the browser edition (wasm32, `docs/wasm.md`) built by CI as `wwlite-web-<version>`: files from the browser and downloads, the settings and drafts in the storage of the page, the embedded list of input languages |
 | Done in pull request #61 (0.25.0) | The list of the customer of 24.10.2026 in six groups: the shell (keys, focus, About, links, icons, the question of a closing tab), the documents, the profile (links between catalogs, colours of the panels, `.reg` and `.ps1` of a diff and a whole profile, the command line), the registry and `.pol` files, drafts of every document, `wwlite` and a study of a Wasm edition |
 | Done in pull request #62 (0.26.0) | The list of the customer of 25.10.2026, 14 items: the command line (the answer file, the import and export of templates, a read of this PC, diffs, `--out` as a file), Open and Save as of the MCP tab, the comparison of catalogs as a tab with its report, the panel of the work in the background, the Group Policy editor, Copy to of a catalog, Only on, the scrolling tab row, the catalog by mechanism with the root Policies, icons in every menu, wwlite without the code of the full edition, the hammer of Build, the parameters in the width of the panel with their limits |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |

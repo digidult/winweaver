@@ -62,6 +62,8 @@
   "Open failed: {e}": "Açılamadı: {e}",
   "Nothing to save: the active tab is not a profile": "Kaydedilecek bir şey yok: etkin sekme bir profil değil",
   "Saved {path}": "Kaydedildi: {path}",
+  "Downloaded {name}": "{name} indirildi",
+  "Built and downloaded {name} ({rules} rules, {scripts} scripts, {warnings} warnings)": "{name} oluşturuldu ve indirildi ({rules} kural, {scripts} betik, {warnings} uyarı)",
   "Save failed: {e}": "Kaydedilemedi: {e}",
   "Nothing to check: the active tab is not a profile": "Denetlenecek bir şey yok: etkin sekme bir profil değil",
   "Build: {e}": "Oluşturma: {e}",

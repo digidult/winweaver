@@ -21,6 +21,7 @@ pub(crate) fn reg_extension(path: PathBuf) -> PathBuf {
 }
 
 /// The path with the profile extension when it has none.
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn with_extension(path: PathBuf) -> PathBuf {
     if path.extension().is_some() {
         path
@@ -36,9 +37,22 @@ pub(crate) fn file_dialog(kind: &str, extension: &str) -> rfd::FileDialog {
     widgets::in_folder(dialog, &dir)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn profile_dialog() -> rfd::FileDialog {
     let dialog = rfd::FileDialog::new().add_filter("WinWeaver profile", &[profile::EXTENSION]);
     widgets::in_folder(dialog, &profiles_dir())
+}
+
+/// The kinds of files the dialog of a browser offers (the light edition there): profiles, answer
+/// files, older profiles; a name and its extensions each.
+#[cfg(target_arch = "wasm32")]
+pub(crate) fn open_filters() -> Vec<(String, Vec<String>)> {
+    let kind = |name: &str, ext: &str| (name.to_owned(), vec![ext.to_owned()]);
+    vec![
+        kind(tr("Profiles"), profile::EXTENSION),
+        kind(tr("Answer files (the profile they embed)"), "xml"),
+        kind(tr("Older profiles and audit reports"), "json"),
+    ]
 }
 
 #[cfg(feature = "full")]
@@ -47,6 +61,7 @@ pub(crate) fn pick_profile() -> Option<PathBuf> {
 }
 
 /// The open dialog for every kind of file the program opens.
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn open_dialog() -> rfd::FileDialog {
     let dir = profiles_dir();
     #[cfg(not(feature = "full"))]
@@ -79,6 +94,7 @@ pub(crate) fn open_dialog() -> rfd::FileDialog {
     widgets::in_folder(dialog, &dir)
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn ask_save_path(proposed: &str) -> Option<PathBuf> {
     let _ = std::fs::create_dir_all(profiles_dir());
     profile_dialog()

@@ -9,9 +9,8 @@ use crate::settings::Settings;
 use crate::shell::{App, Window};
 use crate::style;
 
-/// The size of the window at the first start, and the least size it takes.
-pub const WINDOW_SIZE: [f32; 2] = [1280.0, 800.0];
-pub const WINDOW_MIN_SIZE: [f32; 2] = [900.0, 560.0];
+pub use crate::shell::{WINDOW_MIN_SIZE, WINDOW_SIZE};
+
 /// The size of the window of the smoke test.
 const SMOKE_WINDOW_SIZE: [f32; 2] = [400.0, 300.0];
 

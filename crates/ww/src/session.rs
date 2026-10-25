@@ -1,12 +1,15 @@
-//! The session: the drafts of unsaved documents next to the executable, and the log of the day.
+//! The session: the drafts of unsaved documents next to the executable, and the log of the day;
+//! both through `store`, so a browser keeps the drafts in the storage of the page and logs to
+//! its console.
 
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use ww_base::{clock, jsonfile, paths};
+
+use crate::store;
 
 pub const DRAFT_FORMAT: &str = "ww-draft";
 /// The format of the drafts of WinWeaver before WW; read, never written.
@@ -68,7 +71,6 @@ pub fn write_draft(
     path: Option<&Path>,
     document: &Value,
 ) -> Result<(), String> {
-    std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
     let kept = path.map(|p| paths::stored(p, &paths::program_dir()));
     let draft = Draft {
         format: DRAFT_FORMAT.to_owned(),
@@ -79,15 +81,12 @@ pub fn write_draft(
     };
     let mut text = serde_json::to_string_pretty(&draft).map_err(|e| e.to_string())?;
     text.push('\n');
-    let file = draft_file(dir, key);
-    let tmp = file.with_extension("tmp");
-    std::fs::write(&tmp, text).map_err(|e| format!("{}: {e}", tmp.display()))?;
-    std::fs::rename(&tmp, &file).map_err(|e| format!("{}: {e}", file.display()))
+    store::write(&draft_file(dir, key), &text)
 }
 
 /// Deletes the draft of a key, if there is one.
 pub fn remove_draft(dir: &Path, key: &str) {
-    let _ = std::fs::remove_file(draft_file(dir, key));
+    store::remove(&draft_file(dir, key));
 }
 
 /// The drafts of a folder with their keys, oldest first, and the names of the files that could
@@ -95,19 +94,11 @@ pub fn remove_draft(dir: &Path, key: &str) {
 pub fn read_drafts(dir: &Path) -> (Vec<(String, Draft)>, Vec<String>) {
     let mut drafts = Vec::new();
     let mut broken = Vec::new();
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return (drafts, broken);
-    };
-    let mut files: Vec<PathBuf> = entries
-        .filter_map(Result::ok)
-        .map(|e| e.path())
-        .filter(|p| p.extension().is_some_and(|e| e == "json"))
-        .collect();
-    files.sort();
-    for file in files {
+    for file in store::list(dir, &["json"]) {
         let name = jsonfile::display_name(&file);
-        let read = jsonfile::read::<Draft>(&file, DRAFT_MAX_BYTES)
-            .map_err(|e| e.to_string())
+        let read = store::read(&file, DRAFT_MAX_BYTES)
+            .and_then(|text| text.ok_or_else(|| format!("{name}: not found")))
+            .and_then(|text| jsonfile::parse::<Draft>(&text, &name).map_err(|e| e.to_string()))
             .and_then(|d| {
                 if d.format == DRAFT_FORMAT || d.format == EARLIER_DRAFT_FORMAT {
                     Ok(d)
@@ -131,23 +122,10 @@ pub fn read_drafts(dir: &Path) -> (Vec<(String, Draft)>, Vec<String>) {
     (drafts, broken)
 }
 
-/// Appends a line to the log of the day in `dir`, named after the program; a log that cannot be
-/// written is ignored.
+/// Appends a line to the log of the day in `dir`, named after the program (the console of a
+/// browser); a log that cannot be written is ignored.
 pub fn log(dir: &Path, program: &str, level: &str, text: &str) {
-    let now = clock::now_utc_iso();
-    let day = now.get(..10).unwrap_or("unknown");
-    if std::fs::create_dir_all(dir).is_err() {
-        return;
-    }
-    let file = dir.join(format!("{program}-{day}.log"));
-    if let Ok(mut f) = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(file)
-    {
-        let line = text.replace(['\r', '\n'], " ");
-        let _ = writeln!(f, "[{now}] [{level}] {line}");
-    }
+    store::log_line(dir, program, level, text);
 }
 
 #[cfg(test)]

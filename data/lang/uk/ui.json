@@ -62,6 +62,8 @@
   "Open failed: {e}": "Не вдалося відкрити: {e}",
   "Nothing to save: the active tab is not a profile": "Нічого зберігати: активна вкладка не є профілем",
   "Saved {path}": "Збережено {path}",
+  "Downloaded {name}": "Завантажено {name}",
+  "Built and downloaded {name} ({rules} rules, {scripts} scripts, {warnings} warnings)": "Зібрано й завантажено {name} (правил: {rules}, скриптів: {scripts}, попереджень: {warnings})",
   "Save failed: {e}": "Не вдалося зберегти: {e}",
   "Nothing to check: the active tab is not a profile": "Нічого перевіряти: активна вкладка не є профілем",
   "Build: {e}": "Збирання: {e}",

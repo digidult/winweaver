@@ -117,8 +117,21 @@ impl App for WinWeaver {
         self.open_any(shell, path);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn open_dialog(&self, _shell: &Shell<Self>) -> rfd::FileDialog {
         open_dialog()
+    }
+
+    /// The kinds of files the dialog of the browser offers.
+    #[cfg(target_arch = "wasm32")]
+    fn open_filters(&self, _shell: &Shell<Self>) -> Vec<(String, Vec<String>)> {
+        open_filters()
+    }
+
+    /// A file the browser hands over by its bytes: the light edition opens it.
+    #[cfg(not(feature = "full"))]
+    fn open_bytes(&mut self, shell: &mut Shell<Self>, name: &str, bytes: Vec<u8>) {
+        self.open_any_bytes(shell, name, bytes);
     }
 
     fn save(&mut self, shell: &mut Shell<Self>, ask: bool) {

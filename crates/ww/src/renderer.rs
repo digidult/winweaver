@@ -4,9 +4,12 @@
 //! Windows. Automatic tries them in that order and takes the first that starts; a chosen one is
 //! tried first, and the others follow when it does not start.
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::atomic::{AtomicBool, Ordering};
 
+#[cfg(not(target_arch = "wasm32"))]
 use eframe::egui;
 
 #[cfg(not(any(feature = "glow", feature = "wgpu")))]
@@ -55,6 +58,7 @@ impl Renderer {
         Self::ALL.iter().copied().find(|r| r.id() == name)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn eframe(self) -> eframe::Renderer {
         match self {
             #[cfg(feature = "glow")]
@@ -117,7 +121,9 @@ pub fn graphics_text(cc: &eframe::CreationContext<'_>) -> String {
 /// Opens a window with the first renderer of `order` that starts. `make` gives the creator of the
 /// app for a renderer and the failures of the ones tried before it; it is called once per try. A
 /// renderer fails when the window ends with an error before its app is created; an error after
-/// that ends the start. The renderer that drew and the failures before it.
+/// that ends the start. The renderer that drew and the failures before it. A browser starts
+/// through `web::start` with WebGL.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn start(
     title: &str,
     viewport: &egui::ViewportBuilder,

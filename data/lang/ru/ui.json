@@ -62,6 +62,8 @@
   "Open failed: {e}": "Не удалось открыть: {e}",
   "Nothing to save: the active tab is not a profile": "Нечего сохранять: активная вкладка не профиль",
   "Saved {path}": "Сохранено {path}",
+  "Downloaded {name}": "Загружено {name}",
+  "Built and downloaded {name} ({rules} rules, {scripts} scripts, {warnings} warnings)": "Собрано и загружено {name} (правил: {rules}, скриптов: {scripts}, предупреждений: {warnings})",
   "Save failed: {e}": "Не удалось сохранить: {e}",
   "Nothing to check: the active tab is not a profile": "Нечего проверять: активная вкладка не профиль",
   "Build: {e}": "Сборка: {e}",

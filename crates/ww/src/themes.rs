@@ -1,8 +1,9 @@
 //! Themes: the colours and the fonts of the window. Light and Dark are embedded in WW, a program
 //! embeds more (`install`); a file
-//! `themes/<id>.wwtheme` next to the executable adds a theme, or replaces the embedded one of its
-//! id. A theme names a light or dark base and the colours it changes; a colour it leaves out
-//! keeps the base. Files `<id>.json` of the first version are read too.
+//! `themes/<id>.wwtheme` next to the executable (in the storage of the page in a browser, through
+//! `store`) adds a theme, or replaces the embedded one of its id. A theme names a light or dark
+//! base and the colours it changes; a colour it leaves out keeps the base. Files `<id>.json` of
+//! the first version are read too.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -11,6 +12,7 @@ use eframe::egui::Color32;
 use serde::{Deserialize, Serialize};
 use ww_base::jsonfile;
 
+use crate::store;
 use crate::style::{self, Fonts, Palette};
 
 pub const FORMAT: &str = "winweaver-theme";
@@ -116,7 +118,7 @@ impl Theme {
 
     pub fn load(path: &Path) -> Result<Self, String> {
         let name = jsonfile::display_name(path);
-        let text = jsonfile::read_text(path, MAX_BYTES).map_err(|e| e.to_string())?;
+        let text = store::read(path, MAX_BYTES)?.ok_or_else(|| format!("{name}: not found"))?;
         let mut theme = Self::parse(&text, &name)?;
         theme.id = path
             .file_stem()
@@ -136,13 +138,7 @@ impl Theme {
     }
 
     pub fn save(&self, path: &Path) -> Result<(), String> {
-        if let Some(dir) = path.parent() {
-            std::fs::create_dir_all(dir).map_err(|e| format!("{}: {e}", dir.display()))?;
-        }
-        let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, self.to_json())
-            .and_then(|()| std::fs::rename(&tmp, path))
-            .map_err(|e| format!("{}: {e}", path.display()))
+        store::write(path, &self.to_json())
     }
 
     /// The embedded theme of an id.
@@ -188,18 +184,12 @@ pub fn themes(dir: &Path) -> Vec<Theme> {
         .into_iter()
         .filter_map(|(id, _)| Theme::embedded(id))
         .collect();
-    if let Ok(entries) = std::fs::read_dir(dir) {
-        let mut paths: Vec<PathBuf> = entries
-            .filter_map(Result::ok)
-            .map(|e| e.path())
-            .filter(|p| p.extension().is_some_and(|e| e == "json" || e == EXTENSION))
-            .collect();
-        paths.sort_by_key(|p| p.extension().is_some_and(|e| e == EXTENSION));
-        for path in paths {
-            if let Ok(t) = Theme::load(&path) {
-                out.retain(|o| o.id != t.id);
-                out.push(t);
-            }
+    let mut paths = store::list(dir, &["json", EXTENSION]);
+    paths.sort_by_key(|p| p.extension().is_some_and(|e| e == EXTENSION));
+    for path in paths {
+        if let Ok(t) = Theme::load(&path) {
+            out.retain(|o| o.id != t.id);
+            out.push(t);
         }
     }
     out.sort_by(|a, b| a.name.cmp(&b.name));

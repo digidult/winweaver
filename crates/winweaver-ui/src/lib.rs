@@ -86,6 +86,9 @@ pub(crate) use app::show_single;
 #[cfg(feature = "full")]
 pub use catalogview::TreeKey;
 pub use dialogs::file_stem;
+#[cfg(target_arch = "wasm32")]
+pub(crate) use dialogs::open_filters;
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) use dialogs::{ask_save_path, open_dialog, with_extension};
 #[cfg(feature = "full")]
 pub(crate) use dialogs::{file_dialog, kept_name, pick_profile, reg_extension, write_file};
@@ -631,6 +634,7 @@ pub const LANGUAGES_LITE: [(&str, &str); 1] =
 
 /// Opens the window with the renderer of `--renderer` or of the settings first; returns the
 /// error text when the catalog or the window cannot start.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
     let catalog = Catalog::embedded().map_err(|e| format!("catalog: {e}"))?;
     let texts = CatalogTexts::embedded().map_err(|e| format!("translations: {e}"))?;
@@ -640,8 +644,28 @@ pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
 }
 
 /// The smoke test of the renderers for CI (`--smoke-window`): a small window drawn twice.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn smoke_window(cli_renderer: Option<&str>) -> Result<String, String> {
     ww::smoke_window::<WinWeaver>(cli_renderer)
+}
+
+/// Starts the window in the canvas of that id of a page and runs it (the browser edition of
+/// wwlite); a failure of the catalog or of the start is shown in the page and the console.
+#[cfg(target_arch = "wasm32")]
+pub async fn run_web(canvas_id: &str) {
+    let catalog = Catalog::embedded().map_err(|e| format!("catalog: {e}"));
+    let texts = CatalogTexts::embedded().map_err(|e| format!("translations: {e}"));
+    let (catalog, texts) = match (catalog, texts) {
+        (Ok(c), Ok(t)) => (c, t),
+        (Err(e), _) | (_, Err(e)) => {
+            ww::web::failed(&e);
+            return;
+        }
+    };
+    let _ = ww::web::start::<WinWeaver>(canvas_id, move |_| {
+        WinWeaver::new(catalog.clone(), texts.clone())
+    })
+    .await;
 }
 
 #[cfg(all(test, feature = "full"))]

@@ -14,7 +14,8 @@ path = "src/main.rs"
 
 [features]
 default = ["glow", "wgpu"]
-# The renderers of the window: OpenGL (glow), DirectX 12 (wgpu); at least one.
+# The renderers of the window: OpenGL (glow), DirectX 12 (wgpu); at least one. A browser build
+# takes glow alone (WebGL): --no-default-features --features glow --target wasm32-unknown-unknown.
 glow = ["winweaver-ui/glow"]
 wgpu = ["winweaver-ui/wgpu"]
 
@@ -24,6 +25,10 @@ winweaver-ui = { path = "../winweaver-ui", default-features = false }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_System_Console"] }
+
+# The browser edition (web/index.html): the start of the window runs as a task of the page.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4"
 
 [dev-dependencies]
 # The tests and the screenshots of the window, drawn without a screen (src/tests.rs).

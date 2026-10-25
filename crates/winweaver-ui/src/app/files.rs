@@ -182,6 +182,32 @@ impl WinWeaver {
         }
     }
 
+    /// Saves the profile in front, in a browser: as a download of its file, whatever `ask` says,
+    /// since the tab has no file there.
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn save_active(&mut self, shell: &mut Shell<WinWeaver>, _ask: bool) {
+        let Some(Doc::Profile(doc)) = shell.docs.get_mut(shell.active) else {
+            shell.status = tr("Nothing to save: the active tab is not a profile").to_owned();
+            return;
+        };
+        if doc.profile.created.is_empty() {
+            doc.profile.created = clock::now_utc_iso();
+        }
+        doc.profile.modified = clock::now_utc_iso();
+        let name = format!("{}.{}", file_stem(&doc.profile.name), profile::EXTENSION);
+        let text = doc.profile.to_json();
+        match ww::store::download(&name, text.as_bytes(), "application/json") {
+            Ok(()) => {
+                doc.dirty = false;
+                doc.changed = None;
+                session::remove_draft(&shell.drafts_dir, &doc.draft_key);
+                shell.status = trf("Downloaded {name}", &[("name", &name)]);
+            }
+            Err(e) => shell.save_failed(e),
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn save_active(&mut self, shell: &mut Shell<WinWeaver>, ask: bool) {
         let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
             shell.status = tr("Nothing to save: the active tab is not a profile").to_owned();
@@ -315,10 +341,27 @@ impl WinWeaver {
             self.open_report_from(shell, report, &path);
             return;
         }
+        let shown = path.display().to_string();
+        if self.open_profile_text(shell, &text, &name, ext, &shown) {
+            shell.remember_recent(&path);
+        }
+    }
+
+    /// Opens the profile a text holds (an answer file, or a profile of WinWeaver or WinKickOff
+    /// as JSON) as a new, unsaved profile; `shown` names the file in the status bar. Whether it
+    /// opened.
+    fn open_profile_text(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        text: &str,
+        name: &str,
+        ext: &str,
+        shown: &str,
+    ) -> bool {
         let opened = if ext == "xml" {
-            import::profile_from_answer_file(&text, &name)
+            import::profile_from_answer_file(text, name)
         } else {
-            import::profile_from_json(&text, &name)
+            import::profile_from_json(text, name)
         };
         match opened {
             Ok((mut profile, notes)) => {
@@ -333,9 +376,63 @@ impl WinWeaver {
                 shell.open_tab(Doc::Profile(Box::new(doc)));
                 shell.status = trf(
                     "Opened the profile of {path}; save it as a .wwprofile file",
-                    &[("path", &path.display())],
+                    &[("path", &shown)],
                 );
-                shell.remember_recent(&path);
+                true
+            }
+            Err(e) => {
+                shell.open_failed(e);
+                false
+            }
+        }
+    }
+
+    /// Opens a file the browser handed over by its name and its bytes (the light edition in a
+    /// browser): a profile, an answer file with the profile it embeds, or an older profile. The
+    /// tab has no file, so a save is a download.
+    #[cfg(not(feature = "full"))]
+    pub(crate) fn open_any_bytes(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        name: &str,
+        bytes: Vec<u8>,
+    ) {
+        let ext = name
+            .rsplit_once('.')
+            .map(|(_, e)| e.to_ascii_lowercase())
+            .unwrap_or_default();
+        if ext != profile::EXTENSION && ext != "xml" && ext != "json" {
+            shell.status = trf(
+                "wwlite opens profiles and answer files, not {path}",
+                &[("path", &name)],
+            );
+            return;
+        }
+        if bytes.len() as u64 > jsonfile::MAX_BYTES {
+            shell.open_failed(format!("{name}: larger than {} bytes", jsonfile::MAX_BYTES));
+            return;
+        }
+        let Some(text) = jsonfile::decode_bom(&bytes) else {
+            shell.open_failed(format!("{name}: not UTF-8"));
+            return;
+        };
+        if ext != profile::EXTENSION {
+            self.open_profile_text(shell, &text, name, &ext, name);
+            return;
+        }
+        match Profile::parse(&text, name) {
+            Ok(mut profile) => {
+                let unknown = profile.split_unknown(&self.catalog);
+                let doc = ProfileDoc::new(profile, None, &self.catalog);
+                shell.open_tab(Doc::Profile(Box::new(doc)));
+                shell.status = if unknown.is_empty() {
+                    trf("Opened {path}", &[("path", &name)])
+                } else {
+                    trf(
+                        "Opened {path}: {n} options of catalogs that are not loaded are left out of the build",
+                        &[("path", &name), ("n", &unknown.len())],
+                    )
+                };
             }
             Err(e) => shell.open_failed(e),
         }

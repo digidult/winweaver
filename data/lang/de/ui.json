@@ -62,6 +62,8 @@
   "Open failed: {e}": "Öffnen fehlgeschlagen: {e}",
   "Nothing to save: the active tab is not a profile": "Nichts zu speichern: Die aktive Registerkarte ist kein Profil",
   "Saved {path}": "Gespeichert: {path}",
+  "Downloaded {name}": "{name} heruntergeladen",
+  "Built and downloaded {name} ({rules} rules, {scripts} scripts, {warnings} warnings)": "{name} erstellt und heruntergeladen ({rules} Regeln, {scripts} Skripte, {warnings} Warnungen)",
   "Save failed: {e}": "Speichern fehlgeschlagen: {e}",
   "Nothing to check: the active tab is not a profile": "Nichts zu prüfen: Die aktive Registerkarte ist kein Profil",
   "Build: {e}": "Erstellen: {e}",

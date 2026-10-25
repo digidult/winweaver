@@ -62,6 +62,8 @@
   "Open failed: {e}": "Apertura non riuscita: {e}",
   "Nothing to save: the active tab is not a profile": "Niente da salvare: la scheda attiva non è un profilo",
   "Saved {path}": "Salvato {path}",
+  "Downloaded {name}": "Scaricato {name}",
+  "Built and downloaded {name} ({rules} rules, {scripts} scripts, {warnings} warnings)": "Generato e scaricato {name} ({rules} regole, {scripts} script, {warnings} avvisi)",
   "Save failed: {e}": "Salvataggio non riuscito: {e}",
   "Nothing to check: the active tab is not a profile": "Niente da verificare: la scheda attiva non è un profilo",
   "Build: {e}": "Generazione: {e}",

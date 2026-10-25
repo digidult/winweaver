@@ -62,6 +62,8 @@
   "Open failed: {e}": "Échec de l'ouverture : {e}",
   "Nothing to save: the active tab is not a profile": "Rien à enregistrer : l'onglet actif n'est pas un profil",
   "Saved {path}": "{path} enregistré",
+  "Downloaded {name}": "{name} téléchargé",
+  "Built and downloaded {name} ({rules} rules, {scripts} scripts, {warnings} warnings)": "{name} généré et téléchargé ({rules} règles, {scripts} scripts, {warnings} avertissements)",
   "Save failed: {e}": "Échec de l'enregistrement : {e}",
   "Nothing to check: the active tab is not a profile": "Rien à vérifier : l'onglet actif n'est pas un profil",
   "Build: {e}": "Génération : {e}",

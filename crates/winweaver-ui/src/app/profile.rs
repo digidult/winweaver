@@ -141,8 +141,57 @@ impl WinWeaver {
     }
 
     /// Checks the profile, builds the answer file and writes it with its scripts into the
-    /// output folder; errors and warnings go to the messages panel.
+    /// output folder (a browser downloads the answer file alone, which embeds the scripts);
+    /// errors and warnings go to the messages panel.
     pub(crate) fn build_active(&mut self, shell: &mut Shell<WinWeaver>) {
+        /// The answer file of a build, downloaded by the browser.
+        #[cfg(target_arch = "wasm32")]
+        fn download_build(shell: &mut Shell<WinWeaver>, build: &render::Build) {
+            let name = render::ANSWER_FILE;
+            match ww::store::download(name, build.xml.as_bytes(), "application/xml") {
+                Ok(()) => {
+                    shell.status = trf(
+                        "Built and downloaded {name} ({rules} rules, {scripts} scripts, {warnings} warnings)",
+                        &[
+                            ("name", &name),
+                            ("rules", &build.rule_ids.len()),
+                            ("scripts", &build.scripts.len()),
+                            ("warnings", &build.warnings.len()),
+                        ],
+                    );
+                }
+                Err(e) => shell.status = trf("Build: {e}", &[("e", &e)]),
+            }
+        }
+
+        /// The answer file of a build with its scripts, written into the output folder.
+        #[cfg(not(target_arch = "wasm32"))]
+        fn write_build(shell: &mut Shell<WinWeaver>, build: &render::Build) {
+            let dir = output_dir();
+            if let Err(e) = std::fs::create_dir_all(&dir) {
+                shell.status = trf(
+                    "Build: cannot create {path}: {e}",
+                    &[("path", &dir.display()), ("e", &e)],
+                );
+                return;
+            }
+            let xml_path = dir.join(render::ANSWER_FILE);
+            if let Err(e) = build.write(&xml_path) {
+                shell.status = trf("Build: {e}", &[("e", &e)]);
+                return;
+            }
+            shell.status = trf(
+                "Built {path} ({rules} rules, {scripts} scripts, {warnings} warnings)",
+                &[
+                    ("path", &xml_path.display()),
+                    ("rules", &build.rule_ids.len()),
+                    ("scripts", &build.scripts.len()),
+                    ("warnings", &build.warnings.len()),
+                ],
+            );
+            shell.shown_file = Some((shell.status.clone(), xml_path.clone()));
+        }
+
         self.check_active(shell);
         let catalog = &self.catalog;
         let Some(Doc::Profile(doc)) = shell.docs.get_mut(shell.active) else {
@@ -175,29 +224,10 @@ impl WinWeaver {
                 text: trf("Build: {w}", &[("w", &w)]),
             });
         }
-        let dir = output_dir();
-        if let Err(e) = std::fs::create_dir_all(&dir) {
-            shell.status = trf(
-                "Build: cannot create {path}: {e}",
-                &[("path", &dir.display()), ("e", &e)],
-            );
-            return;
-        }
-        let xml_path = dir.join(render::ANSWER_FILE);
-        if let Err(e) = build.write(&xml_path) {
-            shell.status = trf("Build: {e}", &[("e", &e)]);
-            return;
-        }
-        shell.status = trf(
-            "Built {path} ({rules} rules, {scripts} scripts, {warnings} warnings)",
-            &[
-                ("path", &xml_path.display()),
-                ("rules", &build.rule_ids.len()),
-                ("scripts", &build.scripts.len()),
-                ("warnings", &build.warnings.len()),
-            ],
-        );
-        shell.shown_file = Some((shell.status.clone(), xml_path.clone()));
+        #[cfg(target_arch = "wasm32")]
+        download_build(shell, &build);
+        #[cfg(not(target_arch = "wasm32"))]
+        write_build(shell, &build);
     }
 
     #[cfg(feature = "full")]

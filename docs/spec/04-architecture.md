@@ -9,9 +9,11 @@ crates/
 ├── ww/                  W# (the framework, docs/ww.md): shell/ (the trait App, Shell, Window as eframe::App,
 │                        ShellAct, ShellDoc, the chrome drawn from what the program gives, the settings tab,
 │                        the themes), run (run::<A>, smoke_window::<A>), doc (Document, Search, Draft),
-│                        settings (Settings<X: Extra>), session (drafts, the log), style, themes and their
-│                        editor, coloricons, i18n, tree, list, widgets, markdown and mdview, renderer,
-│                        commands, keys, icons, dialogs, folders; data/themes (Light, Dark)
+│                        settings (Settings<X: Extra>), session (drafts, the log), store (the files of the
+│                        window: next to the executable natively, the storage of the page and downloads in
+│                        a browser), web (the start in a browser, wasm32), style, themes and their editor,
+│                        coloricons, i18n, tree, list, widgets, markdown and mdview, renderer, commands,
+│                        keys, icons, dialogs, folders; data/themes (Light, Dark)
 ├── wedit/               the text editor on W#: main (the command line), app (impl ww::App), textdoc
 ├── winweaver-core/      catalog/ (model, embedded data, checks, values), profile, resolver, validate,
 │                        resources (time zones, editions, the input languages and layouts Windows lists),
@@ -160,13 +162,22 @@ errors.
   profile editor, the check and the build; wwlite is built without it and alone (`cargo build -p
   wwlite`, `cargo test -p wwlite`, `cargo clippy -p wwlite`), since cargo unifies the features of
   one build; users files are the feature `users` of the core and of the Windows crate.
+- The browser edition of wwlite: `cargo build --release -p wwlite --no-default-features --features glow
+  --target wasm32-unknown-unknown` (WebGL through glow; the wgpu of WW is DirectX 12 only), then
+  `wasm-bindgen --target web` of the version `Cargo.lock` names writes the module and the glue next to
+  `crates/wwlite/web/index.html`, which loads them; the folder is served over http. `ww::web::start`
+  (eframe's `WebRunner`) replaces `ww::run`, `ww::store` keeps the files of the window in the storage of
+  the page, a save is a download, the files to open come by their bytes (`App::open_bytes`), and the input
+  languages come from `data/resources/locales.json`, embedded for this target alone.
 - `winweaver_core::BUILD` is `<version>+<12 digits of the commit>`, from `build.rs` of the core and
   `WINWEAVER_COMMIT` set by CI.
 - CI (GitHub Actions, `AGENTS.md` section 5): a Linux job first (`cargo fmt --check` with a patch as an
-  artifact, clippy of the whole workspace for `x86_64-pc-windows-gnu`, the tests of the core), then a
-  Windows job (clippy, `cargo test --workspace` with the screenshots of the window, the catalog check, the
-  release build, the window smoke test, the archives `WinWeaver-<version>.zip` and `wedit-<version>.zip`);
-  a tag `v<version>` publishes a release with `docs/releases/v<version>.md`.
+  artifact, clippy of the whole workspace for `x86_64-pc-windows-gnu` and of wwlite for
+  `wasm32-unknown-unknown`, the tests of the core), then a Windows job (clippy, `cargo test --workspace`
+  with the screenshots of the window, the catalog check, the release build, the window smoke test, the
+  archives `WinWeaver-<version>.zip`, `wedit-<version>.zip` and `wwlite-<version>.zip`) and a job on
+  Ubuntu that builds the browser edition (`wwlite-web-<version>`); a tag `v<version>` publishes a release
+  with `docs/releases/v<version>.md`.
 - The zip is the deliverable: unzip, run. Nothing is installed.
 
 ## 8. Testing

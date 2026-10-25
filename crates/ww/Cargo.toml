@@ -27,6 +27,29 @@ raw-window-handle = "0.6"
 serde.workspace = true
 serde_json.workspace = true
 
+# A browser (the web edition of a program): the storage of the page, downloads and the console
+# (src/store.rs), the canvas and the log of the start (src/web.rs), the files of the page read as
+# tasks (src/shell/mod.rs). eframe brings the same crates for this target.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+web-sys = { version = "0.3", features = [
+    "Blob",
+    "BlobPropertyBag",
+    "Document",
+    "Element",
+    "HtmlAnchorElement",
+    "HtmlCanvasElement",
+    "HtmlElement",
+    "Node",
+    "Storage",
+    "Url",
+    "Window",
+    "console",
+] }
+log = "0.4"
+
 [target.'cfg(windows)'.dependencies]
 # The colours of the title bar (src/shell/theme.rs).
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Dwm"] }

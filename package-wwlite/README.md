@@ -44,3 +44,21 @@ and, if wanted, `guide-lite.txt`; German comes this way. Choose it in Settings, 
 | `--smoke-window` | Opens a small window, draws two frames and prints what drew them |
 | `--version` | Prints the version |
 | `--help` | Prints the list of parameters |
+
+## The browser edition
+
+`wwlite-web-<version>.zip` is the same program for a browser: `index.html`, `wwlite.js` and
+`wwlite_bg.wasm`. Put the folder on any web server and open `index.html` over http (a page opened
+from `file://` cannot load the module). It runs in a current Chromium, Firefox or Safari with WebGL.
+
+What it does: opens a profile, an answer file with the profile it embeds or an older profile through
+the file dialog of the browser (Menu, Open or the button Open) or by a drop of the file on the page;
+edits, checks and builds as on Windows; Save and Save as download the profile, Build downloads
+`autounattend.xml` (the scripts are embedded in it, as always). The settings, the unsaved drafts and
+the fonts you choose stay in the storage of the page of that browser.
+
+What it does not: no scripts beside the answer file (Windows alone writes them), no catalogs from a
+folder `imports`, no themes from a folder `themes`, no languages from a folder `lang` (English and
+Ukrainian are built in), no recent files, no tabs of the last session, no log file (the console of the
+browser shows it). The names of the input languages are in English, from a list of Windows 11 built
+in. Ctrl+N, Ctrl+W and Ctrl+Tab belong to the browser: use the menu and the buttons instead.

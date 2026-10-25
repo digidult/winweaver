@@ -59,6 +59,10 @@ The window is built on W#, the framework of this repository (the crates `ww-base
   starts on a clean PC without any redistributable: static CRT, no extra DLL. Without a driver of the
   graphics card OpenGL is not available, and DirectX 12 draws on the software rasterizer of Windows
   (`04-architecture.md` section 9).
+- The browser edition of wwlite: the same window built for `wasm32-unknown-unknown` with WebGL (glow),
+  run by the page `index.html` of its archive from any static web server. It opens files through the
+  browser, downloads what it saves and keeps its settings and drafts in the storage of the page
+  (`04-architecture.md` section 7, `docs/wasm.md`).
 
 ## 4. Principles
 
@@ -68,7 +72,8 @@ The window is built on W#, the framework of this repository (the crates `ww-base
   logs are written next to the executable (`02-documents.md` section 10); nothing goes to the registry,
   `%APPDATA%` or the Start menu, and nothing is written outside the program folder and the system temp
   folder. The extensions of the program are registered nowhere. A file that cannot be written gives a
-  message, never a crash.
+  message, never a crash. The browser edition of wwlite has no folder: its settings and drafts live in
+  the storage of the page, and a saved file is a download of the browser.
 - P2 No PowerShell in the program. Reading this PC uses the Windows API in the process of the window.
   Applying, returning to defaults and undoing run in an elevated helper process of the same executable,
   also through the Windows API (registry, services, DISM, the package API, the network management API,

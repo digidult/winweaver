@@ -71,7 +71,9 @@ extensions are registered nowhere (portability).
   `disk_mode` is `ask` or `partition`.
 - An item of `languages.input` is a language tag (`uk-UA`: the language with the layout Windows gives it
   first) or a layout id (`0422:00000422`: the language of that locale id with that layout); the first item
-  is the default. The languages and layouts are the ones Windows lists, never a list of the program.
+  is the default. The languages and layouts are the ones Windows lists, never a list of the program; the
+  one exception is the browser edition of wwlite, which has no Windows to ask and embeds the list of a
+  Windows 11 with English names (`data/resources/locales.json`, never in a build for Windows).
 - `rules` holds only the rules that are on or have parameters; a rule not listed is off. Parameters are
   written only when they differ from the defaults. A `source` of a choice, when a file has one, is kept.
 - `unknown` (written only when it has entries) keeps the choices of rules the loaded catalog does not have,
@@ -195,6 +197,11 @@ Everything embedded (the catalog with its translations, the English texts and th
 interface, the presets, the four themes, the guide in every built-in language, the reference, the licence)
 is in the executable, so a bare `winweaver.exe` runs; the folders add languages, themes and imports and
 keep the files of the user. The folders are made when the program first writes into them.
+
+The browser edition of wwlite keeps nothing next to a file: `wwlite.settings.json`, the drafts and a
+theme saved from the fonts of the settings are entries of the storage of the page (`localStorage`, the
+key `ww/<path>`), its log goes to the console of the browser, and a saved profile or a built answer
+file is a download of the browser.
 
 ## 11. Users file
 

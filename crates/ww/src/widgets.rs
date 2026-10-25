@@ -1,6 +1,7 @@
 //! Widgets the tabs share: a modal window, the left panel of a tab, the split of a list tab, a
-//! file dialog in a folder.
+//! file dialog in a folder (natively).
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
 use eframe::egui;
@@ -78,6 +79,7 @@ pub fn list_split(ui: &egui::Ui) -> (f32, std::ops::RangeInclusive<f32>) {
 }
 
 /// A file dialog that opens in a folder, when the folder is there.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn in_folder(dialog: rfd::FileDialog, dir: &Path) -> rfd::FileDialog {
     if dir.is_dir() {
         dialog.set_directory(dir)

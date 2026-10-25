@@ -55,7 +55,8 @@ lists the planned changes.
   and partition), Accounts (name, display name, group, description, password; starter accounts without
   passwords are a customer decision and are not "fixed"), Languages (display language, system and user
   locale, input languages and layouts: every input language and keyboard layout Windows lists, by their
-  names in the language of Windows, each item of the list with a layout of its choice).
+  names in the language of Windows, each item of the list with a layout of its choice; the browser
+  edition of wwlite takes the embedded list of a Windows 11 with English names, section 18).
 - The accounts of a users file go into the form Accounts, and the accounts of a profile make a users file
   (section 12).
 - The user region (`default-user.region`): its two text parameters pick a region of Windows (`pick`
@@ -339,5 +340,14 @@ other languages as files (German in its archive). It has nothing of This PC, the
 registry, registry and Group Policy files, diffs, bookmarks, imports of policy templates, the
 catalog views and editor, users files, the theme editor (the fonts of the theme and their size stay
 in Settings) and Markdown pages: winweaver-ui is built
-without its feature `full`, so none of that code is in the executable. It is built for Windows;
-`docs/wasm.md` studies an edition for the browser.
+without its feature `full`, so none of that code is in the executable.
+
+The browser edition (`wwlite-web-<version>`, `docs/wasm.md`): the same window built for
+`wasm32-unknown-unknown`, served as a page from any static web server. It opens a profile, an answer
+file with the profile it embeds or an older profile through the file dialog of the browser or a drop on
+the page; Save and Save as download the profile, Build downloads `autounattend.xml` alone (the scripts
+are embedded in it); the settings, the drafts and the fonts of the theme stay in the storage of the
+page; the input languages and layouts come from the embedded list of a Windows 11 with English names.
+It has no folders (no catalogs of `imports`, no themes of `themes`, no languages of `lang` beyond the
+built-in English and Ukrainian), no recent files, no tabs of the last session, no log file; the keys
+Ctrl+N, Ctrl+W and Ctrl+Tab belong to the browser, the menu does the same.

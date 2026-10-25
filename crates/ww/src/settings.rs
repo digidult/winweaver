@@ -1,6 +1,7 @@
-//! The settings of a window: `settings.json` next to the executable. The window is the only
-//! writer; a missing or unreadable file means the defaults. The fields every program has are
-//! here; the fields of the program are its `Extra`, flattened into the same file.
+//! The settings of a window: `settings.json` next to the executable (in the storage of the page
+//! in a browser, through `store`). The window is the only writer; a missing or unreadable file
+//! means the defaults. The fields every program has are here; the fields of the program are its
+//! `Extra`, flattened into the same file.
 
 use std::path::{Path, PathBuf};
 
@@ -10,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use ww_base::{jsonfile, paths};
 
 use crate::folders::exe_dir;
+use crate::store;
 
 pub const VERSION: u32 = 1;
 const MAX_BYTES: u64 = 1024 * 1024;
@@ -147,7 +149,7 @@ impl<X: Extra> Settings<X> {
         let candidates = Self::candidates(program);
         let path = candidates
             .iter()
-            .find(|p| p.exists())
+            .find(|p| store::exists(p))
             .cloned()
             .unwrap_or_else(|| candidates[0].clone());
         (Self::load_from(&path), path)
@@ -156,10 +158,11 @@ impl<X: Extra> Settings<X> {
     /// The settings of a file; the defaults when the file does not exist. The files the settings
     /// keep relative to their folder (the program folder) are absolute in memory.
     pub fn load_from(path: &Path) -> Result<Self, String> {
-        if !path.exists() {
+        let Some(text) = store::read(path, MAX_BYTES)? else {
             return Ok(Self::default());
-        }
-        let mut settings: Self = jsonfile::read(path, MAX_BYTES).map_err(|e| e.to_string())?;
+        };
+        let mut settings: Self =
+            jsonfile::parse(&text, &jsonfile::display_name(path)).map_err(|e| e.to_string())?;
         if settings.format != X::FORMAT {
             return Err(format!(
                 "{}: not a {} file",
@@ -184,9 +187,7 @@ impl<X: Extra> Settings<X> {
         }
         let mut text = serde_json::to_string_pretty(&kept).map_err(|e| e.to_string())?;
         text.push('\n');
-        let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, text).map_err(|e| e.to_string())?;
-        std::fs::rename(&tmp, path).map_err(|e| e.to_string())
+        store::write(path, &text)
     }
 
     /// Puts a file first in the recent list.

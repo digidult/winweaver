@@ -62,6 +62,8 @@
   "Open failed: {e}": "No se pudo abrir: {e}",
   "Nothing to save: the active tab is not a profile": "No hay nada que guardar: la pestaña activa no es un perfil",
   "Saved {path}": "Guardado {path}",
+  "Downloaded {name}": "Se descargó {name}",
+  "Built and downloaded {name} ({rules} rules, {scripts} scripts, {warnings} warnings)": "Se generó y descargó {name} ({rules} reglas, {scripts} scripts, {warnings} advertencias)",
   "Save failed: {e}": "No se pudo guardar: {e}",
   "Nothing to check: the active tab is not a profile": "No hay nada que comprobar: la pestaña activa no es un perfil",
   "Build: {e}": "Generación: {e}",

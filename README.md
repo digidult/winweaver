@@ -14,7 +14,8 @@ programs that analyse and manage a system: a window with document tabs, a comman
 themes, translations, drafts and the session, with the program bringing its documents and acts
 ([docs/ww.md](docs/ww.md)). Its second program is `wedit`, a portable text editor with a Markdown viewer,
 shipped as `wedit-<version>.zip` beside WinWeaver. The light edition `wwlite` (`wwlite-<version>.zip`)
-keeps the profile editor and the build of `autounattend.xml` alone.
+keeps the profile editor and the build of `autounattend.xml` alone, and runs in a browser too
+(`wwlite-web-<version>.zip`, a page for any static web server).
 
 Licence: [MIT](LICENSE).
 

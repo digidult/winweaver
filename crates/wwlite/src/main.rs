@@ -7,14 +7,26 @@
 //!
 //! In a release build the executable has no console (`windows_subsystem`): the command line
 //! functions attach to the console of the parent when there is one.
+//!
+//! Built for `wasm32-unknown-unknown` (the features `glow` alone), the same window runs in a
+//! browser: `web/index.html` loads the module next to it and `main` starts the window in the
+//! canvas `wwlite` of the page as a task of the page (`winweaver_ui::run_web`). Files come and
+//! go through the browser (a dialog or a drop, downloads), the settings and the drafts stay in
+//! the storage of the page.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+#[cfg(not(target_arch = "wasm32"))]
 use std::process::ExitCode;
 
 #[cfg(test)]
 mod tests;
 
+/// The id of the canvas of `web/index.html` the window draws in.
+#[cfg(target_arch = "wasm32")]
+const CANVAS_ID: &str = "wwlite";
+
+#[cfg(not(target_arch = "wasm32"))]
 const USAGE: &str = "wwlite, the light edition of WinWeaver
 
   wwlite                      open the window
@@ -25,6 +37,7 @@ const USAGE: &str = "wwlite, the light edition of WinWeaver
   wwlite --help               this text";
 
 /// Attaches to the console of the parent process, so that a release build prints in it.
+#[cfg(not(target_arch = "wasm32"))]
 fn attach_console() {
     #[cfg(windows)]
     {
@@ -37,6 +50,7 @@ fn attach_console() {
 }
 
 /// The value of an option such as `--renderer directx` or `--renderer=directx`.
+#[cfg(not(target_arch = "wasm32"))]
 fn option(args: &[String], name: &str) -> Option<String> {
     let prefix = format!("{name}=");
     args.iter().enumerate().find_map(|(i, a)| {
@@ -48,6 +62,7 @@ fn option(args: &[String], name: &str) -> Option<String> {
     })
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str) {
@@ -94,6 +109,7 @@ fn main() -> ExitCode {
 }
 
 /// Opens the window; its failure goes to the console of the parent if there is one.
+#[cfg(not(target_arch = "wasm32"))]
 fn window(renderer: Option<&str>) -> ExitCode {
     match winweaver_ui::run(renderer) {
         Ok(()) => ExitCode::SUCCESS,
@@ -103,4 +119,11 @@ fn window(renderer: Option<&str>) -> ExitCode {
             ExitCode::FAILURE
         }
     }
+}
+
+/// The browser edition: the window in the canvas of the page, started when the module loads; a
+/// failure of the start is shown in the page and in the console of the browser.
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    wasm_bindgen_futures::spawn_local(winweaver_ui::run_web(CANVAS_ID));
 }

@@ -29,7 +29,7 @@ use crate::{icons, session};
 
 pub use jobs::Job;
 pub use tabs::{menu_entry, menu_entry_colored, menu_item, sub_menu};
-pub use window::{COMPACT_WIDTH, Window};
+pub use window::{COMPACT_WIDTH, WINDOW_MIN_SIZE, WINDOW_SIZE, Window};
 
 /// The height of a tab.
 const TAB_HEIGHT: f32 = 32.0;
@@ -173,6 +173,8 @@ pub enum ShellAct<A: App> {
     New,
     Open,
     OpenPath(PathBuf),
+    /// Opens a file by its name and its bytes: one the browser hands over, which has no path.
+    OpenBytes(String, Vec<u8>),
     Save,
     SaveAs,
     ForgetRecent,
@@ -286,7 +288,19 @@ pub trait App: Sized + 'static {
     fn open_path(&mut self, shell: &mut Shell<Self>, path: PathBuf);
 
     /// The dialog of Open with the filters of the program.
+    #[cfg(not(target_arch = "wasm32"))]
     fn open_dialog(&self, shell: &Shell<Self>) -> rfd::FileDialog;
+
+    /// The kinds of files Open offers in a browser: a name and its extensions each; none for
+    /// any file.
+    #[cfg(target_arch = "wasm32")]
+    fn open_filters(&self, _shell: &Shell<Self>) -> Vec<(String, Vec<String>)> {
+        Vec::new()
+    }
+
+    /// Opens a file by its name and its bytes: one the browser hands over (its dialog, a drop on
+    /// the page), which has no path.
+    fn open_bytes(&mut self, _shell: &mut Shell<Self>, _name: &str, _bytes: Vec<u8>) {}
 
     /// Saves the active document; `ask` asks for the file.
     fn save(&mut self, shell: &mut Shell<Self>, ask: bool);
@@ -405,7 +419,12 @@ pub trait App: Sized + 'static {
 }
 
 /// The colours given to the title bar last: dark, the background, the text, the border.
+#[cfg(not(target_arch = "wasm32"))]
 type TitleColors = (bool, [u8; 3], [u8; 3], [u8; 3]);
+
+/// The files the browser handed over, shared with the tasks of the page that read them.
+#[cfg(target_arch = "wasm32")]
+type Picked = std::rc::Rc<std::cell::RefCell<Vec<(String, Vec<u8>)>>>;
 
 /// The state of the window: the tabs and everything around them.
 pub struct Shell<A: App> {
@@ -429,6 +448,7 @@ pub struct Shell<A: App> {
     /// open and after a theme is saved.
     pub themes: Vec<Theme>,
     applied_theme: Option<(Theme, Theme, egui::ThemePreference)>,
+    #[cfg(not(target_arch = "wasm32"))]
     title_colors: Option<TitleColors>,
     last_title: String,
     pub exit: bool,
@@ -445,6 +465,13 @@ pub struct Shell<A: App> {
     /// Acts requested by views that run without the list of the frame.
     pub pending: Vec<A::Act>,
     last_logged: String,
+    /// The files the browser handed over (its dialog, a drop on the page), by their names and
+    /// bytes, opened at the next frame.
+    #[cfg(target_arch = "wasm32")]
+    pub picked: Picked,
+    /// The context of the window, so that a file that arrives wakes the frame.
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) ctx: Option<egui::Context>,
 }
 
 impl<A: App> Shell<A> {
@@ -465,6 +492,7 @@ impl<A: App> Shell<A> {
             shown_file: None,
             themes: themes::themes(&dir("themes")),
             applied_theme: None,
+            #[cfg(not(target_arch = "wasm32"))]
             title_colors: None,
             last_title: String::new(),
             exit: false,
@@ -476,6 +504,10 @@ impl<A: App> Shell<A> {
             graphics: String::new(),
             pending: Vec::new(),
             last_logged: String::new(),
+            #[cfg(target_arch = "wasm32")]
+            picked: Default::default(),
+            #[cfg(target_arch = "wasm32")]
+            ctx: None,
         }
     }
 
@@ -852,5 +884,54 @@ impl<A: App> Shell<A> {
         if let Some(doc) = self.active_doc_mut() {
             doc.scrolled(how);
         }
+    }
+}
+
+/// The files of a browser: they come by their bytes, from the dialog of the page or a drop on
+/// it, and reach the program at the next frame as `ShellAct::OpenBytes`.
+#[cfg(target_arch = "wasm32")]
+impl<A: App> Shell<A> {
+    /// Asks the browser for a file with its dialog, filtered by kinds (a name and its
+    /// extensions each).
+    pub fn pick_file(&self, filters: Vec<(String, Vec<String>)>) {
+        let slot = self.picked.clone();
+        let ctx = self.ctx.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            let mut dialog = rfd::AsyncFileDialog::new().set_title(tr("Open"));
+            for (name, extensions) in &filters {
+                dialog = dialog.add_filter(name, extensions.as_slice());
+            }
+            let Some(file) = dialog.pick_file().await else {
+                return;
+            };
+            let bytes = file.read().await;
+            slot.borrow_mut().push((file.file_name(), bytes));
+            if let Some(ctx) = ctx {
+                ctx.request_repaint();
+            }
+        });
+    }
+
+    /// Reads a file dropped on the page.
+    pub fn read_dropped(&self, file: egui::DroppedFileHandle) {
+        let slot = self.picked.clone();
+        let ctx = self.ctx.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            let name = file.path().display().to_string();
+            match file.bytes_async().await {
+                Ok(bytes) => {
+                    slot.borrow_mut().push((name, bytes));
+                    if let Some(ctx) = ctx {
+                        ctx.request_repaint();
+                    }
+                }
+                Err(e) => web_sys::console::error_1(&format!("{name}: {e}").into()),
+            }
+        });
+    }
+
+    /// The files that arrived since the last frame.
+    pub fn take_picked(&self) -> Vec<(String, Vec<u8>)> {
+        std::mem::take(&mut *self.picked.borrow_mut())
     }
 }

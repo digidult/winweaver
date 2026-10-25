@@ -12,6 +12,7 @@
   "Stop": "Зупинити",
   "Settings": "Налаштування",
   "Saved {path}": "Збережено {path}",
+  "Downloaded {name}": "Завантажено {name}",
   "Opened {path}": "Відкрито {path}",
   "Save failed: {e}": "Не вдалося зберегти: {e}",
   "Open failed: {e}": "Не вдалося відкрити: {e}",

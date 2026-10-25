@@ -121,6 +121,13 @@ pub struct Locales {
 static READER: OnceLock<fn() -> Locales> = OnceLock::new();
 static LOCALES: OnceLock<Locales> = OnceLock::new();
 
+/// The input languages and keyboard layouts of a Windows 11 (`data/resources/locales.json`),
+/// read once from a PC through the Windows API with their English names: the list of a build
+/// for a browser, which has no Windows to ask. A build for Windows carries no list and asks the
+/// system (`set_locale_reader`).
+#[cfg(target_arch = "wasm32")]
+const EMBEDDED_LOCALES: &str = include_str!("../../../data/resources/locales.json");
+
 /// Names the function that reads the languages and layouts of Windows; the first one named is
 /// called at the first use. The window and the MCP server name `winweaver_win::locales`, the
 /// tests a list of their own.
@@ -128,9 +135,16 @@ pub fn set_locale_reader(read: fn() -> Locales) {
     let _ = READER.set(read);
 }
 
-/// The input languages and keyboard layouts, read once; empty when no reader was named.
+/// The input languages and keyboard layouts, read once; empty when no reader was named, but in
+/// a browser, which takes the embedded list then.
 pub fn locales() -> &'static Locales {
-    LOCALES.get_or_init(|| READER.get().map_or_else(Locales::default, |read| read()))
+    LOCALES.get_or_init(|| match READER.get() {
+        Some(read) => read(),
+        #[cfg(target_arch = "wasm32")]
+        None => Locales::parse(EMBEDDED_LOCALES),
+        #[cfg(not(target_arch = "wasm32"))]
+        None => Locales::default(),
+    })
 }
 
 /// Whether a locale id is one Windows hands at the first sign-in to a language without its own
@@ -315,5 +329,35 @@ mod tests {
         let two = vec!["0422:00020422".to_owned(), "0422:00000422".to_owned()];
         let both = Some(vec!["uk-UA".to_owned(), "0422:00000422".to_owned()]);
         assert_eq!(read("uk", &two), both);
+    }
+
+    /// The list a browser build embeds (`data/resources/locales.json`) is whole and ASCII; a
+    /// native build never reads it.
+    #[test]
+    fn the_list_of_the_browser_edition_is_whole() {
+        let text = include_str!("../../../data/resources/locales.json");
+        assert!(text.is_ascii());
+        let l = Locales::parse(text);
+        assert!(l.languages.len() > 500, "{} languages", l.languages.len());
+        assert!(l.layouts.len() > 100, "{} layouts", l.layouts.len());
+        assert!(
+            l.languages
+                .iter()
+                .all(|x| !x.tag.is_empty() && !x.name.is_empty() && !x.default.is_empty())
+        );
+        assert!(
+            l.layouts
+                .iter()
+                .all(|x| x.klid.len() == 8 && !x.name.is_empty())
+        );
+        assert_eq!(l.language("en-US").unwrap().default, "0409:00000409");
+        let input = |item: &str| l.input(item).map(|(x, p)| (x.tag.clone(), p));
+        let uk = ("uk-UA".to_owned(), "0422:00020422".to_owned());
+        assert_eq!(input("uk-UA"), Some(uk));
+        let ru = ("ru-UA".to_owned(), String::new());
+        assert_eq!(input("ru-UA"), Some(ru));
+        assert_eq!(l.layout_name("0422:00000422"), "Ukrainian");
+        let tips = vec!["2000:00000419".to_owned()];
+        assert_eq!(l.read_items("ru-UA", &tips), Some(vec!["ru-UA".to_owned()]));
     }
 }
