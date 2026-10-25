@@ -267,8 +267,13 @@ impl Fonts {
 
 /// The text size the layout is drawn for; a theme with another size scales the texts.
 pub const BASE_SIZE: f32 = 13.0;
-/// The sizes a theme may have.
-pub const SIZES: std::ops::RangeInclusive<f32> = 10.0..=20.0;
+/// The sizes a theme may have: a file outside the range is brought into it.
+pub const SIZES: std::ops::RangeInclusive<f32> = 10.0..=36.0;
+/// The sizes the settings and the theme editor offer: by one up to 20, then the steps of
+/// large displays and of people with poor sight.
+pub const SIZE_STEPS: [u32; 17] = [
+    10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 24, 26, 28, 32, 36,
+];
 
 /// The families of texts the program knows in the fonts folder of Windows: the name, the file
 /// of the regular cut and the file of the bold or semibold cut for titles.
@@ -590,9 +595,16 @@ pub fn size(ui: &egui::Ui, size: f32) -> f32 {
     size * fonts(ui).size / BASE_SIZE
 }
 
+/// A size of the layout in the text size of the theme, never below the size of the layout: the
+/// room of the chrome (buttons, tabs, icons) grows with a large text and keeps its place with a
+/// small one.
+pub fn at_least(ui: &egui::Ui, at: f32) -> f32 {
+    size(ui, at).max(at)
+}
+
 /// The height of a row of a tree or a list: 28 points, more for a large text size.
 pub fn row_height(ui: &egui::Ui) -> f32 {
-    size(ui, 28.0).max(28.0).round()
+    at_least(ui, 28.0).round()
 }
 
 fn named(ui: &egui::Ui) -> bool {
@@ -663,21 +675,25 @@ pub fn tool_button(
 ) -> egui::Response {
     let p = palette(ui);
     let label_font = font(ui, 11.0);
+    // The room of the button grows with the text size of the theme.
+    let room = |at: f32| at_least(ui, at);
     let width = if compact {
-        if split { 40.0 } else { 32.0 }
+        room(if split { 40.0 } else { 32.0 })
     } else {
         let text = ui
             .painter()
             .layout_no_wrap(label.to_owned(), label_font.clone(), p.text)
             .size()
             .x;
-        (text + 20.0 + if split { 12.0 } else { 0.0 }).max(58.0)
+        (text + room(20.0) + if split { room(12.0) } else { 0.0 }).max(room(58.0))
     };
-    let height = if compact {
-        28.0
-    } else {
-        size(ui, 44.0).max(44.0)
-    };
+    let height = if compact { room(28.0) } else { room(44.0) };
+    let (icon_top, label_bottom, caret_right, shift) = (
+        room(15.0),
+        room(10.0),
+        room(8.0),
+        if split { room(6.0) } else { 0.0 },
+    );
     let sense = if enabled {
         Sense::click()
     } else {
@@ -698,11 +714,10 @@ pub fn tool_button(
             );
         }
         let color = if enabled { p.text } else { p.off };
-        let shift = if split { 6.0 } else { 0.0 };
         let icon_y = if compact {
             rect.center().y
         } else {
-            rect.top() + 15.0
+            rect.top() + icon_top
         };
         paint_icon(
             ui,
@@ -715,7 +730,7 @@ pub fn tool_button(
         );
         if !compact {
             painter.text(
-                egui::pos2(rect.center().x - shift, rect.bottom() - 10.0),
+                egui::pos2(rect.center().x - shift, rect.bottom() - label_bottom),
                 Align2::CENTER_CENTER,
                 label,
                 label_font,
@@ -723,7 +738,11 @@ pub fn tool_button(
             );
         }
         if split {
-            caret(painter, egui::pos2(rect.right() - 8.0, icon_y), p.muted);
+            caret(
+                painter,
+                egui::pos2(rect.right() - caret_right, icon_y),
+                p.muted,
+            );
         }
     }
     response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Button, enabled, label));
@@ -775,7 +794,8 @@ pub fn icon_button(
     } else {
         Sense::hover()
     };
-    let (rect, response) = ui.allocate_exact_size(egui::vec2(30.0, 28.0), sense);
+    let side = egui::vec2(at_least(ui, 30.0), at_least(ui, 28.0));
+    let (rect, response) = ui.allocate_exact_size(side, sense);
     if ui.is_rect_visible(rect) {
         let painter = ui.painter();
         if enabled && response.hovered() {

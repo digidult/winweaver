@@ -28,7 +28,7 @@ use crate::themeview::ThemeDoc;
 use crate::{icons, session};
 
 pub use jobs::Job;
-pub use tabs::{menu_entry, menu_item, sub_menu};
+pub use tabs::{menu_entry, menu_entry_colored, menu_item, sub_menu};
 pub use window::{COMPACT_WIDTH, Window};
 
 /// The height of a tab.

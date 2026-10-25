@@ -27,13 +27,16 @@ impl<A: App> Window<A> {
         } else {
             0.0
         };
+        // The buttons of the row grow with the text size of the theme.
         let search_w = if hint.is_empty() {
             0.0
         } else if search_open {
-            SEARCH_OPEN_WIDTH
+            style::at_least(ui, SEARCH_OPEN_WIDTH)
         } else {
-            SEARCH_CLOSED_WIDTH
+            style::at_least(ui, SEARCH_CLOSED_WIDTH)
         };
+        let star_width = style::at_least(ui, STAR_WIDTH);
+        let tools_height = style::at_least(ui, 30.0);
         ui.horizontal(|ui| {
             ui.spacing_mut().item_spacing.x = 2.0;
             let (history, mut crumbs, star) = match nav {
@@ -52,7 +55,7 @@ impl<A: App> Window<A> {
                 }
                 ui.add_space(6.0);
             }
-            let star_w = if star.is_some() { STAR_WIDTH } else { 0.0 };
+            let star_w = if star.is_some() { star_width } else { 0.0 };
             let taken = tools_w + search_w + star_w + CRUMBS_MARGIN;
             let room = (ui.available_width() - taken).max(CRUMBS_MIN);
             let labels: Vec<String> = crumbs.iter().map(|(l, _)| l.clone()).collect();
@@ -123,7 +126,7 @@ impl<A: App> Window<A> {
                 if tools {
                     ui.separator();
                     let (rect, _) =
-                        ui.allocate_exact_size(egui::vec2(tools_w, 30.0), Sense::hover());
+                        ui.allocate_exact_size(egui::vec2(tools_w, tools_height), Sense::hover());
                     let mut child = ui.new_child(
                         egui::UiBuilder::new()
                             .max_rect(rect)

@@ -272,14 +272,14 @@ mod tests {
         let mut mine = old.clone();
         mine.name = "My latte".into();
         mine.font = "Verdana".into();
-        mine.font_size = 40.0;
+        mine.font_size = 48.0;
         let path = mine.file_in(&dir);
         assert_eq!(path, dir.join("latte.wwtheme"));
         mine.save(&path).unwrap();
         let back = find(&themes(&dir), "latte");
         assert_eq!(back.name, "My latte");
         assert_eq!(back.font, "Verdana");
-        assert_eq!(back.font_size, 20.0, "the size is kept in its range");
+        assert_eq!(back.font_size, 36.0, "the size is kept in its range");
         assert_eq!(back.path.as_deref(), Some(path.as_path()));
         assert!(Theme::parse(r#"{"format": "winweaver-profile"}"#, "x").is_err());
         std::fs::remove_dir_all(&dir).unwrap();

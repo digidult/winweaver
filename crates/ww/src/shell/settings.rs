@@ -42,12 +42,14 @@ impl<A: App> Window<A> {
                 })
                 .show(ui, |ui| {
                     ui.vertical(|ui| {
-                        ui.set_width(200.0);
+                        // The list of the sections grows with the text size of the theme.
+                        let width = style::at_least(ui, 200.0);
+                        ui.set_width(width);
                         ui.spacing_mut().item_spacing.y = 2.0;
                         for (i, title) in titles.iter().enumerate() {
                             let selected = section == i;
                             let (rect, response) = ui.allocate_exact_size(
-                                egui::vec2(200.0, style::row_height(ui)),
+                                egui::vec2(width, style::row_height(ui)),
                                 egui::Sense::click(),
                             );
                             if selected {

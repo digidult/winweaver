@@ -134,15 +134,14 @@ fn family_combo(
     changed
 }
 
-/// The size of the texts of a theme, a whole number of points.
+/// The size of the texts of a theme, a whole number of points from [`style::SIZE_STEPS`].
 pub fn size_combo(ui: &mut egui::Ui, id: &str, size: &mut f32) -> bool {
     let mut changed = false;
     egui::ComboBox::from_id_salt(id)
         .selected_text(format!("{size:.0}"))
-        .width(70.0)
+        .width(style::at_least(ui, 70.0))
         .show_ui(ui, |ui| {
-            let (low, high) = (*style::SIZES.start() as u32, *style::SIZES.end() as u32);
-            for s in low..=high {
+            for s in style::SIZE_STEPS {
                 changed |= ui.selectable_value(size, s as f32, s.to_string()).changed();
             }
         });
@@ -233,8 +232,9 @@ pub fn theme_view<A: App>(
                     .spacing([14.0, 8.0])
                     .show(ui, |ui| {
                         ui.label(tr("Name"));
+                        let width = ui.available_width().clamp(240.0, 560.0);
                         changed |= ui
-                            .add(egui::TextEdit::singleline(&mut theme.name).desired_width(240.0))
+                            .add(egui::TextEdit::singleline(&mut theme.name).desired_width(width))
                             .changed();
                         ui.end_row();
                         ui.label(tr("Base"));

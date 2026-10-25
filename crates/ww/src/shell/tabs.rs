@@ -34,7 +34,8 @@ impl<A: App> Window<A> {
             let overflow = before.is_some_and(|b| b.2);
             let follow = before.is_none_or(|b| b.0 != active || b.1 != docs.len());
             let buttons = if overflow { 2.0 } else { 1.0 };
-            let width = (ui.available_width() - buttons * (TAB_BUTTON + 2.0)).max(TAB_BUTTON);
+            let button = style::at_least(ui, TAB_BUTTON);
+            let width = (ui.available_width() - buttons * (button + 2.0)).max(button);
             use egui::containers::scroll_area::{ScrollBarVisibility, ScrollSource};
             let shown = egui::ScrollArea::horizontal()
                 .id_salt("ww-tabs")
@@ -118,20 +119,32 @@ fn tab<A: App>(
 ) -> egui::Response {
     let title = doc.title();
     let font = style::font(ui, 12.5);
+    // The parts of the tab grow with the text size of the theme.
+    let room = |at: f32| style::at_least(ui, at);
+    let (padding, icon_w, dot_w, gap, close_w, height) = (
+        room(TAB_PADDING),
+        room(TAB_ICON),
+        room(TAB_DOT),
+        room(TAB_GAP),
+        room(TAB_CLOSE),
+        room(TAB_HEIGHT),
+    );
+    let (close_side, close_inset, icon_inset, dot_inset, dot_radius) =
+        (room(18.0), room(15.0), room(6.0), room(2.0), room(3.0));
     let text_w = ui
         .painter()
         .layout_no_wrap(title.clone(), font.clone(), p.text)
         .size()
         .x
-        .min(TAB_TITLE_WIDTH);
+        .min(room(TAB_TITLE_WIDTH));
     let dirty = doc.dirty();
-    let dot = if dirty { TAB_DOT } else { 0.0 };
-    let width = TAB_PADDING + TAB_ICON + dot + text_w + TAB_GAP + TAB_CLOSE;
+    let dot = if dirty { dot_w } else { 0.0 };
+    let width = padding + icon_w + dot + text_w + gap + close_w;
     let (rect, response) =
-        ui.allocate_exact_size(egui::vec2(width, TAB_HEIGHT), Sense::click_and_drag());
+        ui.allocate_exact_size(egui::vec2(width, height), Sense::click_and_drag());
     let close_rect = egui::Rect::from_center_size(
-        egui::pos2(rect.right() - 15.0, rect.center().y),
-        egui::vec2(18.0, 18.0),
+        egui::pos2(rect.right() - close_inset, rect.center().y),
+        egui::vec2(close_side, close_side),
     );
     let close = ui.interact(close_rect, response.id.with("close"), Sense::click());
     if ui.is_rect_visible(rect) {
@@ -148,20 +161,21 @@ fn tab<A: App>(
             painter.rect_filled(rect, corners, p.hover);
         }
         let color = if active { p.text } else { p.muted };
-        let mut x = rect.left() + TAB_PADDING;
+        let mut x = rect.left() + padding;
         style::paint_icon(
             ui,
             painter,
-            egui::pos2(x + 6.0, rect.center().y),
+            egui::pos2(x + icon_inset, rect.center().y),
             doc.icon(),
             12.0,
             color,
             true,
         );
-        x += TAB_ICON;
+        x += icon_w;
         if dirty {
-            painter.circle_filled(egui::pos2(x + 2.0, rect.center().y), 3.0, p.accent);
-            x += TAB_DOT;
+            let center = egui::pos2(x + dot_inset, rect.center().y);
+            painter.circle_filled(center, dot_radius, p.accent);
+            x += dot_w;
         }
         let galley = painter.layout_no_wrap(title.clone(), font, color);
         let clip = egui::Rect::from_min_max(
@@ -278,7 +292,24 @@ fn paint_menu_icon(ui: &egui::Ui, response: &egui::Response, icon: &str) {
 /// An entry of a menu: an icon (empty for none), a text and the text of its keys, enabled or
 /// not; true when it was clicked, and the menu closes then.
 pub fn menu_entry(ui: &mut egui::Ui, icon: &str, text: &str, keys: &str, enabled: bool) -> bool {
-    let mut button = egui::Button::image_and_text(icon_place(ui), text);
+    menu_entry_colored(ui, icon, text, keys, enabled, None)
+}
+
+/// An entry of a menu whose text has a colour of its own (`None` for the colour of the text):
+/// a loaded catalog among the others, for one.
+pub fn menu_entry_colored(
+    ui: &mut egui::Ui,
+    icon: &str,
+    text: &str,
+    keys: &str,
+    enabled: bool,
+    color: Option<egui::Color32>,
+) -> bool {
+    let label = match color {
+        Some(c) => egui::RichText::new(text).color(c),
+        None => egui::RichText::new(text),
+    };
+    let mut button = egui::Button::image_and_text(icon_place(ui), label);
     if !keys.is_empty() {
         button = button.shortcut_text(keys);
     }
