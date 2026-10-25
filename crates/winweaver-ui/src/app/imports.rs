@@ -19,22 +19,13 @@ impl WinWeaver {
         if shell.focus_tab(|d| matches!(d, Doc::Catalog(c) if c.path.as_ref() == Some(&path))) {
             return;
         }
-        let templates = admx::read_file(&path);
-        if templates.policies() == 0 {
-            let why = templates
-                .skipped
-                .first()
-                .map(|s| s.1.clone())
-                .unwrap_or_else(|| tr("no policies").to_owned());
-            shell.open_failed(why);
-            return;
-        }
-        let name = path
-            .file_stem()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "Templates".to_owned());
-        let id = format!("file-{:08x}", session::fnv(&kept_name(&path)) as u32);
-        let file = admx::to_catalog_file(&templates, &id, &name, "", &clock::now_utc_iso());
+        let file = match admx_file_catalog(&path) {
+            Ok(f) => f,
+            Err(why) => {
+                shell.open_failed(why);
+                return;
+            }
+        };
         let doc = catalogview::CatalogDoc::from_file(file, path.clone());
         shell.open_tab(Doc::Catalog(Box::new(doc)));
         shell.opened(&path);
@@ -54,11 +45,7 @@ impl WinWeaver {
         }
         c.id = file.id.clone();
         c.path = None;
-        let dir = self.imports_dir.clone();
-        let path = dir.join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
-        let saved = std::fs::create_dir_all(&dir)
-            .map_err(|e| e.to_string())
-            .and_then(|()| file.save(&path));
+        let saved = save_import(&self.imports_dir, &file);
         let rules = file.rules.len();
         let id = file.id.clone();
         self.imports.retain(|f| f.id != id);
@@ -68,7 +55,7 @@ impl WinWeaver {
         self.refresh_import_list();
         self.rebuild_catalog(shell);
         shell.status = match saved {
-            Ok(()) => trf("Imported: {rules} rules", &[("rules", &rules)]),
+            Ok(_) => trf("Imported: {rules} rules", &[("rules", &rules)]),
             Err(e) => trf("Imported, but not saved: {e}", &[("e", &e)]),
         };
     }
@@ -282,60 +269,11 @@ impl WinWeaver {
                 None => return,
             },
         };
-        let build = winweaver_win::this_pc()
-            .map(|m| m.system_info().build)
-            .unwrap_or_default();
+        let build = windows_build();
         let taken: Vec<String> = self.imports.iter().map(|f| f.id.clone()).collect();
         let (tx, rx) = std::sync::mpsc::channel();
         std::thread::spawn(move || {
-            let now = clock::now_utc_iso();
-            let result = match (source, path) {
-                (ImportSource::ThisWindows, _) => {
-                    let t =
-                        admx::read_folder(std::path::Path::new("C:\\Windows\\PolicyDefinitions"));
-                    let name = if build.is_empty() {
-                        "Policy templates of this Windows".to_owned()
-                    } else {
-                        format!("Policy templates of this Windows ({build})")
-                    };
-                    Ok(admx::to_catalog_file(&t, "system", &name, &build, &now))
-                }
-                (ImportSource::Folder, Some(dir)) => {
-                    let t = admx::read_folder(&dir);
-                    let name = dir
-                        .file_name()
-                        .map(|n| n.to_string_lossy().into_owned())
-                        .unwrap_or_else(|| "Templates".to_owned());
-                    let id = format!("folder-{:08x}", session::fnv(&kept_name(&dir)) as u32);
-                    Ok(admx::to_catalog_file(&t, &id, &name, "", &now))
-                }
-                (ImportSource::CatalogFile, Some(file)) => CatalogFile::load(&file).map(|mut f| {
-                    if taken.contains(&f.id) && !f.id.starts_with("package-") {
-                        f.id = format!("package-{}", f.id);
-                    }
-                    f
-                }),
-                (ImportSource::Archive, Some(file)) => match admx::read_archive(&file) {
-                    Ok(admx::Archive::Templates(t)) => {
-                        let name = file
-                            .file_stem()
-                            .map(|n| n.to_string_lossy().into_owned())
-                            .unwrap_or_else(|| "Templates".to_owned());
-                        let id = format!("archive-{:08x}", session::fnv(&kept_name(&file)) as u32);
-                        Ok(admx::to_catalog_file(&t, &id, &name, "", &now))
-                    }
-                    Ok(admx::Archive::Catalog(f)) => {
-                        let mut f = *f;
-                        if taken.contains(&f.id) && !f.id.starts_with("package-") {
-                            f.id = format!("package-{}", f.id);
-                        }
-                        Ok(f)
-                    }
-                    Err(e) => Err(e),
-                },
-                _ => Err("nothing to import".to_owned()),
-            };
-            let _ = tx.send(result);
+            let _ = tx.send(import_source(source, path.as_deref(), &build, &taken));
         });
         self.importing = Some(rx);
         shell.status = tr("The policy templates are being read").to_owned();
@@ -351,11 +289,7 @@ impl WinWeaver {
                 self.importing = None;
                 match result {
                     Ok(file) => {
-                        let dir = self.imports_dir.clone();
-                        let path = dir.join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
-                        let saved = std::fs::create_dir_all(&dir)
-                            .map_err(|e| e.to_string())
-                            .and_then(|()| file.save(&path));
+                        let saved = save_import(&self.imports_dir, &file);
                         let rules = file.rules.len();
                         let skipped = file.skipped.len();
                         let id = file.id.clone();
@@ -366,7 +300,7 @@ impl WinWeaver {
                         self.refresh_import_list();
                         self.rebuild_catalog(shell);
                         shell.status = match saved {
-                            Ok(()) => trf(
+                            Ok(_) => trf(
                                 "Imported: {rules} rules, {skipped} policies skipped",
                                 &[("rules", &rules), ("skipped", &skipped)],
                             ),

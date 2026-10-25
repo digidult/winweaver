@@ -267,6 +267,16 @@ passwords when the master password is given, and makes a users file of its accou
   `--detailed-log` and `--profile`, which change what the configuration file says for that start;
   `--smoke-window` (a small window draws two frames and closes, for CI). The guide in every language and
   `package/README.md` list every parameter.
+- The command line writes files without the window, through the functions the window uses
+  (`crates/winweaver/src/cli.rs`): `--build PROFILE` (the check, then `autounattend.xml` with its scripts
+  beside it; PROFILE a file, a preset or a name of `profiles/`); `--import-admx system|PATH` (the templates
+  of this Windows, a folder, an `.admx`, `.zip` or `.wwcatalog` file into `imports/`, named among the loaded
+  imports of the settings); `--export-catalog ID|PATH` (the catalog file of an import or of templates read
+  without importing them); `--read-pc [--base PROFILE]` (this PC read into a new profile on the base, Office
+  by default, or its answer file); `--diff A B` (a `.wwdiff`); `--script` and `--reg`. `--out` names the
+  file when it ends with the extension the command writes, else it is a folder for the file of the default
+  name (`export::out_path`). The exit code is 0 when the files were written, 2 for a wrong use, 1 for a
+  failure, and every file written is named.
 
 ## 16. wedit
 

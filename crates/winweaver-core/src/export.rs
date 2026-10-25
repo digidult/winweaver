@@ -2,7 +2,9 @@
 //! and the command line: the stand-alone scripts (apply, return to the defaults, audit, with the
 //! undo script beside an apply or a return) and the registry files of an apply or a return. A
 //! diff applies its other side: the rules it turns on are applied, the ones it turns off return to
-//! the defaults of Windows.
+//! the defaults of Windows. The command line writes each file where [`out_path`] says.
+
+use std::path::{Path, PathBuf};
 
 use crate::apply;
 use crate::catalog::Catalog;
@@ -87,6 +89,26 @@ pub fn file_stem(name: &str) -> String {
         "profile".to_owned()
     } else {
         stem.to_owned()
+    }
+}
+
+/// Whether a path of the command line names a file with the extension `ext` (in any case) rather
+/// than a folder; an existing folder never does.
+pub fn names_file(path: &Path, ext: &str) -> bool {
+    let fits = path
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case(ext));
+    fits && !path.is_dir()
+}
+
+/// The file a command of the command line writes: `out` when it names a file with the extension
+/// `ext` ([`names_file`]); any other `out` is the folder of the file, which gets `name` there;
+/// without `out` the file `name` in the folder `dir`.
+pub fn out_path(out: Option<&Path>, dir: &Path, name: &str, ext: &str) -> PathBuf {
+    match out {
+        Some(file) if names_file(file, ext) => file.to_path_buf(),
+        Some(folder) => folder.join(name),
+        None => dir.join(name),
     }
 }
 
@@ -298,5 +320,42 @@ mod tests {
         assert_eq!(file_stem("Office 2026"), "Office 2026");
         assert_eq!(file_stem("a/b:c"), "a_b_c");
         assert_eq!(file_stem("   "), "profile");
+    }
+
+    /// Where `--out` puts the registry file `Apply-Office.reg` of the output folder `output`.
+    fn reg_out(out: &Path) -> PathBuf {
+        out_path(Some(out), Path::new("output"), "Apply-Office.reg", "reg")
+    }
+
+    #[test]
+    fn an_out_with_the_extension_names_the_file() {
+        let named = Path::new("usb").join("Office.reg");
+        assert_eq!(reg_out(&named), named);
+        let upper = Path::new("usb").join("OFFICE.REG");
+        assert_eq!(reg_out(&upper), upper);
+        assert!(names_file(Path::new("answer.XML"), "xml"));
+        assert!(!names_file(Path::new("answer.xml"), "wwprofile"));
+        assert!(!names_file(Path::new("answer"), "xml"));
+    }
+
+    #[test]
+    fn an_out_without_the_extension_is_a_folder() {
+        let none = out_path(None, Path::new("output"), "Apply-Office.reg", "reg");
+        assert_eq!(none, Path::new("output").join("Apply-Office.reg"));
+        let folder = Path::new("usb").join("files");
+        assert_eq!(reg_out(&folder), folder.join("Apply-Office.reg"));
+        // Another extension is the name of a folder too.
+        let other = Path::new("usb").join("Office.ps1");
+        assert_eq!(reg_out(&other), other.join("Apply-Office.reg"));
+    }
+
+    #[test]
+    fn an_existing_folder_is_a_folder_whatever_its_name() {
+        let name = format!("winweaver-out-{}.reg", std::process::id());
+        let folder = std::env::temp_dir().join(name);
+        std::fs::create_dir_all(&folder).unwrap();
+        let target = reg_out(&folder);
+        let _ = std::fs::remove_dir(&folder);
+        assert_eq!(target, folder.join("Apply-Office.reg"));
     }
 }

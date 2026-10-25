@@ -65,7 +65,10 @@ pub use diffview::DiffDoc;
 pub use doc::{Doc, DocKind, SettingsSection};
 pub use folders::{imports_dir, lang_dir, output_dir, profiles_dir, themes_dir};
 pub use forms::Form;
-pub use importlist::{ImportEntry, import_files, loaded_import_ids, read_imports};
+pub use importlist::{
+    ImportEntry, admx_file_catalog, import_files, import_source, loaded_import_ids, package_id,
+    read_imports, save_import, windows_build,
+};
 pub(crate) use importlist::{import_entries, import_order, size_text, unknown_issues};
 pub use question::Question;
 pub use settings::{DescSections, Extra, Settings, ThemeChoice};

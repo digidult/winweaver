@@ -265,13 +265,22 @@ menyebutkan apa yang dipakai jendela untuk menggambar.
 | `--detailed-log` | Dengan `--mcp`: log menyimpan setiap permintaan dan jawaban utuh, tanpa kata sandi, kunci, dan token |
 | `--version` | Menampilkan versi |
 | `--check-catalog` | Memuat katalog bawaan dengan terjemahannya dan menampilkan masalahnya |
+| `--build PROFILE` | Memeriksa profil dan membuat file jawabannya tanpa jendela: `autounattend.xml` di `output`, dengan skrip yang disematkannya di sampingnya; PROFILE adalah file `.wwprofile`, preset (`Office`, `Strict`, `Laptop`, `Home`), atau nama profil dari `profiles/`; kesalahan pemeriksaan menghentikan pembuatan |
+| `--import-admx SOURCE` | Mengimpor templat kebijakan seperti Pengaturan, Templat kebijakan: `system` (templat Windows ini), folder file ADMX, file `.admx` dengan ADML dari folder bahasanya, arsip `.zip`, atau file `.wwcatalog`; file katalog masuk ke `imports/`, dan jendela serta server MCP memuatnya pada start berikutnya (jalankan saat jendela tertutup) |
+| `--export-catalog SOURCE` | Menulis file katalog (`.wwcatalog`) seperti Ekspor di Pengaturan, Templat kebijakan: dari impor menurut id-nya (nama file-nya di `imports/`), atau dari sumber `--import-admx` yang dibaca tanpa mengimpornya; `<id>.wwcatalog` di `output` |
+| `--read-pc` | Tanpa `--mcp`: membaca PC ini ke profil baru bernama komputer, seperti PC Ini, Baca PC ini, dan menyimpannya di `profiles/`; dengan file `.xml` di `--out`, menulis file jawaban profil itu sebagai gantinya; fitur dan kemampuan Windows hanya dibaca saat program berjalan sebagai administrator |
+| `--base PROFILE` | Dengan `--read-pc`: profil awal pembacaan, diberikan seperti untuk `--build`; secara default preset Office |
+| `--diff A B` | Menulis perbedaan dari profil A ke profil B sebagai file perbedaan, `A-vs-B.wwdiff` di `profiles/`; A dan B diberikan seperti untuk `--build` |
 | `--script KIND FILE` | Menulis skrip mandiri dari profil (`.wwprofile`) atau perbedaan (`.wwdiff`) tanpa jendela: `apply`, `revert` (kembali ke default Windows) atau `audit`; skrip penerapan atau pengembalian mendapat `Undo-Apply.ps1` di sampingnya |
 | `--reg KIND FILE` | Menulis file registri penerapan (`apply`) atau pengembalian ke default (`revert`) dari profil atau perbedaan |
 | `--only IDS` | Dengan `--script` atau `--reg`: hanya aturan atau grup ini, id-nya dipisahkan koma |
-| `--out FOLDER` | Dengan `--script` atau `--reg`: folder file, secara default `output` di samping program |
+| `--out FILE` | Dengan `--build`, `--export-catalog`, `--read-pc`, `--diff`, `--script`, atau `--reg`: file yang ditulis, jika nilainya berakhir dengan ekstensi yang ditulis perintah itu (`.xml`, `.wwcatalog`, `.wwprofile`, `.wwdiff`, `.ps1`, `.reg`); nilai lain adalah folder, dibuat bila belum ada, untuk file dengan nama biasanya; `Undo-Apply.ps1` dan skrip file jawaban diletakkan di samping file itu; tanpa `--out` file masuk ke `output` di samping program (`profiles/` untuk `--read-pc` dan `--diff`) |
 | `--help` | Menampilkan daftar parameter |
 | `--smoke-window` | Membuka jendela kecil, menggambar dua bingkai, dan menampilkan apa yang menggambarnya (juga dengan `--renderer`): pemeriksaan grafis |
 | `--elevated-apply PLAN DIGEST` | Jendela menjalankan dirinya sendiri dengan cara ini untuk menerapkan rencana yang dikonfirmasi sebagai administrator; bukan untuk dijalankan manual |
+
+Perintah yang menulis file menyebutkan setiap file yang ditulisnya dan berakhir dengan kode 0; penggunaan
+parameter yang salah berakhir dengan kode 2, kegagalan dengan 1, dan alasannya ditampilkan.
 
 Mode dan izin membaca PC ini diberikan pada setiap start dan tidak pernah disimpan. Pesan masuk ke konsol
 tempat program dijalankan dan ke `logs/`.

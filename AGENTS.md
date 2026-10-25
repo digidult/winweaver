@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 24.10.2026.
+Updated with every change of structure, commands or task status. Last update: 25.10.2026.
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -521,6 +521,13 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   and DirectX 12 draws, so it tests the fall back. Tests and screenshots draw with the wgpu of egui_kittest.
 - The command line: `USAGE` of `main.rs` and the section Command line of the guide (`data/docs/guide.md` and every
   `data/lang/<code>/guide.md`) and of `package/README.md` list every parameter; a new one goes into all of them.
+  The commands that write files are `crates/winweaver/src/cli.rs` (`--build`, `--import-admx`,
+  `--export-catalog`, `--read-pc`, `--diff`, `--script`, `--reg`), each through the function the window
+  uses: `render::Build::write`, `winweaver_ui::import_source`, `admx_file_catalog` and `save_import`,
+  `thispc::whole_pc_rules` and `pc_profile_name`, `Diff::between`, `export`. `--out` goes through
+  `export::out_path` (a value with the extension of the command names the file, any other a folder for
+  the default name); the exit code is 0, 2 for a wrong use, 1 for a failure. `--import-admx` names its
+  import in `loaded_imports` of the settings file of the window, so a window open meanwhile overwrites it.
 - Screenshots: the Windows job sets `WINWEAVER_SCREENSHOTS`, and the test `screenshots_of_the_window` draws the
   main tabs with wgpu (no screen) into `target/screenshots`, uploaded as the artifact `screenshots`
   (`gh run download <id> -n screenshots -D <folder>`); the way to see the window without starting it on the

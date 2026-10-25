@@ -270,13 +270,22 @@ yazılır: `--renderer=directx`.
 | `--detailed-log` | `--mcp` ile: günlük her isteği ve yanıtı parolalar, anahtarlar ve belirteçler olmadan eksiksiz tutar |
 | `--version` | Sürümü yazdırır |
 | `--check-catalog` | Yerleşik kataloğu çevirileriyle yükler ve sorunlarını yazdırır |
+| `--build PROFILE` | Pencere olmadan bir profili denetler ve yanıt dosyasını oluşturur: `output` içinde `autounattend.xml` ve yanında gömdüğü betikler; PROFILE bir `.wwprofile` dosyası, bir hazır ayar (`Office`, `Strict`, `Laptop`, `Home`) veya `profiles/` içindeki bir profilin adıdır; denetimin bir hatası oluşturmayı durdurur |
+| `--import-admx SOURCE` | İlke şablonlarını Ayarlar, İlke şablonları gibi içeri aktarır: `system` (bu Windows'un şablonları), ADMX dosyalarından oluşan bir klasör, dil klasörlerinin ADML'leriyle bir `.admx` dosyası, bir `.zip` arşivi veya bir `.wwcatalog` dosyası; katalog dosyası `imports/` içine konur, pencere ve MCP sunucusu onu bir sonraki başlatmalarında yükler (pencere kapalıyken çalıştırın) |
+| `--export-catalog SOURCE` | Ayarlar, İlke şablonları içindeki Dışarı aktar gibi bir katalog dosyası (`.wwcatalog`) yazar: kimliğiyle bir içeri aktarımın (`imports/` içindeki dosyasının adı) veya içeri aktarılmadan okunan bir `--import-admx` kaynağının; `output` içinde `<id>.wwcatalog` |
+| `--read-pc` | `--mcp` olmadan: bu bilgisayarı Bu bilgisayar, Bu bilgisayarı oku gibi bilgisayarın adını taşıyan yeni bir profile okur ve `profiles/` içine kaydeder; `--out` içinde bir `.xml` dosyasıyla bunun yerine o profilin yanıt dosyasını yazar; Windows özellikleri ve yetenekleri yalnızca program yönetici olarak çalıştığında okunur |
+| `--base PROFILE` | `--read-pc` ile: okumanın başladığı profil, `--build` için olduğu gibi verilir; varsayılan olarak Office hazır ayarı |
+| `--diff A B` | A profilinden B profiline olan farkları bir fark dosyası olarak yazar: `profiles/` içinde `A-vs-B.wwdiff`; A ve B, `--build` için olduğu gibi verilir |
 | `--script KIND FILE` | Pencere olmadan bir profilin (`.wwprofile`) veya bir farkın (`.wwdiff`) bağımsız betiğini yazar: `apply`, `revert` (Windows varsayılanlarına dönüş) veya `audit`; uygulama veya dönüş betiğinin yanına `Undo-Apply.ps1` konur |
 | `--reg KIND FILE` | Bir profilin veya farkın uygulama (`apply`) ya da varsayılanlara dönüş (`revert`) kayıt dosyasını yazar |
 | `--only IDS` | `--script` veya `--reg` ile: yalnızca bu kurallar veya gruplar, kimlikleri virgülle ayrılmış |
-| `--out FOLDER` | `--script` veya `--reg` ile: dosyaların klasörü, varsayılan olarak programın yanındaki `output` |
+| `--out FILE` | `--build`, `--export-catalog`, `--read-pc`, `--diff`, `--script` veya `--reg` ile: değer komutun yazdığı uzantıyla bitiyorsa (`.xml`, `.wwcatalog`, `.wwprofile`, `.wwdiff`, `.ps1`, `.reg`) yazılacak dosya; başka her değer, eksikse oluşturulan ve dosyanın olağan adıyla yazıldığı bir klasördür; `Undo-Apply.ps1` ve yanıt dosyasının betikleri dosyanın yanına konur; `--out` olmadan dosyalar programın yanındaki `output` klasörüne gider (`--read-pc` ve `--diff` için `profiles/`) |
 | `--help` | Parametre listesini yazdırır |
 | `--smoke-window` | Küçük bir pencere açar, iki kare çizer ve bunları neyin çizdiğini yazdırır (`--renderer` ile de): grafik denetimi |
 | `--elevated-apply PLAN DIGEST` | Pencere, onaylanmış bir planı yönetici olarak uygulamak için kendini böyle başlatır; elle başlatmak için değildir |
+
+Dosya yazan bir komut yazdığı her dosyayı adlandırır ve 0 koduyla biter; parametrelerin yanlış kullanımı 2
+koduyla, bir hata 1 koduyla biter ve nedeni yazdırılır.
 
 Mod ve bu bilgisayarı okuma izni her başlatmada verilir ve hiç kaydedilmez. İletiler programın başlatıldığı
 konsola ve `logs/` klasörüne gider.

@@ -11,7 +11,7 @@
 //! `judge` (the verdict of each rule), `capture` (the readings into a profile) and `memory`
 //! (a machine in memory for the tests).
 
-use crate::catalog::{Action, Phase, Rule};
+use crate::catalog::{Action, Catalog, Phase, Rule};
 use crate::registry::Data;
 
 mod capture;
@@ -85,6 +85,26 @@ pub fn exclusion(rule: &Rule) -> Option<&'static str> {
         return Some(SIGN_IN_SCREEN);
     }
     None
+}
+
+/// The rules a read of the whole PC covers: every rule of the catalog but the imported policies.
+pub fn whole_pc_rules(catalog: &Catalog) -> Vec<String> {
+    catalog
+        .rules()
+        .iter()
+        .filter(|r| !r.id.starts_with(crate::admx::RULE_PREFIX))
+        .map(|r| r.id.clone())
+        .collect()
+}
+
+/// The name of the profile a read of the whole PC makes: the name of the computer, `This PC`
+/// when the read has none.
+pub fn pc_profile_name(computer: &str) -> String {
+    if computer.is_empty() {
+        "This PC".to_owned()
+    } else {
+        computer.to_owned()
+    }
 }
 
 /// The edition name of a Windows edition id.

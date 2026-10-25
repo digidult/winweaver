@@ -14,12 +14,7 @@ impl WinWeaver {
         let ids = if only_selection {
             self.selection_ids(shell)
         } else {
-            self.catalog
-                .rules()
-                .iter()
-                .filter(|r| !r.id.starts_with("admx."))
-                .map(|r| r.id.clone())
-                .collect()
+            thispc::whole_pc_rules(&self.catalog)
         };
         let base = doc.profile.clone();
         let plan = thispc::plan(&self.catalog, &base, &ids);
@@ -165,12 +160,7 @@ impl WinWeaver {
             doc.issues = issues;
             shell.status = format!("Read the selection on this PC: {}", summary.line());
         } else {
-            let computer = if report.computer.is_empty() {
-                "This PC".to_owned()
-            } else {
-                report.computer.clone()
-            };
-            profile.name = computer;
+            profile.name = thispc::pc_profile_name(&report.computer);
             profile.created = clock::now_utc_iso();
             profile.modified = String::new();
             let mut doc = ProfileDoc::new(profile, None, catalog);

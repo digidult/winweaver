@@ -114,6 +114,55 @@ jobs:
           "exit code: $($p.ExitCode)"
           Get-ChildItem target/release/logs -ErrorAction SilentlyContinue | Get-Content -ErrorAction SilentlyContinue
           if ($p.ExitCode -ne 0) { exit 1 }
+      - name: Command line smoke test
+        # The commands that write files, on the presets and the templates of the runner's Windows, into
+        # a folder of the runner: each must end with the code 0 and write the files it names; a wrong use
+        # ends with 2. The import and the read of this PC only read the system (the read takes DISM about
+        # a minute as administrator) and write next to the executable of target/release.
+        shell: pwsh
+        run: |
+          $exe = (Resolve-Path 'target/release/winweaver.exe').Path
+          $out = Join-Path $env:RUNNER_TEMP 'cli'
+          New-Item -ItemType Directory -Force $out | Out-Null
+          function Invoke-Cli([string[]]$a, [int]$want = 0) {
+            "> winweaver $($a -join ' ')"
+            $p = Start-Process -FilePath $exe -ArgumentList $a -PassThru -RedirectStandardOutput "$out/stdout.txt" -RedirectStandardError "$out/stderr.txt"
+            $null = $p.Handle
+            if (-not $p.WaitForExit(300000)) { $p.Kill(); throw 'the command did not end within 300 s' }
+            Get-Content "$out/stdout.txt", "$out/stderr.txt"
+            if ($p.ExitCode -ne $want) { throw "the exit code was $($p.ExitCode), not $want" }
+          }
+          function Assert-File([string]$path) {
+            if (-not (Test-Path -PathType Leaf $path)) { throw "missing $path" }
+          }
+          Invoke-Cli @('--build', 'Office', '--out', "$out/office.xml")
+          Assert-File "$out/office.xml"
+          Assert-File "$out/Setup-System.ps1"
+          Invoke-Cli @('--build', 'strict', '--out', "$out/strict")
+          Assert-File "$out/strict/autounattend.xml"
+          Invoke-Cli @('--diff', 'Office', 'Strict', '--out', $out)
+          Assert-File "$out/Office-vs-Strict.wwdiff"
+          Invoke-Cli @('--reg', 'apply', "$out/Office-vs-Strict.wwdiff", '--out', "$out/diff.reg")
+          Assert-File "$out/diff.reg"
+          Invoke-Cli @('--script', 'audit', 'data/presets/office.wwprofile', '--out', "$out/audit.ps1")
+          Assert-File "$out/audit.ps1"
+          Invoke-Cli @('--script', 'apply', 'data/presets/office.wwprofile', '--out', "$out/apply.ps1")
+          Assert-File "$out/apply.ps1"
+          Assert-File "$out/Undo-Apply.ps1"
+          $admx = 'C:\Windows\PolicyDefinitions\WindowsUpdate.admx'
+          Invoke-Cli @('--export-catalog', $admx, '--out', "$out/update.wwcatalog")
+          Assert-File "$out/update.wwcatalog"
+          Invoke-Cli @('--export-catalog', 'system', '--out', "$out/system.wwcatalog")
+          Assert-File "$out/system.wwcatalog"
+          Invoke-Cli @('--import-admx', "$out/update.wwcatalog")
+          $settings = 'target/release/winweaver.settings.json'
+          Assert-File $settings
+          if (-not ((Get-Content -Raw $settings) -match '"file-')) { throw 'the import is not in the settings' }
+          Invoke-Cli @('--read-pc', '--out', "$out/pc.wwprofile")
+          Assert-File "$out/pc.wwprofile"
+          Invoke-Cli @('--build') 2
+          Invoke-Cli @('--diff', 'Office', '--out', $out) 2
+          Get-ChildItem -Recurse $out | Select-Object Length, FullName | Format-Table -AutoSize
       - name: Package
         shell: pwsh
         run: |

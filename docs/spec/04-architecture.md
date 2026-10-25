@@ -35,8 +35,10 @@ crates/
 │                        bookmarks, MCP, catalog, its editor, the registry, registry files, users files),
 │                        forms, pages (the guide, the licence, the reference), settings (the fields of
 │                        WinWeaver in the settings file)
-└── winweaver/           the binary: argument parsing (the window, --mcp, --elevated-apply, --check-catalog,
-                         --smoke-window, --version), logging and crash handlers set up first
+└── winweaver/           the binary: cli (the commands that write files: --build, --import-admx,
+                         --export-catalog, --read-pc, --diff, --script, --reg), argument parsing (the
+                         window, --mcp, --elevated-apply, --check-catalog, --smoke-window,
+                         --version), logging and crash handlers set up first
 data/
 ├── catalog/             groups.json, 00-17 rule files, lang/<code>.json
 ├── presets/             office, strict, laptop, home .wwprofile

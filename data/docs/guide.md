@@ -263,13 +263,22 @@ names what the window draws with.
 | `--detailed-log` | With `--mcp`: the log keeps every request and answer whole, without passwords, keys and tokens |
 | `--version` | Prints the version |
 | `--check-catalog` | Loads the built-in catalog with its translations and prints their problems |
+| `--build PROFILE` | Checks a profile and builds its answer file without the window: `autounattend.xml` in `output`, with the scripts it embeds beside it; PROFILE is a `.wwprofile` file, a preset (`Office`, `Strict`, `Laptop`, `Home`) or the name of a profile of `profiles/`; an error of the check stops the build |
+| `--import-admx SOURCE` | Imports policy templates as Settings, Policy templates does: `system` (the templates of this Windows), a folder of ADMX files, an `.admx` file with the ADML of its culture folders, a `.zip` archive or a `.wwcatalog` file; the catalog file goes into `imports/`, and the window and the MCP server load it at their next start (run it while the window is closed) |
+| `--export-catalog SOURCE` | Writes a catalog file (`.wwcatalog`) as Export in Settings, Policy templates does: of an import by its id (the name of its file in `imports/`), or of a source of `--import-admx` read without importing it; `<id>.wwcatalog` in `output` |
+| `--read-pc` | Without `--mcp`: reads this PC into a new profile named after the computer, as This PC, Read this PC does, and saves it in `profiles/`; with an `.xml` file in `--out` it writes the answer file of that profile instead; the features and capabilities of Windows are read only when the program runs as administrator |
+| `--base PROFILE` | With `--read-pc`: the profile the read starts from, given as for `--build`; the preset Office by default |
+| `--diff A B` | Writes the differences from the profile A to the profile B as a diff file, `A-vs-B.wwdiff` in `profiles/`; A and B are given as for `--build` |
 | `--script KIND FILE` | Writes the stand-alone script of a profile (`.wwprofile`) or a diff (`.wwdiff`) without the window: `apply`, `revert` (back to the defaults of Windows) or `audit`; an apply or a return gets `Undo-Apply.ps1` beside it |
 | `--reg KIND FILE` | Writes the registry file of the apply (`apply`) or of the return to the defaults (`revert`) of a profile or a diff |
 | `--only IDS` | With `--script` or `--reg`: only these rules or groups, their ids separated by commas |
-| `--out FOLDER` | With `--script` or `--reg`: the folder of the files, `output` next to the program by default |
+| `--out FILE` | With `--build`, `--export-catalog`, `--read-pc`, `--diff`, `--script` or `--reg`: the file to write when the value ends with the extension the command writes (`.xml`, `.wwcatalog`, `.wwprofile`, `.wwdiff`, `.ps1`, `.reg`); any other value is a folder, made when missing, for the file of its usual name; `Undo-Apply.ps1` and the scripts of the answer file go beside the file; without `--out` the files go to `output` next to the program (`profiles/` for `--read-pc` and `--diff`) |
 | `--help` | Prints the list of parameters |
 | `--smoke-window` | Opens a small window, draws two frames and prints what drew them (also with `--renderer`): a check of the graphics |
 | `--elevated-apply PLAN DIGEST` | The window starts itself so to apply a confirmed plan as administrator; not for starting by hand |
+
+A command that writes files names every file it writes and ends with the code 0; a wrong use of the parameters
+ends with the code 2, a failure with 1, and the reason is printed.
 
 The mode and the permission to read this PC are given at every start and never saved. The messages go to
 the console the program was started from and to `logs/`.

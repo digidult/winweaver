@@ -9,6 +9,8 @@
 //! (the script lines of the actions), `xml` (the pieces of the passes), `languages`, `name` (the
 //! computer name template), `accounts` and `answer` (the build itself).
 
+use std::path::{Path, PathBuf};
+
 use crate::catalog::Rule;
 
 mod accounts;
@@ -48,6 +50,8 @@ pub(super) const SECTION_COMPUTER_NAME: &str =
     include_str!("../../../../data/templates/section-computer-name.ps1");
 const RUNTIME_VERSION_FILE: &str = include_str!("../../../../data/templates/VERSION");
 
+/// The name of the answer file Windows Setup looks for on the installation media.
+pub const ANSWER_FILE: &str = "autounattend.xml";
 /// The key of the mode `ask`: Windows Setup shows the key and edition dialog.
 pub const ASK_KEY: &str = "00000-00000-00000-00000-00000";
 /// The temporary computer name of a template; `section-computer-name.ps1` replaces it.
@@ -91,6 +95,30 @@ pub struct Build {
     /// The rules in effect, in the order they were applied.
     pub rule_ids: Vec<String>,
     pub warnings: Vec<String>,
+}
+
+impl Build {
+    /// Writes the answer file to `xml` and the scripts it embeds beside it with Windows line
+    /// ends, each through a temporary neighbour that replaces it; the files written, the answer
+    /// file first.
+    pub fn write(&self, xml: &Path) -> Result<Vec<PathBuf>, String> {
+        let dir = xml.parent().unwrap_or(Path::new(""));
+        write_file(xml, self.xml.as_bytes())?;
+        let mut written = vec![xml.to_path_buf()];
+        for (name, text) in &self.scripts {
+            let text = text.replace("\r\n", "\n").replace('\n', "\r\n");
+            let path = dir.join(name);
+            write_file(&path, text.as_bytes())?;
+            written.push(path);
+        }
+        Ok(written)
+    }
+}
+
+fn write_file(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    let tmp = path.with_extension("tmp");
+    std::fs::write(&tmp, bytes).map_err(|e| format!("{}: {e}", path.display()))?;
+    std::fs::rename(&tmp, path).map_err(|e| format!("{}: {e}", path.display()))
 }
 
 pub(super) fn err(rule: &Rule, text: impl Into<String>) -> RenderError {

@@ -1,10 +1,14 @@
-//! The WinWeaver executable: the window by default, a few command line functions.
+//! The WinWeaver executable: the window by default, the command line functions (`cli`: the
+//! answer file, the imports and exports of policy templates, a read of this PC, diffs, scripts
+//! and registry files), the MCP server and the elevated helper.
 //!
 //! In a release build the executable has no console (`windows_subsystem`): the command line
 //! functions attach to the console of the parent when there is one. The MCP stdio transport
 //! needs no console; the client gives the process its pipes.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+mod cli;
 
 use std::process::ExitCode;
 
@@ -18,13 +22,36 @@ const USAGE: &str = "WinWeaver
                               open the window, trying that renderer first (this start only)
   winweaver --version         print the version
   winweaver --check-catalog   load the embedded catalog and report its problems
-  winweaver --script apply|revert|audit FILE [--only IDS] [--out FOLDER]
+  winweaver --build PROFILE [--out FILE|FOLDER]
+                              check a profile and build its answer file, autounattend.xml with
+                              the scripts it embeds beside it; PROFILE is a .wwprofile file, a
+                              preset (Office, Strict, Laptop, Home) or a name of the profiles folder
+  winweaver --import-admx system|PATH
+                              import policy templates as Settings, Policy templates does: those of
+                              this Windows, a folder of ADMX files, an .admx, .zip or .wwcatalog
+                              file; the window and the MCP server load it at their next start
+  winweaver --export-catalog ID|system|PATH [--out FILE|FOLDER]
+                              write the catalog file (<id>.wwcatalog) of an import of the imports
+                              folder, or of templates read as --import-admx reads them
+  winweaver --read-pc [--base PROFILE] [--out FILE|FOLDER]
+                              read this PC into a new profile on the base (the preset Office by
+                              default), <computer>.wwprofile in profiles; an .xml file in --out
+                              gets its answer file; features and capabilities need administrator
+  winweaver --diff A B [--out FILE|FOLDER]
+                              write the differences from the profile A to the profile B as
+                              <A>-vs-<B>.wwdiff in profiles; A and B as PROFILE of --build
+  winweaver --script apply|revert|audit FILE [--only IDS] [--out FILE|FOLDER]
                               write the stand-alone script of a profile (FILE.wwprofile) or a
                               diff (FILE.wwdiff); an apply or a return gets Undo-Apply.ps1 beside it
-  winweaver --reg apply|revert FILE [--only IDS] [--out FOLDER]
+  winweaver --reg apply|revert FILE [--only IDS] [--out FILE|FOLDER]
                               write the registry file of the apply or the return of a profile or
-                              a diff; --only takes ids of rules or groups separated by commas,
-                              --out the folder (output next to the program by default)
+                              a diff; --only takes ids of rules or groups separated by commas
+  --out FILE|FOLDER           with the commands above: the file when it ends with the extension
+                              the command writes (.xml, .wwcatalog, .wwprofile, .wwdiff, .ps1,
+                              .reg), else a folder for the file of the default name; without it
+                              output next to the program (profiles for a profile and a diff)
+  exit codes                  0 when the files were written, 2 for a wrong use of the
+                              parameters, 1 for a failure
   winweaver --mcp FILE        serve MCP as a configuration file says (FILE.wwmcp, a path or
                               a name of the mcp folder next to the program)
   winweaver --mcp stdio [--config FILE] [--mode read|edit|files] [--read-pc]
@@ -319,20 +346,17 @@ fn main() -> ExitCode {
             attach_console();
             check_catalog()
         }
-        Some("--script") => {
-            attach_console();
-            export_files(&args[1..], false)
-        }
-        Some("--reg") => {
-            attach_console();
-            export_files(&args[1..], true)
-        }
         Some("--help") => {
             attach_console();
             println!("{USAGE}");
             ExitCode::SUCCESS
         }
+        Some(command) if cli::COMMANDS.contains(&command) => {
+            attach_console();
+            cli::run(command, &args[1..])
+        }
         Some(other) => {
+            attach_console();
             eprintln!("unknown argument {other}\n{USAGE}");
             ExitCode::from(2)
         }
@@ -350,96 +374,6 @@ fn window(renderer: Option<&str>) -> ExitCode {
             ExitCode::FAILURE
         }
     }
-}
-
-/// Writes a stand-alone script (`reg` false) or a registry file of a profile or a diff without
-/// the window: the catalog with the imports the settings load, the rules of `--only` or every
-/// rule (a diff: its rules), the files in `--out` or the output folder next to the program.
-fn export_files(args: &[String], reg: bool) -> ExitCode {
-    match export_to(args, reg) {
-        Ok(lines) => {
-            for line in lines {
-                println!("{line}");
-            }
-            ExitCode::SUCCESS
-        }
-        Err(e) => {
-            eprintln!("{e}");
-            ExitCode::FAILURE
-        }
-    }
-}
-
-fn export_to(args: &[String], reg: bool) -> Result<Vec<String>, String> {
-    use winweaver_core::export::{self, ScriptKind};
-    let usage = if reg {
-        "--reg needs apply or revert and a .wwprofile or .wwdiff file"
-    } else {
-        "--script needs apply, revert or audit and a .wwprofile or .wwdiff file"
-    };
-    let (Some(word), Some(file)) = (args.first(), args.get(1)) else {
-        return Err(usage.to_owned());
-    };
-    let kind = ScriptKind::parse(word).ok_or(usage)?;
-    if reg && kind == ScriptKind::Audit {
-        return Err(usage.to_owned());
-    }
-    let catalog = Catalog::embedded().map_err(|e| format!("catalog: {e}"))?;
-    let catalog = with_imports(catalog, &winweaver_ui::imports_dir());
-    let path = std::path::PathBuf::from(file);
-    let is_diff = path
-        .extension()
-        .is_some_and(|e| e == winweaver_core::diff::EXTENSION);
-    let (profile, mut ids) = if is_diff {
-        let diff = winweaver_core::diff::Diff::load(&path).map_err(|e| e.to_string())?;
-        export::diff_profile(&diff)
-    } else {
-        let profile = winweaver_core::profile::Profile::load(&path).map_err(|e| e.to_string())?;
-        (profile, export::all_rules(&catalog))
-    };
-    if let Some(only) = option(args, "--only") {
-        let named: Vec<String> = only
-            .split(',')
-            .map(|s| s.trim().to_owned())
-            .filter(|s| !s.is_empty())
-            .collect();
-        let wanted = export::rules_of(&catalog, &named)?;
-        ids.retain(|id| wanted.contains(id));
-    }
-    if !export::applicable(&catalog, &ids) {
-        return Err(
-            "nothing to apply on a PC: the rules are passes of the installation".to_owned(),
-        );
-    }
-    let stem = export::file_stem(&path.file_stem().unwrap_or_default().to_string_lossy());
-    let out = option(args, "--out")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(winweaver_ui::output_dir);
-    std::fs::create_dir_all(&out).map_err(|e| format!("{}: {e}", out.display()))?;
-    let mut lines = Vec::new();
-    if reg {
-        let made = export::reg(&catalog, &profile, &ids, kind == ScriptKind::Revert, &stem);
-        if made.values == 0 {
-            return Err(
-                "nothing for a registry file: the rules write no registry value".to_owned(),
-            );
-        }
-        let target = out.join(&made.name);
-        made.file.save(&target)?;
-        lines.push(format!(
-            "wrote {} ({} values)",
-            target.display(),
-            made.values
-        ));
-    } else {
-        let made = export::scripts(&catalog, &profile, &ids, kind, &stem, winweaver_core::BUILD)?;
-        for f in &made.files {
-            let target = out.join(&f.name);
-            std::fs::write(&target, &f.bytes).map_err(|e| format!("{}: {e}", target.display()))?;
-            lines.push(format!("wrote {}", target.display()));
-        }
-    }
-    Ok(lines)
 }
 
 fn check_catalog() -> ExitCode {

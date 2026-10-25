@@ -284,13 +284,22 @@ registro de `logs/` indica con qué dibuja la ventana.
 | `--detailed-log` | Con `--mcp`: el registro guarda cada solicitud y respuesta completas, sin contraseñas, claves ni tokens |
 | `--version` | Muestra la versión |
 | `--check-catalog` | Carga el catálogo integrado con sus traducciones y muestra sus problemas |
+| `--build PROFILE` | Comprueba un perfil y genera su archivo de respuesta sin la ventana: `autounattend.xml` en `output`, con los scripts que incrusta junto a él; PROFILE es un archivo `.wwprofile`, un perfil predefinido (`Office`, `Strict`, `Laptop`, `Home`) o el nombre de un perfil de `profiles/`; un error de la comprobación detiene la generación |
+| `--import-admx SOURCE` | Importa plantillas de directivas como lo hace Configuración, Plantillas de directivas: `system` (las plantillas de este Windows), una carpeta de archivos ADMX, un archivo `.admx` con los ADML de las carpetas de sus idiomas, un archivo `.zip` o un archivo `.wwcatalog`; el archivo de catálogo va a `imports/`, y la ventana y el servidor MCP lo cargan en su próximo inicio (ejecútelo con la ventana cerrada) |
+| `--export-catalog SOURCE` | Escribe un archivo de catálogo (`.wwcatalog`) como lo hace Exportar en Configuración, Plantillas de directivas: de una importación por su identificador (el nombre de su archivo en `imports/`), o de un origen de `--import-admx` leído sin importarlo; `<id>.wwcatalog` en `output` |
+| `--read-pc` | Sin `--mcp`: lee este equipo en un perfil nuevo con el nombre del equipo, como Este equipo, Leer este PC, y lo guarda en `profiles/`; con un archivo `.xml` en `--out` escribe en su lugar el archivo de respuesta de ese perfil; las características y funcionalidades de Windows solo se leen cuando el programa se ejecuta como administrador |
+| `--base PROFILE` | Con `--read-pc`: el perfil del que parte la lectura, indicado como para `--build`; por defecto el perfil predefinido Office |
+| `--diff A B` | Escribe las diferencias del perfil A al perfil B como archivo de diferencias, `A-vs-B.wwdiff` en `profiles/`; A y B se indican como para `--build` |
 | `--script KIND FILE` | Escribe sin la ventana el script independiente de un perfil (`.wwprofile`) o de una diferencia (`.wwdiff`): `apply`, `revert` (vuelta a los valores predeterminados de Windows) o `audit`; junto a un script de aplicación o de vuelta queda `Undo-Apply.ps1` |
 | `--reg KIND FILE` | Escribe el archivo de registro de la aplicación (`apply`) o de la vuelta a los valores predeterminados (`revert`) de un perfil o de una diferencia |
 | `--only IDS` | Con `--script` o `--reg`: solo estas reglas o grupos, sus identificadores separados por comas |
-| `--out FOLDER` | Con `--script` o `--reg`: la carpeta de los archivos, por defecto `output` junto al programa |
+| `--out FILE` | Con `--build`, `--export-catalog`, `--read-pc`, `--diff`, `--script` o `--reg`: el archivo que se escribe, cuando el valor termina con la extensión que escribe el comando (`.xml`, `.wwcatalog`, `.wwprofile`, `.wwdiff`, `.ps1`, `.reg`); cualquier otro valor es una carpeta, creada si falta, para el archivo con su nombre habitual; `Undo-Apply.ps1` y los scripts del archivo de respuesta van junto al archivo; sin `--out` los archivos van a `output` junto al programa (`profiles/` para `--read-pc` y `--diff`) |
 | `--help` | Muestra la lista de parámetros |
 | `--smoke-window` | Abre una ventana pequeña, dibuja dos fotogramas y muestra con qué se dibujaron (también con `--renderer`): una comprobación de los gráficos |
 | `--elevated-apply PLAN DIGEST` | Así se inicia la propia ventana para aplicar un plan confirmado como administrador; no es para iniciarlo a mano |
+
+Un comando que escribe archivos nombra cada archivo que escribe y termina con el código 0; un uso incorrecto
+de los parámetros termina con el código 2, un fallo con 1, y se muestra el motivo.
 
 El modo y el permiso para leer este equipo se indican en cada inicio y nunca se guardan. Los mensajes van a
 la consola desde la que se inició el programa y a `logs/`.

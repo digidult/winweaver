@@ -267,3 +267,21 @@ fn a_chosen_layout_goes_with_its_language() {
         assert!(user.contains(line), "{line}");
     }
 }
+
+#[test]
+fn a_build_writes_the_answer_file_with_its_scripts_beside_it() {
+    let b = build(&preset("office"));
+    let name = format!("winweaver-build-{}", std::process::id());
+    let dir = std::env::temp_dir().join(name);
+    std::fs::create_dir_all(&dir).unwrap();
+    let written = b.write(&dir.join("Office.xml")).unwrap();
+    let xml = std::fs::read_to_string(&written[0]);
+    let script = std::fs::read_to_string(dir.join(&b.scripts[0].0));
+    let _ = std::fs::remove_dir_all(&dir);
+    assert_eq!(written.len(), 1 + b.scripts.len());
+    assert_eq!(written[0], dir.join("Office.xml"));
+    assert_eq!(xml.unwrap(), b.xml);
+    let script = script.unwrap();
+    assert!(script.contains("\r\n"));
+    assert!(!script.replace("\r\n", "").contains('\n'));
+}

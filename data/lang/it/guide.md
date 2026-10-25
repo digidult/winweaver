@@ -274,13 +274,22 @@ in `logs/` indica con che cosa disegna la finestra.
 | `--detailed-log` | Con `--mcp`: il log conserva ogni richiesta e risposta per intero, senza password, chiavi e token |
 | `--version` | Stampa la versione |
 | `--check-catalog` | Carica il catalogo integrato con le sue traduzioni e stampa i loro problemi |
+| `--build PROFILE` | Verifica un profilo e genera il suo file di risposte senza la finestra: `autounattend.xml` in `output`, con accanto gli script che incorpora; PROFILE è un file `.wwprofile`, una preimpostazione (`Office`, `Strict`, `Laptop`, `Home`) o il nome di un profilo di `profiles/`; un errore della verifica ferma la generazione |
+| `--import-admx SOURCE` | Importa modelli di criteri come Impostazioni, Modelli di criteri: `system` (i modelli di questo Windows), una cartella di file ADMX, un file `.admx` con gli ADML delle cartelle delle sue lingue, un archivio `.zip` o un file `.wwcatalog`; il file di catalogo va in `imports/`, e la finestra e il server MCP lo caricano al loro prossimo avvio (da eseguire a finestra chiusa) |
+| `--export-catalog SOURCE` | Scrive un file di catalogo (`.wwcatalog`) come Esporta in Impostazioni, Modelli di criteri: di un'importazione per il suo id (il nome del suo file in `imports/`), o di una sorgente di `--import-admx` letta senza importarla; `<id>.wwcatalog` in `output` |
+| `--read-pc` | Senza `--mcp`: legge questo PC in un nuovo profilo con il nome del computer, come Questo PC, Leggi questo PC, e lo salva in `profiles/`; con un file `.xml` in `--out` scrive invece il file di risposte di quel profilo; le funzionalità e le capacità di Windows vengono lette solo quando il programma è eseguito come amministratore |
+| `--base PROFILE` | Con `--read-pc`: il profilo da cui parte la lettura, indicato come per `--build`; per impostazione predefinita la preimpostazione Office |
+| `--diff A B` | Scrive le differenze dal profilo A al profilo B come file di differenze, `A-vs-B.wwdiff` in `profiles/`; A e B si indicano come per `--build` |
 | `--script KIND FILE` | Scrive senza la finestra lo script autonomo di un profilo (`.wwprofile`) o di una differenza (`.wwdiff`): `apply`, `revert` (ritorno ai valori predefiniti di Windows) o `audit`; accanto a uno script di applicazione o di ritorno va `Undo-Apply.ps1` |
 | `--reg KIND FILE` | Scrive il file di registro dell'applicazione (`apply`) o del ritorno ai valori predefiniti (`revert`) di un profilo o di una differenza |
 | `--only IDS` | Con `--script` o `--reg`: solo queste regole o gruppi, i loro id separati da virgole |
-| `--out FOLDER` | Con `--script` o `--reg`: la cartella dei file, per impostazione predefinita `output` accanto al programma |
+| `--out FILE` | Con `--build`, `--export-catalog`, `--read-pc`, `--diff`, `--script` o `--reg`: il file da scrivere, quando il valore termina con l'estensione che il comando scrive (`.xml`, `.wwcatalog`, `.wwprofile`, `.wwdiff`, `.ps1`, `.reg`); qualsiasi altro valore è una cartella, creata se manca, per il file con il suo nome abituale; `Undo-Apply.ps1` e gli script del file di risposte vanno accanto al file; senza `--out` i file vanno in `output` accanto al programma (`profiles/` per `--read-pc` e `--diff`) |
 | `--help` | Stampa l'elenco dei parametri |
 | `--smoke-window` | Apre una piccola finestra, disegna due fotogrammi e stampa con che cosa sono stati disegnati (anche con `--renderer`): un controllo della grafica |
 | `--elevated-apply PLAN DIGEST` | La finestra avvia così se stessa per applicare un piano confermato come amministratore; non va avviato a mano |
+
+Un comando che scrive file nomina ogni file scritto e termina con il codice 0; un uso errato dei parametri
+termina con il codice 2, un errore con 1, e il motivo viene stampato.
 
 La modalità e il permesso di leggere questo PC si danno a ogni avvio e non vengono mai salvati. I messaggi
 vanno nella console da cui è stato avviato il programma e in `logs/`.

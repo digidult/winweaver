@@ -172,10 +172,11 @@ the menu Compare of a profile compares with each of them; the archive also bring
 
 ```
 WinWeaver/
-├── winweaver.exe              the window, the MCP server (also without the window, --mcp) and the
-│                              elevated helper of the native apply
+├── winweaver.exe              the window, the MCP server (also without the window, --mcp), the
+│                              command line functions (--build, --import-admx, --read-pc, ...) and
+│                              the elevated helper of the native apply
 ├── README.md                  for the user (package/README.md)
-├── winweaver.settings.json    written by the window
+├── winweaver.settings.json    written by the window (and by --import-admx, which names its import)
 ├── bookmarks.wwmarks          created at the first bookmark
 ├── profiles/                  the presets as files; the user's profiles (the default folder of Open and Save)
 ├── lang/<code>/               ui.json and guide.md: a language added or overriding a built-in one

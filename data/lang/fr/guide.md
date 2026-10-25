@@ -289,13 +289,22 @@ démarrage. Le journal de `logs/` indique avec quoi la fenêtre dessine.
 | `--detailed-log` | Avec `--mcp` : le journal garde chaque requête et réponse en entier, sans mots de passe, clés ni jetons |
 | `--version` | Affiche la version |
 | `--check-catalog` | Charge le catalogue intégré avec ses traductions et affiche leurs problèmes |
+| `--build PROFILE` | Vérifie un profil et génère son fichier de réponses sans la fenêtre : `autounattend.xml` dans `output`, avec à côté les scripts qu'il intègre ; PROFILE est un fichier `.wwprofile`, un préréglage (`Office`, `Strict`, `Laptop`, `Home`) ou le nom d'un profil de `profiles/` ; une erreur de la vérification arrête la génération |
+| `--import-admx SOURCE` | Importe des modèles de stratégie comme le fait Paramètres, Modèles de stratégie : `system` (les modèles de ce Windows), un dossier de fichiers ADMX, un fichier `.admx` avec les ADML des dossiers de ses langues, une archive `.zip` ou un fichier `.wwcatalog` ; le fichier de catalogue va dans `imports/`, et la fenêtre et le serveur MCP le chargent à leur prochain démarrage (à lancer fenêtre fermée) |
+| `--export-catalog SOURCE` | Écrit un fichier de catalogue (`.wwcatalog`) comme le fait Exporter dans Paramètres, Modèles de stratégie : d'une importation par son identifiant (le nom de son fichier dans `imports/`), ou d'une source de `--import-admx` lue sans l'importer ; `<id>.wwcatalog` dans `output` |
+| `--read-pc` | Sans `--mcp` : lit ce PC dans un nouveau profil au nom de l'ordinateur, comme Ce PC, Lire ce PC, et l'enregistre dans `profiles/` ; avec un fichier `.xml` dans `--out`, écrit à la place le fichier de réponses de ce profil ; les fonctionnalités et capacités de Windows ne sont lues que si le programme s'exécute en tant qu'administrateur |
+| `--base PROFILE` | Avec `--read-pc` : le profil dont part la lecture, donné comme pour `--build` ; le préréglage Office par défaut |
+| `--diff A B` | Écrit les différences du profil A au profil B dans un fichier de différences, `A-vs-B.wwdiff` dans `profiles/` ; A et B sont donnés comme pour `--build` |
 | `--script KIND FILE` | Écrit sans la fenêtre le script autonome d'un profil (`.wwprofile`) ou d'une différence (`.wwdiff`) : `apply`, `revert` (retour aux valeurs par défaut de Windows) ou `audit` ; un script d'application ou de retour reçoit `Undo-Apply.ps1` à côté de lui |
 | `--reg KIND FILE` | Écrit le fichier de registre de l'application (`apply`) ou du retour aux valeurs par défaut (`revert`) d'un profil ou d'une différence |
 | `--only IDS` | Avec `--script` ou `--reg` : seulement ces règles ou groupes, leurs identifiants séparés par des virgules |
-| `--out FOLDER` | Avec `--script` ou `--reg` : le dossier des fichiers, `output` à côté du programme par défaut |
+| `--out FILE` | Avec `--build`, `--export-catalog`, `--read-pc`, `--diff`, `--script` ou `--reg` : le fichier à écrire, quand la valeur se termine par l'extension que la commande écrit (`.xml`, `.wwcatalog`, `.wwprofile`, `.wwdiff`, `.ps1`, `.reg`) ; toute autre valeur est un dossier, créé s'il manque, pour le fichier de son nom habituel ; `Undo-Apply.ps1` et les scripts du fichier de réponses vont à côté du fichier ; sans `--out`, les fichiers vont dans `output` à côté du programme (`profiles/` pour `--read-pc` et `--diff`) |
 | `--help` | Affiche la liste des paramètres |
 | `--smoke-window` | Ouvre une petite fenêtre, dessine deux images et affiche avec quoi elles ont été dessinées (aussi avec `--renderer`) : une vérification de l'affichage |
 | `--elevated-apply PLAN DIGEST` | La fenêtre se démarre ainsi elle-même pour appliquer un plan confirmé en administrateur ; pas pour un démarrage à la main |
+
+Une commande qui écrit des fichiers nomme chaque fichier écrit et se termine avec le code 0 ; une mauvaise
+utilisation des paramètres se termine avec le code 2, un échec avec 1, et la raison est affichée.
 
 Le mode et l'autorisation de lire ce PC sont donnés à chaque démarrage et jamais enregistrés. Les messages
 vont dans la console d'où le programme a été démarré et dans `logs/`.

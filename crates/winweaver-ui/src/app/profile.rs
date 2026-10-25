@@ -177,17 +177,10 @@ impl WinWeaver {
             );
             return;
         }
-        let xml_path = dir.join("autounattend.xml");
-        if let Err(e) = write_file(&xml_path, build.xml.as_bytes()) {
+        let xml_path = dir.join(render::ANSWER_FILE);
+        if let Err(e) = build.write(&xml_path) {
             shell.status = trf("Build: {e}", &[("e", &e)]);
             return;
-        }
-        for (name, text) in &build.scripts {
-            let text = text.replace("\r\n", "\n").replace('\n', "\r\n");
-            if let Err(e) = write_file(&dir.join(name), text.as_bytes()) {
-                shell.status = trf("Build: {e}", &[("e", &e)]);
-                return;
-            }
         }
         shell.status = trf(
             "Built {path} ({rules} rules, {scripts} scripts, {warnings} warnings)",
