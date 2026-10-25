@@ -5,8 +5,9 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
+use ww::clock::Instant;
 use ww::eframe::egui::{
     self, Galley, Key, Modifiers, text::CCursor, text::CCursorRange, text_edit::TextEditState,
 };

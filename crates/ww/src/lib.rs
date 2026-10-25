@@ -36,6 +36,7 @@ pub mod widgets;
 // The crates a program on WW names in its own code: egui through eframe, the file dialogs.
 pub use eframe;
 pub use rfd;
+pub use ww_base::clock;
 
 pub use commands::{Command, Item, MenuButton};
 pub use doc::{Document, Draft, DraftState, Scrolled, Search, matches_words, remember_search};

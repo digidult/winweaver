@@ -2,9 +2,10 @@
 //! runs, how long it has taken, a Stop for the work that can stop; folded, a small spinner
 //! with the count of the works.
 
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use eframe::egui::{self, Align2};
+use ww_base::clock::Instant;
 
 use super::{App, ShellAct, Window};
 use crate::i18n::{tr, trf};

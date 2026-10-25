@@ -1,6 +1,8 @@
-//! The current time as an ISO 8601 text in UTC, without a date crate.
+//! The current time as an ISO 8601 text in UTC, without a date crate, and the clock types every
+//! crate of W# takes: `std::time` natively, the clock of the browser on wasm32, where the ones of
+//! `std` panic.
 
-use std::time::{SystemTime, UNIX_EPOCH};
+pub use web_time::{Instant, SystemTime, UNIX_EPOCH};
 
 /// `2026-10-14T13:45:10Z` for now, or an empty text when the clock is before 1970.
 pub fn now_utc_iso() -> String {

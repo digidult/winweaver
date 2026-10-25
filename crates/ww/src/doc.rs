@@ -71,7 +71,7 @@ pub struct Draft {
 pub struct DraftState {
     pub key: String,
     written: Option<u64>,
-    checked: Option<std::time::Instant>,
+    checked: Option<ww_base::clock::Instant>,
 }
 
 impl DraftState {
@@ -99,7 +99,7 @@ impl DraftState {
         if !all && self.checked.is_some_and(|t| t.elapsed() < delay) {
             return false;
         }
-        self.checked = Some(std::time::Instant::now());
+        self.checked = Some(ww_base::clock::Instant::now());
         true
     }
 

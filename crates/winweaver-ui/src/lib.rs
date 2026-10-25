@@ -147,7 +147,7 @@ pub struct ProfileDoc {
     /// The name of the draft file of the unsaved changes.
     pub draft_key: String,
     /// When the profile last changed and has no draft yet.
-    changed: Option<std::time::Instant>,
+    changed: Option<clock::Instant>,
     pub search: Search,
     /// The selected row is scrolled to the middle at the next frame (after a search).
     pub reveal: bool,
@@ -225,7 +225,7 @@ impl ProfileDoc {
     fn refresh(&mut self, catalog: &Catalog) {
         self.resolution = resolver::resolve(catalog, &self.profile);
         self.dirty = true;
-        self.changed = Some(std::time::Instant::now());
+        self.changed = Some(clock::Instant::now());
     }
 }
 
@@ -279,7 +279,7 @@ pub struct WinWeaver {
     importing: Option<std::sync::mpsc::Receiver<Result<CatalogFile, String>>>,
     /// When each kind of work in the background was first seen running, for the panel of the
     /// work.
-    jobs_since: std::collections::HashMap<&'static str, std::time::Instant>,
+    jobs_since: std::collections::HashMap<&'static str, clock::Instant>,
     /// The folder of the catalog files of the imports.
     imports_dir: PathBuf,
     /// The registry the registry tab reads and changes: of this PC, or in memory for the tests.

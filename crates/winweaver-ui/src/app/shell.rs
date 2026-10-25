@@ -493,7 +493,7 @@ impl WinWeaver {
             if running {
                 self.jobs_since
                     .entry(kind)
-                    .or_insert_with(std::time::Instant::now);
+                    .or_insert_with(clock::Instant::now);
             } else {
                 self.jobs_since.remove(kind);
             }

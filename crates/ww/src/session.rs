@@ -50,8 +50,8 @@ pub fn key_for_path(path: &Path) -> String {
 pub fn new_key() -> String {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let start = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
+    let start = ww_base::clock::SystemTime::now()
+        .duration_since(ww_base::clock::UNIX_EPOCH)
         .map(|d| d.as_millis())
         .unwrap_or(0);
     format!("n-{start}-{n}")
