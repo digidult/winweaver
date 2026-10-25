@@ -340,12 +340,13 @@
           "type": "string",
           "title": "Manufacturer (the organisation)",
           "default": "",
-          "required": false
+          "required": false,
+          "max_length": 256
         },
-        "model": {"type": "string", "title": "Model (any text)", "default": "", "required": false},
-        "support_phone": {"type": "string", "title": "Support phone", "default": "", "required": false},
-        "support_hours": {"type": "string", "title": "Support hours", "default": "", "required": false},
-        "support_url": {"type": "string", "title": "Support site (URL)", "default": "", "required": false}
+        "model": {"type": "string", "title": "Model (any text)", "default": "", "required": false, "max_length": 256},
+        "support_phone": {"type": "string", "title": "Support phone", "default": "", "required": false, "max_length": 256},
+        "support_hours": {"type": "string", "title": "Support hours", "default": "", "required": false, "max_length": 256},
+        "support_url": {"type": "string", "title": "Support site (URL)", "default": "", "required": false, "max_length": 2083}
       },
       "actions": [
         {

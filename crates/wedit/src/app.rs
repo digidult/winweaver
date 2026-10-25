@@ -9,7 +9,7 @@ use ww::eframe::egui::{self, Key, Modifiers};
 use ww::i18n::{tr, trf};
 use ww::keys::{self, Keys};
 use ww::mdview::{self, MdDoc};
-use ww::shell::menu_item;
+use ww::shell::{menu_item, sub_menu};
 use ww::{App, Document, Draft, Search, Shell, ShellAct, ShellDoc, icons, session};
 
 use crate::textdoc::TextDoc;
@@ -476,6 +476,7 @@ impl App for Wedit {
     fn menu(&self, shell: &Shell<Self>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         menu_item(
             ui,
+            icons::NEW,
             tr("New"),
             keys::NEW.text,
             Act::Shell(ShellAct::New),
@@ -483,16 +484,18 @@ impl App for Wedit {
         );
         menu_item(
             ui,
+            icons::OPEN,
             tr("Open..."),
             keys::OPEN.text,
             Act::Shell(ShellAct::Open),
             acts,
         );
         ui.add_enabled_ui(!shell.settings.recent.is_empty(), |ui| {
-            ui.menu_button(tr("Open recent"), |ui| {
+            sub_menu(ui, icons::RECENT, tr("Open recent"), |ui| {
                 for path in &shell.settings.recent {
                     menu_item(
                         ui,
+                        icons::PAGE,
                         &path.display().to_string(),
                         "",
                         Act::Shell(ShellAct::OpenPath(path.clone())),
@@ -503,6 +506,7 @@ impl App for Wedit {
         });
         menu_item(
             ui,
+            icons::SAVE,
             tr("Save"),
             keys::SAVE.text,
             Act::Shell(ShellAct::Save),
@@ -510,6 +514,7 @@ impl App for Wedit {
         );
         menu_item(
             ui,
+            icons::SAVE,
             tr("Save as..."),
             keys::SAVE_AS.text,
             Act::Shell(ShellAct::SaveAs),
@@ -517,6 +522,7 @@ impl App for Wedit {
         );
         menu_item(
             ui,
+            icons::CLOSE,
             tr("Close tab"),
             keys::CLOSE.text,
             Act::Shell(ShellAct::CloseTab(shell.active, false)),
@@ -525,13 +531,28 @@ impl App for Wedit {
         ui.separator();
         menu_item(
             ui,
+            icons::GEAR,
             tr("Settings"),
             keys::SETTINGS.text,
             Act::Shell(ShellAct::OpenSettings),
             acts,
         );
-        menu_item(ui, tr("About"), "", Act::Shell(ShellAct::About), acts);
-        menu_item(ui, tr("Exit"), "", Act::Shell(ShellAct::Exit), acts);
+        menu_item(
+            ui,
+            icons::INFO,
+            tr("About"),
+            "",
+            Act::Shell(ShellAct::About),
+            acts,
+        );
+        menu_item(
+            ui,
+            icons::EXIT,
+            tr("Exit"),
+            "",
+            Act::Shell(ShellAct::Exit),
+            acts,
+        );
     }
 
     /// The position of the cursor and the state of the text.

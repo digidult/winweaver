@@ -140,6 +140,8 @@ pub enum ProfileAct {
     ClearMessages,
     /// Shows or hides the description panel.
     Fold,
+    /// Shows only the rules that are on in the tree, or every rule again.
+    OnlyOn,
 }
 
 /// The acts of the files of WinWeaver: a new profile, the pages of the program.
@@ -275,6 +277,17 @@ pub enum CatalogAct {
     Expand(String, bool),
     /// Imports the catalog file of the active tab.
     ImportOpen,
+    /// Selects a row of the comparison in front.
+    CompareSelect(crate::catalogdiff::CmpKey),
+    /// Opens or folds a category of the comparison in front.
+    CompareExpand(String, bool),
+    /// Shows or hides the policies of a side of the comparison: only in the first, only in
+    /// the second, different.
+    CompareShow(usize),
+    /// Saves the report of the comparison in front as a Markdown file.
+    CompareSave,
+    /// Opens the report of the comparison in front as a page.
+    ComparePage,
 }
 
 /// The acts of the imports of policy templates.

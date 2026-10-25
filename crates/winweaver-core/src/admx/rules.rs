@@ -346,6 +346,7 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
             Element::Text {
                 expandable,
                 required,
+                max_length,
                 ..
             } => {
                 let default = p.defaults.get(eid).cloned().unwrap_or_default();
@@ -362,6 +363,7 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
                         title: cut(&label, 200),
                         default: default.clone(),
                         required: *required && !default.is_empty(),
+                        max_length: max_length.filter(|&m| default.chars().count() <= m),
                     },
                 )
             }

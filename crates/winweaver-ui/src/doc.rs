@@ -7,6 +7,7 @@ use std::path::Path;
 use ww::{Draft, Scrolled, ShellDoc};
 
 use crate::cataledit::EditorDoc;
+use crate::catalogdiff::CompareDoc;
 use crate::catalogview::CatalogDoc;
 use crate::diffview::DiffDoc;
 use crate::i18n::tr;
@@ -49,6 +50,7 @@ pub enum DocKind {
     RegFile,
     Users,
     Pol,
+    Compare,
 }
 
 impl DocKind {
@@ -67,6 +69,7 @@ impl DocKind {
             DocKind::RegFile => icons::PAGE,
             DocKind::Users => icons::PEOPLE,
             DocKind::Pol => icons::SCRIPT,
+            DocKind::Compare => icons::COMPARE,
         }
     }
 
@@ -82,6 +85,7 @@ impl DocKind {
             DocKind::RegFile => "Search the keys, values and comments (Ctrl+F)",
             DocKind::Users => "Search the accounts (Ctrl+F)",
             DocKind::Pol => "Search the keys, values and data (Ctrl+F)",
+            DocKind::Compare => "Search policies (Ctrl+F)",
             DocKind::Settings | DocKind::Theme | DocKind::Registry | DocKind::CatalogEdit => "",
         }
     }
@@ -151,6 +155,8 @@ pub enum Doc {
     Users(Box<UsersDoc>),
     /// A Group Policy file (`.pol`).
     Pol(Box<PolDoc>),
+    /// Two catalogs compared policy by policy.
+    Compare(Box<CompareDoc>),
     /// A document of the window itself: the settings, the editor of a theme.
     Shell(ShellDoc),
 }
@@ -169,6 +175,7 @@ impl Doc {
             Doc::RegFile(_) => DocKind::RegFile,
             Doc::Users(_) => DocKind::Users,
             Doc::Pol(_) => DocKind::Pol,
+            Doc::Compare(_) => DocKind::Compare,
             Doc::Shell(ShellDoc::Settings(_)) => DocKind::Settings,
             Doc::Shell(ShellDoc::Theme(_)) => DocKind::Theme,
         }
@@ -188,6 +195,7 @@ impl Doc {
             Doc::RegFile(d) => &**d,
             Doc::Users(d) => &**d,
             Doc::Pol(d) => &**d,
+            Doc::Compare(d) => &**d,
             Doc::Shell(d) => d,
         }
     }
@@ -205,6 +213,7 @@ impl Doc {
             Doc::RegFile(d) => &mut **d,
             Doc::Users(d) => &mut **d,
             Doc::Pol(d) => &mut **d,
+            Doc::Compare(d) => &mut **d,
             Doc::Shell(d) => d,
         }
     }
@@ -252,6 +261,7 @@ impl Tab for Doc {
             Doc::Catalog(c) => (&mut c.reveal, &mut c.follow),
             Doc::Diff(d) => (&mut d.reveal, &mut d.follow),
             Doc::Bookmarks(d) => (&mut d.reveal, &mut d.follow),
+            Doc::Compare(d) => (&mut d.reveal, &mut d.follow),
             _ => return,
         };
         *follow_flag = follow;
@@ -421,6 +431,16 @@ impl Tab for CatalogDoc {
 
     fn path(&self) -> Option<&Path> {
         self.path.as_deref()
+    }
+
+    fn search(&mut self) -> Option<&mut Search> {
+        Some(&mut self.search)
+    }
+}
+
+impl Tab for CompareDoc {
+    fn title(&self) -> String {
+        self.title.clone()
     }
 
     fn search(&mut self) -> Option<&mut Search> {

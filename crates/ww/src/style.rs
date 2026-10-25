@@ -10,6 +10,8 @@ use eframe::egui::{
     Stroke, StrokeKind,
 };
 
+use crate::icons;
+
 /// The colours of the interface, the tokens of the palette.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Palette {
@@ -915,17 +917,12 @@ pub fn selectable_text(ui: &mut egui::Ui, id: impl std::hash::Hash + std::fmt::D
         .unwrap_or_default();
     let galley = output.galley.clone();
     output.response.context_menu(|ui| {
-        if ui
-            .add_enabled(
-                !selected.is_empty(),
-                egui::Button::new(crate::i18n::tr("Copy")),
-            )
-            .clicked()
-        {
+        use crate::i18n::tr;
+        use crate::shell::menu_entry;
+        if menu_entry(ui, icons::CLIPBOARD, tr("Copy"), "", !selected.is_empty()) {
             ui.ctx().copy_text(selected.clone());
-            ui.close();
         }
-        if ui.button(crate::i18n::tr("Select all")).clicked() {
+        if menu_entry(ui, icons::SELECT_ALL, tr("Select all"), "", true) {
             if let Some(mut state) = egui::TextEdit::load_state(ui.ctx(), id) {
                 state
                     .cursor
@@ -935,11 +932,9 @@ pub fn selectable_text(ui: &mut egui::Ui, id: impl std::hash::Hash + std::fmt::D
                 state.store(ui.ctx(), id);
             }
             ui.memory_mut(|m| m.request_focus(id));
-            ui.close();
         }
-        if ui.button(crate::i18n::tr("Copy all")).clicked() {
+        if menu_entry(ui, icons::COPY_ALL, tr("Copy all"), "", true) {
             ui.ctx().copy_text(text.to_owned());
-            ui.close();
         }
     });
 }
@@ -953,9 +948,9 @@ pub fn copy_label(ui: &mut egui::Ui, text: RichText, wrap: bool) -> egui::Respon
     }
     let response = ui.add(label);
     response.context_menu(|ui| {
-        if ui.button(crate::i18n::tr("Copy")).clicked() {
+        let copy = crate::i18n::tr("Copy");
+        if crate::shell::menu_entry(ui, icons::CLIPBOARD, copy, "", true) {
             ui.ctx().copy_text(plain.clone());
-            ui.close();
         }
     });
     response

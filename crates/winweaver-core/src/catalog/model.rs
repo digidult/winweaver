@@ -118,6 +118,10 @@ pub enum Param {
         /// `false` lets the text be empty.
         #[serde(default = "yes")]
         required: bool,
+        /// The most characters the text may have (the limit of the answer file or the
+        /// template), none for no limit of its own.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max_length: Option<usize>,
     },
     /// A list of texts: the items of a `reg-list`, or the lines of a multi-line value written by a
     /// `reg` action whose value is the parameter alone. Empty items are left out.

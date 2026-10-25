@@ -2,7 +2,7 @@
 //! name their keys, and every key text lives here once.
 
 use winweaver_core::users::Operation;
-use ww::commands::{cmd, cmd_if, keyed, when};
+use ww::commands::{cmd, cmd_if, keyed, toggle, when};
 
 use crate::i18n::tr;
 use crate::{
@@ -82,6 +82,12 @@ fn save() -> Item {
     keyed(icons::SAVE, tr("Save"), &keys::SAVE, ShellAct::Save)
 }
 
+/// The switch of a profile tab that shows only the rules that are on.
+fn only_on(shell: &Shell<WinWeaver>) -> Item {
+    let on = matches!(shell.active_doc(), Some(Doc::Profile(d)) if d.only_on);
+    toggle(icons::ONLY_ON, tr("Only on"), on, ProfileAct::OnlyOn)
+}
+
 fn save_as() -> Item {
     keyed(icons::SAVE, tr("Save as"), &keys::SAVE_AS, ShellAct::SaveAs)
 }
@@ -108,7 +114,9 @@ impl WinWeaver {
                     save(),
                     Item::Separator,
                     keyed(icons::CHECK, tr("Check"), &keys::CHECK, ProfileAct::Check),
-                    keyed(icons::GEAR, tr("Build"), &keys::BUILD, ProfileAct::Build),
+                    keyed(icons::HAMMER, tr("Build"), &keys::BUILD, ProfileAct::Build),
+                    Item::Separator,
+                    only_on(shell),
                 ],
                 Some(Doc::Shell(ShellDoc::Settings(_))) => Vec::new(),
                 _ => vec![new_profile(), open()],
@@ -121,7 +129,8 @@ impl WinWeaver {
                 save(),
                 Item::Separator,
                 keyed(icons::CHECK, tr("Check"), &keys::CHECK, ProfileAct::Check),
-                keyed(icons::GEAR, tr("Build"), &keys::BUILD, ProfileAct::Build),
+                keyed(icons::HAMMER, tr("Build"), &keys::BUILD, ProfileAct::Build),
+                only_on(shell),
                 Item::Separator,
                 Menu::ThisPc.item(),
                 Menu::CompareProfile.item(),
@@ -150,9 +159,21 @@ impl WinWeaver {
                 ),
             ],
             Some(Doc::Markdown(_)) | Some(Doc::Bookmarks(_)) => vec![open()],
+            Some(Doc::Compare(_)) => vec![
+                keyed(
+                    icons::SAVE,
+                    tr("Save the report"),
+                    &keys::SAVE,
+                    CatalogAct::CompareSave,
+                ),
+                cmd(icons::BOOK, tr("As a page"), CatalogAct::ComparePage),
+            ],
             Some(Doc::Mcp(_)) => {
                 let running = self.mcp.run.is_some();
                 vec![
+                    open(),
+                    save_as(),
+                    Item::Separator,
                     when(icons::START, tr("Start"), !running, McpAct::Start),
                     when(icons::STOP, tr("Stop"), running, McpAct::Stop),
                 ]

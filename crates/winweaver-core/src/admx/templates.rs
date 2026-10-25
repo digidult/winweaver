@@ -58,6 +58,8 @@ pub(super) enum Element {
         value_name: String,
         expandable: bool,
         required: bool,
+        /// The `maxLength` of the element, none when absent or not a number above zero.
+        max_length: Option<usize>,
     },
     /// The values of a key; `prefix` absent: the items name the values, empty or set: the prefix
     /// and a number; `explicit`: `name=value` items.
@@ -311,6 +313,10 @@ fn elements_of(node: Option<&Node>, res: &[(String, Resources)]) -> Result<Vec<E
                 value_name: value_name()?,
                 expandable: e.attr("expandable") == Some("true"),
                 required: e.attr("required") == Some("true"),
+                max_length: e
+                    .attr("maxLength")
+                    .and_then(|v| v.trim().parse::<usize>().ok())
+                    .filter(|&n| n > 0),
                 id,
             },
             "list" => Element::List {

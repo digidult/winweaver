@@ -19,6 +19,8 @@ pub struct Command<T> {
     pub keys: Option<&'static Keys>,
     /// What a click does; `None` disables the button.
     pub act: Option<T>,
+    /// A switch that is on: the button is drawn pressed.
+    pub pressed: bool,
 }
 
 /// A button of the command bar that opens a menu.
@@ -39,6 +41,7 @@ pub fn cmd<T>(icon: &'static str, label: &'static str, act: impl Into<T>) -> Ite
         label,
         keys: None,
         act: Some(act.into()),
+        pressed: false,
     })
 }
 
@@ -49,6 +52,23 @@ pub fn cmd_if<T>(icon: &'static str, label: &'static str, act: Option<T>) -> Ite
         label,
         keys: None,
         act,
+        pressed: false,
+    })
+}
+
+/// A switch of the command bar: a click turns it on or off, and it is drawn pressed when on.
+pub fn toggle<T>(
+    icon: &'static str,
+    label: &'static str,
+    pressed: bool,
+    act: impl Into<T>,
+) -> Item<T> {
+    Item::Command(Command {
+        icon,
+        label,
+        keys: None,
+        act: Some(act.into()),
+        pressed,
     })
 }
 
@@ -74,6 +94,7 @@ pub fn keyed<T>(
         label,
         keys: Some(keys),
         act: Some(act.into()),
+        pressed: false,
     })
 }
 

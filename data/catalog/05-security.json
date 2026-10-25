@@ -363,7 +363,7 @@
       "verify": "Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon' -Name AutoAdminLogon, DefaultUserName, AutoLogonCount",
       "rollback": "AutoAdminLogon 0 and delete AutoLogonCount; DefaultUserName stays (Windows keeps the last account there).",
       "params": {
-        "account": {"type": "string", "title": "Account name (an account without a password)", "default": "User"},
+        "account": {"type": "string", "title": "Account name (an account without a password)", "default": "User", "max_length": 20},
         "count": {
           "type": "int",
           "title": "Automatic sign-ins before the sign-in screen returns",

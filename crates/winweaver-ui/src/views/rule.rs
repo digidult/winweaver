@@ -327,15 +327,10 @@ pub(crate) fn rule_detail(
         block(ui, |ui| {
             style::section_title(ui, tr("Parameters"));
             ui.add_space(4.0);
-            egui::Grid::new(("params", rule.id.as_str()))
-                .num_columns(3)
-                .spacing([14.0, 8.0])
-                .show(ui, |ui| {
-                    for (name, param) in &rule.params {
-                        param_editor(ui, catalog, texts, doc, rule, name, param, acts);
-                        ui.end_row();
-                    }
-                });
+            for (name, param) in &rule.params {
+                param_editor(ui, catalog, texts, doc, rule, name, param, acts);
+                ui.add_space(8.0);
+            }
         });
     }
     let on_pc = winweaver_core::thispc::exclusion(rule).is_none();
@@ -493,7 +488,15 @@ pub(crate) fn param_editor(
         .profile
         .param(catalog, &rule.id, name)
         .unwrap_or(Value::Null);
-    ui.label(ptitle(texts, rule, name));
+    // The title with the default above the field, so the field takes the width of the panel.
+    ui.horizontal_wrapped(|ui| {
+        ui.label(ptitle(texts, rule, name));
+        ui.label(style::muted(
+            ui,
+            trf("default: {value}", &[("value", &param.default_value())]),
+            11.0,
+        ));
+    });
     match param {
         Param::Enum { values, .. } => {
             let shown = values
@@ -502,7 +505,7 @@ pub(crate) fn param_editor(
                 .map_or_else(|| current.to_string(), |v| v.title.clone());
             egui::ComboBox::from_id_salt(format!("{}.{name}", rule.id))
                 .selected_text(shown)
-                .width((ui.available_width() - 120.0).max(160.0))
+                .width(ui.available_width().max(160.0))
                 .show_ui(ui, |ui| {
                     for v in values {
                         let chosen = check::same_value(&v.value, &current);
@@ -553,7 +556,7 @@ pub(crate) fn param_editor(
                     egui::TextEdit::multiline(&mut text)
                         .id_salt(format!("{}.{name}", rule.id))
                         .desired_rows(6)
-                        .desired_width((ui.available_width() - 24.0).clamp(360.0, 760.0))
+                        .desired_width(ui.available_width())
                         .hint_text(hint),
                 )
                 .changed()
@@ -572,27 +575,32 @@ pub(crate) fn param_editor(
                 )));
             }
         }
-        Param::Text { .. } => {
+        Param::Text { max_length, .. } => {
             let mut s = current.as_str().unwrap_or("").to_owned();
-            if ui
-                .add(
-                    egui::TextEdit::singleline(&mut s)
-                        .id_salt(format!("{}.{name}", rule.id))
-                        .desired_width((ui.available_width() - 24.0).clamp(240.0, 520.0)),
-                )
-                .changed()
-            {
+            let mut edit = egui::TextEdit::singleline(&mut s)
+                .id_salt(format!("{}.{name}", rule.id))
+                .desired_width(ui.available_width());
+            if let Some(max) = max_length {
+                edit = edit.char_limit(*max);
+            }
+            if ui.add(edit).changed() {
                 acts.push(Act::Profile(ProfileAct::SetParam(
                     rule.id.clone(),
                     name.to_owned(),
-                    Value::from(s),
+                    Value::from(s.clone()),
                 )));
+            }
+            if let Some(max) = max_length {
+                let count = s.chars().count();
+                ui.label(style::muted(
+                    ui,
+                    trf(
+                        "{count} of {max} characters",
+                        &[("count", &count), ("max", max)],
+                    ),
+                    11.0,
+                ));
             }
         }
     }
-    ui.label(style::muted(
-        ui,
-        trf("default: {value}", &[("value", &param.default_value())]),
-        11.0,
-    ));
 }

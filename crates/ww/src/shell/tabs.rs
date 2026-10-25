@@ -25,14 +25,47 @@ impl<A: App> Window<A> {
             });
             ui.add_space(4.0);
             let active = self.shell.active;
-            let last = self.shell.docs.len().saturating_sub(1);
-            let tabs: Vec<egui::Response> = self
-                .shell
-                .docs
-                .iter()
-                .enumerate()
-                .map(|(i, doc)| tab::<A>(ui, &p, i, i == active, last, doc, acts))
-                .collect();
+            let docs = &self.shell.docs;
+            let last = docs.len().saturating_sub(1);
+            // The row of the last frame: its active tab, its count of tabs and whether they were
+            // wider than the row. A new active tab or count scrolls the active one into view.
+            let row_id = egui::Id::new("ww-tab-row");
+            let before: Option<(usize, usize, bool)> = ui.data(|d| d.get_temp(row_id));
+            let overflow = before.is_some_and(|b| b.2);
+            let follow = before.is_none_or(|b| b.0 != active || b.1 != docs.len());
+            let buttons = if overflow { 2.0 } else { 1.0 };
+            let width = (ui.available_width() - buttons * (TAB_BUTTON + 2.0)).max(TAB_BUTTON);
+            use egui::containers::scroll_area::{ScrollBarVisibility, ScrollSource};
+            let shown = egui::ScrollArea::horizontal()
+                .id_salt("ww-tabs")
+                .max_width(width)
+                .scroll_bar_visibility(ScrollBarVisibility::AlwaysHidden)
+                .scroll_source(ScrollSource::MOUSE_WHEEL)
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        let tabs: Vec<egui::Response> = docs
+                            .iter()
+                            .enumerate()
+                            .map(|(i, doc)| tab::<A>(ui, &p, i, i == active, last, doc, acts))
+                            .collect();
+                        if follow && let Some(t) = tabs.get(active) {
+                            t.scroll_to_me(None);
+                        }
+                        // The wheel turns the row sideways.
+                        let wheel = ui.input(|i| i.smooth_scroll_delta);
+                        if wheel.x == 0.0
+                            && wheel.y != 0.0
+                            && ui.rect_contains_pointer(ui.clip_rect())
+                        {
+                            ui.scroll_with_delta(egui::vec2(wheel.y, 0.0));
+                        }
+                        tabs
+                    })
+                    .inner
+                });
+            let tabs = shown.inner;
+            let wider = shown.content_size.x > shown.inner_rect.width() + 0.5;
+            ui.data_mut(|d| d.insert_temp(row_id, (active, docs.len(), wider)));
             let rects: Vec<egui::Rect> = tabs.iter().map(|r| r.rect).collect();
             let pointer = ui.ctx().pointer_interact_pos();
             if let (Some(from), Some(pos)) = (tabs.iter().position(|r| r.dragged()), pointer) {
@@ -54,9 +87,23 @@ impl<A: App> Window<A> {
             if style::icon_button(ui, "+", tr(A::NEW_HINT), true, None).clicked() {
                 acts.push(ShellAct::New.into());
             }
+            if wider {
+                let all = style::icon_button(ui, icons::UNFOLDED, tr("All tabs"), true, None);
+                egui::Popup::menu(&all).show(|ui| {
+                    for (i, doc) in docs.iter().enumerate() {
+                        let title = doc.title();
+                        if menu_entry(ui, doc.icon(), &title, "", true) {
+                            acts.push(ShellAct::Activate(i).into());
+                        }
+                    }
+                });
+            }
         });
     }
 }
+
+/// The width of a button of the tab row (the menu, the new tab, the list of all tabs).
+const TAB_BUTTON: f32 = 30.0;
 
 /// A tab of the row: a click brings it to the front, a drag moves it, the right button opens a
 /// menu that moves or closes it.
@@ -156,30 +203,17 @@ fn tab<A: App>(
         acts.push(ShellAct::CloseTab(i, false).into());
     }
     response.context_menu(|ui| {
-        if ui
-            .add_enabled(
-                i > 0,
-                egui::Button::new(tr("Move the tab left (Ctrl+Shift+PgUp)")),
-            )
-            .clicked()
-        {
+        let left = tr("Move the tab left (Ctrl+Shift+PgUp)");
+        if menu_entry(ui, icons::BACK, left, "", i > 0) {
             acts.push(ShellAct::MoveTab(i, i - 1).into());
-            ui.close();
         }
-        if ui
-            .add_enabled(
-                i < last,
-                egui::Button::new(tr("Move the tab right (Ctrl+Shift+PgDn)")),
-            )
-            .clicked()
-        {
+        let right = tr("Move the tab right (Ctrl+Shift+PgDn)");
+        if menu_entry(ui, icons::FORWARD, right, "", i < last) {
             acts.push(ShellAct::MoveTab(i, i + 1).into());
-            ui.close();
         }
         ui.separator();
-        if ui.button(tr("Close (Ctrl+W)")).clicked() {
+        if menu_entry(ui, icons::CLOSE, tr("Close (Ctrl+W)"), "", true) {
             acts.push(ShellAct::CloseTab(i, false).into());
-            ui.close();
         }
     });
     let hint = doc.path().map(|p| p.display().to_string());
@@ -208,14 +242,79 @@ fn drop_place(rects: &[egui::Rect], from: usize, x: f32) -> (usize, f32) {
     (to, line)
 }
 
-/// An item of a menu: a text, the text of its keys and the act of a click.
-pub fn menu_item<T>(ui: &mut egui::Ui, text: &str, keys: &str, act: T, acts: &mut Vec<T>) {
-    let mut button = egui::Button::new(text);
+/// The size of the text of an icon of a menu, in the points of the layout.
+const MENU_ICON: f32 = 12.0;
+
+/// The side of the place of an icon of a menu.
+fn menu_icon_side(ui: &egui::Ui) -> f32 {
+    (style::size(ui, MENU_ICON) * 1.3).round()
+}
+
+/// An empty image of the size of an icon of a menu: it keeps the place the icon is painted on,
+/// so the texts of a menu line up whether an item has an icon or not.
+fn icon_place(ui: &egui::Ui) -> egui::Image<'static> {
+    let side = egui::vec2(menu_icon_side(ui), menu_icon_side(ui));
+    let place = egui::load::SizedTexture::new(egui::TextureId::default(), side);
+    egui::Image::new(place)
+        .fit_to_exact_size(side)
+        .tint(egui::Color32::TRANSPARENT)
+}
+
+/// Paints the icon of a menu item on the place `icon_place` kept at the left of its button.
+fn paint_menu_icon(ui: &egui::Ui, response: &egui::Response, icon: &str) {
+    if icon.is_empty() || !ui.is_rect_visible(response.rect) {
+        return;
+    }
+    let side = menu_icon_side(ui);
+    let center = egui::pos2(
+        response.rect.left() + ui.spacing().button_padding.x + side / 2.0,
+        response.rect.center().y,
+    );
+    let color = ui.style().interact(response).text_color();
+    let enabled = response.enabled();
+    style::paint_icon(ui, ui.painter(), center, icon, MENU_ICON, color, enabled);
+}
+
+/// An entry of a menu: an icon (empty for none), a text and the text of its keys, enabled or
+/// not; true when it was clicked, and the menu closes then.
+pub fn menu_entry(ui: &mut egui::Ui, icon: &str, text: &str, keys: &str, enabled: bool) -> bool {
+    let mut button = egui::Button::image_and_text(icon_place(ui), text);
     if !keys.is_empty() {
         button = button.shortcut_text(keys);
     }
-    if ui.add(button).clicked() {
-        acts.push(act);
+    let response = ui.add_enabled(enabled, button);
+    paint_menu_icon(ui, &response, icon);
+    let clicked = response.clicked();
+    if clicked {
         ui.close();
     }
+    clicked
+}
+
+/// An item of a menu: an icon (empty for none), a text, the text of its keys and the act of a
+/// click.
+pub fn menu_item<T>(
+    ui: &mut egui::Ui,
+    icon: &str,
+    text: &str,
+    keys: &str,
+    act: T,
+    acts: &mut Vec<T>,
+) {
+    if menu_entry(ui, icon, text, keys, true) {
+        acts.push(act);
+    }
+}
+
+/// A menu inside a menu, with an icon before its title like the items beside it.
+pub fn sub_menu<R>(
+    ui: &mut egui::Ui,
+    icon: &str,
+    text: &str,
+    add_contents: impl FnOnce(&mut egui::Ui) -> R,
+) -> Option<R> {
+    let place = icon_place(ui);
+    let inner = ui.menu_image_text_button(place, text, add_contents);
+    paint_menu_icon(ui, &inner.response, icon);
+    inner.inner
 }

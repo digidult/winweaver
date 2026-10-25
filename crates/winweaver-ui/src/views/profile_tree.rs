@@ -23,7 +23,8 @@ pub(crate) fn tree_rows(
         return;
     };
     let rules = catalog.rules_under(gid);
-    if !words.is_empty() && !rules.iter().any(|r| matches(texts, r, words)) {
+    let filtered = !words.is_empty() || doc.only_on;
+    if filtered && !rules.iter().any(|r| doc.shows(texts, r, words)) {
         return;
     }
     let total = rules.len();
@@ -31,7 +32,7 @@ pub(crate) fn tree_rows(
         .iter()
         .filter(|r| doc.resolution.shown_on(&r.id))
         .count();
-    let open = !words.is_empty() || doc.expanded.contains(gid);
+    let open = filtered || doc.expanded.contains(gid);
     let check = if total > 0 && on == total {
         tree::Check::On
     } else if on > 0 {
@@ -82,7 +83,7 @@ pub(crate) fn tree_rows(
     }
     let group_selected = matches!(&doc.sel, Sel::Group(g) if g == gid);
     for rule in catalog.rules_in(gid) {
-        if !matches(texts, rule, words) {
+        if !doc.shows(texts, rule, words) {
             continue;
         }
         let linked = linked_rule(doc, rule).is_some();
@@ -128,12 +129,12 @@ pub(crate) fn unknown_rows(rows: &mut Vec<tree::Row<Key>>, doc: &ProfileDoc, wor
     let unknown = &doc.profile.unknown;
     let shown: Vec<(&String, &Value)> = unknown
         .iter()
-        .filter(|(id, _)| matches_words(id, words))
+        .filter(|(id, choice)| matches_words(id, words) && (!doc.only_on || unknown_on(choice)))
         .collect();
     if unknown.is_empty() || shown.is_empty() {
         return;
     }
-    let open = !words.is_empty() || doc.expanded.contains(UNKNOWN_GROUP);
+    let open = !words.is_empty() || doc.only_on || doc.expanded.contains(UNKNOWN_GROUP);
     rows.push(tree::Row {
         key: (Sel::Group(UNKNOWN_GROUP.to_owned()), None),
         depth: 0,

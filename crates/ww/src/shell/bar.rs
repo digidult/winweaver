@@ -22,8 +22,15 @@ impl<A: App> Window<A> {
                         None => c.label.to_owned(),
                     };
                     let enabled = c.act.is_some();
+                    // The background of a switch that is on, painted under the button.
+                    let back = ui.painter().add(egui::Shape::Noop);
                     let button =
                         style::tool_button(ui, c.icon, c.label, &hint, enabled, compact, false);
+                    if c.pressed {
+                        let p = style::palette(ui);
+                        let shape = egui::Shape::rect_filled(button.rect, 6, p.sel);
+                        ui.painter().set(back, shape);
+                    }
                     if button.clicked()
                         && let Some(act) = c.act
                     {

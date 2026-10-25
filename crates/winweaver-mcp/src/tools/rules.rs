@@ -13,11 +13,14 @@ use crate::{Server, State};
 
 pub(super) const LIST_GROUPS: Tool = Tool {
     name: "list_groups",
-    description: "The groups under a parent group (the roots without one), with the counts of rules and of rules in effect in the current profile.",
+    description: "The groups under a parent group (the roots without one), with the counts of rules, of rules in effect and of rules on in the current profile.",
     needs: Needs::READ,
     schema: || {
         schema(
-            json!({ "parent": s("A group id; leave it out for the roots") }),
+            json!({
+                "parent": s("A group id; leave it out for the roots"),
+                "only_on": { "type": "boolean", "description": "Only the groups that hold a rule that is on in the current profile" },
+            }),
             &[],
         )
     },
@@ -33,6 +36,7 @@ pub(super) const LIST_RULES: Tool = Tool {
             json!({
                 "group": s("A group id"),
                 "on": { "type": "boolean", "description": "Only the rules in effect (true) or not (false)" },
+                "only_on": { "type": "boolean", "description": "Only the rules that are on in the current profile, chosen on or linked to a built-in rule that is, as the switch Only on of the window shows them" },
                 "offset": { "type": "integer", "minimum": 0 },
                 "limit": { "type": "integer", "minimum": 1, "maximum": LIST_LIMIT },
             }),
@@ -58,6 +62,7 @@ pub(super) const SEARCH_RULES: Tool = Tool {
         schema(
             json!({
                 "query": s("Words to look for"),
+                "only_on": { "type": "boolean", "description": "Only the rules that are on in the current profile, chosen on or linked to a built-in rule that is, as the switch Only on of the window shows them" },
                 "limit": { "type": "integer", "minimum": 1, "maximum": LIST_LIMIT },
             }),
             &["query"],
@@ -115,6 +120,19 @@ fn state_text(state: &RuleState) -> &'static str {
         RuleState::Off => "off",
         RuleState::Blocked { .. } => "blocked",
     }
+}
+
+/// Whether a rule is on in the current profile as the switch Only on of the window shows it:
+/// chosen on, or shown on through the built-in rule it is linked to.
+fn shown_on(state: &State, resolution: &resolver::Resolution, id: &str) -> bool {
+    current(state).profile.is_on(id) || resolution.shown_on(id)
+}
+
+/// The switch `only_on` of a call, off when absent.
+fn only_on(args: &Args<'_>) -> bool {
+    args.get("only_on")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
 }
 
 fn rule_brief(rule: &Rule, resolution: &resolver::Resolution) -> Value {
@@ -196,8 +214,10 @@ fn param_json(
             title,
             default,
             required,
+            max_length,
         } => json!({
             "name": name, "type": "string", "title": title, "default": default, "value": value, "required": required,
+            "max_length": max_length,
         }),
         Param::List { title, default } => json!({
             "name": name, "type": "list", "title": title, "default": default, "value": value,
@@ -227,19 +247,28 @@ fn list_groups(server: &Server, state: &mut State, args: &Args<'_>) -> Outcome {
         return Err(fail(Kind::NotFound, format!("no group {p}")));
     }
     let resolution = resolution(server, state);
+    let only = only_on(args);
     let groups: Vec<Value> = catalog
         .child_groups(parent)
         .iter()
-        .map(|g| {
+        .filter_map(|g| {
             let rules = catalog.rules_under(&g.id);
-            json!({
+            let on = rules
+                .iter()
+                .filter(|r| shown_on(state, &resolution, &r.id))
+                .count();
+            if only && on == 0 {
+                return None;
+            }
+            Some(json!({
                 "id": g.id,
                 "title": g.title,
                 "summary": g.summary,
                 "rules": rules.len(),
                 "in_effect": rules.iter().filter(|r| resolution.in_effect(&r.id)).count(),
+                "on": on,
                 "subgroups": catalog.child_groups(Some(&g.id)).len(),
-            })
+            }))
         })
         .collect();
     Ok(json!({ "parent": parent, "groups": groups }))
@@ -257,9 +286,11 @@ fn list_rules(server: &Server, state: &mut State, args: &Args<'_>) -> Outcome {
     };
     let resolution = resolution(server, state);
     let on = args.get("on").and_then(Value::as_bool);
+    let only = only_on(args);
     let filtered: Vec<&Rule> = rules
         .into_iter()
         .filter(|r| on.is_none_or(|want| resolution.in_effect(&r.id) == want))
+        .filter(|r| !only || shown_on(state, &resolution, &r.id))
         .collect();
     let offset = args.number("offset").unwrap_or(0) as usize;
     let limit = args.limit("limit", 50, LIST_LIMIT);
@@ -319,10 +350,12 @@ fn search_rules(server: &Server, state: &mut State, args: &Args<'_>) -> Outcome 
     }
     let limit = args.limit("limit", 20, LIST_LIMIT);
     let resolution = resolution(server, state);
+    let only = only_on(args);
     let found: Vec<&Rule> = catalog
         .rules()
         .iter()
         .filter(|r| matches(r, &words))
+        .filter(|r| !only || shown_on(state, &resolution, &r.id))
         .collect();
     Ok(json!({
         "total": found.len(),
@@ -383,11 +416,12 @@ fn param_value(param: &Param, pname: &str, value: Value) -> Result<Value, ToolEr
             }
             Value::from(n)
         }
-        Param::Text { .. } => {
+        Param::Text { max_length, .. } => {
             let t = value
                 .as_str()
                 .ok_or_else(|| fail(Kind::Invalid, "a text is needed"))?;
-            Value::from(super::profiles::one_line(t, 500)?)
+            let max = max_length.unwrap_or(500);
+            Value::from(super::profiles::one_line(t, max)?)
         }
         Param::List { .. } => {
             let items = value

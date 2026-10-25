@@ -643,7 +643,8 @@ impl WinWeaver {
         }
     }
 
-    /// The catalog of the active tab and the other one, side by side in a Markdown page.
+    /// The catalog of the active tab and the other one, side by side in a tab of their
+    /// differences.
     pub(crate) fn compare_catalog(&mut self, shell: &mut Shell<WinWeaver>, other: CatalogRef) {
         let Some(Doc::Catalog(c)) = shell.docs.get(shell.active) else {
             return;
@@ -662,15 +663,73 @@ impl WinWeaver {
             shell.status = tr("The other catalog is not open any more").to_owned();
             return;
         };
-        let title = trf(
-            "{first} and {second}",
-            &[("first", &first.name), ("second", &second.name)],
-        );
-        let page = comparison_page(first, second);
-        shell
-            .docs
-            .push(Doc::Markdown(Box::new(MdDoc::new(title, None, page))));
+        let doc = catalogdiff::CompareDoc::new(first, second);
+        shell.docs.push(Doc::Compare(Box::new(doc)));
         shell.active = shell.docs.len() - 1;
+    }
+
+    /// Saves the report of the comparison in front as a Markdown file.
+    pub(crate) fn save_comparison(&mut self, shell: &mut Shell<WinWeaver>) {
+        let Some(Doc::Compare(doc)) = shell.docs.get(shell.active) else {
+            return;
+        };
+        let name = format!("{}.md", export::file_stem(&doc.title));
+        let Some(path) = rfd::FileDialog::new()
+            .set_title(tr("Save the report of the comparison"))
+            .add_filter(tr("Markdown pages"), &["md"])
+            .set_file_name(name)
+            .save_file()
+        else {
+            return;
+        };
+        let page = comparison_page(&doc.first, &doc.second);
+        match jsonfile::write_atomic(&path, &page) {
+            Ok(()) => {
+                shell.saved(&path);
+            }
+            Err(e) => shell.save_failed(e),
+        }
+    }
+
+    /// Runs an act of the comparison in front.
+    fn apply_compare(&mut self, shell: &mut Shell<WinWeaver>, act: CatalogAct) {
+        if let CatalogAct::CompareSave = act {
+            self.save_comparison(shell);
+            return;
+        }
+        if let CatalogAct::ComparePage = act {
+            let Some(Doc::Compare(doc)) = shell.docs.get(shell.active) else {
+                return;
+            };
+            let page = comparison_page(&doc.first, &doc.second);
+            let title = doc.title.clone();
+            shell
+                .docs
+                .push(Doc::Markdown(Box::new(MdDoc::new(title, None, page))));
+            shell.active = shell.docs.len() - 1;
+            return;
+        }
+        let Some(Doc::Compare(doc)) = shell.docs.get_mut(shell.active) else {
+            return;
+        };
+        match act {
+            CatalogAct::CompareSelect(key) => {
+                doc.sel = Some(key);
+            }
+            CatalogAct::CompareExpand(key, open) => {
+                if open {
+                    doc.expanded.insert(key);
+                } else {
+                    doc.expanded.remove(&key);
+                }
+            }
+            CatalogAct::CompareShow(i) => {
+                if let Some(on) = doc.shown.get_mut(i) {
+                    *on = !*on;
+                }
+            }
+            _ => {}
+        }
     }
 
     /// Runs an act of the acts of the tab of an import or of a catalog file, and of its editor.
@@ -687,6 +746,11 @@ impl WinWeaver {
                 self.reveal_selection(shell);
             }
             CatalogAct::ImportOpen => self.import_open_catalog(shell),
+            act @ (CatalogAct::CompareSelect(_)
+            | CatalogAct::CompareExpand(..)
+            | CatalogAct::CompareShow(_)
+            | CatalogAct::CompareSave
+            | CatalogAct::ComparePage) => self.apply_compare(shell, act),
             CatalogAct::Compare(other) => self.compare_catalog(shell, other),
             CatalogAct::Edit(which) => self.edit_catalog(shell, which),
             CatalogAct::New => self.new_catalog(shell),

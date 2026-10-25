@@ -447,11 +447,23 @@ fn param_problems(
             }
         }
         Param::List { .. } => list_problems(rule, name, value),
-        Param::Text { required, .. } => {
+        Param::Text {
+            required,
+            max_length,
+            ..
+        } => {
             let text = value.as_str().unwrap_or_default();
             let mut out = Vec::new();
             if *required && text.trim().is_empty() {
                 out.push(format!("Parameter {name} is empty"));
+            }
+            if let Some(max) = max_length
+                && text.chars().count() > *max
+            {
+                out.push(format!(
+                    "Parameter {name}: at most {max} characters, the text has {}",
+                    text.chars().count()
+                ));
             }
             if !text.is_ascii() {
                 out.push(format!(

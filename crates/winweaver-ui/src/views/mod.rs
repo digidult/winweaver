@@ -152,7 +152,7 @@ fn ptitle<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule, name: &'a str) ->
 }
 
 /// Whether a rule matches every word of the search.
-fn matches(texts: Option<&CatalogTexts>, rule: &Rule, words: &[String]) -> bool {
+pub(crate) fn matches(texts: Option<&CatalogTexts>, rule: &Rule, words: &[String]) -> bool {
     if words.is_empty() {
         return true;
     }

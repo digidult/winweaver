@@ -93,9 +93,9 @@ impl<A: App> Window<A> {
                             .on_hover_text(tr("The other parts of the path"));
                         egui::Popup::menu(&more).show(|ui| {
                             for i in &hidden {
-                                if ui.button(labels[*i].as_str()).clicked() {
+                                let label = labels[*i].as_str();
+                                if super::menu_entry(ui, icons::FOLDER, label, "", true) {
                                     clicked = Some(*i);
-                                    ui.close();
                                 }
                             }
                         });
@@ -171,9 +171,8 @@ impl<A: App> Shell<A> {
             let more = style::icon_button(ui, icons::UNFOLDED, tr("Recent searches"), true, None);
             egui::Popup::menu(&more).show(|ui| {
                 for h in &history {
-                    if ui.button(h).clicked() {
+                    if super::menu_entry(ui, icons::FIND, h, "", true) {
                         search.text = h.clone();
-                        ui.close();
                     }
                 }
             });

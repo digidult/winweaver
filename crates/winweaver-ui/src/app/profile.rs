@@ -324,6 +324,12 @@ impl WinWeaver {
                 }
                 self.refresh_active(shell);
             }
+            ProfileAct::OnlyOn => {
+                if let Some(doc) = self.active_profile(shell) {
+                    doc.only_on = !doc.only_on;
+                    doc.reveal = true;
+                }
+            }
             ProfileAct::Expand(group, open) => {
                 if let Some(doc) = self.active_profile(shell) {
                     if open {

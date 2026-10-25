@@ -111,6 +111,7 @@ impl App for WinWeaver {
             Some(DocKind::CatalogEdit) => self.save_catalog_edit(shell),
             Some(DocKind::RegFile) => self.save_reg_doc(shell, ask),
             Some(DocKind::Users) => self.save_users_doc(shell, ask),
+            Some(DocKind::Compare) => self.save_comparison(shell),
             _ => self.save_active(shell, ask),
         }
     }
@@ -157,6 +158,11 @@ impl App for WinWeaver {
             Some(DocKind::RegFile) => self.draw_reg_file(shell, ui, acts),
             Some(DocKind::Users) => self.draw_users(shell, ui, acts),
             Some(DocKind::Pol) => self.draw_pol(shell, ui, acts),
+            Some(DocKind::Compare) => {
+                if let Some(Doc::Compare(doc)) = shell.docs.get(shell.active) {
+                    catalogdiff::compare_view(ui, doc, acts);
+                }
+            }
             // The settings and the editor of a theme are drawn by the window.
             Some(DocKind::Settings | DocKind::Theme) | None => {}
         }

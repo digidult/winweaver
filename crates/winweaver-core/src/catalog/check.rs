@@ -118,11 +118,21 @@ fn check_param(id: &str, name: &str, param: &Param, rule: &Rule, problems: &mut 
             }
         }
         Param::Text {
-            default, required, ..
+            default,
+            required,
+            max_length,
+            ..
         } => {
             if *required && default.is_empty() {
                 problems.push(format!(
                     "rule {id}: parameter {name} is required but its default is empty"
+                ));
+            }
+            if let Some(max) = max_length
+                && (*max == 0 || default.chars().count() > *max)
+            {
+                problems.push(format!(
+                    "rule {id}: parameter {name}: the default is longer than {max} characters"
                 ));
             }
         }

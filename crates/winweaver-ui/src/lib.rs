@@ -7,6 +7,7 @@
 mod act;
 mod app;
 mod cataledit;
+mod catalogdiff;
 mod catalogview;
 mod commands;
 mod dialogs;
@@ -33,7 +34,7 @@ use std::path::{Path, PathBuf};
 use eframe::egui;
 use winweaver_core::admx::{self, CatalogFile};
 use winweaver_core::bookmarks::{self, Bookmark, Bookmarks};
-use winweaver_core::catalog::{Catalog, TREE_ROOTS, check};
+use winweaver_core::catalog::{Catalog, Rule, TREE_ROOTS, check};
 use winweaver_core::clock;
 use winweaver_core::diff::{self, Diff};
 use winweaver_core::export;
@@ -154,6 +155,8 @@ pub struct ProfileDoc {
     pub follow: bool,
     /// The group the selected rule is shown in, when it shows in the trees of two imports.
     pub focus: Option<String>,
+    /// The tree shows only the rules that are on, with their groups open.
+    pub only_on: bool,
 }
 
 impl ProfileDoc {
@@ -181,7 +184,20 @@ impl ProfileDoc {
             reveal: false,
             follow: false,
             focus: None,
+            only_on: false,
         }
+    }
+
+    /// Whether the tree shows a rule: it matches the words of the search and, with the filter
+    /// of the rules that are on, it is on.
+    pub(crate) fn shows(
+        &self,
+        texts: Option<&CatalogTexts>,
+        rule: &Rule,
+        words: &[String],
+    ) -> bool {
+        views::matches(texts, rule, words)
+            && (!self.only_on || self.profile.is_on(&rule.id) || self.resolution.shown_on(&rule.id))
     }
 
     fn select(&mut self, sel: Sel) {
@@ -401,7 +417,7 @@ fn sel_from_item(catalog: &Catalog, item: &str) -> Sel {
 }
 
 /// What differs in a policy, as the comparison page names it.
-fn difference_text(what: &str) -> &'static str {
+pub(crate) fn difference_text(what: &str) -> &'static str {
     match what {
         "title" => tr("title"),
         "description" => tr("description"),
@@ -427,7 +443,7 @@ fn md_plain(text: &str) -> String {
 
 /// Two catalog files compared policy by policy, as a Markdown page: the counts, then the policies
 /// of each alone and those that differ, at most 1000 lines a section.
-fn comparison_page(first: &CatalogFile, second: &CatalogFile) -> String {
+pub(crate) fn comparison_page(first: &CatalogFile, second: &CatalogFile) -> String {
     const LINES: usize = 1000;
     let c = admx::compare(first, second);
     let mut page = format!(
