@@ -167,6 +167,8 @@ text editor wedit.
 │                          (Belarusian, every text: the example of a language, checked by a test of i18n.rs)
 └── docs/
     ├── releases/          release notes v<version>.md
+    ├── presentation/      make_presentation.py: the slides for a prospective user from the screenshots
+    │                      of CI (python-pptx), uploaded by the Windows job as presentation-<version>
     ├── ww.md              the framework W# for the programs written on it
     ├── wasm.md            the study of wwlite in a browser (WebAssembly)
     └── spec/              the specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
@@ -798,6 +800,11 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   searches, the copy menus of texts) have icons too. The tab row (`shell/tabs.rs`) is a scroll area
   without a bar when the tabs are wider than the window: the wheel scrolls it sideways, a new active
   tab or count scrolls the active one into view, and a button after the new tab lists every tab.
+- The presentation (`docs/presentation/make_presentation.py`, item 7 of the second list of
+  25.10.2026): `SLIDES` is the list of slides (a title, lines, a screenshot of the artifact
+  `screenshots` and a box of pixels for a fragment); the Windows job installs python-pptx and
+  Pillow and uploads `presentation-<version>`. A new screenshot of the window may become a slide;
+  a change of the layout of the window moves the boxes.
 - The command line (`crates/winweaver/src/cli.rs`): `--build`, `--import-admx`, `--export-catalog`,
   `--read-pc`, `--diff` beside `--script` and `--reg`; `--out` names the file when it ends with the
   extension the command writes, else a folder for the default name (`export::out_path`).
