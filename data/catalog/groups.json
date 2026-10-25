@@ -8,25 +8,25 @@
       "id": "unattend",
       "title": "Installation",
       "order": 1,
-      "summary": "What the answer file does by its own means: the installation, OOBE, the accounts and the languages; the data forms are here too"
+      "summary": "What the answer file does by its own means and by its scripts: the passes of the installation, OOBE, the scripts of the installation, the first sign-in and the task after OOBE; the data forms are here too"
     },
     {
       "id": "policies",
-      "title": "Standard policies",
+      "title": "Policies",
       "order": 2,
-      "summary": "Policies of Windows: the built-in rules that write policy values only, and every imported policy template"
+      "summary": "Every rule that only writes the registry, policies or other values, and every imported policy template"
     },
     {
       "id": "other",
       "title": "Other",
       "order": 3,
-      "summary": "Rules outside policies: registry values, services, features, apps, scripts, the default user profile, the first sign-in and the tasks after OOBE"
+      "summary": "Rules that are not only registry values or answer file settings: services, features, capabilities, apps, programs, scripts on a running Windows and their mixes with registry values"
     },
     {
       "id": "install",
       "title": "windowsPE and specialize",
       "order": 10,
-      "summary": "Bypassing compatibility checks, a local account without a network connection, .NET Framework 3.5 from the media.",
+      "summary": "Bypassing compatibility checks, Setup without diagnostic data and Dynamic Update, a local account without a network connection.",
       "parent": "unattend"
     },
     {
@@ -62,7 +62,7 @@
       "title": "Security",
       "order": 60,
       "summary": "UAC, accounts, credential protection, remote access, encryption.",
-      "parent": "other"
+      "parent": "policies"
     },
     {"id": "security.accounts", "parent": "security", "title": "Accounts and sign-in", "order": 2},
     {"id": "security.lsa", "parent": "security", "title": "Credential protection (LSA, NTLM)", "order": 3},
@@ -71,8 +71,8 @@
       "id": "network",
       "title": "Network and sharing",
       "order": 70,
-      "summary": "SMB, signing, name resolution, firewall.",
-      "parent": "other"
+      "summary": "SMB signing, name resolution, firewall.",
+      "parent": "policies"
     },
     {
       "id": "browsers",
@@ -88,7 +88,7 @@
       "id": "logging",
       "title": "Logging for investigations",
       "order": 90,
-      "summary": "Auditing, log sizes, PowerShell logging, disabling PowerShell 2.0.",
+      "summary": "Auditing, log sizes, disabling PowerShell 2.0.",
       "parent": "other"
     },
     {
@@ -98,12 +98,12 @@
       "summary": "Minimal data sending, disabling ads and preinstalled apps, Copilot and Recall, widgets, web search.",
       "parent": "policies"
     },
-    {"id": "system", "title": "System", "order": 110, "summary": "Other system settings.", "parent": "other"},
+    {"id": "system", "title": "System", "order": 110, "summary": "Other system settings.", "parent": "policies"},
     {
       "id": "apps",
       "title": "Services and apps",
       "order": 120,
-      "summary": "Disabling unnecessary services and removing apps.",
+      "summary": "Disabling unnecessary services, the Print Spooler started automatically, removing apps.",
       "parent": "other"
     },
     {
@@ -118,14 +118,14 @@
       "title": "Default user profile",
       "order": 130,
       "summary": "Values that every new user gets at first sign-in (can be changed in Settings).",
-      "parent": "other"
+      "parent": "policies"
     },
     {
       "id": "post-oobe",
       "title": "After OOBE (scheduled task)",
-      "order": 150,
+      "order": 50,
       "summary": "Scheduled task after OOBE completes: passwords, built-in accounts, cleanup.",
-      "parent": "other"
+      "parent": "unattend"
     },
     {
       "id": "privacy.ai",
@@ -153,7 +153,7 @@
       "parent": "apps.policies",
       "title": "OneDrive",
       "order": 2,
-      "summary": "OneDrive client policies: moving folders to the cloud, network traffic, feedback, a complete block."
+      "summary": "OneDrive client policies: moving folders to the cloud, network traffic, feedback, a complete block; its installer removed from the default user profile."
     },
     {
       "id": "system.explorer",
@@ -174,7 +174,7 @@
       "parent": "system.explorer",
       "title": "Navigation pane",
       "order": 2,
-      "summary": "\"Home\", \"Gallery\", \"Libraries\", \"Network\", \"Recycle Bin\", the user folder and USB drives in the left pane of File Explorer, and the folder File Explorer opens to."
+      "summary": "\"Home\", \"Gallery\", \"Libraries\", \"Network\", \"Recycle Bin\" and the user folder in the left pane of File Explorer, and the folder File Explorer opens to."
     },
     {
       "id": "system.explorer.desktop",
@@ -191,43 +191,43 @@
       "summary": "\"Documents\", \"Downloads\", \"Music\", \"Pictures\", \"Videos\", \"Desktop\", \"Gallery\" and \"Home\" as icons on the desktop of new accounts. Rarely needed."
     },
     {
-      "id": "install.other",
-      "parent": "other",
+      "id": "install.scripts",
+      "parent": "unattend",
       "title": "Installation scripts (specialize)",
-      "order": 10,
-      "summary": "Bypassing compatibility checks, a local account without a network connection, .NET Framework 3.5 from the media."
+      "order": 30,
+      "summary": ".NET Framework 3.5 and drivers from the installation media."
     },
     {
-      "id": "security.policies",
-      "parent": "policies",
+      "id": "user-logon",
+      "parent": "unattend",
+      "title": "First sign-in",
+      "order": 40,
+      "summary": "Scripts of the first sign-in of every new user: the display language pinned, the input languages of the profile."
+    },
+    {
+      "id": "security.other",
+      "parent": "other",
       "title": "Security",
       "order": 60,
-      "summary": "UAC, accounts, credential protection, remote access, encryption."
+      "summary": "Account lockout and password expiry, set with net accounts."
     },
     {
       "id": "privacy.other",
       "parent": "other",
       "title": "Telemetry, ads, AI",
       "order": 100,
-      "summary": "Minimal data sending, disabling ads and preinstalled apps, Copilot and Recall, widgets, web search."
+      "summary": "Minimal telemetry with its services and tasks; Copilot, Recall and Click to Do off together with the Recall feature."
     },
     {
-      "id": "privacy.ads.other",
-      "parent": "privacy.other",
+      "id": "privacy.ads",
+      "parent": "privacy",
       "title": "Ads and recommendations",
       "order": 3,
-      "summary": "Advertising ID, tips and suggestions, lock screen, widgets."
+      "summary": "Advertising ID, tips and suggestions, preinstalled apps, the lock screen, ads in File Explorer and Settings."
     },
     {
-      "id": "privacy.ai.other",
-      "parent": "privacy.other",
-      "title": "Artificial intelligence",
-      "order": 1,
-      "summary": "Copilot, Recall, Click to Do, AI agents, Windows generative features, Paint and Notepad."
-    },
-    {
-      "id": "privacy.speech.other",
-      "parent": "privacy.other",
+      "id": "privacy.speech",
+      "parent": "privacy",
       "title": "Speech and input",
       "order": 5,
       "summary": "Cloud speech recognition, handwriting and typing personalization, Narrator online services."
@@ -235,9 +235,30 @@
     {
       "id": "apps.policies",
       "parent": "policies",
-      "title": "Services and apps",
+      "title": "Apps",
       "order": 120,
-      "summary": "Disabling unnecessary services and removing apps."
+      "summary": "Policies and values of apps: OneDrive."
+    },
+    {
+      "id": "logging.policies",
+      "parent": "policies",
+      "title": "Logging for investigations",
+      "order": 90,
+      "summary": "PowerShell logging."
+    },
+    {
+      "id": "network.other",
+      "parent": "other",
+      "title": "Network and sharing",
+      "order": 70,
+      "summary": "SMB 1.0 and NetBIOS over TCP/IP."
+    },
+    {
+      "id": "system.other",
+      "parent": "other",
+      "title": "System",
+      "order": 110,
+      "summary": "Windows Update unblocked, VBScript removed, USB drives once in the navigation pane."
     }
   ]
 }

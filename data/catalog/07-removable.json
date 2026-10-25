@@ -6,7 +6,7 @@
   "rules": [
     {
       "id": "removable.autorun-off",
-      "group": "policies",
+      "group": "system",
       "phase": "specialize",
       "title": "AutoRun and AutoPlay disabled for all media",
       "level": "recommended",
@@ -47,7 +47,7 @@
     },
     {
       "id": "scripts.open-in-notepad",
-      "group": "other",
+      "group": "system",
       "phase": "specialize",
       "title": "Script files (.js .vbs .hta and others) open in Notepad",
       "level": "recommended",
@@ -121,7 +121,7 @@
     },
     {
       "id": "scripts.remove-vbscript",
-      "group": "other",
+      "group": "system.other",
       "phase": "specialize",
       "title": "Remove the VBScript engine",
       "level": "risky",

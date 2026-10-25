@@ -319,7 +319,7 @@
     },
     {
       "id": "nav.removable-drives-once",
-      "group": "system.explorer.nav",
+      "group": "system.other",
       "phase": "specialize",
       "title": "Show USB drives only under \"This PC\" in the navigation pane",
       "level": "optional",
@@ -349,7 +349,7 @@
     },
     {
       "id": "nav.home-cloud-files-off",
-      "group": "policies",
+      "group": "system.explorer.nav",
       "phase": "specialize",
       "title": "No cloud files and activity in File Explorer \"Home\"",
       "level": "optional",

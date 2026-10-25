@@ -8,9 +8,10 @@ description: Review a WinWeaver profile for weak protection and mistakes, and ex
 1. `get_status`; `get_profile`: the forms (edition, key mode, disk, accounts, languages, time zone), `rules_in_effect`,
    `parameters`, `changed`.
 2. `check_profile`: errors stop the build, warnings name what to look at. Report errors first.
-3. Protection that is off: `list_rules` {group, on: false, limit: 50} for the groups `defender`, `security.policies`,
-   `security`, `update`, `network`, `browsers`, `privacy`. Every row has its level: `baseline` (basic protection) and
-   `recommended` matter most; `optional` is a choice; `risky` may disturb programs.
+3. Protection that is off: `list_rules` {group, on: false, limit: 50} for the groups `defender`, `security`,
+   `security.other`, `update`, `network`, `network.other`, `browsers`, `privacy`. Every row has its level:
+   `baseline` (basic protection) and `recommended` matter most; `optional` is a choice; `risky` may disturb
+   programs.
 4. For each finding worth a change, `get_rule` {id}: `risk`, `requires`, `conflicts`. A rule `blocked_by` another one
    is chosen on but waits for it; a rule `linked_by` a built-in rule is already written by it.
 5. Compare with a stricter preset when useful: `compare_profiles` {a: <current>, b: "Strict"}.

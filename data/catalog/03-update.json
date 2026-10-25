@@ -3,7 +3,7 @@
   "rules": [
     {
       "id": "update.unblock",
-      "group": "other",
+      "group": "system.other",
       "phase": "specialize",
       "title": "Remove all Windows Update blocks",
       "level": "baseline",

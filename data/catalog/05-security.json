@@ -80,7 +80,7 @@
     },
     {
       "id": "uac.admin-always-notify",
-      "group": "security.policies",
+      "group": "security",
       "phase": "specialize",
       "title": "UAC for administrators: always notify",
       "level": "recommended",
@@ -119,7 +119,7 @@
     },
     {
       "id": "accounts.inactivity-lock",
-      "group": "security.policies",
+      "group": "security.accounts",
       "phase": "specialize",
       "title": "Lock the screen after inactivity",
       "level": "recommended",
@@ -295,7 +295,7 @@
     },
     {
       "id": "accounts.lockout",
-      "group": "security.accounts",
+      "group": "security.other",
       "phase": "specialize",
       "title": "Lock out accounts after wrong passwords",
       "level": "recommended",
@@ -333,7 +333,7 @@
     },
     {
       "id": "accounts.password-never-expires",
-      "group": "security.accounts",
+      "group": "security.other",
       "phase": "specialize",
       "title": "Passwords never expire (initial accounts)",
       "level": "recommended",
@@ -484,7 +484,7 @@
     },
     {
       "id": "remote.registry-off",
-      "group": "security.remote",
+      "group": "apps",
       "phase": "specialize",
       "title": "Remote Registry service disabled",
       "level": "recommended",
@@ -527,7 +527,7 @@
     },
     {
       "id": "accounts.block-aad-join",
-      "group": "security.policies",
+      "group": "security.accounts",
       "phase": "specialize",
       "title": "No \"Allow my organization to manage my device\" prompt",
       "level": "baseline",

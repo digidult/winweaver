@@ -13,8 +13,10 @@ documentation pages open the same way, each in its own tab.
 
 - **Profiles** (`.wwprofile`) hold your choices; the presets Office, Strict, Laptop and Home are starting
   points.
-- **The catalog** is the built-in rules in three parts (Installation, Standard policies, Other) and the
-  policy templates (ADMX) you import, which become rules too.
+- **The catalog** is the built-in rules in three parts and the policy templates (ADMX) you import, which
+  become rules too. **Installation** is what the answer file and its scripts do; **Policies** is every
+  rule that only writes the registry, and every import; **Other** is the rest: services, features, apps,
+  programs and scripts on a running Windows.
 - **Tabs**: every document opens in its own tab: profiles, comparisons, catalogs, bookmarks, the MCP
   server, pages like this one.
 - **This PC** reads the running Windows, checks rules against it, applies them with a backup and makes
@@ -177,7 +179,7 @@ A registry file (`.reg`) opens in a tab of its own, as the section on the regist
 ## Policy templates
 
 **Settings, Policy templates** imports the ADMX templates of this Windows, of a folder or a catalog file;
-their policies become rules under Standard policies, and the imports are kept in `imports/`. Only the
+their policies become rules under Policies, and the imports are kept in `imports/`. Only the
 checked imports are read and loaded; the others take no memory. A profile can hold options of an import
 that is not loaded: they stay in the profile unchanged, are listed under **Unknown options** at the end of
 the tree and are left out of the build, with a warning when the profile opens and when the answer file is

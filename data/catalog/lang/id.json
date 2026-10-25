@@ -4296,19 +4296,19 @@
   "_groups": {
     "unattend": {
       "title": "Instalasi",
-      "summary": "Apa yang dilakukan file jawaban dengan caranya sendiri: instalasi, OOBE, akun, dan bahasa; formulir datanya juga ada di sini"
+      "summary": "Apa yang dilakukan file jawaban dengan caranya sendiri dan dengan skripnya: tahap instalasi, OOBE, skrip instalasi, masuk pertama kali, dan tugas setelah OOBE; formulir datanya juga ada di sini"
     },
     "policies": {
-      "title": "Kebijakan standar",
-      "summary": "Kebijakan Windows: aturan bawaan yang hanya menulis nilai kebijakan, dan setiap templat kebijakan yang diimpor"
+      "title": "Kebijakan",
+      "summary": "Setiap aturan yang hanya menulis registri, baik nilai kebijakan maupun nilai lain, dan setiap templat kebijakan yang diimpor"
     },
     "other": {
       "title": "Lainnya",
-      "summary": "Aturan di luar kebijakan: nilai registri, layanan, fitur, aplikasi, skrip, profil pengguna default, masuk pertama kali, dan tugas setelah OOBE"
+      "summary": "Aturan yang bukan hanya nilai registri atau pengaturan file jawaban: layanan, fitur, kapabilitas, aplikasi, program, skrip di Windows yang sedang berjalan, dan kombinasinya dengan nilai registri"
     },
     "install": {
       "title": "windowsPE dan specialize",
-      "summary": "Melewati pemeriksaan kompatibilitas, akun lokal tanpa koneksi jaringan, .NET Framework 3.5 dari media."
+      "summary": "Melewati pemeriksaan kompatibilitas, Penyiapan Windows tanpa data diagnostik dan Dynamic Update, akun lokal tanpa koneksi jaringan."
     },
     "oobe": {
       "title": "Pengalaman out-of-box (OOBE)",
@@ -4341,7 +4341,7 @@
     },
     "network": {
       "title": "Jaringan dan berbagi",
-      "summary": "SMB, penandatanganan, resolusi nama, firewall."
+      "summary": "Penandatanganan SMB, resolusi nama, firewall."
     },
     "browsers": {
       "title": "Browser",
@@ -4358,7 +4358,7 @@
     },
     "logging": {
       "title": "Pencatatan untuk investigasi",
-      "summary": "Audit, ukuran log, pencatatan PowerShell, penonaktifan PowerShell 2.0."
+      "summary": "Audit, ukuran log, penonaktifan PowerShell 2.0."
     },
     "privacy": {
       "title": "Telemetri, iklan, AI",
@@ -4370,7 +4370,7 @@
     },
     "apps": {
       "title": "Layanan dan aplikasi",
-      "summary": "Menonaktifkan layanan yang tidak perlu dan menghapus aplikasi."
+      "summary": "Menonaktifkan layanan yang tidak perlu, Print Spooler dimulai otomatis, menghapus aplikasi."
     },
     "apps.remove": {
       "title": "Aplikasi yang dihapus",
@@ -4398,7 +4398,7 @@
     },
     "apps.onedrive": {
       "title": "OneDrive",
-      "summary": "Kebijakan klien OneDrive: pemindahan folder ke cloud, lalu lintas jaringan, umpan balik, pemblokiran total."
+      "summary": "Kebijakan klien OneDrive: pemindahan folder ke cloud, lalu lintas jaringan, umpan balik, pemblokiran total; penginstalnya dihapus dari profil pengguna default."
     },
     "system.explorer": {
       "title": "File Explorer dan desktop",
@@ -4410,7 +4410,7 @@
     },
     "system.explorer.nav": {
       "title": "Panel navigasi",
-      "summary": "\"Beranda\", \"Galeri\", \"Pustaka\", \"Jaringan\", \"Keranjang Sampah\", folder pengguna, dan drive USB di panel kiri File Explorer, serta folder tempat File Explorer terbuka."
+      "summary": "\"Beranda\", \"Galeri\", \"Pustaka\", \"Jaringan\", \"Keranjang Sampah\", dan folder pengguna di panel kiri File Explorer, serta folder tempat File Explorer terbuka."
     },
     "system.explorer.desktop": {
       "title": "Ikon desktop",
@@ -4420,33 +4420,45 @@
       "title": "Folder di desktop",
       "summary": "\"Dokumen\", \"Unduhan\", \"Musik\", \"Gambar\", \"Video\", \"Desktop\", \"Galeri\", dan \"Beranda\" sebagai ikon di desktop akun baru. Jarang diperlukan."
     },
-    "install.other": {
+    "install.scripts": {
       "title": "Skrip instalasi (specialize)",
-      "summary": "Melewati pemeriksaan kompatibilitas, akun lokal tanpa koneksi jaringan, .NET Framework 3.5 dari media."
+      "summary": ".NET Framework 3.5 dan driver dari media instalasi."
     },
-    "security.policies": {
+    "user-logon": {
+      "title": "Masuk pertama kali",
+      "summary": "Skrip saat setiap pengguna baru masuk pertama kali: bahasa tampilan yang disematkan, bahasa input dari profil."
+    },
+    "security.other": {
       "title": "Keamanan",
-      "summary": "UAC, akun, perlindungan kredensial, akses jarak jauh, enkripsi."
+      "summary": "Penguncian akun dan masa berlaku kata sandi, diatur dengan net accounts."
     },
     "privacy.other": {
       "title": "Telemetri, iklan, AI",
-      "summary": "Pengiriman data minimal, penonaktifan iklan dan aplikasi prainstal, Copilot dan Recall, widget, pencarian web."
+      "summary": "Telemetri minimal beserta layanan dan tugasnya; Copilot, Recall, dan Click to Do dinonaktifkan bersama fitur Recall."
     },
-    "privacy.ads.other": {
+    "privacy.ads": {
       "title": "Iklan dan rekomendasi",
-      "summary": "ID iklan, tips dan saran, layar kunci, widget."
+      "summary": "ID iklan, tips dan saran, aplikasi prainstal, layar kunci, iklan di File Explorer dan Pengaturan."
     },
-    "privacy.ai.other": {
-      "title": "Kecerdasan buatan",
-      "summary": "Copilot, Recall, Click to Do, agen AI, fitur generatif Windows, Paint, dan Notepad."
-    },
-    "privacy.speech.other": {
+    "privacy.speech": {
       "title": "Ucapan dan input",
       "summary": "Pengenalan ucapan cloud, personalisasi tulisan tangan dan pengetikan, layanan online Narator."
     },
     "apps.policies": {
-      "title": "Layanan dan aplikasi",
-      "summary": "Menonaktifkan layanan yang tidak perlu dan menghapus aplikasi."
+      "title": "Aplikasi",
+      "summary": "Kebijakan dan nilai aplikasi: OneDrive."
+    },
+    "logging.policies": {
+      "title": "Pencatatan untuk investigasi",
+      "summary": "Pencatatan PowerShell."
+    },
+    "network.other": {
+      "title": "Jaringan dan berbagi",
+      "summary": "SMB 1.0 dan NetBIOS over TCP/IP."
+    },
+    "system.other": {
+      "title": "Sistem",
+      "summary": "Windows Update tanpa blokir, VBScript dihapus, drive USB hanya sekali di panel navigasi."
     }
   }
 }

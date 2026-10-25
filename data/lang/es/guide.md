@@ -14,8 +14,11 @@ las páginas de documentación se abren del mismo modo, cada una en su propia pe
 
 - **Perfiles** (`.wwprofile`): guardan sus elecciones; los perfiles predefinidos Office, Strict, Laptop y
   Home son puntos de partida.
-- **El catálogo**: las reglas integradas en tres partes (Instalación, Directivas estándar, Otros) y las
-  plantillas de directivas (ADMX) que importe, que también se convierten en reglas.
+- **El catálogo**: las reglas integradas en tres partes y las plantillas de directivas (ADMX) que importe,
+  que también se convierten en reglas. **Instalación** reúne lo que hacen el archivo de respuesta y sus
+  scripts; **Directivas**, todas las reglas que solo escriben en el Registro y todas las importaciones;
+  **Otras**, el resto: servicios, características, aplicaciones, programas y scripts en un Windows en
+  ejecución.
 - **Pestañas**: cada documento se abre en su propia pestaña: perfiles, comparaciones, catálogos,
   marcadores, el servidor MCP, páginas como esta.
 - **Este equipo** lee el Windows en marcha, comprueba reglas en él, las aplica con una copia de seguridad
@@ -193,7 +196,7 @@ registro.
 ## Plantillas de directivas
 
 **Configuración, Plantillas de directivas** importa las plantillas ADMX de este Windows, de una carpeta o
-de un archivo de catálogo; sus directivas se convierten en reglas dentro de Directivas estándar, y las
+de un archivo de catálogo; sus directivas se convierten en reglas dentro de Directivas, y las
 importaciones se guardan en `imports/`. Solo se leen y cargan las importaciones marcadas; las demás no
 ocupan memoria. Un perfil puede tener opciones de una importación que no está cargada: se conservan sin
 cambios en el perfil, aparecen en **Opciones desconocidas** al final del árbol y quedan fuera de la

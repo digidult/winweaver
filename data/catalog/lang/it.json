@@ -4294,19 +4294,19 @@
   "_groups": {
     "unattend": {
       "title": "Installazione",
-      "summary": "Ciò che il file di risposte fa con i propri mezzi: l'installazione, la OOBE, gli account e le lingue; qui ci sono anche i moduli dei dati"
+      "summary": "Ciò che il file di risposte fa con i propri mezzi e con i propri script: i passaggi dell'installazione, la OOBE, gli script di installazione, il primo accesso e l'attività dopo la OOBE; qui ci sono anche i moduli dei dati"
     },
     "policies": {
-      "title": "Criteri standard",
-      "summary": "Criteri di Windows: le regole integrate che scrivono solo valori di criteri e ogni modello di criteri importato"
+      "title": "Criteri",
+      "summary": "Ogni regola che scrive solo nel Registro di sistema, valori di criteri o altri valori, e ogni modello di criteri importato"
     },
     "other": {
       "title": "Altro",
-      "summary": "Regole esterne ai criteri: valori del Registro di sistema, servizi, funzionalità, app, script, il profilo utente predefinito, il primo accesso e le attività dopo la OOBE"
+      "summary": "Regole che non sono solo valori del Registro di sistema o impostazioni del file di risposte: servizi, funzionalità, funzionalità su richiesta, app, programmi, script su un Windows in esecuzione e le loro combinazioni con valori del Registro di sistema"
     },
     "install": {
       "title": "windowsPE e specialize",
-      "summary": "Esclusione dei controlli di compatibilità, un account locale senza connessione di rete, .NET Framework 3.5 dal supporto di installazione."
+      "summary": "Esclusione dei controlli di compatibilità, il programma di installazione senza dati di diagnostica né aggiornamento dinamico, un account locale senza connessione di rete."
     },
     "oobe": {
       "title": "Configurazione guidata (OOBE)",
@@ -4339,7 +4339,7 @@
     },
     "network": {
       "title": "Rete e condivisione",
-      "summary": "SMB, firma, risoluzione dei nomi, firewall."
+      "summary": "Firma SMB, risoluzione dei nomi, firewall."
     },
     "browsers": {
       "title": "Browser",
@@ -4356,7 +4356,7 @@
     },
     "logging": {
       "title": "Registrazione per le indagini",
-      "summary": "Controllo, dimensioni dei registri, registrazione di PowerShell, disattivazione di PowerShell 2.0."
+      "summary": "Controllo, dimensioni dei registri, disattivazione di PowerShell 2.0."
     },
     "privacy": {
       "title": "Telemetria, pubblicità, IA",
@@ -4368,7 +4368,7 @@
     },
     "apps": {
       "title": "Servizi e app",
-      "summary": "Disattivazione dei servizi non necessari e rimozione delle app."
+      "summary": "Disattivazione dei servizi non necessari, avvio automatico dello spooler di stampa, rimozione delle app."
     },
     "apps.remove": {
       "title": "App da rimuovere",
@@ -4396,7 +4396,7 @@
     },
     "apps.onedrive": {
       "title": "OneDrive",
-      "summary": "Criteri del client OneDrive: spostamento delle cartelle nel cloud, traffico di rete, feedback, blocco completo."
+      "summary": "Criteri del client OneDrive: spostamento delle cartelle nel cloud, traffico di rete, feedback, blocco completo; il suo programma di installazione viene rimosso dal profilo utente predefinito."
     },
     "system.explorer": {
       "title": "Esplora file e desktop",
@@ -4408,7 +4408,7 @@
     },
     "system.explorer.nav": {
       "title": "Riquadro di spostamento",
-      "summary": "\"Home\", \"Raccolta\", \"Raccolte\", \"Rete\", \"Cestino\", la cartella dell'utente e le unità USB nel riquadro sinistro di Esplora file, e la cartella in cui si apre Esplora file."
+      "summary": "\"Home\", \"Raccolta\", \"Raccolte\", \"Rete\", \"Cestino\" e la cartella dell'utente nel riquadro sinistro di Esplora file, e la cartella in cui si apre Esplora file."
     },
     "system.explorer.desktop": {
       "title": "Icone del desktop",
@@ -4418,33 +4418,45 @@
       "title": "Cartelle sul desktop",
       "summary": "\"Documenti\", \"Download\", \"Musica\", \"Immagini\", \"Video\", \"Desktop\", \"Raccolta\" e \"Home\" come icone sul desktop dei nuovi account. Raramente necessario."
     },
-    "install.other": {
+    "install.scripts": {
       "title": "Script di installazione (specialize)",
-      "summary": "Esclusione dei controlli di compatibilità, un account locale senza connessione di rete, .NET Framework 3.5 dal supporto di installazione."
+      "summary": ".NET Framework 3.5 e driver dal supporto di installazione."
     },
-    "security.policies": {
+    "user-logon": {
+      "title": "Primo accesso",
+      "summary": "Script del primo accesso di ogni nuovo utente: la lingua di visualizzazione fissata, le lingue di input del profilo."
+    },
+    "security.other": {
       "title": "Sicurezza",
-      "summary": "Controllo dell'account utente, account, protezione delle credenziali, accesso remoto, crittografia."
+      "summary": "Blocco degli account e scadenza delle password, impostati con net accounts."
     },
     "privacy.other": {
       "title": "Telemetria, pubblicità, IA",
-      "summary": "Invio minimo di dati, disattivazione della pubblicità e delle app preinstallate, Copilot e Recall, widget, ricerca Web."
+      "summary": "Telemetria minima con i suoi servizi e le sue attività; Copilot, Recall e Click to Do disattivati insieme alla funzionalità Recall."
     },
-    "privacy.ads.other": {
+    "privacy.ads": {
       "title": "Pubblicità e suggerimenti",
-      "summary": "ID pubblicità, suggerimenti e consigli, schermata di blocco, widget."
+      "summary": "ID pubblicità, suggerimenti e consigli, app preinstallate, schermata di blocco, pubblicità in Esplora file e in Impostazioni."
     },
-    "privacy.ai.other": {
-      "title": "Intelligenza artificiale",
-      "summary": "Copilot, Recall, Click to Do, agenti di IA, funzionalità generative di Windows, Paint e Blocco note."
-    },
-    "privacy.speech.other": {
+    "privacy.speech": {
       "title": "Riconoscimento vocale e input",
       "summary": "Riconoscimento vocale online, personalizzazione della scrittura a mano e della digitazione, servizi online dell'Assistente vocale."
     },
     "apps.policies": {
-      "title": "Servizi e app",
-      "summary": "Disattivazione dei servizi non necessari e rimozione delle app."
+      "title": "App",
+      "summary": "Criteri e valori delle app: OneDrive."
+    },
+    "logging.policies": {
+      "title": "Registrazione per le indagini",
+      "summary": "Registrazione di PowerShell."
+    },
+    "network.other": {
+      "title": "Rete e condivisione",
+      "summary": "SMB 1.0 e NetBIOS su TCP/IP."
+    },
+    "system.other": {
+      "title": "Sistema",
+      "summary": "Windows Update senza blocchi, VBScript rimosso, unità USB una sola volta nel riquadro di spostamento."
     }
   }
 }

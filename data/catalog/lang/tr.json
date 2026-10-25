@@ -4293,19 +4293,19 @@
   "_groups": {
     "unattend": {
       "title": "Yükleme",
-      "summary": "Yanıt dosyasının kendi olanaklarıyla yaptıkları: yükleme, OOBE, hesaplar ve diller; veri formları da buradadır"
+      "summary": "Yanıt dosyasının kendi olanaklarıyla ve betikleriyle yaptıkları: yükleme aşamaları, OOBE, yükleme betikleri, ilk oturum açma ve OOBE sonrası görev; veri formları da buradadır"
     },
     "policies": {
-      "title": "Standart ilkeler",
-      "summary": "Windows ilkeleri: yalnızca ilke değerleri yazan yerleşik kurallar ve içeri aktarılan her ilke şablonu"
+      "title": "İlkeler",
+      "summary": "Yalnızca kayıt defterine yazan her kural (ilke değerleri ya da başka değerler) ve içeri aktarılan her ilke şablonu"
     },
     "other": {
       "title": "Diğer",
-      "summary": "İlkelerin dışındaki kurallar: kayıt defteri değerleri, hizmetler, özellikler, uygulamalar, betikler, varsayılan kullanıcı profili, ilk oturum açma ve OOBE sonrası görevler"
+      "summary": "Yalnızca kayıt defteri değerlerinden veya yanıt dosyası ayarlarından oluşmayan kurallar: hizmetler, özellikler, yetenekler, uygulamalar, programlar, çalışan bir Windows'taki betikler ve bunların kayıt defteri değerleriyle birleşimleri"
     },
     "install": {
       "title": "windowsPE ve specialize",
-      "summary": "Uyumluluk denetimlerini atlama, ağ bağlantısı olmadan yerel hesap, medyadan .NET Framework 3.5."
+      "summary": "Uyumluluk denetimlerini atlama, tanılama verisi ve Dinamik Güncelleştirme olmadan Windows Kurulumu, ağ bağlantısı olmadan yerel hesap."
     },
     "oobe": {
       "title": "Kullanıma hazır deneyim (OOBE)",
@@ -4338,7 +4338,7 @@
     },
     "network": {
       "title": "Ağ ve paylaşım",
-      "summary": "SMB, imzalama, ad çözümleme, güvenlik duvarı."
+      "summary": "SMB imzalama, ad çözümleme, güvenlik duvarı."
     },
     "browsers": {
       "title": "Tarayıcılar",
@@ -4355,7 +4355,7 @@
     },
     "logging": {
       "title": "İncelemeler için günlüğe kaydetme",
-      "summary": "Denetim, günlük boyutları, PowerShell günlüğe kaydı, PowerShell 2.0'ı devre dışı bırakma."
+      "summary": "Denetim, günlük boyutları, PowerShell 2.0'ı devre dışı bırakma."
     },
     "privacy": {
       "title": "Telemetri, reklamlar, yapay zeka",
@@ -4367,7 +4367,7 @@
     },
     "apps": {
       "title": "Hizmetler ve uygulamalar",
-      "summary": "Gereksiz hizmetleri devre dışı bırakma ve uygulamaları kaldırma."
+      "summary": "Gereksiz hizmetleri devre dışı bırakma, Yazdırma Biriktiricisini otomatik başlatma, uygulamaları kaldırma."
     },
     "apps.remove": {
       "title": "Kaldırılacak uygulamalar",
@@ -4395,7 +4395,7 @@
     },
     "apps.onedrive": {
       "title": "OneDrive",
-      "summary": "OneDrive istemci ilkeleri: klasörlerin buluta taşınması, ağ trafiği, geri bildirim, tam engelleme."
+      "summary": "OneDrive istemci ilkeleri: klasörlerin buluta taşınması, ağ trafiği, geri bildirim, tam engelleme; yükleyicisi varsayılan kullanıcı profilinden kaldırılır."
     },
     "system.explorer": {
       "title": "Dosya Gezgini ve masaüstü",
@@ -4407,7 +4407,7 @@
     },
     "system.explorer.nav": {
       "title": "Gezinti bölmesi",
-      "summary": "Dosya Gezgini'nin sol bölmesinde \"Giriş\", \"Galeri\", \"Kitaplıklar\", \"Ağ\", \"Geri Dönüşüm Kutusu\", kullanıcı klasörü ve USB sürücüler ile Dosya Gezgini'nin açıldığı klasör."
+      "summary": "Dosya Gezgini'nin sol bölmesinde \"Giriş\", \"Galeri\", \"Kitaplıklar\", \"Ağ\", \"Geri Dönüşüm Kutusu\" ve kullanıcı klasörü ile Dosya Gezgini'nin açıldığı klasör."
     },
     "system.explorer.desktop": {
       "title": "Masaüstü simgeleri",
@@ -4417,33 +4417,45 @@
       "title": "Masaüstündeki klasörler",
       "summary": "Yeni hesapların masaüstünde simge olarak \"Belgeler\", \"İndirilenler\", \"Müzik\", \"Resimler\", \"Videolar\", \"Masaüstü\", \"Galeri\" ve \"Giriş\". Nadiren gerekir."
     },
-    "install.other": {
+    "install.scripts": {
       "title": "Yükleme betikleri (specialize)",
-      "summary": "Uyumluluk denetimlerini atlama, ağ bağlantısı olmadan yerel hesap, medyadan .NET Framework 3.5."
+      "summary": "Yükleme medyasından .NET Framework 3.5 ve sürücüler."
     },
-    "security.policies": {
+    "user-logon": {
+      "title": "İlk oturum açma",
+      "summary": "Her yeni kullanıcının ilk oturum açma betikleri: sabitlenen görüntüleme dili, profilin giriş dilleri."
+    },
+    "security.other": {
       "title": "Güvenlik",
-      "summary": "UAC, hesaplar, kimlik bilgisi koruması, uzaktan erişim, şifreleme."
+      "summary": "net accounts ile ayarlanan hesap kilitleme ve parola süresi."
     },
     "privacy.other": {
       "title": "Telemetri, reklamlar, yapay zeka",
-      "summary": "En az veri gönderimi, reklamları ve önceden yüklenmiş uygulamaları kapatma, Copilot ve Recall, pencere öğeleri, web araması."
+      "summary": "Hizmetleri ve görevleriyle en az telemetri; Recall özelliğiyle birlikte kapatılan Copilot, Recall ve Click to Do."
     },
-    "privacy.ads.other": {
+    "privacy.ads": {
       "title": "Reklamlar ve öneriler",
-      "summary": "Reklam kimliği, ipuçları ve öneriler, kilit ekranı, pencere öğeleri."
+      "summary": "Reklam kimliği, ipuçları ve öneriler, önceden yüklenmiş uygulamalar, kilit ekranı, Dosya Gezgini'ndeki ve Ayarlar'daki reklamlar."
     },
-    "privacy.ai.other": {
-      "title": "Yapay zeka",
-      "summary": "Copilot, Recall, Click to Do, yapay zeka aracıları, Windows üretken özellikleri, Paint ve Not Defteri."
-    },
-    "privacy.speech.other": {
+    "privacy.speech": {
       "title": "Konuşma ve giriş",
       "summary": "Bulut tabanlı konuşma tanıma, el yazısı ve yazma kişiselleştirmesi, Ekran Okuyucusu çevrimiçi hizmetleri."
     },
     "apps.policies": {
-      "title": "Hizmetler ve uygulamalar",
-      "summary": "Gereksiz hizmetleri devre dışı bırakma ve uygulamaları kaldırma."
+      "title": "Uygulamalar",
+      "summary": "Uygulamaların ilkeleri ve değerleri: OneDrive."
+    },
+    "logging.policies": {
+      "title": "İncelemeler için günlüğe kaydetme",
+      "summary": "PowerShell günlüğe kaydı."
+    },
+    "network.other": {
+      "title": "Ağ ve paylaşım",
+      "summary": "SMB 1.0 ve TCP/IP üzerinden NetBIOS."
+    },
+    "system.other": {
+      "title": "Sistem",
+      "summary": "Engelleri kaldırılan Windows Update, kaldırılan VBScript, gezinti bölmesinde yalnızca bir kez görünen USB sürücüler."
     }
   }
 }

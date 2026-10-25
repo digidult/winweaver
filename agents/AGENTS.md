@@ -49,9 +49,10 @@ Priorities: security and updates of small offices without a domain.
 | edit | `set_rule` {id, on}, `set_param` {id, name, value}, `set_group` {group, on}, `set_profile_info` {name?, author?, comment?}, `new_profile` {name, preset?}, `load_profile` {name}, `read_this_pc` (also needs the option to read this PC) |
 | files | `save_profile` {name?}, `write_answer_file` |
 
-The roots of `list_groups` are `unattend` (Installation), `policies` (Standard policies) and `other`. Presets: Office,
-Strict, Laptop, Home. Resources: `winweaver://skill` (the tool reference), `winweaver://catalog`,
-`winweaver://profile`, `winweaver://presets`.
+The roots of `list_groups` are `unattend` (Installation: the answer file and its scripts), `policies` (Policies: every
+rule that only writes the registry, and the imports) and `other` (the rest). Presets: Office, Strict, Laptop, Home.
+Resources: `winweaver://skill` (the tool reference), `winweaver://catalog`, `winweaver://profile`,
+`winweaver://presets`.
 
 Labels of the MCP tab for the person: mode "read: nothing changes" (uk "читання", ru "чтение"), "edit: profiles change
 in memory" (uk "редагування", ru "правка"), "files: profiles and the answer file are written" (uk "файли", ru

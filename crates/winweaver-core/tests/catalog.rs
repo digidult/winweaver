@@ -15,7 +15,7 @@ fn data_dir() -> PathBuf {
 fn embedded_catalog_loads() {
     let catalog = Catalog::embedded().expect("the embedded catalog loads");
     assert_eq!(catalog.rules().len(), 284);
-    assert_eq!(catalog.groups().len(), 40);
+    assert_eq!(catalog.groups().len(), 43);
     assert_eq!(catalog.version(), embedded::CATALOG_VERSION);
     for root in TREE_ROOTS {
         assert!(catalog.group(root).is_some(), "root {root}");
@@ -192,13 +192,29 @@ fn resolver_blocks_dependents() {
 }
 
 #[test]
-fn every_rule_sits_under_the_root_of_its_mechanism() {
+fn every_rule_sits_under_a_root_of_its_mechanism() {
     let catalog = Catalog::embedded().unwrap();
     let wrong: Vec<String> = catalog
         .rules()
         .iter()
-        .filter(|r| catalog.root_of(&r.group) != Some(Catalog::mechanism(r).root()))
+        .filter(|r| {
+            let roots = Catalog::mechanism(r).roots();
+            let root = catalog.root_of(&r.group);
+            root.is_none_or(|g| !roots.contains(&g))
+        })
         .map(|r| format!("{} ({:?}) in {}", r.id, Catalog::mechanism(r), r.group))
         .collect();
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+#[test]
+fn no_rule_sits_directly_in_a_root() {
+    let catalog = Catalog::embedded().unwrap();
+    let direct: Vec<&str> = catalog
+        .rules()
+        .iter()
+        .filter(|r| TREE_ROOTS.contains(&r.group.as_str()))
+        .map(|r| r.id.as_str())
+        .collect();
+    assert!(direct.is_empty(), "{direct:?}");
 }

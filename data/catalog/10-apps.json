@@ -511,7 +511,7 @@
     },
     {
       "id": "apps.remove.onedrive",
-      "group": "apps.remove",
+      "group": "apps.onedrive",
       "phase": "default-user",
       "title": "OneDrive",
       "level": "optional",

@@ -202,7 +202,8 @@ fn switch(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
 pub(crate) fn mechanism_title(m: winweaver_core::catalog::Mechanism) -> &'static str {
     match m {
         winweaver_core::catalog::Mechanism::Unattend => "Answer file",
-        winweaver_core::catalog::Mechanism::Policy => "Policy",
+        winweaver_core::catalog::Mechanism::Registry => "Registry",
+        winweaver_core::catalog::Mechanism::Script => "Script",
         winweaver_core::catalog::Mechanism::Other => "Other",
     }
 }

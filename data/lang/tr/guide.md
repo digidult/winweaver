@@ -13,8 +13,10 @@ sayfaları da aynı şekilde, her biri kendi sekmesinde açılır.
 
 - **Profiller** (`.wwprofile`) seçimlerinizi tutar; Office, Strict, Laptop ve Home hazır ayarları başlangıç
   noktalarıdır.
-- **Katalog**, üç bölümdeki yerleşik kurallardan (Kurulum, Standart ilkeler, Diğer) ve içeri aktardığınız,
-  onlar da kurala dönüşen ilke şablonlarından (ADMX) oluşur.
+- **Katalog**, üç bölümdeki yerleşik kurallardan ve içeri aktardığınız, onlar da kurala dönüşen ilke
+  şablonlarından (ADMX) oluşur. **Yükleme**, yanıt dosyasının ve betiklerinin yaptıklarını; **İlkeler**,
+  yalnızca kayıt defterine yazan her kuralı ve her içeri aktarımı; **Diğer** ise geri kalanı, yani
+  çalışan bir Windows'taki hizmetleri, özellikleri, uygulamaları, programları ve betikleri içerir.
 - **Sekmeler**: her belge kendi sekmesinde açılır: profiller, karşılaştırmalar, kataloglar, yer imleri, MCP
   sunucusu, bunun gibi sayfalar.
 - **Bu bilgisayar** çalışan Windows'u okur, kuralları onda denetler, onları bir yedekle uygular ve başka
@@ -183,7 +185,7 @@ Bir kayıt dosyası (`.reg`), kayıt defteri bölümünde anlatıldığı gibi k
 ## İlke şablonları
 
 **Ayarlar, İlke şablonları** bu Windows'un, bir klasörün veya bir katalog dosyasının ADMX şablonlarını
-içeri aktarır; ilkeleri Standart ilkeler altında kurallara dönüşür ve içeri aktarımlar `imports/` içinde
+içeri aktarır; ilkeleri İlkeler altında kurallara dönüşür ve içeri aktarımlar `imports/` içinde
 saklanır. Yalnızca işaretli içeri aktarımlar okunur ve yüklenir; diğerleri bellek kullanmaz. Bir profil,
 yüklenmemiş bir içeri aktarımın seçeneklerini içerebilir: bunlar profilde değişmeden kalır, ağacın
 sonunda **Bilinmeyen seçenekler** altında listelenir ve oluşturmaya alınmaz; profil açılırken ve yanıt

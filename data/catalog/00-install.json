@@ -184,7 +184,7 @@
     },
     {
       "id": "install.netfx3",
-      "group": "install.other",
+      "group": "install.scripts",
       "phase": "specialize",
       "title": ".NET Framework 3.5 from the installation media",
       "level": "optional",
@@ -217,7 +217,7 @@
     },
     {
       "id": "install.drivers-from-media",
-      "group": "install.other",
+      "group": "install.scripts",
       "phase": "specialize",
       "title": "Drivers from the Drivers folder of the installation media",
       "level": "optional",
@@ -250,7 +250,7 @@
     },
     {
       "id": "install.skip-auto-activation",
-      "group": "install.other",
+      "group": "system",
       "phase": "specialize",
       "title": "No automatic activation attempts",
       "level": "optional",

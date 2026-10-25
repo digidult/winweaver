@@ -13,8 +13,11 @@ Markdown-Datei; die Seiten der Dokumentation werden genauso geöffnet, jede in e
 
 - **Profile** (`.wwprofile`) enthalten Ihre Auswahl; die Vorlagen Office, Strict, Laptop und Home sind
   Ausgangspunkte.
-- **Der Katalog** besteht aus den integrierten Regeln in drei Teilen (Installation, Standardrichtlinien,
-  Sonstiges) und den Richtlinienvorlagen (ADMX), die Sie importieren und die ebenfalls zu Regeln werden.
+- **Der Katalog** besteht aus den integrierten Regeln in drei Teilen und den Richtlinienvorlagen (ADMX),
+  die Sie importieren und die ebenfalls zu Regeln werden. **Installation** enthält, was die Antwortdatei
+  und ihre Skripts erledigen; **Richtlinien** jede Regel, die nur in die Registrierung schreibt, und jeden
+  Import; **Sonstiges** den Rest: Dienste, Features, Apps, Programme und Skripts in einem laufenden
+  Windows.
 - **Registerkarten**: Jedes Dokument öffnet sich in einer eigenen Registerkarte: Profile, Vergleiche,
   Kataloge, Lesezeichen, der MCP-Server, Seiten wie diese.
 - **Dieser PC** liest das laufende Windows, prüft Regeln darauf, wendet sie mit einer Sicherung an und
@@ -194,7 +197,7 @@ Registrierung beschreibt.
 ## Richtlinienvorlagen
 
 **Einstellungen, Richtlinienvorlagen** importiert die ADMX-Vorlagen dieses Windows, eines Ordners oder
-einer Katalogdatei; ihre Richtlinien werden zu Regeln unter Standardrichtlinien, und die Importe liegen in
+einer Katalogdatei; ihre Richtlinien werden zu Regeln unter Richtlinien, und die Importe liegen in
 `imports/`. Nur die markierten Importe werden gelesen und geladen; die anderen belegen keinen Speicher.
 Ein Profil kann Optionen eines Imports enthalten, der nicht geladen ist: Sie bleiben unverändert im
 Profil, stehen unter **Unbekannte Optionen** am Ende der Struktur und werden beim Erstellen ausgelassen,

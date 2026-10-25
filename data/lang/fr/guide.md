@@ -14,8 +14,11 @@ les pages de documentation s'ouvrent de la même façon, chacune dans son propre
 
 - **Les profils** (`.wwprofile`) gardent vos choix ; les préréglages Office, Strict, Laptop et Home sont
   des points de départ.
-- **Le catalogue** réunit les règles intégrées en trois parties (Installation, Stratégies standard,
-  Autres) et les modèles de stratégie (ADMX) que vous importez, qui deviennent aussi des règles.
+- **Le catalogue** réunit les règles intégrées en trois parties et les modèles de stratégie (ADMX) que
+  vous importez, qui deviennent aussi des règles. **Installation** regroupe ce que font le fichier de
+  réponses et ses scripts ; **Stratégies**, chaque règle qui n'écrit que dans le Registre et chaque
+  importation ; **Autres**, le reste : services, fonctionnalités, applications, programmes et scripts sur
+  un Windows en cours d'exécution.
 - **Les onglets** : chaque document s'ouvre dans son propre onglet : profils, comparaisons, catalogues,
   signets, le serveur MCP, des pages comme celle-ci.
 - **Ce PC** lit le Windows en marche, y vérifie des règles, les applique avec une sauvegarde et crée des
@@ -196,7 +199,7 @@ Un fichier de registre (`.reg`) s'ouvre dans un onglet à lui, comme le décrit 
 ## Modèles de stratégie
 
 **Paramètres, Modèles de stratégie** importe les modèles ADMX de ce Windows, d'un dossier ou d'un fichier
-de catalogue ; leurs stratégies deviennent des règles sous Stratégies standard, et les importations sont
+de catalogue ; leurs stratégies deviennent des règles sous Stratégies, et les importations sont
 gardées dans `imports/`. Seules les importations cochées sont lues et chargées ; les autres n'occupent pas
 de mémoire. Un profil peut contenir des options d'une importation non chargée : elles restent inchangées
 dans le profil, sont listées sous **Options inconnues** à la fin de l'arborescence et sont exclues de la

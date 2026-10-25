@@ -13,7 +13,8 @@ keeps its settings and files in that folder. The guide opens at the first start 
 
 ## What it does
 
-- **Profiles** (`.wwprofile`): a tree of about 280 rules in three parts (Installation, Standard policies, Other), each
+- **Profiles** (`.wwprofile`): a tree of about 280 rules in three parts (Installation: the answer file and its
+  scripts; Policies: every rule that only writes the registry; Other: services, features, apps and scripts), each
   with its description, risk, what it writes and its parameters, and the forms of the installation: edition and
   product key, computer name, workgroup, disk, accounts, languages, time zone. Presets: Office, Strict, Laptop, Home.
 - **Check and build**: Check (F7) lists errors and warnings; Build (F9) writes `autounattend.xml` and its scripts into

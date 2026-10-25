@@ -15,29 +15,38 @@ pub use model::{
 
 use crate::jsonfile::{self, JsonError};
 
-/// The root of the answer file settings.
+/// The root of the installation: the answer file settings and the scripts of the installation.
 pub const ROOT_UNATTEND: &str = "unattend";
-/// The root of the policies (registry values under `Policies` keys and imported templates).
+/// The root of the policies: every rule that only writes the registry, and every imported
+/// policy template.
 pub const ROOT_POLICIES: &str = "policies";
 /// The root of everything else.
 pub const ROOT_OTHER: &str = "other";
 /// The three roots of the tree, in order.
 pub const TREE_ROOTS: [&str; 3] = [ROOT_UNATTEND, ROOT_POLICIES, ROOT_OTHER];
 
-/// The mechanism that carries a rule; it decides the root the rule must live under.
+/// The mechanism that carries a rule; it decides the roots the rule may live under.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Mechanism {
+    /// Only settings and commands of the answer file.
     Unattend,
-    Policy,
+    /// Only registry values, their removals and lists, whatever the key.
+    Registry,
+    /// Only steps of a script: of the installation, or of a running Windows.
+    Script,
+    /// Anything else, a mix included.
     Other,
 }
 
 impl Mechanism {
-    pub fn root(self) -> &'static str {
+    /// The roots a rule of this mechanism may live under; a script goes under the installation
+    /// or under the rest, as the catalog decides.
+    pub fn roots(self) -> &'static [&'static str] {
         match self {
-            Mechanism::Unattend => ROOT_UNATTEND,
-            Mechanism::Policy => ROOT_POLICIES,
-            Mechanism::Other => ROOT_OTHER,
+            Mechanism::Unattend => &[ROOT_UNATTEND],
+            Mechanism::Registry => &[ROOT_POLICIES],
+            Mechanism::Script => &[ROOT_UNATTEND, ROOT_OTHER],
+            Mechanism::Other => &[ROOT_OTHER],
         }
     }
 }
@@ -283,18 +292,16 @@ impl Catalog {
     }
 
     /// The mechanism of a rule, read from its actions: only answer file settings and commands
-    /// is `Unattend`; only registry values under a `Policies` key is `Policy`; anything else or a
-    /// mix is `Other`.
+    /// is `Unattend`; only registry values, removals and lists is `Registry`; only script steps
+    /// is `Script`; anything else or a mix is `Other`.
     pub fn mechanism(rule: &Rule) -> Mechanism {
-        if rule.actions.iter().all(Action::is_xml) {
-            return Mechanism::Unattend;
-        }
-        let all_policies = rule.actions.iter().all(|a| {
-            a.registry_path()
-                .is_some_and(|p| p.to_ascii_lowercase().contains("\\policies\\"))
-        });
-        if all_policies {
-            Mechanism::Policy
+        let actions = &rule.actions;
+        if actions.iter().all(Action::is_xml) {
+            Mechanism::Unattend
+        } else if actions.iter().all(|a| a.registry_path().is_some()) {
+            Mechanism::Registry
+        } else if actions.iter().all(|a| matches!(a, Action::Ps { .. })) {
+            Mechanism::Script
         } else {
             Mechanism::Other
         }

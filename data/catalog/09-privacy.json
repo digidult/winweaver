@@ -114,7 +114,7 @@
     },
     {
       "id": "privacy.consumer-content",
-      "group": "privacy.ads.other",
+      "group": "privacy.ads",
       "phase": "specialize",
       "title": "No ads, preinstalled apps or automatic Teams installation (machine policies)",
       "level": "recommended",
@@ -181,7 +181,7 @@
     },
     {
       "id": "privacy.copilot-recall-off",
-      "group": "privacy.ai.other",
+      "group": "privacy.other",
       "phase": "specialize",
       "title": "Copilot, Recall and Click to Do turned off",
       "level": "recommended",
@@ -633,7 +633,7 @@
     },
     {
       "id": "ai.typing-insights-off",
-      "group": "privacy.ai.other",
+      "group": "privacy.ai",
       "phase": "default-user",
       "title": "No typing statistics (Typing insights)",
       "level": "optional",
@@ -843,7 +843,7 @@
     },
     {
       "id": "telemetry.feedback-user-off",
-      "group": "privacy.other",
+      "group": "privacy.telemetry",
       "phase": "default-user",
       "title": "Feedback frequency: never",
       "level": "optional",
@@ -868,7 +868,7 @@
     },
     {
       "id": "ads.lock-screen-spotlight-off",
-      "group": "privacy.ads.other",
+      "group": "privacy.ads",
       "phase": "default-user",
       "title": "Lock screen without \"Windows spotlight\" and suggested content",
       "level": "optional",
@@ -901,7 +901,7 @@
     },
     {
       "id": "ads.suggestions-user-policies",
-      "group": "privacy",
+      "group": "privacy.ads",
       "phase": "default-user",
       "title": "No tailored tips or third-party app suggestions",
       "level": "optional",
@@ -932,7 +932,7 @@
     },
     {
       "id": "ads.account-notifications-off",
-      "group": "privacy.ads.other",
+      "group": "privacy.ads",
       "phase": "default-user",
       "title": "No account notifications in Settings",
       "level": "optional",
@@ -957,7 +957,7 @@
     },
     {
       "id": "ads.advertising-id-user-off",
-      "group": "privacy.ads.other",
+      "group": "privacy.ads",
       "phase": "default-user",
       "title": "Advertising ID turned off in the new settings store too",
       "level": "optional",
@@ -1020,7 +1020,7 @@
     },
     {
       "id": "search.user-cloud-off",
-      "group": "privacy.other",
+      "group": "privacy",
       "phase": "default-user",
       "title": "Search without cloud content and history (user profile)",
       "level": "optional",
@@ -1069,7 +1069,7 @@
     },
     {
       "id": "search.start-track-off",
-      "group": "privacy.other",
+      "group": "privacy",
       "phase": "default-user",
       "title": "Do not track app launches for the Start menu and search",
       "level": "optional",
@@ -1094,7 +1094,7 @@
     },
     {
       "id": "speech.online-off",
-      "group": "privacy",
+      "group": "privacy.speech",
       "phase": "specialize",
       "title": "No cloud speech recognition or handwriting improvement",
       "level": "optional",
@@ -1127,7 +1127,7 @@
     },
     {
       "id": "speech.online-user-off",
-      "group": "privacy.speech.other",
+      "group": "privacy.speech",
       "phase": "default-user",
       "title": "Speech and input personalization turned off in the user profile",
       "level": "optional",
@@ -1185,7 +1185,7 @@
     },
     {
       "id": "speech.narrator-online-off",
-      "group": "privacy.speech.other",
+      "group": "privacy.speech",
       "phase": "default-user",
       "title": "Narrator without online services",
       "level": "optional",
@@ -1211,7 +1211,7 @@
     },
     {
       "id": "speech.narrator-extensions-off",
-      "group": "privacy.speech.other",
+      "group": "privacy.speech",
       "phase": "default-user",
       "title": "Narrator without extensions",
       "level": "optional",
@@ -1264,7 +1264,7 @@
     },
     {
       "id": "drivers.metadata-off",
-      "group": "policies",
+      "group": "system",
       "phase": "specialize",
       "title": "Do not download device apps and icons from the internet",
       "level": "optional",

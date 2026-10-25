@@ -10,7 +10,7 @@ out of scope.
 The program:
 
 1. shows a catalog of installation rules as a searchable tree, grouped by the mechanism that carries them
-   (answer file settings, policies, other registry values and scripts) and by topic, and resolves
+   (the answer file and its scripts, the registry, the rest) and by topic, and resolves
    dependencies and conflicts between rules automatically;
 2. edits profiles: which rules are on, with which parameters, plus the forms of the installation (edition
    and key, computer name, workgroup, disk, accounts, languages, time zone);

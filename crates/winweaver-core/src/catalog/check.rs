@@ -71,7 +71,7 @@ fn check_rule(catalog: &Catalog, rule: &Rule, problems: &mut Vec<String>) {
     }
     let mechanism = Catalog::mechanism(rule);
     match catalog.root_of(&rule.group) {
-        Some(root) if root == mechanism.root() => {}
+        Some(root) if mechanism.roots().contains(&root) => {}
         Some(root) => problems.push(format!(
             "rule {id}: mechanism {mechanism:?} but the group {} is under the root {root}",
             rule.group

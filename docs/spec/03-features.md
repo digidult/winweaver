@@ -27,10 +27,15 @@ lists the planned changes.
   without parameters whose every registry action a built-in rule in effect has too is shown on, its check
   box disabled with the built-in rule in the tip, and it stays off in the profile; chosen on, it stays a
   normal rule).
-- The tree has three roots by mechanism: answer file settings, policies (registry under `Policies` keys,
-  and every imported template), other (registry values elsewhere, scripts, app removals); a thematic group
-  sits under the root of most of its rules and a rule of another mechanism lives in a mirror group under
-  the right root. A rule in the wrong root fails the tests.
+- The tree has three roots by mechanism (`Catalog::mechanism`, read from the actions of a rule):
+  Installation holds the answer file settings and commands and the scripts of the installation (the
+  specialize scripts, the first sign-in, the task after OOBE); Policies holds every rule that only writes
+  registry values, their removals and lists, under any key, and every imported template; Other holds the
+  rest: services, features, capabilities, apps, programs, scripts on a running Windows and their mixes
+  with registry values. A rule of only script steps lives under Installation or Other, as the catalog
+  decides. A thematic group sits under the root of most of its rules and a rule of another mechanism lives
+  in a mirror group under the right root (Security, Network and sharing, Logging, Telemetry, System). A rule
+  in the wrong root fails the tests, and no rule sits directly in a root.
 - The catalog is English with a translation file per built-in language (the titles and texts of the rules
   and the groups); a test fails when a rule lacks its texts in one of them.
 - The catalog version is kept in the profile; a profile of another catalog version loads, and its unknown

@@ -4611,19 +4611,19 @@
   "_groups": {
     "unattend": {
       "title": "Installation",
-      "summary": "Was die Antwortdatei mit eigenen Mitteln erledigt: die Installation, OOBE, die Konten und die Sprachen; auch die Datenformulare befinden sich hier"
+      "summary": "Was die Antwortdatei mit eigenen Mitteln und ihren Skripts erledigt: die Durchläufe der Installation, OOBE, die Installationsskripts, die erste Anmeldung und die Aufgabe nach OOBE; auch die Datenformulare befinden sich hier"
     },
     "policies": {
-      "title": "Standardrichtlinien",
-      "summary": "Richtlinien von Windows: die integrierten Regeln, die nur Richtlinienwerte schreiben, und alle importierten Richtlinienvorlagen"
+      "title": "Richtlinien",
+      "summary": "Jede Regel, die nur in die Registrierung schreibt, ob Richtlinienwerte oder andere Werte, und alle importierten Richtlinienvorlagen"
     },
     "other": {
       "title": "Sonstiges",
-      "summary": "Regeln außerhalb der Richtlinien: Registrierungswerte, Dienste, Features, Apps, Skripts, das Standardbenutzerprofil, die erste Anmeldung und die Aufgaben nach OOBE"
+      "summary": "Regeln, die nicht nur aus Registrierungswerten oder Einstellungen der Antwortdatei bestehen: Dienste, Features, Funktionen, Apps, Programme, Skripts in einem laufenden Windows und ihre Kombinationen mit Registrierungswerten"
     },
     "install": {
       "title": "windowsPE und specialize",
-      "summary": "Umgehen der Kompatibilitätsprüfungen, ein lokales Konto ohne Netzwerkverbindung, .NET Framework 3.5 vom Installationsmedium."
+      "summary": "Umgehen der Kompatibilitätsprüfungen, Windows-Setup ohne Diagnosedaten und dynamisches Update, ein lokales Konto ohne Netzwerkverbindung."
     },
     "oobe": {
       "title": "Windows-Willkommensseite (OOBE)",
@@ -4656,7 +4656,7 @@
     },
     "network": {
       "title": "Netzwerk und Freigabe",
-      "summary": "SMB, Signierung, Namensauflösung, Firewall."
+      "summary": "SMB-Signierung, Namensauflösung, Firewall."
     },
     "browsers": {
       "title": "Browser",
@@ -4673,7 +4673,7 @@
     },
     "logging": {
       "title": "Protokollierung für Untersuchungen",
-      "summary": "Überwachung, Protokollgrößen, PowerShell-Protokollierung, Deaktivieren von PowerShell 2.0."
+      "summary": "Überwachung, Protokollgrößen, Deaktivieren von PowerShell 2.0."
     },
     "privacy": {
       "title": "Telemetrie, Werbung, KI",
@@ -4685,7 +4685,7 @@
     },
     "apps": {
       "title": "Dienste und Apps",
-      "summary": "Deaktivieren unnötiger Dienste und Entfernen von Apps."
+      "summary": "Deaktivieren unnötiger Dienste, automatischer Start der Druckwarteschlange, Entfernen von Apps."
     },
     "apps.remove": {
       "title": "Zu entfernende Apps",
@@ -4713,7 +4713,7 @@
     },
     "apps.onedrive": {
       "title": "OneDrive",
-      "summary": "Richtlinien für den OneDrive-Client: Verschieben von Ordnern in die Cloud, Netzwerkverkehr, Feedback, vollständige Sperre."
+      "summary": "Richtlinien für den OneDrive-Client: Verschieben von Ordnern in die Cloud, Netzwerkverkehr, Feedback, vollständige Sperre; sein Installationsprogramm wird aus dem Standardbenutzerprofil entfernt."
     },
     "system.explorer": {
       "title": "Explorer und Desktop",
@@ -4725,7 +4725,7 @@
     },
     "system.explorer.nav": {
       "title": "Navigationsbereich",
-      "summary": "„Start“, „Katalog“, „Bibliotheken“, „Netzwerk“, „Papierkorb“, der Benutzerordner und USB-Laufwerke im linken Bereich des Explorers sowie der Ordner, mit dem der Explorer geöffnet wird."
+      "summary": "„Start“, „Katalog“, „Bibliotheken“, „Netzwerk“, „Papierkorb“ und der Benutzerordner im linken Bereich des Explorers sowie der Ordner, mit dem der Explorer geöffnet wird."
     },
     "system.explorer.desktop": {
       "title": "Desktopsymbole",
@@ -4735,33 +4735,45 @@
       "title": "Ordner auf dem Desktop",
       "summary": "„Dokumente“, „Downloads“, „Musik“, „Bilder“, „Videos“, „Desktop“, „Katalog“ und „Start“ als Symbole auf dem Desktop neuer Konten. Selten benötigt."
     },
-    "install.other": {
+    "install.scripts": {
       "title": "Installationsskripts (specialize)",
-      "summary": "Umgehen der Kompatibilitätsprüfungen, ein lokales Konto ohne Netzwerkverbindung, .NET Framework 3.5 vom Installationsmedium."
+      "summary": ".NET Framework 3.5 und Treiber vom Installationsmedium."
     },
-    "security.policies": {
+    "user-logon": {
+      "title": "Erste Anmeldung",
+      "summary": "Skripts der ersten Anmeldung jedes neuen Benutzers: die festgelegte Anzeigesprache, die Eingabesprachen des Profils."
+    },
+    "security.other": {
       "title": "Sicherheit",
-      "summary": "UAC, Konten, Schutz von Anmeldeinformationen, Remotezugriff, Verschlüsselung."
+      "summary": "Kontosperrung und Kennwortablauf, festgelegt mit net accounts."
     },
     "privacy.other": {
       "title": "Telemetrie, Werbung, KI",
-      "summary": "Minimale Datenübermittlung, Deaktivieren von Werbung und vorinstallierten Apps, Copilot und Recall, Widgets, Websuche."
+      "summary": "Minimale Telemetrie mit ihren Diensten und Aufgaben; Copilot, Recall und Click to Do deaktiviert, samt dem Feature Recall."
     },
-    "privacy.ads.other": {
+    "privacy.ads": {
       "title": "Werbung und Empfehlungen",
-      "summary": "Werbe-ID, Tipps und Vorschläge, Sperrbildschirm, Widgets."
+      "summary": "Werbe-ID, Tipps und Vorschläge, vorinstallierte Apps, der Sperrbildschirm, Werbung im Explorer und in den Einstellungen."
     },
-    "privacy.ai.other": {
-      "title": "Künstliche Intelligenz",
-      "summary": "Copilot, Recall, Click to Do, KI-Agents, generative Features von Windows, Paint und Editor."
-    },
-    "privacy.speech.other": {
+    "privacy.speech": {
       "title": "Spracherkennung und Eingabe",
       "summary": "Spracherkennung in der Cloud, Freihand- und Eingabeanpassung, Onlinedienste der Sprachausgabe."
     },
     "apps.policies": {
-      "title": "Dienste und Apps",
-      "summary": "Deaktivieren unnötiger Dienste und Entfernen von Apps."
+      "title": "Apps",
+      "summary": "Richtlinien und Werte von Apps: OneDrive."
+    },
+    "logging.policies": {
+      "title": "Protokollierung für Untersuchungen",
+      "summary": "PowerShell-Protokollierung."
+    },
+    "network.other": {
+      "title": "Netzwerk und Freigabe",
+      "summary": "SMB 1.0 und NetBIOS über TCP/IP."
+    },
+    "system.other": {
+      "title": "System",
+      "summary": "Windows Update ohne Sperren, VBScript entfernt, USB-Laufwerke nur einmal im Navigationsbereich."
     }
   }
 }

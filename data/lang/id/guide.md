@@ -13,8 +13,10 @@ ini adalah file Markdown; halaman dokumentasi terbuka dengan cara yang sama, mas
 
 - **Profil** (`.wwprofile`) menyimpan pilihan Anda; preset Office, Strict, Laptop, dan Home menjadi titik
   awal.
-- **Katalog** terdiri dari aturan bawaan dalam tiga bagian (Instalasi, Kebijakan standar, Lainnya) dan
-  templat kebijakan (ADMX) yang Anda impor, yang juga menjadi aturan.
+- **Katalog** terdiri dari aturan bawaan dalam tiga bagian dan templat kebijakan (ADMX) yang Anda impor,
+  yang juga menjadi aturan. **Instalasi** memuat apa yang dilakukan file jawaban dan skripnya;
+  **Kebijakan** memuat setiap aturan yang hanya menulis registri dan setiap impor; **Lainnya** memuat
+  sisanya: layanan, fitur, aplikasi, program, dan skrip di Windows yang sedang berjalan.
 - **Tab**: setiap dokumen terbuka di tabnya sendiri: profil, perbandingan, katalog, penanda, server MCP,
   halaman seperti ini.
 - **PC Ini** membaca Windows yang berjalan, memeriksa aturan di sana, menerapkannya dengan cadangan, dan
@@ -180,7 +182,7 @@ File registri (`.reg`) terbuka di tabnya sendiri, seperti yang dijelaskan di bag
 ## Templat kebijakan
 
 **Pengaturan, Templat kebijakan** mengimpor templat ADMX Windows ini, sebuah folder, atau file katalog;
-kebijakannya menjadi aturan di bawah Kebijakan standar, dan impor disimpan di `imports/`. Hanya impor
+kebijakannya menjadi aturan di bawah Kebijakan, dan impor disimpan di `imports/`. Hanya impor
 yang dicentang yang dibaca dan dimuat; yang lain tidak memakai memori. Profil dapat memuat opsi dari
 impor yang tidak dimuat: opsi tetap di profil tanpa perubahan, tercantum di **Opsi tidak dikenal** di akhir
 pohon, dan tidak disertakan dalam pembuatan, dengan peringatan saat profil dibuka dan saat file jawaban

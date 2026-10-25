@@ -4288,19 +4288,19 @@
   "_groups": {
     "unattend": {
       "title": "Instalación",
-      "summary": "Lo que el archivo de respuesta hace con sus propios medios: la instalación, la OOBE, las cuentas y los idiomas; aquí también están los formularios de datos"
+      "summary": "Lo que el archivo de respuesta hace con sus propios medios y con sus scripts: los pasos de la instalación, la OOBE, los scripts de instalación, el primer inicio de sesión y la tarea posterior a la OOBE; aquí también están los formularios de datos"
     },
     "policies": {
-      "title": "Directivas estándar",
-      "summary": "Directivas de Windows: las reglas integradas que solo escriben valores de directiva y todas las plantillas de directivas importadas"
+      "title": "Directivas",
+      "summary": "Todas las reglas que solo escriben en el Registro, ya sean valores de directiva u otros valores, y todas las plantillas de directivas importadas"
     },
     "other": {
       "title": "Otras",
-      "summary": "Reglas ajenas a las directivas: valores del Registro, servicios, características, aplicaciones, scripts, el perfil de usuario predeterminado, el primer inicio de sesión y las tareas posteriores a la OOBE"
+      "summary": "Reglas que no son solo valores del Registro o configuraciones del archivo de respuesta: servicios, características, funcionalidades, aplicaciones, programas, scripts en un Windows en ejecución y sus combinaciones con valores del Registro"
     },
     "install": {
       "title": "windowsPE y specialize",
-      "summary": "Omisión de las comprobaciones de compatibilidad, una cuenta local sin conexión de red, .NET Framework 3.5 desde el medio de instalación."
+      "summary": "Omisión de las comprobaciones de compatibilidad, el programa de instalación sin datos de diagnóstico ni Actualización dinámica, una cuenta local sin conexión de red."
     },
     "oobe": {
       "title": "Experiencia de configuración rápida (OOBE)",
@@ -4333,7 +4333,7 @@
     },
     "network": {
       "title": "Red y uso compartido",
-      "summary": "SMB, firma, resolución de nombres, firewall."
+      "summary": "Firma SMB, resolución de nombres, firewall."
     },
     "browsers": {
       "title": "Navegadores",
@@ -4350,7 +4350,7 @@
     },
     "logging": {
       "title": "Registro para investigaciones",
-      "summary": "Auditoría, tamaños de los registros, registro de PowerShell, deshabilitación de PowerShell 2.0."
+      "summary": "Auditoría, tamaños de los registros, deshabilitación de PowerShell 2.0."
     },
     "privacy": {
       "title": "Telemetría, anuncios, IA",
@@ -4362,7 +4362,7 @@
     },
     "apps": {
       "title": "Servicios y aplicaciones",
-      "summary": "Deshabilitación de servicios innecesarios y eliminación de aplicaciones."
+      "summary": "Deshabilitación de servicios innecesarios, inicio automático de la cola de impresión, eliminación de aplicaciones."
     },
     "apps.remove": {
       "title": "Aplicaciones que se quitan",
@@ -4390,7 +4390,7 @@
     },
     "apps.onedrive": {
       "title": "OneDrive",
-      "summary": "Directivas del cliente de OneDrive: mover carpetas a la nube, tráfico de red, comentarios, bloqueo completo."
+      "summary": "Directivas del cliente de OneDrive: mover carpetas a la nube, tráfico de red, comentarios, bloqueo completo; su instalador se quita del perfil de usuario predeterminado."
     },
     "system.explorer": {
       "title": "Explorador de archivos y escritorio",
@@ -4402,7 +4402,7 @@
     },
     "system.explorer.nav": {
       "title": "Panel de navegación",
-      "summary": "\"Inicio\", \"Galería\", \"Bibliotecas\", \"Red\", \"Papelera de reciclaje\", la carpeta del usuario y las unidades USB en el panel izquierdo del Explorador de archivos, y la carpeta en la que se abre el Explorador de archivos."
+      "summary": "\"Inicio\", \"Galería\", \"Bibliotecas\", \"Red\", \"Papelera de reciclaje\" y la carpeta del usuario en el panel izquierdo del Explorador de archivos, y la carpeta en la que se abre el Explorador de archivos."
     },
     "system.explorer.desktop": {
       "title": "Iconos del escritorio",
@@ -4412,33 +4412,45 @@
       "title": "Carpetas en el escritorio",
       "summary": "\"Documentos\", \"Descargas\", \"Música\", \"Imágenes\", \"Vídeos\", \"Escritorio\", \"Galería\" e \"Inicio\" como iconos en el escritorio de las cuentas nuevas. Rara vez es necesario."
     },
-    "install.other": {
+    "install.scripts": {
       "title": "Scripts de instalación (specialize)",
-      "summary": "Omisión de las comprobaciones de compatibilidad, una cuenta local sin conexión de red, .NET Framework 3.5 desde el medio de instalación."
+      "summary": ".NET Framework 3.5 y controladores desde el medio de instalación."
     },
-    "security.policies": {
+    "user-logon": {
+      "title": "Primer inicio de sesión",
+      "summary": "Scripts del primer inicio de sesión de cada usuario nuevo: el idioma de visualización fijado, los idiomas de entrada del perfil."
+    },
+    "security.other": {
       "title": "Seguridad",
-      "summary": "UAC, cuentas, protección de credenciales, acceso remoto, cifrado."
+      "summary": "Bloqueo de cuentas y caducidad de las contraseñas, configurados con net accounts."
     },
     "privacy.other": {
       "title": "Telemetría, anuncios, IA",
-      "summary": "Envío mínimo de datos, deshabilitación de anuncios y aplicaciones preinstaladas, Copilot y Recall, widgets, búsqueda web."
+      "summary": "Telemetría mínima con sus servicios y tareas; Copilot, Recall y Click to Do desactivados junto con la característica Recall."
     },
-    "privacy.ads.other": {
+    "privacy.ads": {
       "title": "Anuncios y recomendaciones",
-      "summary": "Id. de publicidad, consejos y sugerencias, pantalla de bloqueo, widgets."
+      "summary": "Id. de publicidad, consejos y sugerencias, aplicaciones preinstaladas, la pantalla de bloqueo, anuncios en el Explorador de archivos y en Configuración."
     },
-    "privacy.ai.other": {
-      "title": "Inteligencia artificial",
-      "summary": "Copilot, Recall, Click to Do, agentes de IA, características generativas de Windows, Paint y Bloc de notas."
-    },
-    "privacy.speech.other": {
+    "privacy.speech": {
       "title": "Voz y entrada",
       "summary": "Reconocimiento de voz en la nube, personalización de la escritura a mano y del tecleo, servicios en línea del Narrador."
     },
     "apps.policies": {
-      "title": "Servicios y aplicaciones",
-      "summary": "Deshabilitación de servicios innecesarios y eliminación de aplicaciones."
+      "title": "Aplicaciones",
+      "summary": "Directivas y valores de aplicaciones: OneDrive."
+    },
+    "logging.policies": {
+      "title": "Registro para investigaciones",
+      "summary": "Registro de PowerShell."
+    },
+    "network.other": {
+      "title": "Red y uso compartido",
+      "summary": "SMB 1.0 y NetBIOS sobre TCP/IP."
+    },
+    "system.other": {
+      "title": "Sistema",
+      "summary": "Windows Update sin bloqueos, VBScript quitado, unidades USB una sola vez en el panel de navegación."
     }
   }
 }

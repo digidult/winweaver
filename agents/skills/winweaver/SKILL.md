@@ -17,8 +17,8 @@ Tool names may carry a prefix of the client, such as `mcp__winweaver__get_status
 
 1. `get_status`: the mode, whether reading this PC is allowed, the current profile and the workspace.
 2. `get_profile`: the current profile (passwords and the product key appear as `***`).
-3. `list_groups` (the three roots: Installation, Standard policies, Other), then `list_rules` with a group,
-   or `search_rules` with words.
+3. `list_groups` (the three roots: Installation, the answer file and its scripts; Policies, every rule that
+   only writes the registry; Other, the rest), then `list_rules` with a group, or `search_rules` with words.
 4. `get_rule` before changing a rule: it says what the rule writes, its risk, its parameters and what it
    needs or conflicts with.
 

@@ -13,8 +13,10 @@ della documentazione si aprono allo stesso modo, ognuna nella propria scheda.
 
 - **I profili** (`.wwprofile`) conservano le vostre scelte; le preimpostazioni Office, Strict, Laptop e
   Home sono punti di partenza.
-- **Il catalogo** comprende le regole integrate in tre parti (Installazione, Criteri standard, Altro) e i
-  modelli di criteri (ADMX) che importate, che diventano anch'essi regole.
+- **Il catalogo** comprende le regole integrate in tre parti e i modelli di criteri (ADMX) che importate,
+  che diventano anch'essi regole. **Installazione** raccoglie ciò che fanno il file di risposte e i suoi
+  script; **Criteri** ogni regola che scrive solo nel Registro di sistema e ogni importazione; **Altro**
+  il resto: servizi, funzionalità, app, programmi e script su un Windows in esecuzione.
 - **Le schede**: ogni documento si apre nella propria scheda: profili, confronti, cataloghi, segnalibri, il
   server MCP, pagine come questa.
 - **Questo PC** legge il Windows in funzione, vi controlla le regole, le applica con un backup e crea
@@ -185,7 +187,7 @@ Un file di registro (`.reg`) si apre in una scheda propria, come descrive la sez
 ## Modelli di criteri
 
 **Impostazioni, Modelli di criteri** importa i modelli ADMX di questo Windows, di una cartella o di un
-file di catalogo; i loro criteri diventano regole in Criteri standard e le importazioni sono conservate in
+file di catalogo; i loro criteri diventano regole in Criteri e le importazioni sono conservate in
 `imports/`. Vengono letti e caricati solo le importazioni selezionate; le altre non occupano memoria. Un
 profilo può contenere opzioni di un'importazione non caricata: restano invariate nel profilo, sono
 elencate in **Opzioni sconosciute** alla fine dell'albero e sono escluse dalla generazione, con un avviso
