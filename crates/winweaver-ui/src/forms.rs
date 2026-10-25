@@ -11,7 +11,19 @@ use winweaver_core::validate;
 #[cfg(feature = "full")]
 use crate::UsersAct;
 use crate::i18n::{tr, trf};
-use crate::{Act, ProfileAct, ProfileDoc};
+use crate::{Act, ProfileAct, ProfileDoc, style};
+
+/// The width of a field that holds a text of any length (a name, a description, a path): the
+/// room of the panel, within reason.
+pub(crate) fn wide_field(ui: &egui::Ui) -> f32 {
+    (ui.available_width() - 8.0).clamp(240.0, 720.0)
+}
+
+/// The width of a field of a short value (a name of 15 or 20 characters, a key, a tag), in the
+/// text size of the theme.
+pub(crate) fn short_field(ui: &egui::Ui, at: f32) -> f32 {
+    style::size(ui, at)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Form {
@@ -118,7 +130,7 @@ fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
                     ui.add(
                         egui::TextEdit::singleline(&mut i.product_key)
                             .hint_text(tr("XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"))
-                            .desired_width(240.0),
+                            .desired_width(short_field(ui, 260.0)),
                     );
                 }
             });
@@ -131,7 +143,7 @@ fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
                 .map_or_else(|| i.time_zone.clone(), |z| z.title_for(language).to_owned());
             egui::ComboBox::from_id_salt("time-zone")
                 .selected_text(shown)
-                .width(320.0)
+                .width(wide_field(ui).min(560.0))
                 .show_ui(ui, |ui| {
                     for zone in resources::time_zones() {
                         ui.selectable_value(
@@ -175,7 +187,7 @@ fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
                             } else {
                                 "PC-01"
                             })
-                            .desired_width(180.0),
+                            .desired_width(short_field(ui, 200.0)),
                     );
                 }
             });
@@ -185,7 +197,7 @@ fn install_form(ui: &mut egui::Ui, i: &mut Install, language: &str) {
             ui.add(
                 egui::TextEdit::singleline(&mut i.workgroup)
                     .hint_text(tr("Empty: WORKGROUP"))
-                    .desired_width(180.0),
+                    .desired_width(short_field(ui, 200.0)),
             );
             ui.end_row();
 
@@ -298,11 +310,15 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>, acts: &mut Vec<
                 .spacing([16.0, 6.0])
                 .show(ui, |ui| {
                     ui.label(tr("Name"));
-                    ui.add(egui::TextEdit::singleline(&mut account.name).desired_width(200.0));
+                    ui.add(
+                        egui::TextEdit::singleline(&mut account.name)
+                            .desired_width(short_field(ui, 220.0)),
+                    );
                     ui.end_row();
                     ui.label(tr("Display name"));
                     ui.add(
-                        egui::TextEdit::singleline(&mut account.display_name).desired_width(200.0),
+                        egui::TextEdit::singleline(&mut account.display_name)
+                            .desired_width(wide_field(ui)),
                     );
                     ui.end_row();
                     ui.label(tr("Group"));
@@ -316,14 +332,15 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>, acts: &mut Vec<
                     ui.end_row();
                     ui.label(tr("Description"));
                     ui.add(
-                        egui::TextEdit::singleline(&mut account.description).desired_width(320.0),
+                        egui::TextEdit::singleline(&mut account.description)
+                            .desired_width(wide_field(ui)),
                     );
                     ui.end_row();
                     ui.label(tr("Password"));
                     ui.add(
                         egui::TextEdit::singleline(&mut account.password)
                             .password(true)
-                            .desired_width(200.0),
+                            .desired_width(short_field(ui, 240.0)),
                     );
                     ui.end_row();
                 });
@@ -370,7 +387,7 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>, acts: &mut Vec<
 /// (filtered by what is typed) that fills the tag in.
 fn locale_field(ui: &mut egui::Ui, id: &str, value: &mut String, table: &resources::Locales) {
     ui.horizontal(|ui| {
-        ui.add(egui::TextEdit::singleline(value).desired_width(120.0));
+        ui.add(egui::TextEdit::singleline(value).desired_width(short_field(ui, 120.0)));
         if table.languages.is_empty() {
             return;
         }
@@ -383,7 +400,7 @@ fn locale_field(ui: &mut egui::Ui, id: &str, value: &mut String, table: &resourc
         let mut chosen = None;
         egui::ComboBox::from_id_salt(id)
             .selected_text(known.unwrap_or_default())
-            .width(240.0)
+            .width(short_field(ui, 240.0))
             .height(360.0)
             .show_ui(ui, |ui| {
                 for language in &table.languages {
@@ -520,7 +537,7 @@ fn layout_list(
     let mut chosen = None;
     egui::ComboBox::from_id_salt(id)
         .selected_text(shown)
-        .width(240.0)
+        .width(short_field(ui, 240.0))
         .height(360.0)
         .show_ui(ui, |ui| {
             if ui.selectable_label(own.is_none(), first).clicked() && own.is_some() {
@@ -557,14 +574,14 @@ fn add_input_row(ui: &mut egui::Ui, l: &mut Languages, table: &resources::Locale
         ui.label(tr("Add"));
         let search = egui::TextEdit::singleline(&mut add.filter)
             .hint_text(tr("Find a language"))
-            .desired_width(140.0);
+            .desired_width(short_field(ui, 140.0));
         ui.add(search);
         let needle = add.filter.to_lowercase();
         let chosen = table.language(&add.tag);
         let shown = chosen.map_or_else(|| tr("a language").to_owned(), |c| c.name.clone());
         egui::ComboBox::from_id_salt("add-input-language")
             .selected_text(shown)
-            .width(240.0)
+            .width(short_field(ui, 240.0))
             .height(360.0)
             .show_ui(ui, |ui| {
                 for language in &table.languages {

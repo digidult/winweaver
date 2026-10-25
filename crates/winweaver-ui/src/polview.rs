@@ -684,9 +684,13 @@ fn editor(ctx: &egui::Context, doc: &mut PolDoc) {
     };
     let mut close = false;
     let mut apply = false;
+    // The fields take the width of the window, wider for data of several lines or a list.
+    let long =
+        edit.kind.with_list() || (edit.kind.with_data() && regedit::multiline(&edit.type_name));
+    let width = regedit::modal_width(ctx, long);
     widgets::Modal::new(title)
         .id("pol-editor")
-        .width(560.0)
+        .width(width)
         .show(ctx, |ui| {
             egui::Grid::new("pol-edit")
                 .num_columns(2)
@@ -696,7 +700,7 @@ fn editor(ctx: &egui::Context, doc: &mut PolDoc) {
                     ui.vertical(|ui| {
                         ui.add(
                             egui::TextEdit::singleline(&mut edit.key)
-                                .desired_width(420.0)
+                                .desired_width(f32::INFINITY)
                                 .font(egui::TextStyle::Monospace),
                         );
                         let note = match hive {
@@ -711,7 +715,7 @@ fn editor(ctx: &egui::Context, doc: &mut PolDoc) {
                     ui.label(tr("Action"));
                     egui::ComboBox::from_id_salt("pol-kind")
                         .selected_text(edit.kind.title())
-                        .width(420.0)
+                        .width(ui.available_width())
                         .show_ui(ui, |ui| {
                             for kind in EntryKind::ALL {
                                 ui.selectable_value(&mut edit.kind, kind, kind.title());
@@ -722,7 +726,7 @@ fn editor(ctx: &egui::Context, doc: &mut PolDoc) {
                         ui.label(tr("Name"));
                         ui.add(
                             egui::TextEdit::singleline(&mut edit.name)
-                                .desired_width(420.0)
+                                .desired_width(f32::INFINITY)
                                 .hint_text(tr("(Default)")),
                         );
                         ui.end_row();
@@ -735,14 +739,13 @@ fn editor(ctx: &egui::Context, doc: &mut PolDoc) {
                             Some(&types),
                             &mut edit.type_name,
                             &mut edit.text,
-                            420.0,
                         );
                     }
                     if edit.kind.with_list() {
                         ui.label(tr("Names"));
                         ui.add(
                             egui::TextEdit::multiline(&mut edit.names)
-                                .desired_width(420.0)
+                                .desired_width(f32::INFINITY)
                                 .desired_rows(4)
                                 .hint_text(tr("One name a line")),
                         );

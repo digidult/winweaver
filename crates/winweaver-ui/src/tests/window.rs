@@ -408,6 +408,87 @@ fn screenshots_of_the_window() {
     harness.state_mut().shell.jobs_folded = true;
     shot(&mut harness, "29b-jobs-folded");
     drop(tx);
+    // The forms of a profile and the editors, their fields in the width of the panel.
+    harness.state_mut().apply(vec![
+        Act::Shell(ShellAct::Activate(0)),
+        Act::Profile(ProfileAct::Select(Sel::Form(Form::Install))),
+    ]);
+    shot(&mut harness, "30-form-install");
+    harness
+        .state_mut()
+        .apply(vec![Act::Profile(ProfileAct::Select(Sel::Form(
+            Form::Accounts,
+        )))]);
+    shot(&mut harness, "31-form-accounts");
+    // The editor of a catalog file with a policy selected.
+    let edit_dir =
+        std::env::temp_dir().join(format!("winweaver-shots-edit-{}", std::process::id()));
+    super::sample_import(&edit_dir);
+    let file = edit_dir.join("imports").join("test.wwcatalog");
+    harness
+        .state_mut()
+        .apply(vec![Act::Shell(ShellAct::OpenPath(file))]);
+    let tab = harness.state().shell.active;
+    harness
+        .state_mut()
+        .apply(vec![Act::Catalog(CatalogAct::Edit(CatalogRef::Tab(tab)))]);
+    if let Some(Doc::CatalogEdit(d)) = harness.state_mut().shell.docs.last_mut() {
+        d.select(&TreeKey::Rule("admx.sample.turnoff".to_owned()));
+    }
+    shot(&mut harness, "32-catalog-editor");
+    let _ = std::fs::remove_dir_all(&edit_dir);
+    // The editor of a value of the registry tab, over the tab.
+    harness.state_mut().apply(vec![
+        Act::Registry(RegistryAct::Open(
+            "HKEY_CURRENT_USER\\Software\\WinWeaverShots".to_owned(),
+            Some("Name".to_owned()),
+        )),
+        Act::Registry(RegistryAct::Edit),
+    ]);
+    shot(&mut harness, "33-registry-editor");
+    for doc in &mut harness.state_mut().shell.docs {
+        if let Doc::Registry(d) = doc {
+            d.edit = None;
+        }
+    }
+    // A users file with an account selected.
+    harness
+        .state_mut()
+        .apply(vec![Act::Users(UsersAct::New), Act::Users(UsersAct::Add)]);
+    shot(&mut harness, "34-users");
+    // The window at the text sizes of large displays and of poor sight: the profile and the
+    // settings at 28 and 36 points of the theme Light, whose list the window keeps in memory.
+    let settings_tab = harness
+        .state()
+        .shell
+        .docs
+        .iter()
+        .position(|d| matches!(d, Doc::Shell(ShellDoc::Settings(_))))
+        .unwrap_or(0);
+    for size in [28.0_f32, 36.0] {
+        for theme in &mut harness.state_mut().shell.themes {
+            if theme.id == "light" {
+                theme.font_size = size;
+            }
+        }
+        harness.state_mut().apply(vec![
+            Act::Shell(ShellAct::UseTheme("light".to_owned())),
+            Act::Shell(ShellAct::Activate(0)),
+        ]);
+        shot(&mut harness, &format!("35-size-{size:.0}"));
+        harness
+            .state_mut()
+            .apply(vec![Act::Shell(ShellAct::Activate(settings_tab))]);
+        shot(&mut harness, &format!("36-size-{size:.0}-settings"));
+    }
+    for theme in &mut harness.state_mut().shell.themes {
+        if theme.id == "light" {
+            theme.font_size = 13.0;
+        }
+    }
+    harness
+        .state_mut()
+        .apply(vec![Act::Shell(ShellAct::UseTheme("light".to_owned()))]);
 }
 
 #[test]

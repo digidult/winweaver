@@ -1,5 +1,6 @@
 //! The fields of a registry value shared by the editors of the registry tab and of a registry
-//! file: the type and the data, with the hint and the lines the type wants.
+//! file: the type and the data, with the hint and the lines the type wants, and the width of
+//! the windows over a tab that edit a value, a key or an entry.
 
 use eframe::egui;
 
@@ -20,15 +21,25 @@ pub fn hint(type_name: &str) -> &'static str {
     }
 }
 
+/// The width a window over the tab opens with: half of the window for data of one line, three
+/// quarters for data of several lines (a list of strings, bytes), never wider than the window
+/// and never narrower than 560 points where the window allows it. The window keeps the size
+/// the user drags it to.
+pub fn modal_width(ctx: &egui::Context, long: bool) -> f32 {
+    let room = (ctx.content_rect().width() - 80.0).max(400.0);
+    let wanted = if long { room * 0.75 } else { room * 0.5 };
+    wanted.clamp(560.0_f32.min(room), room)
+}
+
 /// The rows Type and Data of a two-column grid: the type as a list of `types` when it may
-/// change, else as text; the data on one line or several, by the type.
+/// change, else as text; the data on one line or several, by the type, in the width of the
+/// window.
 pub fn type_and_data(
     ui: &mut egui::Ui,
     salt: &str,
     types: Option<&[&str]>,
     type_name: &mut String,
     text: &mut String,
-    width: f32,
 ) {
     ui.label(tr("Type"));
     match types {
@@ -55,7 +66,7 @@ pub fn type_and_data(
     };
     ui.add(
         field
-            .desired_width(width)
+            .desired_width(f32::INFINITY)
             .hint_text(hint)
             .font(egui::TextStyle::Monospace),
     );

@@ -2,7 +2,8 @@
 
 use super::*;
 
-/// The editor of a key, a value or a comment, over the window.
+/// The editor of a key, a value or a comment, over the window; its fields take the width of the
+/// window, which is wider for data of several lines.
 pub(crate) fn editor(ctx: &egui::Context, doc: &mut RegFileDoc) {
     let Some(edit) = &mut doc.edit else {
         return;
@@ -15,11 +16,13 @@ pub(crate) fn editor(ctx: &egui::Context, doc: &mut RegFileDoc) {
         (EditKind::Comment, _) => tr("Edit the comment"),
         (EditKind::Raw, _) => tr("Edit the line"),
     };
+    let long = edit.kind == EditKind::Value && regedit::multiline(&edit.type_name);
+    let width = regedit::modal_width(ctx, long);
     let mut close = false;
     let mut apply = false;
     widgets::Modal::new(title)
         .id("regfile-editor")
-        .width(560.0)
+        .width(width)
         .show(ctx, |ui| {
             egui::Grid::new("regfile-edit")
                 .num_columns(2)
@@ -29,7 +32,7 @@ pub(crate) fn editor(ctx: &egui::Context, doc: &mut RegFileDoc) {
                         ui.label(tr("Key"));
                         ui.add(
                             egui::TextEdit::singleline(&mut edit.name)
-                                .desired_width(420.0)
+                                .desired_width(f32::INFINITY)
                                 .font(egui::TextStyle::Monospace),
                         );
                         ui.end_row();
@@ -42,7 +45,7 @@ pub(crate) fn editor(ctx: &egui::Context, doc: &mut RegFileDoc) {
                         ui.label(tr("Text"));
                         ui.add(
                             egui::TextEdit::singleline(&mut edit.name)
-                                .desired_width(420.0)
+                                .desired_width(f32::INFINITY)
                                 .font(egui::TextStyle::Monospace),
                         );
                         ui.end_row();
@@ -76,7 +79,7 @@ pub(crate) fn value_fields(ui: &mut egui::Ui, edit: &mut Edit) {
     ui.label(tr("Name"));
     ui.add(
         egui::TextEdit::singleline(&mut edit.name)
-            .desired_width(420.0)
+            .desired_width(f32::INFINITY)
             .hint_text(tr("(Default)")),
     );
     ui.end_row();
@@ -93,6 +96,5 @@ pub(crate) fn value_fields(ui: &mut egui::Ui, edit: &mut Edit) {
         Some(&types),
         &mut edit.type_name,
         &mut edit.text,
-        420.0,
     );
 }

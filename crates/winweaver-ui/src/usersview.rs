@@ -387,18 +387,22 @@ fn user_form(ui: &mut egui::Ui, doc: &mut UsersDoc) {
     };
     let before = doc.file.users[i].clone();
     let mut u = before.clone();
+    // The name is short; the full name, the description and the folder take the width of the
+    // panel.
     egui::Grid::new("user-form")
         .num_columns(2)
         .spacing([16.0, 6.0])
         .show(ui, |ui| {
             ui.label(tr("Name"));
-            ui.add(egui::TextEdit::singleline(&mut u.name).desired_width(200.0));
+            let short = crate::forms::short_field(ui, 220.0);
+            ui.add(egui::TextEdit::singleline(&mut u.name).desired_width(short));
             ui.end_row();
+            let wide = crate::forms::wide_field(ui);
             ui.label(tr("Full name"));
-            ui.add(egui::TextEdit::singleline(&mut u.full_name).desired_width(260.0));
+            ui.add(egui::TextEdit::singleline(&mut u.full_name).desired_width(wide));
             ui.end_row();
             ui.label(tr("Description"));
-            ui.add(egui::TextEdit::singleline(&mut u.description).desired_width(320.0));
+            ui.add(egui::TextEdit::singleline(&mut u.description).desired_width(wide));
             ui.end_row();
             ui.label(tr("Group"));
             ui.horizontal(|ui| {
@@ -410,7 +414,7 @@ fn user_form(ui: &mut egui::Ui, doc: &mut UsersDoc) {
             ui.add(
                 egui::TextEdit::singleline(&mut u.profile_path)
                     .hint_text(tr("Empty: the one Windows chooses"))
-                    .desired_width(320.0),
+                    .desired_width(wide),
             );
             ui.end_row();
             ui.label("");
@@ -698,7 +702,8 @@ pub fn users_view(ui: &mut egui::Ui, doc: &mut UsersDoc, acts: &mut Vec<Act>) {
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
                 ui.label(tr("Name of the file"));
-                let name = egui::TextEdit::singleline(&mut doc.file.name).desired_width(200.0);
+                let width = crate::forms::short_field(ui, 280.0);
+                let name = egui::TextEdit::singleline(&mut doc.file.name).desired_width(width);
                 if ui.add(name).changed() {
                     doc.dirty = true;
                 }

@@ -529,7 +529,7 @@ fn search_panel(ui: &mut egui::Ui, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
         ui.label(tr("Find"));
         let edit = ui.add(
             egui::TextEdit::singleline(&mut s.text)
-                .desired_width(260.0)
+                .desired_width(style::size(ui, 300.0))
                 .hint_text(tr("Text in the names or the data")),
         );
         if s.focus {
@@ -664,7 +664,9 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
     };
     let rename = matches!(edit.kind, EditKind::RenameValue | EditKind::RenameKey);
     let mut close = false;
-    widgets::Modal::new(title).width(560.0).show(ctx, |ui| {
+    // The fields take the width of the window, which is wider for data of several lines.
+    let width = regedit::modal_width(ctx, regedit::multiline(&edit.type_name));
+    widgets::Modal::new(title).width(width).show(ctx, |ui| {
         ui.weak(&doc.path);
         ui.add_space(6.0);
         egui::Grid::new("registry-edit")
@@ -674,7 +676,7 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
                 ui.label(tr("Name"));
                 let name = ui.add_enabled(
                     edit.kind != EditKind::Value,
-                    egui::TextEdit::singleline(&mut edit.name).desired_width(380.0),
+                    egui::TextEdit::singleline(&mut edit.name).desired_width(f32::INFINITY),
                 );
                 if rename && ui.input(|i| i.key_pressed(egui::Key::Enter)) && name.lost_focus() {
                     acts.push(Act::Registry(RegistryAct::Save));
@@ -688,7 +690,6 @@ fn editor(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>) {
                         types,
                         &mut edit.type_name,
                         &mut edit.text,
-                        380.0,
                     );
                 }
             });
@@ -797,9 +798,10 @@ fn rights_window(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>
     };
     let mut close = false;
     let mut gone = None;
+    let width = regedit::modal_width(ctx, true).max(680.0);
     widgets::Modal::new(tr("Permissions"))
         .id("registry-rights")
-        .width(680.0)
+        .width(width)
         .show(ctx, |ui| {
             ui.weak(&edit.path);
             ui.add_space(4.0);
@@ -853,10 +855,11 @@ fn rights_window(ctx: &egui::Context, doc: &mut RegistryDoc, acts: &mut Vec<Act>
             }
             ui.add_space(6.0);
             ui.horizontal(|ui| {
+                let width = (ui.available_width() - 90.0).max(260.0);
                 ui.add(
                     egui::TextEdit::singleline(&mut edit.add)
                         .hint_text(tr("An account or a group of this PC"))
-                        .desired_width(260.0),
+                        .desired_width(width),
                 );
                 if ui.button(tr("Add")).clicked() {
                     acts.push(Act::Registry(RegistryAct::RightsAdd));

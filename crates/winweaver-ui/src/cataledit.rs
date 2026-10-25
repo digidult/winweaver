@@ -360,10 +360,11 @@ pub fn editor_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) 
 
 fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
     ui.horizontal_wrapped(|ui| {
+        let width = (ui.available_width() * 0.5).clamp(280.0, 560.0);
         ui.add(
             egui::TextEdit::singleline(&mut doc.new_name)
                 .hint_text(tr("Title of a new policy or group"))
-                .desired_width(280.0),
+                .desired_width(width),
         );
         if ui.button(tr("New policy")).clicked() {
             doc.new_policy();
@@ -412,14 +413,15 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
         .num_columns(2)
         .spacing([12.0, 8.0])
         .show(ui, |ui| {
+            // The texts take the width of the panel.
             ui.label(tr("Title"));
-            ui.add(egui::TextEdit::singleline(&mut form.title).desired_width(520.0));
+            ui.add(egui::TextEdit::singleline(&mut form.title).desired_width(f32::INFINITY));
             ui.end_row();
             ui.label(tr("Description"));
             ui.add(
                 egui::TextEdit::multiline(&mut form.summary)
                     .desired_rows(4)
-                    .desired_width(520.0),
+                    .desired_width(f32::INFINITY),
             );
             ui.end_row();
             ui.label(tr("Applies to"));
@@ -433,6 +435,14 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
     style::section_title(ui, tr("What it writes"));
     ui.add_space(4.0);
     let mut gone = None;
+    // The columns of the table share the width of the panel: the key takes the most, the name
+    // and the value their parts, the rest (the switch, the type, the buttons) what is left.
+    let room = ui.available_width();
+    let (key_w, name_w, value_w) = (
+        (room * 0.42).max(300.0),
+        (room * 0.16).max(140.0),
+        (room * 0.18).max(160.0),
+    );
     egui::Grid::new(("catalog-editor-actions", form.id.as_str()))
         .num_columns(6)
         .spacing([8.0, 6.0])
@@ -450,7 +460,7 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
                         ui.add(
                             egui::TextEdit::singleline(&mut row.key)
                                 .hint_text(tr("Key"))
-                                .desired_width(300.0),
+                                .desired_width(key_w),
                         );
                         if ui
                             .small_button(icons::REGISTRY)
@@ -464,7 +474,7 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
                     ui.add(
                         egui::TextEdit::singleline(&mut row.name)
                             .hint_text(tr("Name"))
-                            .desired_width(140.0),
+                            .desired_width(name_w),
                     );
                     if row.remove {
                         ui.label("");
@@ -480,7 +490,7 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
                         ui.add(
                             egui::TextEdit::singleline(&mut row.value)
                                 .hint_text(tr("Value"))
-                                .desired_width(160.0),
+                                .desired_width(value_w),
                         );
                     }
                 }
