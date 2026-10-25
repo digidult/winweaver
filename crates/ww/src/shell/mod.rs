@@ -5,6 +5,7 @@
 //! own to its handler, the others to the program (`Window`).
 
 mod bar;
+mod jobs;
 mod nav;
 mod settings;
 mod status;
@@ -26,6 +27,7 @@ use crate::themes::{self, Theme};
 use crate::themeview::ThemeDoc;
 use crate::{icons, session};
 
+pub use jobs::Job;
 pub use tabs::{menu_entry, menu_item, sub_menu};
 pub use window::{COMPACT_WIDTH, Window};
 
@@ -197,6 +199,8 @@ pub enum ShellAct<A: App> {
     SaveAndClose(usize),
     /// The window About over the tabs.
     About,
+    /// Folds (true) or opens the panel of the work in the background.
+    FoldJobs(bool),
     /// Opens a link outside the program (the web, a file of another kind), after its question.
     OpenWeb(String),
     Ask(Box<Question<A::Act>>),
@@ -349,9 +353,10 @@ pub trait App: Sized + 'static {
     /// What the program draws at the right of the status bar, before the message.
     fn status_right(&self, _shell: &Shell<Self>, _ui: &mut egui::Ui) {}
 
-    /// Whether something runs in the background (a spinner in the status bar).
-    fn busy(&self, _shell: &Shell<Self>) -> bool {
-        false
+    /// The work that runs in the background: the panel of the work over the window shows it,
+    /// and a spinner in the status bar while there is any.
+    fn jobs(&self, _shell: &Shell<Self>) -> Vec<Job<Self::Act>> {
+        Vec::new()
     }
 
     /// The sections of the settings tab after General, by their titles.
@@ -423,6 +428,8 @@ pub struct Shell<A: App> {
     pub exit: bool,
     /// The window About is open.
     pub about_open: bool,
+    /// The panel of the work in the background is folded to its spinner.
+    pub jobs_folded: bool,
     /// A link outside the program the user agreed to open, handed to the system after the acts.
     pub open_web: Option<String>,
     pub drafts_dir: PathBuf,
@@ -456,6 +463,7 @@ impl<A: App> Shell<A> {
             last_title: String::new(),
             exit: false,
             about_open: false,
+            jobs_folded: false,
             open_web: None,
             drafts_dir: exe_dir().join("drafts"),
             logs_dir: exe_dir().join("logs"),

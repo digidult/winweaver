@@ -277,6 +277,9 @@ pub struct WinWeaver {
     /// The imports of policy templates found next to the executable.
     imports: Vec<CatalogFile>,
     importing: Option<std::sync::mpsc::Receiver<Result<CatalogFile, String>>>,
+    /// When each kind of work in the background was first seen running, for the panel of the
+    /// work.
+    jobs_since: std::collections::HashMap<&'static str, std::time::Instant>,
     /// The folder of the catalog files of the imports.
     imports_dir: PathBuf,
     /// The registry the registry tab reads and changes: of this PC, or in memory for the tests.
@@ -323,6 +326,7 @@ impl WinWeaver {
             registry: winweaver_win::this_registry(),
             pc: winweaver_win::this_pc().map(std::sync::Arc::from),
             pc_read: None,
+            jobs_since: std::collections::HashMap::new(),
             import_list: Vec::new(),
             catalog,
             texts,

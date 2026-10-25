@@ -42,5 +42,5 @@ pub use doc::{Document, Draft, DraftState, Scrolled, Search, matches_words, reme
 pub use question::Question;
 pub use run::{run, smoke_window};
 pub use settings::{Extra, PageWidth, Settings, ThemeChoice, WindowPlace};
-pub use shell::{App, Messages, Nav, SettingsDoc, Shell, ShellAct, ShellDoc, Window};
+pub use shell::{App, Job, Messages, Nav, SettingsDoc, Shell, ShellAct, ShellDoc, Window};
 pub use themeview::ThemeDoc;

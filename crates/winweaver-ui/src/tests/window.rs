@@ -376,7 +376,9 @@ fn screenshots_of_the_window() {
     // The parameters of the support contacts in the width of the panel, with their limits.
     harness.state_mut().apply(vec![
         Act::Shell(ShellAct::Activate(0)),
-        Act::Profile(ProfileAct::Reveal(Sel::Rule("system.support-info".to_owned()))),
+        Act::Profile(ProfileAct::Reveal(Sel::Rule(
+            "system.support-info".to_owned(),
+        ))),
     ]);
     shot(&mut harness, "25-params");
     harness
@@ -387,7 +389,10 @@ fn screenshots_of_the_window() {
         .state_mut()
         .apply(vec![Act::Profile(ProfileAct::OnlyOn)]);
     // The menu of the tab row with its icons.
-    harness.query_all_by_label("Menu").next().unwrap().click();
+    {
+        use egui_kittest::kittest::Queryable;
+        harness.query_all_by_label("Menu").next().unwrap().click();
+    }
     shot(&mut harness, "27-menu");
     harness.key_press(egui::Key::Escape);
     // More tabs than the row holds: the row scrolls and lists every tab.
@@ -396,6 +401,13 @@ fn screenshots_of_the_window() {
         .collect();
     harness.state_mut().apply(many);
     shot(&mut harness, "28-many-tabs");
+    // The panel of the work in the background, open and folded, over an import that runs.
+    let (tx, rx) = std::sync::mpsc::channel();
+    harness.state_mut().app.importing = Some(rx);
+    shot(&mut harness, "29-jobs");
+    harness.state_mut().shell.jobs_folded = true;
+    shot(&mut harness, "29b-jobs-folded");
+    drop(tx);
 }
 
 #[test]

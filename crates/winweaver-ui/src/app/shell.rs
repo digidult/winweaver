@@ -311,8 +311,46 @@ impl App for WinWeaver {
         }
     }
 
-    fn busy(&self, _shell: &Shell<Self>) -> bool {
-        self.pc_read.is_some()
+    fn jobs(&self, shell: &Shell<Self>) -> Vec<ww::Job<Act>> {
+        let since = |kind: &str| self.jobs_since.get(kind).copied();
+        let job = |kind: &str, title: &str| -> ww::Job<Act> {
+            let job = ww::Job::new(title);
+            match since(kind) {
+                Some(at) => job.since(at),
+                None => job,
+            }
+        };
+        let mut jobs = Vec::new();
+        if let Some(read) = &self.pc_read {
+            let what = match &read.job {
+                PcJob::NewProfile { .. } => tr("Every rule, into a new profile"),
+                PcJob::Selection { .. } => tr("The selection, into its profile"),
+                PcJob::Check { .. } => tr("The selection, checked"),
+            };
+            jobs.push(job(JOB_PC, tr("Reading this PC")).detail(what));
+        }
+        if self.importing.is_some() {
+            let detail = tr("The templates are read and turned into rules");
+            jobs.push(job(JOB_IMPORT, tr("Importing policy templates")).detail(detail));
+        }
+        if self.running.is_some() {
+            let detail = tr("WinWeaver started as administrator changes this PC");
+            jobs.push(job(JOB_APPLY, tr("Changing this PC")).detail(detail));
+        }
+        for doc in &shell.docs {
+            if let Doc::Registry(d) = doc
+                && let Some(running) = &d.search.running
+            {
+                let read = running.read.load(std::sync::atomic::Ordering::Relaxed);
+                let detail = trf(
+                    "Under {key}: {n} keys read",
+                    &[("key", &d.search.root), ("n", &read)],
+                );
+                let found = job(JOB_SEARCH, tr("Searching the registry")).detail(detail);
+                jobs.push(found.stop(Act::Registry(RegistryAct::FindStop)));
+            }
+        }
+        jobs
     }
 
     fn settings_sections(&self) -> Vec<&'static str> {
@@ -423,6 +461,7 @@ impl App for WinWeaver {
     }
 
     fn after_frame(&mut self, shell: &mut Shell<Self>, ctx: &egui::Context) {
+        self.track_jobs(shell);
         self.poll_running(shell, ctx);
         self.poll_import(shell, ctx);
         self.poll_pc_read(shell, ctx);
@@ -431,7 +470,36 @@ impl App for WinWeaver {
     }
 }
 
+/// The kinds of the work in the background, for the times of the panel of the work.
+const JOB_PC: &str = "pc";
+const JOB_IMPORT: &str = "import";
+const JOB_APPLY: &str = "apply";
+const JOB_SEARCH: &str = "search";
+
 impl WinWeaver {
+    /// Notes when each kind of work in the background started, and forgets the ones that ended.
+    fn track_jobs(&mut self, shell: &Shell<WinWeaver>) {
+        let searching = shell
+            .docs
+            .iter()
+            .any(|d| matches!(d, Doc::Registry(r) if r.search.running.is_some()));
+        let now = [
+            (JOB_PC, self.pc_read.is_some()),
+            (JOB_IMPORT, self.importing.is_some()),
+            (JOB_APPLY, self.running.is_some()),
+            (JOB_SEARCH, searching),
+        ];
+        for (kind, running) in now {
+            if running {
+                self.jobs_since
+                    .entry(kind)
+                    .or_insert_with(std::time::Instant::now);
+            } else {
+                self.jobs_since.remove(kind);
+            }
+        }
+    }
+
     /// The breadcrumb of the active tab: a label and what a click on it does.
     fn nav_crumbs(&self, shell: &Shell<WinWeaver>) -> Vec<(String, Option<Act>)> {
         match shell.active_doc() {

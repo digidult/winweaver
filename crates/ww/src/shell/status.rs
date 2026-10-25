@@ -90,7 +90,7 @@ impl<A: App> Window<A> {
                     }
                 }
                 ui.label(style::muted(ui, self.shell.status.as_str(), 11.0));
-                if self.app.busy(&self.shell) {
+                if !self.app.jobs(&self.shell).is_empty() {
                     ui.add(egui::Spinner::new().size(style::size(ui, 12.0)));
                 }
             });

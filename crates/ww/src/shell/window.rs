@@ -193,6 +193,7 @@ impl<A: App> Window<A> {
             }
             ShellAct::OpenWeb(link) => shell.open_web = Some(link),
             ShellAct::About => shell.about_open = true,
+            ShellAct::FoldJobs(folded) => shell.jobs_folded = folded,
             ShellAct::SaveAndClose(i) => {
                 if i < self.shell.docs.len() {
                     self.shell.active = i;
@@ -511,6 +512,7 @@ impl<A: App> eframe::App for Window<A> {
             .frame(status_frame)
             .show(ui, |ui| self.status_bar(ui, &mut acts));
         self.draw_active(ui, &mut acts);
+        self.jobs_view(ui.ctx(), &mut acts);
         self.ask_view(ui.ctx(), &mut acts);
         self.about_view(ui.ctx());
         self.app.dialogs(&mut self.shell, ui.ctx(), &mut acts);

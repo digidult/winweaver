@@ -434,12 +434,14 @@ impl WinWeaver {
             }
             RegistryAct::Find => self.registry_find(shell),
             RegistryAct::FindStop => {
-                if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active)
-                    && let Some(running) = &d.search.running
-                {
-                    running
-                        .stop
-                        .store(true, std::sync::atomic::Ordering::Relaxed);
+                for doc in &mut shell.docs {
+                    if let Doc::Registry(d) = doc
+                        && let Some(running) = &d.search.running
+                    {
+                        running
+                            .stop
+                            .store(true, std::sync::atomic::Ordering::Relaxed);
+                    }
                 }
             }
             RegistryAct::AskDelete => self.ask_registry_delete(shell),
