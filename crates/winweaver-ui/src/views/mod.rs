@@ -12,9 +12,11 @@ use winweaver_core::resolver::State;
 
 use crate::i18n::{tr, trf};
 use crate::{
-    Act, CatalogAct, Form, ImportAct, PcAct, ProfileAct, ProfileDoc, RegistryAct, ScriptKind,
-    Search, Sel, Settings, TreeKey, UNKNOWN_GROUP, icons, matches_words, style, tree,
+    Act, Form, ProfileAct, ProfileDoc, Search, Sel, Settings, UNKNOWN_GROUP, icons, matches_words,
+    style, tree,
 };
+#[cfg(feature = "full")]
+use crate::{CatalogAct, ImportAct, PcAct, RegistryAct, ScriptKind, TreeKey};
 
 mod detail;
 mod profile_tree;
@@ -50,9 +52,15 @@ pub(crate) enum RuleLink<'a> {
     Profile,
     /// The catalog tab in front: a policy of its file is selected in its tree, another rule in the
     /// profile.
+    #[cfg(feature = "full")]
     Catalog(&'a CatalogFile),
     /// Any other tab: the rule is shown in the first profile tab.
+    #[cfg(feature = "full")]
     Elsewhere,
+    /// The lifetime of the catalog, kept for the light edition.
+    #[cfg(not(feature = "full"))]
+    #[allow(dead_code)]
+    Never(std::marker::PhantomData<&'a ()>),
 }
 
 impl RuleLink<'_> {
@@ -61,12 +69,16 @@ impl RuleLink<'_> {
         let id = id.to_owned();
         match self {
             RuleLink::Profile => Act::Profile(ProfileAct::Reveal(Sel::Rule(id))),
+            #[cfg(feature = "full")]
             RuleLink::Catalog(file) if file.rules.iter().any(|r| r.id == id) => {
                 Act::Catalog(CatalogAct::Reveal(TreeKey::Rule(id)))
             }
+            #[cfg(feature = "full")]
             RuleLink::Catalog(_) | RuleLink::Elsewhere => {
                 Act::Profile(ProfileAct::ShowInProfile(String::new(), id))
             }
+            #[cfg(not(feature = "full"))]
+            RuleLink::Never(_) => Act::Profile(ProfileAct::Reveal(Sel::Rule(id))),
         }
     }
 }
@@ -134,10 +146,15 @@ pub(crate) fn linked_text(
                         acts.push(link.act(&rule.id));
                     }
                 }
+                #[cfg(feature = "full")]
                 Piece::Key(path) => {
                     if ui.link(path.as_str()).clicked() {
                         acts.push(Act::Registry(RegistryAct::Open(path.clone(), None)));
                     }
+                }
+                #[cfg(not(feature = "full"))]
+                Piece::Key(path) => {
+                    ui.label(RichText::new(path).color(color));
                 }
             }
         }
@@ -425,6 +442,7 @@ fn default_text(default: &Option<Value>) -> String {
     }
 }
 
+#[cfg(feature = "full")]
 /// The name of a policy in its id, without the prefix and the `.off` of the Disabled state.
 fn policy_name(id: &str) -> &str {
     let id = id.strip_suffix(".off").unwrap_or(id);

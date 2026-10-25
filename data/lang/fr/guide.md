@@ -134,6 +134,17 @@ premier enregistrement.
   ou d'un profil, un bouton au bout de la barre d'état montre le fichier dans son dossier dans
   l'Explorateur ; Paramètres, Fichiers ouvre les dossiers du programme.
 
+- **Menus et onglets** : chaque élément d'un menu a une icône. Quand les onglets sont plus larges que la
+  fenêtre, la rangée défile avec la molette, l'onglet actif vient en vue et un bouton à droite liste tous
+  les onglets.
+- **Actives seules** dans la barre d'un profil n'affiche que les règles actives, leurs groupes ouverts ;
+  les outils MCP `list_groups`, `list_rules` et `search_rules` prennent `only_on` de la même façon.
+- **Paramètres** : les champs d'une règle prennent la largeur du panneau ; un texte limité par le fichier
+  de réponses (les contacts du support) compte ses caractères.
+- **Travail en arrière-plan** : une lecture de ce PC, une importation de modèles, une modification de ce
+  PC et une recherche dans le registre s'affichent dans un panneau en bas à droite avec le temps écoulé
+  et Arrêter là où le travail peut s'arrêter ; le panneau se replie en un indicateur.
+
 ## Ce PC
 
 **Ce PC** dans la barre de commandes lit les paramètres de cet ordinateur par l'intermédiaire de
@@ -226,6 +237,15 @@ description, l'ordinateur ou le profil utilisateur par défaut et les valeurs du
 supprime ; **Appliquer** contrôle tout le fichier, et rien ne change si le contrôle échoue. Enregistrer
 (Ctrl+S) écrit le fichier et le recharge.
 
+La comparaison s'ouvre dans un onglet : les stratégies qui diffèrent dans l'arbre de leurs catégories,
+avec des cases pour celles du premier catalogue seul, du second seul et les différentes, et la stratégie
+sélectionnée telle qu'elle est dans les deux catalogues, côte à côte. **Enregistrer le rapport** écrit le
+rapport en fichier Markdown, **En page** l'affiche en page. **Copier dans**, dans la barre d'un onglet de
+catalogue, copie la stratégie sélectionnée ou le groupe sélectionné avec les groupes qu'il contient dans un
+catalogue ouvert dans son éditeur (vous choisissez lequel quand il y en a plusieurs) ou dans un nouveau
+catalogue, avec les mêmes identifiants et les textes des autres langues : un catalogue des seules
+stratégies nécessaires, à transmettre en fichier.
+
 ## Le registre
 
 **Menu, Registre** ouvre le registre de ce PC dans un onglet : les clés à gauche, les valeurs de la clé
@@ -253,6 +273,19 @@ les règles des catalogues chargés qui écrivent la clé ou la valeur sélectio
 d'abord. **Enregistrer** réécrit chaque ligne : les commentaires et les lignes que le programme ne lit
 pas restent à leur place. Un fichier enregistré depuis **Ce PC** nomme ses règles dans des commentaires,
 et la flèche d'un tel commentaire montre la règle dans le profil.
+
+Un fichier de stratégie de groupe (`Registry.pol`) s'ouvre aussi dans son propre onglet : les fichiers de
+l'ordinateur et des utilisateurs de ce Windows (**Menu, Stratégie de groupe** ; la barre d'un profil, d'un
+catalogue et du registre) ou tout fichier `.pol`. Les clés forment un arbre à gauche, les entrées de la clé
+sélectionnée sont à droite avec ce que fait chacune. **Nouvelle clé**, **Nouvelle valeur**, **Modifier**
+(ou un double clic) et **Retirer** changent les entrées dans une fenêtre au-dessus de l'onglet, comme les
+valeurs d'un fichier du registre ; **Racine** choisit si un fichier hors de la stratégie de groupe
+s'applique à l'ordinateur ou à l'utilisateur (les fichiers de ce Windows le tiennent de leur dossier) ;
+**Ajouter un fichier** prend les entrées d'un autre fichier de stratégie de groupe ou les modifications
+d'un fichier du registre de cette racine ; **En .reg** enregistre le fichier en fichier du registre.
+Enregistrer réécrit le format de la stratégie de groupe ; les fichiers de ce Windows sont enregistrés en
+copies ailleurs, car la stratégie de groupe elle-même les écrit. Les modifications non enregistrées
+reviennent d'un brouillon après un redémarrage.
 
 ## Le serveur MCP
 

@@ -2,6 +2,7 @@
 
 use crate::*;
 
+#[cfg(feature = "full")]
 /// Brings the tab of a kind the window holds once to the front, making it when there is none,
 /// and gives its index.
 pub(crate) fn show_single(
@@ -13,6 +14,7 @@ pub(crate) fn show_single(
 }
 
 impl WinWeaver {
+    #[cfg(feature = "full")]
     /// Opens a draft of the last session: the profile into the tab of its file when one is
     /// open, else into a new tab; `false` for a document that is not a profile.
     /// A draft of a registry file, a diff, a catalog in its editor or a users file: into the tab

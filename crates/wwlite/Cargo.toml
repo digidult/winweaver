@@ -19,7 +19,7 @@ glow = ["winweaver-ui/glow"]
 wgpu = ["winweaver-ui/wgpu"]
 
 [dependencies]
-winweaver-core = { path = "../winweaver-core" }
+winweaver-core = { path = "../winweaver-core", default-features = false }
 winweaver-ui = { path = "../winweaver-ui", default-features = false }
 
 [target.'cfg(windows)'.dependencies]

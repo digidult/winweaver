@@ -8,8 +8,10 @@ use winweaver_core::render;
 use winweaver_core::resources;
 use winweaver_core::validate;
 
+#[cfg(feature = "full")]
+use crate::UsersAct;
 use crate::i18n::{tr, trf};
-use crate::{Act, ProfileAct, ProfileDoc, UsersAct};
+use crate::{Act, ProfileAct, ProfileDoc};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Form {
@@ -283,6 +285,7 @@ fn name_template_help(ui: &mut egui::Ui, template: &str) {
     }
 }
 
+#[cfg_attr(not(feature = "full"), allow(unused_variables, clippy::ptr_arg))]
 fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>, acts: &mut Vec<Act>) {
     ui.heading(tr("Accounts"));
     ui.weak(tr("The starter accounts without passwords are a decision of the customer: passwords and groups are set after installation. Names and passwords are ASCII; a display name outside ASCII is set after OOBE."));
@@ -343,22 +346,22 @@ fn accounts_form(ui: &mut egui::Ui, accounts: &mut Vec<Account>, acts: &mut Vec<
                 password: String::new(),
             });
         }
-        if crate::lite() {
-            return;
-        }
-        if ui
-            .button(tr("From a users file..."))
-            .on_hover_text(tr("Replaces the accounts with the ones of a .wwusers file, with their passwords when its master password is given"))
-            .clicked()
+        #[cfg(feature = "full")]
         {
-            acts.push(Act::Users(UsersAct::IntoProfile));
-        }
-        if ui
-            .button(tr("To a users file..."))
-            .on_hover_text(tr("Makes a users file of these accounts; their passwords wait for a master password"))
-            .clicked()
-        {
-            acts.push(Act::Users(UsersAct::FromProfile));
+            if ui
+                .button(tr("From a users file..."))
+                .on_hover_text(tr("Replaces the accounts with the ones of a .wwusers file, with their passwords when its master password is given"))
+                .clicked()
+            {
+                acts.push(Act::Users(UsersAct::IntoProfile));
+            }
+            if ui
+                .button(tr("To a users file..."))
+                .on_hover_text(tr("Makes a users file of these accounts; their passwords wait for a master password"))
+                .clicked()
+            {
+                acts.push(Act::Users(UsersAct::FromProfile));
+            }
         }
     });
 }

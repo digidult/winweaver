@@ -4,10 +4,7 @@
 //! come from the shell.
 
 use crate::i18n::{tr, trf};
-use crate::{Act, CatalogAct, ImportAct, McpAct, RegistryAct, ShellAct};
-
-/// A question over the window with an act of WinWeaver.
-pub type Question = ww::Question<Act>;
+use crate::{CatalogAct, ImportAct, McpAct, Question, RegistryAct};
 
 /// Before an import is removed with its catalog file.
 pub fn remove_import(name: &str, id: String) -> Question {
@@ -58,10 +55,4 @@ pub fn remove_policy(id: String) -> Question {
         tr("Remove"),
         CatalogAct::EditRemove(id),
     )
-}
-
-impl From<Question> for Act {
-    fn from(question: Question) -> Self {
-        Act::Shell(ShellAct::Ask(Box::new(question)))
-    }
 }

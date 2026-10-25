@@ -20,13 +20,13 @@ fn only_the_checked_imports_load_and_unknown_options_find_their_catalog() {
         ..Settings::default()
     };
     let mut app = Window::new(WinWeaver::new(catalog.clone(), Vec::new()), earlier);
-    app.app.imports_dir = dir.join("imports");
+    app.app.full.imports_dir = dir.join("imports");
     app.app.load_imports(&mut app.shell);
     assert!(app.app.imports.is_empty(), "a hidden import stays unread");
     assert_eq!(app.shell.settings.extra.loaded_imports, Some(Vec::new()));
-    assert_eq!(app.app.import_list.len(), 1);
+    assert_eq!(app.app.full.import_list.len(), 1);
     assert_eq!(
-        app.app.import_list[0].name, "Test templates",
+        app.app.full.import_list[0].name, "Test templates",
         "the name comes from the header of the file"
     );
     let id = "admx.sample.turnoff";
@@ -80,7 +80,7 @@ fn only_the_checked_imports_load_and_unknown_options_find_their_catalog() {
             ..Settings::default()
         },
     );
-    next.app.imports_dir = dir.join("imports");
+    next.app.full.imports_dir = dir.join("imports");
     next.app.load_imports(&mut next.shell);
     assert_eq!(
         next.app.imports.len(),
@@ -153,7 +153,7 @@ fn a_new_catalog_is_edited_checked_and_saved() {
         ..Settings::default()
     };
     let mut app = Window::new(WinWeaver::new(catalog, Vec::new()), settings);
-    app.app.imports_dir = dir.join("imports");
+    app.app.full.imports_dir = dir.join("imports");
     app.apply(vec![Act::Catalog(CatalogAct::New)]);
     let Some(Doc::CatalogEdit(d)) = app.shell.docs.get_mut(app.shell.active) else {
         panic!("the editor: {}", app.shell.status);
@@ -219,7 +219,7 @@ fn links_open_the_catalog_at_a_policy_and_select_it_in_another_tree() {
         ..Settings::default()
     };
     let mut app = Window::new(WinWeaver::new(catalog, Vec::new()), settings);
-    app.app.imports_dir = dir.join("imports");
+    app.app.full.imports_dir = dir.join("imports");
     app.app.load_imports(&mut app.shell);
     let id = "admx.sample.turnoff";
     let alias: Vec<String> = app
@@ -277,7 +277,7 @@ fn removals_ask_first_and_two_catalogs_compare() {
         ..Settings::default()
     };
     let mut app = Window::new(WinWeaver::new(catalog, Vec::new()), settings);
-    app.app.imports_dir = dir.join("imports");
+    app.app.full.imports_dir = dir.join("imports");
     app.app.load_imports(&mut app.shell);
     app.apply(vec![
         crate::question::remove_import("test", "test".to_owned()).into(),

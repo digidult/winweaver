@@ -126,6 +126,16 @@ ana parola bekler.
   çubuğunun sonundaki düğme dosyayı Gezgin'de klasöründe gösterir; Ayarlar, Dosyalar programın
   klasörlerini açar.
 
+- **Menüler ve sekmeler**: her menü öğesinin bir simgesi vardır. Sekmeler pencereden genişse satır
+  tekerlekle kayar, etkin sekme görünüme gelir ve sağ uçtaki bir düğme tüm sekmeleri listeler.
+- Profil çubuğundaki **Yalnızca açık** yalnızca açık kuralları, grupları açılmış olarak gösterir; MCP
+  araçları `list_groups`, `list_rules` ve `search_rules` de aynı şekilde `only_on` alır.
+- **Parametreler**: bir kuralın alanları panelin genişliğini kaplar; yanıt dosyasının sınırı olan bir
+  metin (destek kişileri) karakterlerini sayar.
+- **Arka plandaki iş**: bu bilgisayarın okunması, ilke şablonlarının içeri aktarılması, bu bilgisayarın
+  değiştirilmesi ve kayıt defterinde arama, sağ alt köşedeki bir panelde geçen süreyle ve durabilen
+  işlerde Durdur ile gösterilir; panel bir göstergeye daralır.
+
 ## Bu bilgisayar
 
 Komut çubuğundaki **Bu bilgisayar**, bu bilgisayarın ayarlarını hiçbir şeyi değiştirmeden Windows
@@ -209,6 +219,14 @@ de size ait boş bir katalog başlatır. Bir ilke başlığını, açıklamasın
 profilini ve yazdığı ya da kaldırdığı kayıt defteri değerlerini alır; **Uygula** tüm dosyayı denetler ve denetim
 başarısız olursa hiçbir şey değişmez. Kaydet (Ctrl+S) dosyayı yazar ve yeniden yükler.
 
+Karşılaştırma bir sekmede açılır: farklı ilkeler kategorilerinin ağacında, yalnızca ilk katalogda,
+yalnızca ikincisinde olanlar ve farklı olanlar için anahtarlarla; seçili ilke her iki katalogdaki haliyle
+yan yana. **Raporu kaydet** raporu Markdown dosyası olarak yazar, **Sayfa olarak** sayfa olarak gösterir.
+Katalog sekmesinin çubuğundaki **Şuraya kopyala**, seçili ilkeyi ya da seçili grubu altındaki gruplarla
+birlikte düzenleyicide açık bir kataloğa (birkaçı açıksa hangisini seçersiniz) ya da yeni bir kataloğa
+aynı kimlikler ve diğer dillerin metinleriyle kopyalar: yalnızca gereken ilkelerin kataloğu, dosya olarak
+aktarmak için.
+
 ## Kayıt defteri
 
 **Menü, Kayıt defteri** bu bilgisayarın kayıt defterini bir sekmede açar: anahtarlar solda, seçili
@@ -234,6 +252,18 @@ kataloglardaki kurallar. **Yeni anahtar**, **Yeni değer**, **Düzenle** ve **Si
 sorar. **Kaydet** her satırı geri yazar: yorumlar ve programın okumadığı satırlar yerinde kalır. **Bu
 bilgisayar** ile kaydedilen bir dosya kurallarını yorumlarda adlandırır ve böyle bir yorumun oku, kuralı
 profilde gösterir.
+
+Bir Grup İlkesi dosyası (`Registry.pol`) da kendi sekmesinde açılır: bu Windows'un bilgisayar ve
+kullanıcı dosyaları (**Menü, Grup İlkesi**; profil, katalog ve kayıt defteri çubuğu) ya da herhangi bir
+`.pol` dosyası. Anahtarlar solda bir ağaç, seçili anahtarın girdileri sağda her birinin ne yaptığıyla
+birlikte. **Yeni anahtar**, **Yeni değer**, **Düzenle** (ya da çift tıklama) ve **Kaldır** girdileri
+sekmenin üzerindeki bir pencerede değiştirir, kayıt defteri dosyasının değerleri gibi; **Kök**, Grup
+İlkesi dışındaki bir dosyanın bilgisayara mı kullanıcıya mı uygulanacağını seçer (bu Windows'un dosyaları
+bunu klasöründen alır); **Dosya ekle** başka bir Grup İlkesi dosyasının girdilerini ya da o kökün bir
+kayıt defteri dosyasının değişikliklerini alır; **.reg olarak** dosyayı kayıt defteri dosyası olarak
+kaydeder. Kaydet, Grup İlkesi biçimini geri yazar; bu Windows'un dosyaları, onları Grup İlkesi'nin kendisi
+yazdığı için başka yere kopya olarak kaydedilir. Kaydedilmemiş değişiklikler yeniden başlatmadan sonra
+taslaktan geri gelir.
 
 ## MCP sunucusu
 

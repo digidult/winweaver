@@ -193,18 +193,3 @@ pub(crate) fn size_text(bytes: u64) -> String {
         format!("{} KB", bytes.div_ceil(1024))
     }
 }
-
-/// The warning of a profile with options of catalogs that are not loaded.
-pub(crate) fn unknown_issues(profile: &Profile) -> Vec<Issue> {
-    if profile.unknown.is_empty() {
-        return Vec::new();
-    }
-    vec![Issue {
-        severity: Severity::Warning,
-        target: Target::Unknown,
-        text: trf(
-            "Open: {n} options of catalogs that are not loaded are kept in the profile and left out of the build",
-            &[("n", &profile.unknown.len())],
-        ),
-    }]
-}

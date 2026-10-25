@@ -124,6 +124,16 @@ sandi utama sebelum penyimpanan pertama.
 - **Buka folder**: setelah build atau menyimpan skrip, file registri, atau profil, tombol di ujung bilah
   status menampilkan file di foldernya di Explorer; Pengaturan, File membuka folder program.
 
+- **Menu dan tab**: setiap item menu punya ikon. Saat tab lebih lebar dari jendela, barisnya bergulir
+  dengan roda tetikus, tab aktif muncul ke tampilan, dan tombol di ujung kanan mendaftar semua tab.
+- **Hanya yang aktif** di bilah profil hanya menampilkan aturan yang aktif dengan grupnya terbuka; alat
+  MCP `list_groups`, `list_rules` dan `search_rules` menerima `only_on` dengan cara yang sama.
+- **Parameter**: bidang sebuah aturan memakai lebar panel; teks dengan batas berkas jawaban (kontak
+  dukungan) menghitung karakternya.
+- **Pekerjaan di latar belakang**: pembacaan PC ini, impor templat kebijakan, perubahan PC ini dan
+  pencarian registri tampil di panel pojok kanan bawah dengan waktu yang telah berjalan dan Hentikan bila
+  pekerjaan bisa dihentikan; panel melipat menjadi indikator.
+
 ## PC Ini
 
 **PC Ini** di bilah perintah membaca pengaturan komputer ini melalui Windows, tanpa mengubah
@@ -205,6 +215,14 @@ kosong milik Anda. Sebuah kebijakan mendapat judul, deskripsi, komputer atau pro
 registri yang ditulis atau dihapusnya; **Terapkan** memeriksa seluruh file, dan tidak ada yang berubah bila
 pemeriksaan gagal. Simpan (Ctrl+S) menulis file dan memuatnya lagi.
 
+Perbandingan terbuka di sebuah tab: kebijakan yang berbeda dalam pohon kategorinya, dengan sakelar untuk
+yang hanya ada di katalog pertama, hanya di katalog kedua dan yang berbeda, serta kebijakan terpilih apa
+adanya di kedua katalog, berdampingan. **Simpan laporan** menulis laporan sebagai berkas Markdown,
+**Sebagai halaman** menampilkannya sebagai halaman. **Salin ke** di bilah tab katalog menyalin kebijakan
+terpilih atau grup terpilih beserta grup di bawahnya ke katalog yang terbuka di penyuntingnya (Anda memilih
+yang mana bila ada beberapa) atau ke katalog baru, dengan id yang sama dan teks bahasa lain: katalog yang
+hanya berisi kebijakan yang diperlukan, untuk diteruskan sebagai berkas.
+
 ## Registri
 
 **Menu, Registri** membuka registri PC ini di sebuah tab: kunci di kiri, nilai dari kunci terpilih di
@@ -229,6 +247,17 @@ nilai terpilih. **Kunci baru**, **Nilai baru**, **Sunting**, dan **Hapus** ada d
 bertanya terlebih dahulu. **Simpan** menulis kembali setiap baris: komentar dan baris yang tidak dibaca
 program tetap di tempatnya. File yang disimpan dari **PC Ini** menyebut aturannya dalam komentar, dan
 panah komentar seperti itu menunjukkan aturan di profil.
+
+Berkas Kebijakan Grup (`Registry.pol`) juga terbuka di tabnya sendiri: berkas komputer dan pengguna
+Windows ini (**Menu, Kebijakan Grup**; bilah profil, katalog dan registri) atau berkas `.pol` mana pun.
+Kunci menjadi pohon di kiri, entri kunci terpilih di kanan dengan apa yang dilakukan masing-masing. **Kunci
+baru**, **Nilai baru**, **Ubah** (atau klik ganda) dan **Hapus** mengubah entri di jendela di atas tab,
+seperti nilai berkas registri; **Akar** memilih apakah berkas di luar Kebijakan Grup berlaku untuk
+komputer atau pengguna (berkas Windows ini mengambilnya dari foldernya); **Tambahkan berkas** mengambil
+entri berkas Kebijakan Grup lain atau perubahan berkas registri akar itu; **Ke .reg** menyimpan berkas
+sebagai berkas registri. Simpan menulis kembali format Kebijakan Grup; berkas Windows ini disimpan sebagai
+salinan di tempat lain, karena Kebijakan Grup sendiri yang menulisnya. Perubahan yang belum disimpan
+kembali dari draf setelah mulai ulang.
 
 ## Server MCP
 

@@ -51,11 +51,11 @@ impl WinWeaver {
         plan: thispc::Plan,
         read_system: bool,
     ) {
-        if self.pc_read.is_some() {
+        if self.full.pc_read.is_some() {
             shell.status = tr("This PC is being read; wait until the read ends").to_owned();
             return;
         }
-        let Some(machine) = self.pc.clone() else {
+        let Some(machine) = self.full.pc.clone() else {
             shell.status = tr("This PC can be read on Windows only").to_owned();
             return;
         };
@@ -71,7 +71,7 @@ impl WinWeaver {
             shell.status = trf("This PC could not be read: {e}", &[("e", &e)]);
             return;
         }
-        self.pc_read = Some(PcRead {
+        self.full.pc_read = Some(PcRead {
             job,
             plan,
             report: rx,
@@ -81,12 +81,12 @@ impl WinWeaver {
 
     /// Takes the report of a finished read of this PC.
     pub(crate) fn poll_pc_read(&mut self, shell: &mut Shell<WinWeaver>, ctx: &egui::Context) {
-        let Some(read) = &self.pc_read else {
+        let Some(read) = &self.full.pc_read else {
             return;
         };
         match read.report.try_recv() {
             Ok(report) => {
-                if let Some(read) = self.pc_read.take() {
+                if let Some(read) = self.full.pc_read.take() {
                     self.finish_pc_read(shell, read.job, &read.plan, &report);
                     if shell.settings.extra.pol_with_pc {
                         self.open_system_pols_behind(shell);
@@ -97,7 +97,7 @@ impl WinWeaver {
                 ctx.request_repaint_after(std::time::Duration::from_millis(100));
             }
             Err(std::sync::mpsc::TryRecvError::Disconnected) => {
-                self.pc_read = None;
+                self.full.pc_read = None;
                 shell.status = tr("The read of this PC failed; the log names the error").to_owned();
             }
         }
@@ -405,7 +405,7 @@ impl WinWeaver {
 
     /// Prepares the native apply or return of the selection and asks for the confirmation.
     pub(crate) fn plan_native(&mut self, shell: &mut Shell<WinWeaver>, revert: bool) {
-        if self.running.is_some() {
+        if self.full.running.is_some() {
             shell.status = tr("A change of this PC is running; wait for its report").to_owned();
             return;
         }
@@ -433,7 +433,7 @@ impl WinWeaver {
             );
             return;
         }
-        self.confirm = Some(plan);
+        self.full.confirm = Some(plan);
     }
 
     /// Prepares the undo of a backup file the user picks.
@@ -465,13 +465,13 @@ impl WinWeaver {
             shell.status = tr("The backup holds nothing to restore").to_owned();
             return;
         }
-        self.confirm = Some(plan);
+        self.full.confirm = Some(plan);
     }
 
     /// Writes the confirmed plan into the output folder and runs the elevated helper on it in a
     /// thread; the report comes back through a channel.
     pub(crate) fn run_plan(&mut self, shell: &mut Shell<WinWeaver>) {
-        let Some(plan) = self.confirm.take() else {
+        let Some(plan) = self.full.confirm.take() else {
             return;
         };
         let dir = output_dir();
@@ -498,7 +498,7 @@ impl WinWeaver {
                 return;
             }
         };
-        self.running_skipped = plan.skipped.clone();
+        self.full.running_skipped = plan.skipped.clone();
         let (tx, rx) = std::sync::mpsc::channel();
         std::thread::spawn(move || {
             let args = vec![
@@ -524,19 +524,19 @@ impl WinWeaver {
             let _ = std::fs::remove_file(&path);
             let _ = tx.send(result);
         });
-        self.running = Some(rx);
+        self.full.running = Some(rx);
         shell.status = tr("Windows asks for the permission; the change of this PC runs").to_owned();
     }
 
     /// Takes the report of a finished helper.
     pub(crate) fn poll_running(&mut self, shell: &mut Shell<WinWeaver>, ctx: &egui::Context) {
-        let Some(rx) = &self.running else {
+        let Some(rx) = &self.full.running else {
             return;
         };
         match rx.try_recv() {
             Ok(result) => {
-                self.running = None;
-                let skipped = std::mem::take(&mut self.running_skipped);
+                self.full.running = None;
+                let skipped = std::mem::take(&mut self.full.running_skipped);
                 match result {
                     Ok(report) => {
                         let mut issues: Vec<Issue> = report
@@ -584,13 +584,13 @@ impl WinWeaver {
             Err(std::sync::mpsc::TryRecvError::Empty) => {
                 ctx.request_repaint_after(std::time::Duration::from_millis(250));
             }
-            Err(std::sync::mpsc::TryRecvError::Disconnected) => self.running = None,
+            Err(std::sync::mpsc::TryRecvError::Disconnected) => self.full.running = None,
         }
     }
 
     /// The confirmation of a plan, over the window.
     pub(crate) fn confirm_view(&self, ctx: &egui::Context, acts: &mut Vec<Act>) {
-        let Some(plan) = &self.confirm else {
+        let Some(plan) = &self.full.confirm else {
             return;
         };
         let title = match plan.purpose.as_str() {
@@ -650,7 +650,7 @@ impl WinWeaver {
             PcAct::PlanNative(revert) => self.plan_native(shell, revert),
             PcAct::PlanUndo => self.plan_undo(shell),
             PcAct::Confirm => self.run_plan(shell),
-            PcAct::Cancel => self.confirm = None,
+            PcAct::Cancel => self.full.confirm = None,
         }
     }
 }

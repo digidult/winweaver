@@ -27,6 +27,7 @@ impl WinWeaver {
             self.open_linked_file(shell, path, anchor);
             return;
         }
+        #[cfg(feature = "full")]
         if self.open_page(shell, name, anchor) {
             return;
         }
@@ -38,6 +39,7 @@ impl WinWeaver {
         }
     }
 
+    #[cfg(feature = "full")]
     /// Opens a page built into the executable by its file name (the guide in the language of the
     /// interface, or a page of the reference) at a heading; false when there is no such page.
     pub(crate) fn open_page(
@@ -75,7 +77,8 @@ impl WinWeaver {
     }
 
     pub(crate) fn open_any(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf) {
-        if lite() {
+        #[cfg(not(feature = "full"))]
+        {
             let ext = path
                 .extension()
                 .map(|e| e.to_string_lossy().to_ascii_lowercase())
@@ -88,55 +91,58 @@ impl WinWeaver {
                 return;
             }
         }
-        if path.extension().is_some_and(|e| e == diff::EXTENSION) {
-            self.open_diff_path(shell, path);
-            return;
-        }
-        if path.extension().is_some_and(|e| e == bookmarks::EXTENSION) {
-            self.open_marks_path(shell, path);
-            return;
-        }
-        if path
-            .extension()
-            .is_some_and(|e| e == admx::CATALOG_EXTENSION)
+        #[cfg(feature = "full")]
         {
-            self.open_catalog_path(shell, path);
-            return;
-        }
-        if path
-            .extension()
-            .is_some_and(|e| e.eq_ignore_ascii_case("admx"))
-        {
-            self.open_admx_path(shell, path);
-            return;
-        }
-        if path.extension().is_some_and(|e| e == users::EXTENSION) {
-            self.open_users_path(shell, path);
-            return;
-        }
-        if path
-            .extension()
-            .is_some_and(|e| e.eq_ignore_ascii_case(winweaver_core::pol::EXTENSION))
-        {
-            self.open_pol_path(shell, path);
-            return;
+            if path.extension().is_some_and(|e| e == diff::EXTENSION) {
+                self.open_diff_path(shell, path);
+                return;
+            }
+            if path.extension().is_some_and(|e| e == bookmarks::EXTENSION) {
+                self.open_marks_path(shell, path);
+                return;
+            }
+            if path
+                .extension()
+                .is_some_and(|e| e == admx::CATALOG_EXTENSION)
+            {
+                self.open_catalog_path(shell, path);
+                return;
+            }
+            if path
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("admx"))
+            {
+                self.open_admx_path(shell, path);
+                return;
+            }
+            if path.extension().is_some_and(|e| e == users::EXTENSION) {
+                self.open_users_path(shell, path);
+                return;
+            }
+            if path
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case(winweaver_core::pol::EXTENSION))
+            {
+                self.open_pol_path(shell, path);
+                return;
+            }
+            if path
+                .extension()
+                .is_some_and(|e| e == winweaver_mcp::config::EXTENSION)
+            {
+                self.open_mcp_config(shell, path);
+                return;
+            }
+            if path
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case(regfile::EXTENSION))
+            {
+                self.open_reg_path(shell, path);
+                return;
+            }
         }
         if path.extension().is_some_and(|e| e == themes::EXTENSION) {
             shell.open_theme_path(path);
-            return;
-        }
-        if path
-            .extension()
-            .is_some_and(|e| e == winweaver_mcp::config::EXTENSION)
-        {
-            self.open_mcp_config(shell, path);
-            return;
-        }
-        if path
-            .extension()
-            .is_some_and(|e| e.eq_ignore_ascii_case(regfile::EXTENSION))
-        {
-            self.open_reg_path(shell, path);
             return;
         }
         let ext = path
@@ -217,14 +223,15 @@ impl WinWeaver {
     }
 
     pub(crate) fn open_license(&mut self, shell: &mut Shell<WinWeaver>) {
-        if lite() {
+        #[cfg(not(feature = "full"))]
+        {
             let text = include_str!("../../../../LICENSE").to_owned();
             shell.show_or_open(
                 |d| matches!(d, Doc::Markdown(m) if m.title == "LICENSE.txt"),
                 || Doc::Markdown(Box::new(MdDoc::plain("LICENSE.txt", None, text))),
             );
-            return;
         }
+        #[cfg(feature = "full")]
         shell.show_or_open(
             |d| matches!(d, Doc::Markdown(m) if m.page == Some(pages::LICENSE_ID)),
             || Doc::Markdown(Box::new(pages::license())),
@@ -232,14 +239,15 @@ impl WinWeaver {
     }
 
     pub(crate) fn open_guide(&mut self, shell: &mut Shell<WinWeaver>) {
-        if lite() {
+        #[cfg(not(feature = "full"))]
+        {
             let text = pages::guide_lite_text(&i18n::current());
             shell.show_or_open(
                 |d| matches!(d, Doc::Markdown(m) if m.title == pages::GUIDE_LITE_TITLE),
                 || Doc::Markdown(Box::new(MdDoc::plain(pages::GUIDE_LITE_TITLE, None, text))),
             );
-            return;
         }
+        #[cfg(feature = "full")]
         shell.show_or_open(
             |d| matches!(d, Doc::Markdown(m) if m.page == Some(pages::GUIDE_ID)),
             || Doc::Markdown(Box::new(pages::guide())),
@@ -300,6 +308,7 @@ impl WinWeaver {
                 return;
             }
         };
+        #[cfg(feature = "full")]
         if ext == "json"
             && let Ok(report) = Report::parse(&text, &name)
         {
@@ -344,8 +353,10 @@ impl WinWeaver {
                 let doc = ProfileDoc::new(profile, None, &self.catalog);
                 shell.open_tab(Doc::Profile(Box::new(doc)));
             }
+            #[cfg(feature = "full")]
             FileAct::OpenReport => self.open_report(shell),
             FileAct::OpenGuide => self.open_guide(shell),
+            #[cfg(feature = "full")]
             FileAct::OpenDocs => {
                 self.open_page(shell, pages::DOCS_ROOT, None);
             }

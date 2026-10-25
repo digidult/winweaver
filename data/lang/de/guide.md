@@ -133,6 +133,16 @@ Kennwörter warten vor dem ersten Speichern auf ein Masterkennwort.
   einem Profil zeigt eine Schaltfläche am Ende der Statusleiste die Datei in ihrem Ordner im Explorer;
   Einstellungen, Dateien öffnet die Ordner des Programms.
 
+- **Menüs und Tabs**: jeder Menüpunkt hat ein Symbol. Sind die Tabs breiter als das Fenster, rollt die
+  Zeile mit dem Rad, der aktive Tab kommt ins Bild, und ein Knopf am rechten Ende listet alle Tabs.
+- **Nur aktive** in der Leiste eines Profils zeigt nur die aktiven Regeln mit geöffneten Gruppen; die
+  MCP-Werkzeuge `list_groups`, `list_rules` und `search_rules` nehmen ebenso `only_on`.
+- **Parameter**: die Felder einer Regel nehmen die Breite des Felds ein; ein Text mit einer Grenze der
+  Antwortdatei (die Supportkontakte) zählt seine Zeichen dagegen.
+- **Arbeit im Hintergrund**: das Lesen dieses PCs, ein Import von Richtlinienvorlagen, eine Änderung
+  dieses PCs und eine Suche in der Registrierung erscheinen in einem Feld rechts unten mit der
+  verstrichenen Zeit und Stopp, wo die Arbeit anhalten kann; das Feld klappt zu einem Kreisel ein.
+
 ## Dieser PC
 
 **Dieser PC** in der Befehlsleiste liest die Einstellungen dieses Computers über Windows aus, ohne etwas zu
@@ -223,6 +233,14 @@ Computer oder das Standardbenutzerprofil und die Registrierungswerte, die sie sc
 **Übernehmen** prüft die ganze Datei, und nichts ändert sich, wenn die Prüfung fehlschlägt. Speichern
 (Ctrl+S) schreibt die Datei und lädt sie neu.
 
+Der Vergleich öffnet sich in einem Tab: die abweichenden Richtlinien im Baum ihrer Kategorien, mit
+Schaltern für die nur im ersten Katalog, nur im zweiten und die unterschiedlichen, und die gewählte
+Richtlinie, wie sie in beiden Katalogen ist, nebeneinander. **Bericht speichern** schreibt den Bericht
+als Markdown-Datei, **Als Seite** zeigt ihn als Seite. **Kopieren nach** in der Leiste eines Katalog-Tabs
+kopiert die gewählte Richtlinie oder die gewählte Gruppe mit den Gruppen darunter in einen im Editor
+offenen Katalog (bei mehreren wählen Sie welchen) oder in einen neuen Katalog, mit denselben Ids und den
+Texten anderer Sprachen: ein Katalog nur mit den nötigen Richtlinien, als Datei weiterzugeben.
+
 ## Die Registrierung
 
 **Menü, Registrierung** öffnet die Registrierung dieses PCs in einem Tab: die Schlüssel links, die Werte
@@ -250,6 +268,19 @@ Registrierung und die Regeln der geladenen Kataloge, die den Schlüssel oder den
 fragt zuerst. **Speichern** schreibt jede Zeile zurück: die Kommentare und die Zeilen, die das Programm
 nicht liest, bleiben an ihrem Platz. Eine über **Dieser PC** gespeicherte Datei nennt ihre Regeln in
 Kommentaren, und der Pfeil eines solchen Kommentars zeigt die Regel im Profil.
+
+Eine Gruppenrichtliniendatei (`Registry.pol`) öffnet sich ebenfalls in einem eigenen Tab: die Dateien des
+Computers und der Benutzer dieses Windows (**Menü, Gruppenrichtlinie**; die Leiste eines Profils, eines
+Katalogs und der Registrierung) oder jede `.pol`-Datei. Die Schlüssel sind links ein Baum, die Einträge
+des gewählten Schlüssels rechts mit dem, was jeder tut. **Neuer Schlüssel**, **Neuer Wert**,
+**Bearbeiten** (oder ein Doppelklick) und **Entfernen** ändern die Einträge in einem Fenster über dem
+Tab, wie die Werte einer Registrierungsdatei; **Stamm** bestimmt, ob eine Datei außerhalb der
+Gruppenrichtlinie für den Computer oder den Benutzer gilt (die Dateien dieses Windows nehmen es aus
+ihrem Ordner); **Datei hinzufügen** übernimmt die Einträge einer anderen Gruppenrichtliniendatei oder
+die Änderungen einer Registrierungsdatei dieses Stamms; **Als .reg** speichert die Datei als
+Registrierungsdatei. Speichern schreibt das Format der Gruppenrichtlinie zurück; die Dateien dieses
+Windows werden als Kopien anderswo gespeichert, da die Gruppenrichtlinie selbst sie schreibt.
+Ungespeicherte Änderungen kommen nach einem Neustart aus einem Entwurf zurück.
 
 ## Der MCP-Server
 

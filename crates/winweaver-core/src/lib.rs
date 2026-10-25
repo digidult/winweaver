@@ -21,7 +21,9 @@ pub mod resources;
 pub mod scripts;
 pub mod security;
 pub mod thispc;
+#[cfg(feature = "users")]
 pub mod users;
+#[cfg(feature = "users")]
 pub mod userstore;
 pub mod validate;
 

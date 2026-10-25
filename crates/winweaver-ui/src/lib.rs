@@ -3,75 +3,114 @@
 //! chrome; WinWeaver (`app/shell.rs`) answers with its documents, its command bars, its menus
 //! and its acts. Every change is collected as an [`Act`] while the frame is drawn and applied
 //! afterwards.
+//!
+//! The feature `full` (on by default) holds everything beyond the profile editor, the check and
+//! the build of the answer file: This PC, the registry, registry and Group Policy files, users
+//! files, the catalogs of policy templates, diffs, bookmarks and the MCP server. The light edition
+//! wwlite is built without it (`cargo build -p wwlite`, alone, since cargo unifies the features
+//! of one build), so its executable holds none of that code.
 
 mod act;
 mod app;
+#[cfg(feature = "full")]
 mod cataledit;
+#[cfg(feature = "full")]
 mod catalogdiff;
+#[cfg(feature = "full")]
 mod catalogview;
 mod commands;
 mod dialogs;
+#[cfg(feature = "full")]
 mod diffview;
 mod doc;
 mod folders;
 mod forms;
+#[cfg(feature = "full")]
 mod importlist;
+#[cfg(feature = "full")]
 mod marksview;
+#[cfg(feature = "full")]
 mod mcpview;
 mod pages;
+#[cfg(feature = "full")]
 mod polview;
+#[cfg(feature = "full")]
 mod question;
+#[cfg(feature = "full")]
 mod regedit;
+#[cfg(feature = "full")]
 mod regfileview;
+#[cfg(feature = "full")]
 mod regview;
 mod settings;
+#[cfg(feature = "full")]
 mod usersview;
 mod views;
 
 use std::collections::HashSet;
-use std::path::{Path, PathBuf};
+#[cfg(feature = "full")]
+use std::path::Path;
+use std::path::PathBuf;
 
 use eframe::egui;
-use winweaver_core::admx::{self, CatalogFile};
-use winweaver_core::bookmarks::{self, Bookmark, Bookmarks};
+use winweaver_core::admx::CatalogFile;
 use winweaver_core::catalog::{Catalog, Rule, TREE_ROOTS, check};
 use winweaver_core::clock;
-use winweaver_core::diff::{self, Diff};
-use winweaver_core::export;
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::import;
 use winweaver_core::jsonfile;
 use winweaver_core::profile::{self, Profile};
-use winweaver_core::regfile::{self, RegFile};
 use winweaver_core::render;
 use winweaver_core::resolver::{self, Resolution};
-use winweaver_core::scripts;
-use winweaver_core::thispc::{self, Report, Verdict};
-use winweaver_core::users::{self, UsersFile};
 use winweaver_core::validate::{self, Issue, Severity, Target};
-
-pub use act::{
-    Act, CatalogAct, DiffAct, FileAct, ImportAct, MarksAct, McpAct, PcAct, PolAct, ProfileAct,
-    RegFileAct, RegistryAct, SettingsAct, UsersAct,
+#[cfg(feature = "full")]
+use winweaver_core::{
+    admx,
+    bookmarks::{self, Bookmark, Bookmarks},
+    diff::{self, Diff},
+    export,
+    regfile::{self, RegFile},
+    scripts,
+    thispc::{self, Report, Verdict},
+    users::{self, UsersFile},
 };
+
+pub use act::{Act, FileAct, ProfileAct};
+#[cfg(feature = "full")]
+pub use act::{
+    CatalogAct, DiffAct, ImportAct, MarksAct, McpAct, PcAct, PolAct, RegFileAct, RegistryAct,
+    SettingsAct, UsersAct,
+};
+#[cfg(feature = "full")]
 pub(crate) use app::show_single;
+#[cfg(feature = "full")]
 pub use catalogview::TreeKey;
 pub use dialogs::file_stem;
-pub(crate) use dialogs::{
-    ask_save_path, file_dialog, kept_name, open_dialog, pick_profile, reg_extension,
-    with_extension, write_file,
-};
+pub(crate) use dialogs::{ask_save_path, open_dialog, with_extension};
+#[cfg(feature = "full")]
+pub(crate) use dialogs::{file_dialog, kept_name, pick_profile, reg_extension, write_file};
+#[cfg(feature = "full")]
 pub use diffview::DiffDoc;
 pub use doc::{Doc, DocKind, SettingsSection};
 pub use folders::{imports_dir, lang_dir, output_dir, profiles_dir, themes_dir};
 pub use forms::Form;
+#[cfg(feature = "full")]
 pub use importlist::{
     ImportEntry, admx_file_catalog, import_files, import_source, loaded_import_ids, package_id,
     read_imports, save_import, windows_build,
 };
-pub(crate) use importlist::{import_entries, import_order, size_text, unknown_issues};
-pub use question::Question;
+#[cfg(feature = "full")]
+pub(crate) use importlist::{import_entries, import_order, size_text};
 pub use settings::{DescSections, Extra, Settings, ThemeChoice};
+
+/// A question over the window with an act of WinWeaver.
+pub type Question = ww::Question<Act>;
+
+impl From<Question> for Act {
+    fn from(question: Question) -> Self {
+        Act::Shell(ShellAct::Ask(Box::new(question)))
+    }
+}
 pub use ww::doc::{Document as Tab, Search, matches_words, remember_search};
 pub use ww::folders::exe_dir;
 pub use ww::i18n::{tr, trf};
@@ -99,6 +138,7 @@ pub const PRESETS: [(&str, &str); 4] = [
 
 /// The translations of the interface embedded in the executable: the language code and the
 /// file. Every text of the interface has a translation in each of them.
+#[cfg(feature = "full")]
 pub const LANGUAGES: [(&str, &str); 8] = [
     ("uk", include_str!("../../../data/lang/uk/ui.json")),
     ("ru", include_str!("../../../data/lang/ru/ui.json")),
@@ -233,9 +273,26 @@ impl ProfileDoc {
 }
 
 /// The stand-alone scripts the window saves.
+#[cfg(feature = "full")]
 pub use winweaver_core::export::ScriptKind;
 
+/// The warning of a profile with options of catalogs that are not loaded.
+pub(crate) fn unknown_issues(profile: &Profile) -> Vec<Issue> {
+    if profile.unknown.is_empty() {
+        return Vec::new();
+    }
+    vec![Issue {
+        severity: Severity::Warning,
+        target: Target::Unknown,
+        text: trf(
+            "Open: {n} options of catalogs that are not loaded are kept in the profile and left out of the build",
+            &[("n", &profile.unknown.len())],
+        ),
+    }]
+}
+
 /// Where an import of policy templates comes from.
+#[cfg(feature = "full")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ImportSource {
     ThisWindows,
@@ -247,6 +304,7 @@ pub enum ImportSource {
 
 /// Another catalog to compare the one of the active tab with: a loaded import or the tab of a
 /// catalog file.
+#[cfg(feature = "full")]
 pub enum CatalogRef {
     Import(String),
     Tab(usize),
@@ -254,6 +312,7 @@ pub enum CatalogRef {
 
 /// What a read of this PC does with its report. A profile tab is named by its draft key, so a tab
 /// moved meanwhile is found and a tab closed meanwhile is missed without harm.
+#[cfg(feature = "full")]
 enum PcJob {
     /// Every rule read into a new profile, on the profile of a tab as the base.
     NewProfile { base: Profile },
@@ -265,6 +324,7 @@ enum PcJob {
 
 /// A read of this PC in a thread of its own: the features and capabilities take DISM a few
 /// seconds, and the window goes on drawing meanwhile.
+#[cfg(feature = "full")]
 struct PcRead {
     job: PcJob,
     plan: thispc::Plan,
@@ -274,11 +334,20 @@ struct PcRead {
 pub struct WinWeaver {
     catalog: Catalog,
     texts: Vec<CatalogTexts>,
+    /// The imports of policy templates found next to the executable; none in wwlite.
+    imports: Vec<CatalogFile>,
+    /// The parts of the full edition.
+    #[cfg(feature = "full")]
+    full: Full,
+}
+
+/// The parts of WinWeaver the light edition has not: the imports, This PC, the registry,
+/// bookmarks, the MCP server, the native apply, users files.
+#[cfg(feature = "full")]
+struct Full {
     /// The embedded catalog and its translations, before the imports are merged.
     base_catalog: Catalog,
     base_texts: Vec<CatalogTexts>,
-    /// The imports of policy templates found next to the executable.
-    imports: Vec<CatalogFile>,
     importing: Option<std::sync::mpsc::Receiver<Result<CatalogFile, String>>>,
     /// When each kind of work in the background was first seen running, for the panel of the
     /// work.
@@ -317,35 +386,42 @@ pub fn texts_for<'a>(texts: &'a [CatalogTexts], code: &str) -> Option<&'a Catalo
 impl WinWeaver {
     pub fn new(catalog: Catalog, texts: Vec<CatalogTexts>) -> Self {
         // The input languages and layouts of this Windows, read at the first check of a profile.
+        #[cfg(windows)]
         winweaver_core::resources::set_locale_reader(winweaver_win::locales);
         // The colours of the parts of the description, in every theme.
         style::install_colors(&views::SECTION_COLORS);
         Self {
-            base_catalog: catalog.clone(),
-            base_texts: texts.clone(),
+            #[cfg(feature = "full")]
+            full: Full {
+                base_catalog: catalog.clone(),
+                base_texts: texts.clone(),
+                importing: None,
+                imports_dir: imports_dir(),
+                registry: winweaver_win::this_registry(),
+                pc: winweaver_win::this_pc().map(std::sync::Arc::from),
+                pc_read: None,
+                jobs_since: std::collections::HashMap::new(),
+                import_list: Vec::new(),
+                marks: Bookmarks::default(),
+                marks_path: exe_dir().join(bookmarks::DEFAULT_FILE),
+                mcp: mcpview::McpPanel::new(
+                    winweaver_mcp::config::Config::default_path(&exe_dir()),
+                ),
+                confirm: None,
+                running: None,
+                running_skipped: Vec::new(),
+                users_import: None,
+                renaming: None,
+            },
             imports: Vec::new(),
-            importing: None,
-            imports_dir: imports_dir(),
-            registry: winweaver_win::this_registry(),
-            pc: winweaver_win::this_pc().map(std::sync::Arc::from),
-            pc_read: None,
-            jobs_since: std::collections::HashMap::new(),
-            import_list: Vec::new(),
             catalog,
             texts,
-            marks: Bookmarks::default(),
-            marks_path: exe_dir().join(bookmarks::DEFAULT_FILE),
-            mcp: mcpview::McpPanel::new(winweaver_mcp::config::Config::default_path(&exe_dir())),
-            confirm: None,
-            running: None,
-            running_skipped: Vec::new(),
-            users_import: None,
-            renaming: None,
         }
     }
 }
 
 /// The profile tab with this draft key.
+#[cfg(feature = "full")]
 fn profile_doc<'a>(docs: &'a mut [Doc], key: &str) -> Option<&'a mut ProfileDoc> {
     docs.iter_mut().find_map(|d| match d {
         Doc::Profile(p) if p.draft_key == key => Some(&mut **p),
@@ -354,6 +430,7 @@ fn profile_doc<'a>(docs: &'a mut [Doc], key: &str) -> Option<&'a mut ProfileDoc>
 }
 
 /// The note of a read of this PC without the rights that the features and capabilities need.
+#[cfg(feature = "full")]
 fn admin_issue() -> Issue {
     Issue {
         severity: Severity::Info,
@@ -366,6 +443,7 @@ fn admin_issue() -> Issue {
 /// The messages of a read of this PC or of a report: its notes, and every rule partly in effect
 /// with the values that differ, so a value Windows or a program changed after the installation
 /// shows where it is.
+#[cfg(feature = "full")]
 fn capture_issues(summary: &thispc::CaptureSummary) -> Vec<Issue> {
     let mut issues: Vec<Issue> = summary
         .notes
@@ -399,6 +477,7 @@ fn capture_issues(summary: &thispc::CaptureSummary) -> Vec<Issue> {
 }
 
 /// What a profile tab selects for an item of a diff ([`Diff::keys`]).
+#[cfg(feature = "full")]
 fn sel_from_diff_key(catalog: &Catalog, key: &str) -> Sel {
     match diff::ItemKey::parse(key) {
         Some(diff::ItemKey::Rule(id)) => sel_from_item(catalog, &id),
@@ -409,6 +488,7 @@ fn sel_from_diff_key(catalog: &Catalog, key: &str) -> Sel {
     }
 }
 
+#[cfg(feature = "full")]
 fn sel_from_item(catalog: &Catalog, item: &str) -> Sel {
     if item.is_empty() {
         Sel::None
@@ -424,6 +504,7 @@ fn sel_from_item(catalog: &Catalog, item: &str) -> Sel {
 }
 
 /// What differs in a policy, as the comparison page names it.
+#[cfg(feature = "full")]
 pub(crate) fn difference_text(what: &str) -> &'static str {
     match what {
         "title" => tr("title"),
@@ -437,6 +518,7 @@ pub(crate) fn difference_text(what: &str) -> &'static str {
 }
 
 /// A title in a line of Markdown: its marks as plain characters.
+#[cfg(feature = "full")]
 fn md_plain(text: &str) -> String {
     let mut out = String::new();
     for c in text.chars() {
@@ -450,6 +532,7 @@ fn md_plain(text: &str) -> String {
 
 /// Two catalog files compared policy by policy, as a Markdown page: the counts, then the policies
 /// of each alone and those that differ, at most 1000 lines a section.
+#[cfg(feature = "full")]
 pub(crate) fn comparison_page(first: &CatalogFile, second: &CatalogFile) -> String {
     const LINES: usize = 1000;
     let c = admx::compare(first, second);
@@ -510,6 +593,7 @@ pub(crate) fn comparison_page(first: &CatalogFile, second: &CatalogFile) -> Stri
 }
 
 /// What a stand-alone script does with the selection, in the language of the interface.
+#[cfg(feature = "full")]
 fn summary_of(plan: &scripts::ScriptPlan) -> String {
     let counts = [
         (plan.applied.len(), tr("{n} rules applied")),
@@ -530,39 +614,19 @@ fn summary_of(plan: &scripts::ScriptPlan) -> String {
     }
 }
 
-/// Opens the window with the renderer of `--renderer` or of the settings first; returns the
-/// error text when the catalog or the window cannot start.
-/// The light edition wwlite is running: set once at its start, before the window.
-static LITE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-
-/// Whether the program is the light edition wwlite: the profile editor, the check and the build
-/// of the answer file only.
-pub fn lite() -> bool {
-    LITE.load(std::sync::atomic::Ordering::Relaxed)
+/// Whether this is the light edition wwlite, built without the feature `full`: the profile
+/// editor, the check and the build of the answer file only.
+pub const fn lite() -> bool {
+    !cfg!(feature = "full")
 }
 
 /// The translations wwlite embeds: Ukrainian (English is the source); others are files next to it.
+#[cfg(not(feature = "full"))]
 pub const LANGUAGES_LITE: [(&str, &str); 1] =
     [("uk", include_str!("../../../data/lang/uk/ui.json"))];
 
-/// Makes this process the light edition wwlite, before its window is made; for the process
-/// alone (its tests run in a process of their own).
-pub fn enter_lite() {
-    LITE.store(true, std::sync::atomic::Ordering::Relaxed);
-}
-
-/// Opens the window of the light edition wwlite.
-pub fn run_lite(cli_renderer: Option<&str>) -> Result<(), String> {
-    enter_lite();
-    run(cli_renderer)
-}
-
-/// The smoke test of the light edition.
-pub fn smoke_window_lite(cli_renderer: Option<&str>) -> Result<String, String> {
-    enter_lite();
-    smoke_window(cli_renderer)
-}
-
+/// Opens the window with the renderer of `--renderer` or of the settings first; returns the
+/// error text when the catalog or the window cannot start.
 pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
     let catalog = Catalog::embedded().map_err(|e| format!("catalog: {e}"))?;
     let texts = CatalogTexts::embedded().map_err(|e| format!("translations: {e}"))?;
@@ -576,7 +640,7 @@ pub fn smoke_window(cli_renderer: Option<&str>) -> Result<String, String> {
     ww::smoke_window::<WinWeaver>(cli_renderer)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 mod tests;
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 mod translations;

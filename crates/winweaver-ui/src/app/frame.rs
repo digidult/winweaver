@@ -35,6 +35,7 @@ impl WinWeaver {
             });
     }
 
+    #[cfg(feature = "full")]
     /// The diff tab: the list of the differences on the left, the selected one in the middle.
     pub(crate) fn draw_diff(
         &self,
@@ -44,7 +45,7 @@ impl WinWeaver {
     ) {
         let marked = self
             .current_bookmark(shell)
-            .is_some_and(|b| self.marks.find(&b).is_some());
+            .is_some_and(|b| self.full.marks.find(&b).is_some());
         let Some(Doc::Diff(doc)) = shell.docs.get(shell.active) else {
             return;
         };
@@ -74,6 +75,7 @@ impl WinWeaver {
         }
     }
 
+    #[cfg(feature = "full")]
     /// The MCP tab: the configuration, and with the server running the journal under it and
     /// the selected call on the right.
     pub(crate) fn draw_mcp(
@@ -86,7 +88,7 @@ impl WinWeaver {
             return;
         };
         let search = &doc.search;
-        let panel = &mut self.mcp;
+        let panel = &mut self.full.mcp;
         let imports: Vec<String> = self.imports.iter().map(|f| f.id.clone()).collect();
         let catalog = &self.catalog;
         let texts = texts_for(&self.texts, &i18n::current());
@@ -131,6 +133,7 @@ impl WinWeaver {
         }
     }
 
+    #[cfg(feature = "full")]
     /// The bookmark tab: the list on the left, the selected bookmark in the middle.
     pub(crate) fn draw_marks(
         &self,
@@ -155,8 +158,8 @@ impl WinWeaver {
                     &self.catalog,
                     texts,
                     &self.imports,
-                    &self.marks,
-                    &self.marks_path,
+                    &self.full.marks,
+                    &self.full.marks_path,
                     &doc.search,
                     doc,
                     acts,
@@ -170,7 +173,7 @@ impl WinWeaver {
                     &self.catalog,
                     texts,
                     &self.imports,
-                    &self.marks,
+                    &self.full.marks,
                     doc,
                     &shell.settings,
                     acts,
@@ -178,6 +181,7 @@ impl WinWeaver {
             });
     }
 
+    #[cfg(feature = "full")]
     /// The tab of an import: its tree and the selected policy.
     pub(crate) fn draw_catalog(
         &self,
@@ -207,6 +211,7 @@ impl WinWeaver {
         }
     }
 
+    #[cfg(feature = "full")]
     pub(crate) fn draw_registry(
         &mut self,
         shell: &mut Shell<WinWeaver>,
@@ -219,6 +224,7 @@ impl WinWeaver {
         }
     }
 
+    #[cfg(feature = "full")]
     pub(crate) fn draw_catalog_editor(
         &mut self,
         shell: &mut Shell<WinWeaver>,
@@ -230,6 +236,7 @@ impl WinWeaver {
         }
     }
 
+    #[cfg(feature = "full")]
     pub(crate) fn draw_reg_file(
         &mut self,
         shell: &mut Shell<WinWeaver>,
@@ -247,6 +254,7 @@ impl WinWeaver {
         }
     }
 
+    #[cfg(feature = "full")]
     pub(crate) fn draw_users(
         &mut self,
         shell: &mut Shell<WinWeaver>,

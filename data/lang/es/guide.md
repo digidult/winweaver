@@ -132,6 +132,17 @@ cuentas; sus contraseñas esperan una contraseña maestra antes del primer guard
   un botón al final de la barra de estado muestra el archivo en su carpeta en el Explorador;
   Configuración, Archivos abre las carpetas del programa.
 
+- **Menús y pestañas**: cada elemento de un menú tiene un icono. Cuando las pestañas son más anchas que
+  la ventana, la fila se desplaza con la rueda, la pestaña activa queda a la vista y un botón en el
+  extremo derecho lista todas las pestañas.
+- **Solo activas** en la barra de un perfil muestra solo las reglas activas con sus grupos abiertos; las
+  herramientas MCP `list_groups`, `list_rules` y `search_rules` aceptan `only_on` del mismo modo.
+- **Parámetros**: los campos de una regla ocupan el ancho del panel; un texto con un límite del archivo
+  de respuestas (los contactos de soporte) cuenta sus caracteres.
+- **Trabajo en segundo plano**: una lectura de este equipo, una importación de plantillas, un cambio de
+  este equipo y una búsqueda en el registro se muestran en un panel en la esquina inferior derecha con
+  el tiempo que llevan y Detener donde el trabajo puede detenerse; el panel se pliega a un indicador.
+
 ## Este equipo
 
 **Este equipo**, en la barra de comandos, lee la configuración de este equipo a través de Windows, sin
@@ -221,6 +232,15 @@ plantillas empieza uno vacío propio. Una directiva recibe su título, su descri
 de usuario predeterminado y los valores del registro que escribe o quita; **Aplicar** comprueba todo el
 archivo, y nada cambia si la comprobación falla. Guardar (Ctrl+S) escribe el archivo y lo vuelve a cargar.
 
+La comparación se abre en una pestaña: las directivas que difieren en el árbol de sus categorías, con
+interruptores para las que solo están en el primer catálogo, solo en el segundo y las distintas, y la
+directiva seleccionada tal como está en los dos catálogos, lado a lado. **Guardar el informe** escribe el
+informe como archivo Markdown, **Como página** lo muestra como página. **Copiar en**, en la barra de una
+pestaña de catálogo, copia la directiva seleccionada o el grupo seleccionado con los grupos que tiene
+debajo en un catálogo abierto en su editor (usted elige cuál cuando hay varios) o en un catálogo nuevo,
+con los mismos identificadores y los textos de otros idiomas: un catálogo solo con las directivas
+necesarias, para pasarlo como archivo.
+
 ## El registro
 
 **Menú, Registro** abre el registro de este equipo en una pestaña: las claves a la izquierda, los valores
@@ -248,6 +268,18 @@ las reglas de los catálogos cargados que escriben la clave o el valor seleccion
 **Guardar** vuelve a escribir cada línea: los comentarios y las líneas que el programa no lee se quedan
 donde estaban. Un archivo guardado desde **Este equipo** nombra sus reglas en comentarios, y la flecha de
 ese comentario muestra la regla en el perfil.
+
+Un archivo de directiva de grupo (`Registry.pol`) también se abre en su propia pestaña: los archivos del
+equipo y de los usuarios de este Windows (**Menú, Directiva de grupo**; la barra de un perfil, un catálogo
+y el registro) o cualquier archivo `.pol`. Las claves son un árbol a la izquierda, las entradas de la
+clave seleccionada a la derecha con lo que hace cada una. **Nueva clave**, **Nuevo valor**, **Editar** (o
+un doble clic) y **Quitar** cambian las entradas en una ventana sobre la pestaña, como los valores de un
+archivo del registro; **Raíz** elige si un archivo fuera de la directiva de grupo se aplica al equipo o al
+usuario (los archivos de este Windows lo toman de su carpeta); **Añadir un archivo** toma las entradas de
+otro archivo de directiva de grupo o los cambios de un archivo del registro de esa raíz; **A .reg** guarda
+el archivo como archivo del registro. Guardar escribe de vuelta el formato de la directiva de grupo; los
+archivos de este Windows se guardan como copias en otro lugar, porque los escribe la propia directiva de
+grupo. Los cambios sin guardar vuelven de un borrador tras un reinicio.
 
 ## El servidor MCP
 

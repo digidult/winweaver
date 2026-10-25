@@ -139,7 +139,12 @@ lists the planned changes.
 - A policy two imports hold is one rule of the first (the templates of this Windows first) and an alias in
   the groups of the others, so every checked import shows its whole tree.
 - Export a catalog file; rename an import (the file and the title of its tree); remove it after a question.
-- Compare two catalogs (loaded imports or open catalog files) policy by policy, as a Markdown page.
+- Compare two catalogs (loaded imports or open catalog files) policy by policy in a tab: the differing
+  policies in the tree of their categories with switches for each kind, the selected one side by side;
+  the report as a Markdown page or saved as a file.
+- Copy to: the selected policy (with its Disabled rule) or group (with the groups under it) of a catalog
+  tab into a catalog open in its editor or into a new one, with its ids and its texts in other languages
+  (`CatalogFile::copy_from`).
 - The editor of a catalog (`01-ui.md` section 18) changes the policies of a catalog file, and New catalog
   makes an empty import.
 - Templates in UTF-8 or UTF-16 with its mark (the templates of vendors such as Chrome, Edge, Brave and
@@ -294,7 +299,19 @@ and languages as files; files dropped on the window or named on the command line
 - Group Policy files (`.pol`): the files of the computer and of the users of this Windows, or any
   file, as a tree of keys with what each entry does; a button beside a key or a value that Group
   Policy sets in the detail of a rule, the registry tab and a registry file; a setting opens them
-  with a read of this PC.
+  with a read of this PC. The tab edits them: entries made, changed and removed (after a question)
+  in a window like the values of a registry file, the root of a file outside Group Policy chosen,
+  the entries of another `.pol` file or the changes of a `.reg` file of that root added, the file
+  saved in the format of Group Policy (the files of this Windows as copies elsewhere) or as `.reg`,
+  with a draft of its unsaved changes.
+- The catalog by mechanism: Installation holds the answer file settings and the scripts of the
+  installation, Policies every rule that only writes the registry, Other the rest; a text parameter
+  has a limit (`max_length`, the limits of the answer file for the support contacts, `maxLength` of
+  ADMX), and the fields of the parameters take the width of the panel.
+- The tab row scrolls when the tabs are wider than the window and lists them in a menu; every menu
+  item has an icon; Only on in the bar of a profile shows the rules that are on (MCP: `only_on` of
+  `list_groups`, `list_rules` and `search_rules`); the work in the background (a read of this PC, an
+  import, a change of this PC, a search of the registry) shows in a panel with its time and a Stop.
 - Drafts of every document with unsaved changes: profiles, registry files, diffs, the catalog
   editor, users files (with the passwords of their last save, encrypted) and the theme editor.
 - `.reg` and `.ps1` files of the selection, of the whole profile and of a diff, in the window and
@@ -309,5 +326,6 @@ check, the build of `autounattend.xml`, the presets, the catalogs of the folder 
 themes of the folder `themes`, a short guide as plain text, English and Ukrainian built in and
 other languages as files (German in its archive). It has nothing of This PC, the MCP server, the
 registry, registry and Group Policy files, diffs, bookmarks, imports of policy templates, the
-catalog views and editor, users files, the theme editor and Markdown pages. It is built for
-Windows; `docs/wasm.md` studies an edition for the browser.
+catalog views and editor, users files, the theme editor and Markdown pages: winweaver-ui is built
+without its feature `full`, so none of that code is in the executable. It is built for Windows;
+`docs/wasm.md` studies an edition for the browser.

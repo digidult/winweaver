@@ -9,24 +9,33 @@ repository.workspace = true
 authors.workspace = true
 
 [features]
-default = ["glow", "wgpu"]
+default = ["full", "glow", "wgpu"]
+# Everything of WinWeaver beyond the profile editor, the check and the build of wwlite: This PC,
+# the registry, registry and Group Policy files, users files, the catalogs of policy templates,
+# diffs, bookmarks and the MCP server. wwlite builds without it, so its executable holds none of
+# that code.
+full = ["dep:winweaver-mcp", "dep:zeroize", "winweaver-core/users", "winweaver-win/users"]
 # The renderers of the window (src/renderer.rs): OpenGL through glow, DirectX 12 through wgpu with that
 # backend only. At least one is needed; the settings and --renderer offer the ones built in.
 glow = ["ww/glow"]
 wgpu = ["ww/wgpu"]
 
 [dependencies]
-winweaver-core = { path = "../winweaver-core" }
-winweaver-win = { path = "../winweaver-win" }
-winweaver-mcp = { path = "../winweaver-mcp" }
+winweaver-core = { path = "../winweaver-core", default-features = false }
+winweaver-mcp = { path = "../winweaver-mcp", optional = true }
 ww = { path = "../ww", default-features = false }
 # The master password of a users file is wiped when the tab locks or closes.
-zeroize = "1"
+zeroize = { version = "1", optional = true }
 eframe = { version = "0.36", default-features = false, features = ["accesskit", "default_fonts", "links"] }
 rfd = "0.17"
 raw-window-handle = "0.6"
 serde.workspace = true
 serde_json.workspace = true
+
+# The Windows API: the input languages of the form Languages; the rest of WinWeaver (This PC,
+# the registry, the native apply) with the feature full.
+[target.'cfg(windows)'.dependencies]
+winweaver-win = { path = "../winweaver-win", default-features = false }
 
 [dev-dependencies]
 egui_kittest = { version = "0.36", features = ["eframe", "wgpu", "snapshot"] }

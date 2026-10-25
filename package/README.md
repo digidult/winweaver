@@ -32,6 +32,11 @@ keeps its settings and files in that folder. The guide opens at the first start 
   loaded stay in the profile under Unknown options and are left out of the build; Load catalogs finds and loads
   their imports. Compare sets two catalogs side by side; Edit opens a catalog in an editor, New catalog starts
   one of your own. An `.admx` or `.wwcatalog` file also opens as a tab without importing.
+- **Group Policy files** (`Registry.pol`): the files of this Windows or any `.pol` file in a tab, their entries
+  edited, the root chosen for a file outside Group Policy, the entries of another `.pol` or `.reg` file added, the
+  file saved as `.reg`. **Catalogs compared** in a tab, their report saved as Markdown; policies and groups copied
+  into a catalog of your own. **Only on** in the bar of a profile shows the rules that are on; the work in the
+  background shows in a panel of its own.
 - **Registry** of this PC in a tab: keys, values of every type of regedit, edits and deletions that ask
   first, the permissions of keys, bookmarks of keys; every list of what a rule writes opens its key there. A registry file (`.reg`) opens
   as a tab of its keys, values and comments, with the rules that write each key, and is saved without losing a line.

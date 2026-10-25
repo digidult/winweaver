@@ -17,9 +17,9 @@ fn this_pc_is_read_in_the_background() {
         Doc::Profile(Box::new(ProfileDoc::new(profile, None, &catalog))),
     ];
     app.shell.active = 0;
-    app.app.pc = Some(std::sync::Arc::new(thispc::MemoryMachine::default()));
+    app.app.full.pc = Some(std::sync::Arc::new(thispc::MemoryMachine::default()));
     app.apply(vec![Act::Pc(PcAct::Check)]);
-    assert!(app.app.pc_read.is_some());
+    assert!(app.app.full.pc_read.is_some());
     app.apply(vec![Act::Pc(PcAct::Read)]);
     assert_eq!(
         app.shell.status,

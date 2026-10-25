@@ -11,17 +11,18 @@ impl WinWeaver {
     /// Reads the configuration of the MCP tab at the start: `mcp/default.wwmcp`, made from the port
     /// and the token an earlier version kept in the settings when it does not exist yet.
     pub(crate) fn load_mcp_config(&mut self, shell: &mut Shell<WinWeaver>) {
-        let path = self.mcp.path.clone();
+        let path = self.full.mcp.path.clone();
         if path.exists() {
             match winweaver_mcp::config::Config::load(&path) {
                 Ok(config) => {
-                    self.mcp.take(&config);
-                    self.mcp.saved = Some(config);
+                    self.full.mcp.take(&config);
+                    self.full.mcp.saved = Some(config);
                 }
                 Err(e) => {
-                    self.mcp.error = trf("The MCP configuration was not read: {e}", &[("e", &e)]);
+                    self.full.mcp.error =
+                        trf("The MCP configuration was not read: {e}", &[("e", &e)]);
                     // A file that cannot be read is not written over.
-                    self.mcp.saved = Some(self.mcp.config());
+                    self.full.mcp.saved = Some(self.full.mcp.config());
                 }
             }
             return;
@@ -34,36 +35,36 @@ impl WinWeaver {
         if config.check().is_err() {
             config.token.clear();
         }
-        self.mcp.take(&config);
+        self.full.mcp.take(&config);
         // Written at the next frame by `persist_mcp`.
-        self.mcp.saved = None;
+        self.full.mcp.saved = None;
     }
 
     /// Writes the configuration of the MCP tab once it changed; a failure is shown once.
     pub(crate) fn persist_mcp(&mut self) {
-        let config = self.mcp.config();
-        if self.mcp.saved.as_ref() == Some(&config) {
+        let config = self.full.mcp.config();
+        if self.full.mcp.saved.as_ref() == Some(&config) {
             return;
         }
-        if let Err(e) = config.save(&self.mcp.path) {
-            self.mcp.error = trf("The MCP configuration was not saved: {e}", &[("e", &e)]);
+        if let Err(e) = config.save(&self.full.mcp.path) {
+            self.full.mcp.error = trf("The MCP configuration was not saved: {e}", &[("e", &e)]);
         }
-        self.mcp.saved = Some(config);
+        self.full.mcp.saved = Some(config);
     }
 
     /// Opens a configuration file in the MCP tab; a running server keeps the one it has.
     pub(crate) fn open_mcp_config(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf) {
-        if self.mcp.run.is_some() {
+        if self.full.mcp.run.is_some() {
             shell.status =
                 tr("Stop the MCP server before you open another configuration").to_owned();
             return;
         }
         match winweaver_mcp::config::Config::load(&path) {
             Ok(config) => {
-                self.mcp.take(&config);
-                self.mcp.path = path;
-                self.mcp.saved = Some(config);
-                self.mcp.error.clear();
+                self.full.mcp.take(&config);
+                self.full.mcp.path = path;
+                self.full.mcp.saved = Some(config);
+                self.full.mcp.error.clear();
                 self.apply(shell, Act::Mcp(McpAct::Open));
             }
             Err(e) => shell.status = trf("Not opened: {e}", &[("e", &e)]),
@@ -86,12 +87,12 @@ impl WinWeaver {
         if path.extension().is_none() {
             path.set_extension(ext);
         }
-        let config = self.mcp.config();
+        let config = self.full.mcp.config();
         match config.save(&path) {
             Ok(()) => {
                 shell.saved(&path);
-                self.mcp.path = path;
-                self.mcp.saved = Some(config);
+                self.full.mcp.path = path;
+                self.full.mcp.saved = Some(config);
             }
             Err(e) => shell.save_failed(e),
         }
@@ -99,11 +100,11 @@ impl WinWeaver {
 
     /// Starts the HTTP server of the window with the configuration of the MCP tab.
     pub(crate) fn start_mcp(&mut self, shell: &mut Shell<WinWeaver>) {
-        if self.mcp.token.is_empty() {
+        if self.full.mcp.token.is_empty() {
             match winweaver_mcp::new_token() {
-                Ok(t) => self.mcp.token = t,
+                Ok(t) => self.full.mcp.token = t,
                 Err(e) => {
-                    self.mcp.error = e;
+                    self.full.mcp.error = e;
                     return;
                 }
             }
@@ -112,38 +113,38 @@ impl WinWeaver {
             self.catalog.clone(),
             &PRESETS,
             winweaver_mcp::Options {
-                mode: self.mcp.mode,
-                registry: self.mcp.registry,
-                edit_library: self.mcp.edit_library,
-                marks_path: self.marks_path.clone(),
-                imports_dir: self.imports_dir.clone(),
-                read_pc: self.mcp.read_pc,
+                mode: self.full.mcp.mode,
+                registry: self.full.mcp.registry,
+                edit_library: self.full.mcp.edit_library,
+                marks_path: self.full.marks_path.clone(),
+                imports_dir: self.full.imports_dir.clone(),
+                read_pc: self.full.mcp.read_pc,
                 profiles_dir: profiles_dir(),
                 output_dir: output_dir(),
-                detailed_log: self.mcp.detailed_log,
+                detailed_log: self.full.mcp.detailed_log,
             },
         ));
-        if !self.mcp.profile.is_empty()
-            && let Err(e) = server.select(&self.mcp.profile)
+        if !self.full.mcp.profile.is_empty()
+            && let Err(e) = server.select(&self.full.mcp.profile)
         {
-            self.mcp.error = trf(
+            self.full.mcp.error = trf(
                 "The profile {name}: {e}",
-                &[("name", &self.mcp.profile), ("e", &e)],
+                &[("name", &self.full.mcp.profile), ("e", &e)],
             );
             return;
         }
         match winweaver_mcp::http::HttpServer::start(
             server.clone(),
-            self.mcp.port,
-            self.mcp.token.clone(),
+            self.full.mcp.port,
+            self.full.mcp.token.clone(),
         ) {
             Ok(http) => {
                 shell.status = trf("The MCP server runs on {url}", &[("url", &http.url())]);
-                self.mcp.error.clear();
-                self.mcp.run = Some(mcpview::McpRun { server, http });
+                self.full.mcp.error.clear();
+                self.full.mcp.run = Some(mcpview::McpRun { server, http });
             }
             Err(e) => {
-                self.mcp.error = trf("The server did not start: {e}", &[("e", &e)]);
+                self.full.mcp.error = trf("The server did not start: {e}", &[("e", &e)]);
             }
         }
     }
@@ -154,15 +155,16 @@ impl WinWeaver {
             McpAct::Open => self.open_mcp(shell),
             McpAct::Start => self.start_mcp(shell),
             McpAct::Stop => {
-                self.mcp.run = None;
+                self.full.mcp.run = None;
                 shell.status = tr("The MCP server stopped").to_owned();
             }
             McpAct::RenewToken => match winweaver_mcp::new_token() {
-                Ok(t) => self.mcp.token = t,
-                Err(e) => self.mcp.error = e,
+                Ok(t) => self.full.mcp.token = t,
+                Err(e) => self.full.mcp.error = e,
             },
             McpAct::OpenProfile(name) => {
                 let profile = self
+                    .full
                     .mcp
                     .run
                     .as_ref()

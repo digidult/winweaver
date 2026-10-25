@@ -55,6 +55,10 @@ jobs:
         # The Windows crates compile for the Windows target without linking, so the Linux runner checks
         # every crate and every test; no dependency builds C code for that target.
         run: cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu -- -D warnings
+      - name: Clippy (wwlite alone, without the feature full)
+        # Built alone, so cargo does not give winweaver-ui the feature full of WinWeaver: the code
+        # of the light edition is checked as it is built.
+        run: cargo clippy -p wwlite --all-targets --target x86_64-pc-windows-gnu -- -D warnings
       - name: Tests (core)
         run: cargo test -p winweaver-core
       - name: CI files (Cargo.lock, the format patch)
@@ -90,6 +94,10 @@ jobs:
         run: cargo test --workspace
         env:
           WINWEAVER_SCREENSHOTS: ${{ github.workspace }}/target/screenshots
+      - name: Tests of wwlite (alone, without the feature full)
+        run: cargo test -p wwlite
+        env:
+          WINWEAVER_SCREENSHOTS: ${{ github.workspace }}/target/screenshots
       - name: Screenshots of the window
         if: always()
         uses: actions/upload-artifact@v4
@@ -101,6 +109,9 @@ jobs:
         run: cargo run -p winweaver -- --check-catalog
       - name: Release build
         run: cargo build --release --workspace
+      - name: Release build of wwlite (alone, without the feature full)
+        # After the workspace, so target/release/wwlite.exe is the light one.
+        run: cargo build --release -p wwlite
       - name: Window smoke test
         # The runner has no driver of OpenGL 2.0: Automatic must fall back from OpenGL to DirectX 12,
         # which draws on the software rasterizer of Windows.

@@ -1,10 +1,12 @@
 //! The detail of a rule: its cards, its parameters, its description with the links to what it writes and to other catalogs.
 
 use super::*;
+#[cfg(feature = "full")]
 use crate::ShellAct;
 
 /// What a rule writes: the registry values as a table of key, name, value and the default of
 /// Windows; the other actions as one line each under it.
+#[cfg_attr(not(feature = "full"), allow(unused_variables, clippy::ptr_arg))]
 pub(crate) fn writes(ui: &mut egui::Ui, rule: &Rule, acts: &mut Vec<Act>) {
     let p = style::palette(ui);
     let mut rows = Vec::new();
@@ -79,18 +81,19 @@ pub(crate) fn writes(ui: &mut egui::Ui, rule: &Rule, acts: &mut Vec<Act>) {
                 for (path, name, value, default) in &rows {
                     ui.horizontal(|ui| {
                         cell(ui, path, true, false, widths[0] - 24.0);
-                        if crate::lite() {
-                            return;
+                        #[cfg(feature = "full")]
+                        {
+                            let open = ui
+                                .small_button(icons::GO_TO)
+                                .on_hover_text(tr("Open in the registry"));
+                            if open.clicked() {
+                                let value = (!name.is_empty()).then(|| name.clone());
+                                let act = RegistryAct::Open((*path).to_owned(), value);
+                                acts.push(Act::Registry(act));
+                            }
+                            let value = (!name.is_empty()).then_some(name.as_str());
+                            crate::polview::link(ui, path, value, acts);
                         }
-                        let open = ui
-                            .small_button(icons::GO_TO)
-                            .on_hover_text(tr("Open in the registry"));
-                        if open.clicked() {
-                            let value = (!name.is_empty()).then(|| name.clone());
-                            acts.push(Act::Registry(RegistryAct::Open((*path).to_owned(), value)));
-                        }
-                        let value = (!name.is_empty()).then_some(name.as_str());
-                        crate::polview::link(ui, path, value, acts);
                     });
                     cell(ui, name, false, false, widths[1]);
                     cell(ui, value, false, false, widths[2]);
@@ -105,6 +108,7 @@ pub(crate) fn writes(ui: &mut egui::Ui, rule: &Rule, acts: &mut Vec<Act>) {
     }
 }
 
+#[cfg(feature = "full")]
 /// The same policy in the trees of other imports and the policies of the same name in other
 /// catalogs, as links that select them.
 pub(crate) fn other_catalogs(
@@ -220,15 +224,19 @@ pub(crate) fn same_values(
                     tr("Built-in catalog")
                 };
                 let holds = |f: &&CatalogFile| f.rules.iter().any(|r| &r.id == id);
-                match imports.iter().find(holds).filter(|_| !crate::lite()) {
-                    Some(f) => {
-                        if ui.link(name).clicked() {
-                            acts.push(Act::Catalog(CatalogAct::OpenAt(f.id.clone(), id.clone())));
-                        }
+                let shown = imports.iter().find(holds);
+                #[cfg(feature = "full")]
+                if let Some(f) = shown {
+                    if ui.link(name).clicked() {
+                        acts.push(Act::Catalog(CatalogAct::OpenAt(f.id.clone(), id.clone())));
                     }
-                    None => {
-                        ui.weak(name);
-                    }
+                } else {
+                    ui.weak(name);
+                }
+                #[cfg(not(feature = "full"))]
+                {
+                    let _ = shown;
+                    ui.weak(name);
                 }
             });
             for value in values.iter().take(3) {
@@ -241,6 +249,7 @@ pub(crate) fn same_values(
     });
 }
 
+#[cfg(feature = "full")]
 /// Links that open the loaded imports holding a rule in their catalog tabs at it.
 pub(crate) fn catalog_links(
     ui: &mut egui::Ui,
@@ -333,8 +342,9 @@ pub(crate) fn rule_detail(
             }
         });
     }
-    let on_pc = winweaver_core::thispc::exclusion(rule).is_none();
-    if !crate::lite() {
+    #[cfg(feature = "full")]
+    {
+        let on_pc = winweaver_core::thispc::exclusion(rule).is_none();
         block(ui, |ui| {
             if on_pc {
                 style::section_title(ui, tr("This PC, this rule"));
@@ -343,8 +353,6 @@ pub(crate) fn rule_detail(
             }
             catalog_links(ui, imports, &rule.id, acts);
         });
-    }
-    if !crate::lite() {
         other_catalogs(ui, catalog, texts, imports, rule, acts);
     }
     same_values(ui, catalog, texts, imports, rule, acts);
@@ -464,7 +472,8 @@ pub(crate) fn rule_description(
             },
         );
     }
-    if !rule.doc.is_empty() && !crate::lite() {
+    #[cfg(feature = "full")]
+    if !rule.doc.is_empty() {
         section(ui, "desc-ref", tr("Reference"), parts.reference, |ui| {
             if ui.link(rule.doc.as_str()).clicked() {
                 acts.push(Act::Shell(ShellAct::OpenLink(rule.doc.clone())));

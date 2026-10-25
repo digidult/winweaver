@@ -4,8 +4,10 @@
 use crate::*;
 
 /// The guide shown at the first start and from the menu (F1).
+#[cfg(feature = "full")]
 pub const GUIDE: &str = include_str!("../../../data/docs/guide.md");
 /// The translated guides: the language code and the page.
+#[cfg(feature = "full")]
 pub const GUIDES: [(&str, &str); 8] = [
     ("uk", include_str!("../../../data/lang/uk/guide.md")),
     ("ru", include_str!("../../../data/lang/ru/guide.md")),
@@ -17,11 +19,14 @@ pub const GUIDES: [(&str, &str); 8] = [
     ("tr", include_str!("../../../data/lang/tr/guide.md")),
 ];
 
+#[cfg(feature = "full")]
 pub const GUIDE_TITLE: &str = "Guide.md";
 /// The root page of the documentation built into the executable: the reference of the parameters.
+#[cfg(feature = "full")]
 pub const DOCS_ROOT: &str = "README.md";
 /// The parameter reference of the catalog, carried over with its data (`data/reference/`): the
 /// file name and the page. The `doc` field of a rule links into it, a heading as `#anchor`.
+#[cfg(feature = "full")]
 pub const REFERENCE: [(&str, &str); 22] = [
     (
         "00-architecture.md",
@@ -113,21 +118,27 @@ pub const REFERENCE: [(&str, &str); 22] = [
     ),
 ];
 
+#[cfg(feature = "full")]
 pub const GUIDE_ID: &str = "guide";
+#[cfg(feature = "full")]
 pub const LICENSE_ID: &str = "license";
+#[cfg(feature = "full")]
 const LICENSE_TITLE: &str = "LICENSE";
 
 /// The guide in the language of the interface.
+#[cfg(feature = "full")]
 pub fn guide() -> MdDoc {
     MdDoc::page(GUIDE_ID, GUIDE_TITLE, guide_text(&i18n::current()))
 }
 
 /// The license of the program, built into the executable, so that it travels with the exe alone.
+#[cfg(feature = "full")]
 pub fn license() -> MdDoc {
     MdDoc::page(LICENSE_ID, LICENSE_TITLE, license_text())
 }
 
 /// The text of `LICENSE` as a Markdown page: its first line (the name of the license) a heading.
+#[cfg(feature = "full")]
 pub fn license_text() -> String {
     let text = include_str!("../../../LICENSE").replace("\r\n", "\n");
     match text.split_once('\n') {
@@ -137,12 +148,16 @@ pub fn license_text() -> String {
 }
 
 /// The short guide of wwlite, plain text: the title of its tab and the embedded texts.
+#[cfg(not(feature = "full"))]
 pub const GUIDE_LITE_TITLE: &str = "Guide.txt";
+#[cfg(not(feature = "full"))]
 const GUIDE_LITE: &str = include_str!("../../../data/docs/guide-lite.txt");
+#[cfg(not(feature = "full"))]
 const GUIDE_LITE_UK: &str = include_str!("../../../data/lang/uk/guide-lite.txt");
 
 /// The guide of wwlite in a language: a file `lang/<code>/guide-lite.txt` next to the
 /// executable, the Ukrainian one, or the English one.
+#[cfg(not(feature = "full"))]
 pub fn guide_lite_text(code: &str) -> String {
     let file = lang_dir().join(code).join("guide-lite.txt");
     if code != "en"
@@ -160,6 +175,7 @@ pub fn guide_lite_text(code: &str) -> String {
 
 /// The guide in a language: a file `lang/<code>/guide.md` next to the executable, the embedded
 /// translation, or the English page.
+#[cfg(feature = "full")]
 pub fn guide_text(code: &str) -> String {
     let file = lang_dir().join(code).join("guide.md");
     if code != "en"
@@ -174,7 +190,7 @@ pub fn guide_text(code: &str) -> String {
         .to_owned()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "full"))]
 mod tests {
     use super::*;
 

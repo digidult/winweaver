@@ -5,25 +5,39 @@
 
 use serde_json::Value;
 use winweaver_core::profile::{Account, Install, Languages};
+#[cfg(feature = "full")]
 use winweaver_core::users;
 use ww::ShellAct;
 
-use crate::{CatalogRef, ImportSource, ScriptKind, Sel, TreeKey, WinWeaver, regfileview, regview};
+#[cfg(feature = "full")]
+use crate::{CatalogRef, ImportSource, ScriptKind, TreeKey, regfileview, regview};
+use crate::{Sel, WinWeaver};
 
 /// A change requested while a frame was drawn, applied after it.
 pub enum Act {
     Profile(ProfileAct),
     File(FileAct),
+    #[cfg(feature = "full")]
     Settings(SettingsAct),
+    #[cfg(feature = "full")]
     Pc(PcAct),
+    #[cfg(feature = "full")]
     Users(UsersAct),
+    #[cfg(feature = "full")]
     Diff(DiffAct),
+    #[cfg(feature = "full")]
     Marks(MarksAct),
+    #[cfg(feature = "full")]
     Mcp(McpAct),
+    #[cfg(feature = "full")]
     Catalog(CatalogAct),
+    #[cfg(feature = "full")]
     Import(ImportAct),
+    #[cfg(feature = "full")]
     Registry(RegistryAct),
+    #[cfg(feature = "full")]
     RegFile(RegFileAct),
+    #[cfg(feature = "full")]
     Pol(PolAct),
     /// An act of the window itself, run by the shell.
     Shell(ShellAct<WinWeaver>),
@@ -35,6 +49,7 @@ impl From<ShellAct<WinWeaver>> for Act {
     }
 }
 
+#[cfg(feature = "full")]
 impl From<PolAct> for Act {
     fn from(act: PolAct) -> Self {
         Act::Pol(act)
@@ -53,60 +68,70 @@ impl From<FileAct> for Act {
     }
 }
 
+#[cfg(feature = "full")]
 impl From<SettingsAct> for Act {
     fn from(act: SettingsAct) -> Self {
         Act::Settings(act)
     }
 }
 
+#[cfg(feature = "full")]
 impl From<PcAct> for Act {
     fn from(act: PcAct) -> Self {
         Act::Pc(act)
     }
 }
 
+#[cfg(feature = "full")]
 impl From<UsersAct> for Act {
     fn from(act: UsersAct) -> Self {
         Act::Users(act)
     }
 }
 
+#[cfg(feature = "full")]
 impl From<DiffAct> for Act {
     fn from(act: DiffAct) -> Self {
         Act::Diff(act)
     }
 }
 
+#[cfg(feature = "full")]
 impl From<MarksAct> for Act {
     fn from(act: MarksAct) -> Self {
         Act::Marks(act)
     }
 }
 
+#[cfg(feature = "full")]
 impl From<McpAct> for Act {
     fn from(act: McpAct) -> Self {
         Act::Mcp(act)
     }
 }
 
+#[cfg(feature = "full")]
 impl From<CatalogAct> for Act {
     fn from(act: CatalogAct) -> Self {
         Act::Catalog(act)
     }
 }
 
+#[cfg(feature = "full")]
 impl From<ImportAct> for Act {
     fn from(act: ImportAct) -> Self {
         Act::Import(act)
     }
 }
 
+#[cfg(feature = "full")]
 impl From<RegistryAct> for Act {
     fn from(act: RegistryAct) -> Self {
         Act::Registry(act)
     }
 }
 
+#[cfg(feature = "full")]
 impl From<RegFileAct> for Act {
     fn from(act: RegFileAct) -> Self {
         Act::RegFile(act)
@@ -129,6 +154,7 @@ pub enum ProfileAct {
     /// Selects a rule of a profile in the tree of another import (the group) and shows it.
     ShowIn(String, String),
     /// Shows a policy of an import (the import, the rule) in the tree of a profile.
+    #[cfg(feature = "full")]
     ShowInProfile(String, String),
     /// Shows a group in the tree of the first profile tab.
     ShowGroupInProfile(String),
@@ -147,16 +173,19 @@ pub enum ProfileAct {
 /// The acts of the files of WinWeaver: a new profile, the pages of the program.
 pub enum FileAct {
     NewProfile(Option<&'static str>),
+    #[cfg(feature = "full")]
     OpenReport,
     OpenGuide,
     /// Opens the root page of the documentation built into the executable, the reference of the
     /// parameters, from which its other pages are linked.
+    #[cfg(feature = "full")]
     OpenDocs,
     /// Opens the license, built into the executable, in a Markdown tab.
     OpenLicense,
 }
 
 /// The acts of the settings tab.
+#[cfg(feature = "full")]
 pub enum SettingsAct {
     /// Starts to rename an import: its id and its name now.
     StartRename(String, String),
@@ -164,6 +193,7 @@ pub enum SettingsAct {
 }
 
 /// The acts of This PC: the read, the check, the scripts, the native apply.
+#[cfg(feature = "full")]
 pub enum PcAct {
     /// Read every rule of this PC into a new profile tab.
     Read,
@@ -187,6 +217,7 @@ pub enum PcAct {
 }
 
 /// The acts of a users file.
+#[cfg(feature = "full")]
 pub enum UsersAct {
     /// A new users file, empty or of the accounts of this PC.
     New,
@@ -214,6 +245,7 @@ pub enum UsersAct {
 }
 
 /// The acts of the comparison of profiles and of the diff tab.
+#[cfg(feature = "full")]
 pub enum DiffAct {
     /// The differences of the profile in front from its file or its preset, as a diff tab.
     Unsaved,
@@ -237,6 +269,7 @@ pub enum DiffAct {
 }
 
 /// The acts of the bookmarks.
+#[cfg(feature = "full")]
 pub enum MarksAct {
     Toggle,
     Open,
@@ -248,6 +281,7 @@ pub enum MarksAct {
 }
 
 /// The acts of the MCP server and its tab.
+#[cfg(feature = "full")]
 pub enum McpAct {
     Open,
     Start,
@@ -257,6 +291,7 @@ pub enum McpAct {
 }
 
 /// The acts of the tab of an import or of a catalog file, and of its editor.
+#[cfg(feature = "full")]
 pub enum CatalogAct {
     /// Opens the tab of a loaded import, or brings it to the front, at a rule.
     OpenAt(String, String),
@@ -294,6 +329,7 @@ pub enum CatalogAct {
 }
 
 /// The acts of the imports of policy templates.
+#[cfg(feature = "full")]
 pub enum ImportAct {
     /// Import the templates of this Windows (None), of a folder or a catalog file.
     Templates(ImportSource),
@@ -308,6 +344,7 @@ pub enum ImportAct {
 }
 
 /// The acts of the registry tab.
+#[cfg(feature = "full")]
 pub enum RegistryAct {
     /// Opens the registry tab, or brings it to the front, at a key and a value of it.
     Open(String, Option<String>),
@@ -342,6 +379,7 @@ pub enum RegistryAct {
 }
 
 /// The acts of the Group Policy files (`.pol`).
+#[cfg(feature = "full")]
 pub enum PolAct {
     /// Opens the file of the computer or of the users of this Windows, at a key and a value.
     OpenSystem(winweaver_core::pol::Scope, Option<String>, Option<String>),
@@ -368,6 +406,7 @@ pub enum PolAct {
 }
 
 /// The acts of the tab of a registry file.
+#[cfg(feature = "full")]
 pub enum RegFileAct {
     /// Edits the selected line of the registry file in front.
     Edit,

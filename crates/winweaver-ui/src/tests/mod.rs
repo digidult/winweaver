@@ -73,7 +73,7 @@ pub(super) fn sample_import(dir: &Path) {
 pub(super) fn wait_pc_read(app: &mut Window<WinWeaver>) {
     let ctx = egui::Context::default();
     let started = std::time::Instant::now();
-    while app.app.pc_read.is_some() {
+    while app.app.full.pc_read.is_some() {
         assert!(started.elapsed() < std::time::Duration::from_secs(60));
         std::thread::sleep(std::time::Duration::from_millis(10));
         app.app.poll_pc_read(&mut app.shell, &ctx);

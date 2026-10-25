@@ -35,6 +35,7 @@ impl WinWeaver {
                 }
                 doc.reveal = true;
             }
+            #[cfg(feature = "full")]
             Some(Doc::Catalog(c)) => {
                 let mut chain = Vec::new();
                 if let Some(file) = c.catalog(&self.imports) {
@@ -58,10 +59,15 @@ impl WinWeaver {
                 c.expanded.extend(chain);
                 c.reveal = true;
             }
+            #[cfg(feature = "full")]
             Some(Doc::Diff(d)) => d.reveal = true,
+            #[cfg(feature = "full")]
             Some(Doc::Bookmarks(d)) => d.reveal = true,
-            Some(Doc::Mcp(_)) => self.mcp.journal_reveal = true,
+            #[cfg(feature = "full")]
+            Some(Doc::Mcp(_)) => self.full.mcp.journal_reveal = true,
+            #[cfg(feature = "full")]
             Some(Doc::RegFile(d)) => d.follow = true,
+            #[cfg(feature = "full")]
             Some(Doc::Users(d)) => d.follow = true,
             _ => {}
         }
@@ -194,6 +200,7 @@ impl WinWeaver {
         shell.shown_file = Some((shell.status.clone(), xml_path.clone()));
     }
 
+    #[cfg(feature = "full")]
     /// The rule ids of the selection of the active profile: a rule, the rules of a group, or every
     /// rule when nothing (or a form) is selected.
     pub(crate) fn selection_ids(&self, shell: &Shell<WinWeaver>) -> Vec<String> {
@@ -213,6 +220,7 @@ impl WinWeaver {
         }
     }
 
+    #[cfg(feature = "full")]
     /// Shows a policy of an import in the tree of a profile: an import that is not loaded is, the
     /// first profile tab comes to the front, the groups above the policy open and it is selected.
     pub(crate) fn show_in_profile(
@@ -346,6 +354,7 @@ impl WinWeaver {
                 self.check_active(shell);
                 shell.messages_open = true;
             }
+            #[cfg(feature = "full")]
             ProfileAct::ShowInProfile(import, rule) => self.show_in_profile(shell, &import, &rule),
             ProfileAct::ShowGroupInProfile(group) => {
                 match shell.docs.iter().position(|d| matches!(d, Doc::Profile(_))) {

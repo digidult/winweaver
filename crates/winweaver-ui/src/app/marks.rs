@@ -24,7 +24,7 @@ impl WinWeaver {
     pub(crate) fn ask_remove_mark(&mut self, shell: &mut Shell<WinWeaver>, i: usize) {
         let texts = texts_for(&self.texts, &i18n::current());
         if let Some(q) =
-            marksview::remove_question(&self.catalog, texts, &self.imports, &self.marks, i)
+            marksview::remove_question(&self.catalog, texts, &self.imports, &self.full.marks, i)
         {
             shell.ask(q);
         }
@@ -62,10 +62,10 @@ impl WinWeaver {
 
     /// Writes the bookmark file; `false` (and a status message) when it cannot be written.
     pub(crate) fn save_marks(&mut self, shell: &mut Shell<WinWeaver>) -> bool {
-        if let Some(parent) = self.marks_path.parent() {
+        if let Some(parent) = self.full.marks_path.parent() {
             let _ = std::fs::create_dir_all(parent);
         }
-        match self.marks.save(&self.marks_path) {
+        match self.full.marks.save(&self.full.marks_path) {
             Ok(()) => true,
             Err(e) => {
                 shell.status = trf("Bookmarks not saved: {e}", &[("e", &e)]);
@@ -77,8 +77,8 @@ impl WinWeaver {
     pub(crate) fn open_marks_path(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf) {
         match Bookmarks::load(&path) {
             Ok(marks) => {
-                self.marks = marks;
-                self.marks_path = path.clone();
+                self.full.marks = marks;
+                self.full.marks_path = path.clone();
                 shell.status = trf(
                     "Opened {path}: the star now writes there",
                     &[("path", &path.display())],
@@ -95,7 +95,7 @@ impl WinWeaver {
     /// Opens the profile of a bookmark (loading its file when no tab has it) and selects the
     /// option; without a profile file the option is shown in the profile tab in front, else the first one.
     pub(crate) fn go_to_mark(&mut self, shell: &mut Shell<WinWeaver>, i: usize) {
-        let Some(mark) = self.marks.items.get(i).cloned() else {
+        let Some(mark) = self.full.marks.items.get(i).cloned() else {
             return;
         };
         if let Some(m) = self.marks_doc(shell) {
@@ -151,14 +151,14 @@ impl WinWeaver {
         match act {
             MarksAct::Toggle => {
                 if let Some(mut mark) = self.current_bookmark(shell) {
-                    if let Some(j) = self.marks.find(&mark)
-                        && !self.marks.items[j].comment.trim().is_empty()
+                    if let Some(j) = self.full.marks.find(&mark)
+                        && !self.full.marks.items[j].comment.trim().is_empty()
                     {
                         self.ask_remove_mark(shell, j);
                         return;
                     }
                     mark.created = clock::now_utc_iso();
-                    let added = self.marks.toggle(mark);
+                    let added = self.full.marks.toggle(mark);
                     if self.save_marks(shell) {
                         let text = if added {
                             tr("Bookmark added ({n} bookmarks in {path})")
@@ -166,22 +166,22 @@ impl WinWeaver {
                             tr("Bookmark removed ({n} bookmarks in {path})")
                         };
                         shell.status = text
-                            .replace("{n}", &self.marks.items.len().to_string())
-                            .replace("{path}", &self.marks_path.display().to_string());
+                            .replace("{n}", &self.full.marks.items.len().to_string())
+                            .replace("{path}", &self.full.marks_path.display().to_string());
                     }
                 }
             }
             MarksAct::Open => self.open_marks(shell),
             MarksAct::GoTo(i) => self.go_to_mark(shell, i),
             MarksAct::SetComment(i, text) => {
-                if let Some(b) = self.marks.items.get_mut(i) {
+                if let Some(b) = self.full.marks.items.get_mut(i) {
                     b.comment = text;
                     self.save_marks(shell);
                 }
             }
             MarksAct::Remove(i) => {
-                if i < self.marks.items.len() {
-                    self.marks.items.remove(i);
+                if i < self.full.marks.items.len() {
+                    self.full.marks.items.remove(i);
                     if let Some(m) = self.marks_doc(shell) {
                         m.sel = match m.sel {
                             Some(s) if s == i => None,

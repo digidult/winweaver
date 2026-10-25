@@ -21,7 +21,7 @@ mod native;
 
 #[cfg(windows)]
 mod registry;
-#[cfg(windows)]
+#[cfg(all(windows, feature = "users"))]
 mod users;
 
 #[cfg(windows)]
@@ -82,6 +82,7 @@ pub fn elevated() -> bool {
 
 /// The local accounts of this PC as a users file lists them (no password); an error where the
 /// Windows API is not available.
+#[cfg(feature = "users")]
 pub fn users_of_this_pc() -> Result<Vec<winweaver_core::users::User>, String> {
     #[cfg(windows)]
     {
@@ -94,6 +95,7 @@ pub fn users_of_this_pc() -> Result<Vec<winweaver_core::users::User>, String> {
 }
 
 /// Runs a plan of a users file on this PC as administrator: one outcome an account.
+#[cfg(feature = "users")]
 pub fn run_users_plan(
     plan: &winweaver_core::users::Plan,
     passwords: &winweaver_core::userstore::Passwords,

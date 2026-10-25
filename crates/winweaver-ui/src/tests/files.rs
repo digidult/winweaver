@@ -24,23 +24,23 @@ fn bookmarks_toggle_and_lead_back() {
     let mut app = Window::new(WinWeaver::new(catalog, Vec::new()), Settings::default());
     let dir = std::env::temp_dir().join(format!("winweaver-marks-ui-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
-    app.app.marks_path = dir.join(bookmarks::DEFAULT_FILE);
+    app.app.full.marks_path = dir.join(bookmarks::DEFAULT_FILE);
     app.apply(vec![
         Act::Profile(ProfileAct::Select(Sel::Rule("install.bypass-tpm".into()))),
         Act::Marks(MarksAct::Toggle),
     ]);
-    assert_eq!(app.app.marks.items.len(), 1, "{}", app.shell.status);
-    assert_eq!(app.app.marks.items[0].item, "install.bypass-tpm");
+    assert_eq!(app.app.full.marks.items.len(), 1, "{}", app.shell.status);
+    assert_eq!(app.app.full.marks.items[0].item, "install.bypass-tpm");
     assert_eq!(
-        app.app.marks.items[0].path, "",
+        app.app.full.marks.items[0].path, "",
         "an unsaved profile has no file to link"
     );
     assert_eq!(
-        app.app.marks.items[0].title, "",
+        app.app.full.marks.items[0].title, "",
         "the title comes from the catalog"
     );
     assert!(
-        app.app.marks_path.exists(),
+        app.app.full.marks_path.exists(),
         "the default file is created at the first bookmark"
     );
     app.apply(vec![
@@ -54,7 +54,7 @@ fn bookmarks_toggle_and_lead_back() {
         Sel::Rule("install.bypass-tpm".into())
     );
     app.apply(vec![Act::Marks(MarksAct::Toggle)]);
-    assert!(app.app.marks.items.is_empty());
+    assert!(app.app.full.marks.items.is_empty());
     app.apply(vec![
         Act::Marks(MarksAct::Toggle),
         Act::Marks(MarksAct::SetComment(
@@ -64,24 +64,29 @@ fn bookmarks_toggle_and_lead_back() {
         Act::Marks(MarksAct::Toggle),
     ]);
     assert_eq!(
-        app.app.marks.items.len(),
+        app.app.full.marks.items.len(),
         1,
         "a bookmark with a comment asks first"
     );
     assert!(app.shell.question.is_some());
     app.apply(vec![Act::Shell(ShellAct::Answer(false))]);
-    assert_eq!(app.app.marks.items.len(), 1);
+    assert_eq!(app.app.full.marks.items.len(), 1);
     app.apply(vec![
         Act::Marks(MarksAct::Open),
         Act::Marks(MarksAct::Select(0)),
     ]);
-    let question =
-        marksview::remove_question(&app.app.catalog, None, &app.app.imports, &app.app.marks, 0)
-            .expect("the bookmark is there");
+    let question = marksview::remove_question(
+        &app.app.catalog,
+        None,
+        &app.app.imports,
+        &app.app.full.marks,
+        0,
+    )
+    .expect("the bookmark is there");
     app.apply(vec![question.into()]);
     assert!(app.shell.question.is_some());
     app.apply(vec![Act::Shell(ShellAct::Answer(true))]);
-    assert!(app.app.marks.items.is_empty());
+    assert!(app.app.full.marks.items.is_empty());
     assert_eq!(app.app.marks_doc(&mut app.shell).and_then(|m| m.sel), None);
     std::fs::remove_dir_all(&dir).unwrap();
 }

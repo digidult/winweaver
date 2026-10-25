@@ -53,7 +53,7 @@ impl WinWeaver {
     /// and its access list with the names of the accounts.
     pub(crate) fn registry_rights(&mut self, shell: &mut Shell<WinWeaver>) {
         use winweaver_core::security::{self, Rights};
-        let reg = self.registry.clone();
+        let reg = self.full.registry.clone();
         let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
@@ -90,7 +90,7 @@ impl WinWeaver {
     /// Adds an entry that lets the account typed in the window of the rights read the key.
     pub(crate) fn registry_rights_add(&mut self, shell: &mut Shell<WinWeaver>) {
         use winweaver_core::security::{Entry, Scope};
-        let reg = self.registry.clone();
+        let reg = self.full.registry.clone();
         let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
@@ -120,7 +120,7 @@ impl WinWeaver {
 
     /// Writes the access list of the window of the rights to its key.
     pub(crate) fn registry_rights_save(&mut self, shell: &mut Shell<WinWeaver>) {
-        let reg = self.registry.clone();
+        let reg = self.full.registry.clone();
         let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
@@ -140,7 +140,7 @@ impl WinWeaver {
     /// Starts the search of the registry tab in front under its selected key, in a thread of its
     /// own; `poll_registry_search` takes the result.
     pub(crate) fn registry_find(&mut self, shell: &mut Shell<WinWeaver>) {
-        let reg = self.registry.clone();
+        let reg = self.full.registry.clone();
         let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
@@ -223,7 +223,7 @@ impl WinWeaver {
         path: &str,
         value: Option<&str>,
     ) {
-        let reg = self.registry.clone();
+        let reg = self.full.registry.clone();
         match shell
             .docs
             .iter()
@@ -246,7 +246,7 @@ impl WinWeaver {
     /// the editor.
     pub(crate) fn registry_save(&mut self, shell: &mut Shell<WinWeaver>) {
         use regview::EditKind;
-        let reg = self.registry.clone();
+        let reg = self.full.registry.clone();
         let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
@@ -346,7 +346,7 @@ impl WinWeaver {
         path: &str,
         value: Option<&str>,
     ) {
-        let reg = self.registry.clone();
+        let reg = self.full.registry.clone();
         let result = match value {
             Some(v) => reg.delete_value(path, v),
             None => reg.delete_key(path),
@@ -373,12 +373,12 @@ impl WinWeaver {
             return;
         };
         let mut mark = Bookmark::registry(&d.path, d.value.as_deref().unwrap_or(""));
-        if self.marks.find(&mark).is_some() {
+        if self.full.marks.find(&mark).is_some() {
             shell.status = tr("This is bookmarked already").to_owned();
             return;
         }
         mark.created = clock::now_utc_iso();
-        self.marks.items.push(mark);
+        self.full.marks.items.push(mark);
         self.save_marks(shell);
         shell.status = tr("Bookmarked").to_owned();
     }
@@ -388,19 +388,19 @@ impl WinWeaver {
         match act {
             RegistryAct::Open(path, value) => self.open_registry(shell, &path, value.as_deref()),
             RegistryAct::Go(path, value) => {
-                let reg = self.registry.clone();
+                let reg = self.full.registry.clone();
                 if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) {
                     d.go(&*reg, &path, value.as_deref());
                 }
             }
             RegistryAct::Expand(path, open) => {
-                let reg = self.registry.clone();
+                let reg = self.full.registry.clone();
                 if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) {
                     d.expand(&*reg, &path, open);
                 }
             }
             RegistryAct::Refresh => {
-                let reg = self.registry.clone();
+                let reg = self.full.registry.clone();
                 if let Some(Doc::Registry(d)) = shell.docs.get_mut(shell.active) {
                     d.refresh(&*reg);
                 }
@@ -470,7 +470,7 @@ impl WinWeaver {
         let Some(changes) = changes else {
             return;
         };
-        let (done, errors) = winweaver_core::regfile::apply_changes(&*self.registry, &changes);
+        let (done, errors) = winweaver_core::regfile::apply_changes(&*self.full.registry, &changes);
         shell.status = match errors.first() {
             None => trf("Applied {n} changes to this PC", &[("n", &done)]),
             Some(first) => trf(

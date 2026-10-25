@@ -126,6 +126,17 @@ password attendono una password principale prima del primo salvataggio.
   un profilo, un pulsante alla fine della barra di stato mostra il file nella sua cartella in Esplora
   file; Impostazioni, File apre le cartelle del programma.
 
+- **Menu e schede**: ogni voce di un menu ha un'icona. Quando le schede sono più larghe della finestra,
+  la riga scorre con la rotella, la scheda attiva torna in vista e un pulsante all'estremità destra
+  elenca tutte le schede.
+- **Solo attive** nella barra di un profilo mostra solo le regole attive con i loro gruppi aperti; gli
+  strumenti MCP `list_groups`, `list_rules` e `search_rules` accettano `only_on` allo stesso modo.
+- **Parametri**: i campi di una regola prendono la larghezza del pannello; un testo con un limite del file
+  di risposta (i contatti del supporto) conta i suoi caratteri.
+- **Lavoro in background**: una lettura di questo PC, un'importazione di modelli, una modifica di questo PC
+  e una ricerca nel registro compaiono in un pannello in basso a destra con il tempo trascorso e Ferma
+  dove il lavoro può fermarsi; il pannello si comprime in un indicatore.
+
 ## Questo PC
 
 **Questo PC** nella barra dei comandi legge le impostazioni di questo computer tramite Windows, senza
@@ -212,6 +223,14 @@ modelli ne avvia uno vuoto tutto vostro. Un criterio riceve titolo, descrizione,
 utente predefinito e i valori del registro che scrive o rimuove; **Applica** controlla tutto il file, e
 nulla cambia se il controllo fallisce. Salva (Ctrl+S) scrive il file e lo ricarica.
 
+Il confronto si apre in una scheda: i criteri che differiscono nell'albero delle loro categorie, con
+interruttori per quelli solo nel primo catalogo, solo nel secondo e i diversi, e il criterio selezionato
+com'è in entrambi i cataloghi, fianco a fianco. **Salva il rapporto** scrive il rapporto come file
+Markdown, **Come pagina** lo mostra come pagina. **Copia in**, nella barra di una scheda di catalogo,
+copia il criterio selezionato o il gruppo selezionato con i gruppi sotto di esso in un catalogo aperto nel
+suo editor (scegliete quale quando ce ne sono diversi) o in un nuovo catalogo, con gli stessi id e i testi
+delle altre lingue: un catalogo con i soli criteri necessari, da passare come file.
+
 ## Il registro
 
 **Menu, Registro** apre il registro di questo PC in una scheda: le chiavi a sinistra, i valori della
@@ -238,6 +257,18 @@ cataloghi caricati che scrivono la chiave o il valore selezionato. **Nuova chiav
 **Modifica** ed **Elimina** sono nella barra, e un'eliminazione chiede prima. **Salva** riscrive ogni
 riga: i commenti e le righe che il programma non legge restano al loro posto. Un file salvato da **Questo
 PC** nomina le sue regole nei commenti, e la freccia di un tale commento mostra la regola nel profilo.
+
+Anche un file di Criteri di gruppo (`Registry.pol`) si apre in una scheda propria: i file del computer e
+degli utenti di questo Windows (**Menu, Criteri di gruppo**; la barra di un profilo, di un catalogo e del
+registro) o qualsiasi file `.pol`. Le chiavi sono un albero a sinistra, le voci della chiave selezionata a
+destra con ciò che fa ciascuna. **Nuova chiave**, **Nuovo valore**, **Modifica** (o un doppio clic) e
+**Rimuovi** cambiano le voci in una finestra sopra la scheda, come i valori di un file del registro;
+**Radice** sceglie se un file fuori dai Criteri di gruppo vale per il computer o per l'utente (i file di
+questo Windows lo prendono dalla loro cartella); **Aggiungi un file** prende le voci di un altro file di
+Criteri di gruppo o le modifiche di un file del registro di quella radice; **In .reg** salva il file come
+file del registro. Salva riscrive il formato dei Criteri di gruppo; i file di questo Windows si salvano
+come copie altrove, perché li scrivono i Criteri di gruppo stessi. Le modifiche non salvate tornano da una
+bozza dopo un riavvio.
 
 ## Il server MCP
 

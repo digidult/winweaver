@@ -119,6 +119,17 @@ Ctrl+Shift+PgUp and PgDn; the program adds its own in `shortcuts`.
   `icon_button`, `tool_button`, `selectable_text`, `copy_label`. `ww::tree::show` and
   `ww::list::show` paint a tree and a list with the keyboard.
 
+### The work in the background, the menus, the tabs
+
+- `App::jobs` lists the work that runs in the background as `ww::Job`s (a title, a detail, when it
+  started, the act of Stop); the shell shows them in a panel over the lower right corner, folded to a
+  spinner on request, and keeps the spinner of the status bar while any runs.
+- A menu item is `shell::menu_item` (an icon, the text, the keys, the act) or `shell::menu_entry`
+  (true when clicked), a menu inside a menu `shell::sub_menu`; every item keeps the place of an icon,
+  so the texts line up. `commands::toggle` is a switch of the command bar, drawn pressed when on.
+- The tab row scrolls sideways when the tabs are wider than the window (the wheel, the active tab
+  brought into view) and a button at its right end lists every tab.
+
 ## 5. Next to the executable
 
 `<exe>.settings.json` (the settings, named after the executable so that two copies with different

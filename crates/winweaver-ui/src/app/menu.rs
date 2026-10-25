@@ -1,9 +1,13 @@
 //! The menu of the tab row and the menus of the command bar (This PC, Compare, Catalogs).
 
-use ww::shell::{menu_entry, menu_item, sub_menu};
+#[cfg(feature = "full")]
+use ww::shell::menu_entry;
+use ww::shell::{menu_item, sub_menu};
 
 use crate::ShellAct;
-use crate::commands::{Menu, keys};
+#[cfg(feature = "full")]
+use crate::commands::Menu;
+use crate::commands::keys;
 use crate::*;
 
 impl WinWeaver {
@@ -34,26 +38,26 @@ impl WinWeaver {
                     acts,
                 );
             }
-            if lite() {
-                return;
+            #[cfg(feature = "full")]
+            {
+                ui.separator();
+                menu_item(
+                    ui,
+                    icons::PEOPLE,
+                    tr("Users file"),
+                    "",
+                    Act::Users(UsersAct::New),
+                    acts,
+                );
+                menu_item(
+                    ui,
+                    icons::PEOPLE,
+                    tr("Users file of the accounts of this PC"),
+                    "",
+                    Act::Users(UsersAct::OfThisPc),
+                    acts,
+                );
             }
-            ui.separator();
-            menu_item(
-                ui,
-                icons::PEOPLE,
-                tr("Users file"),
-                "",
-                Act::Users(UsersAct::New),
-                acts,
-            );
-            menu_item(
-                ui,
-                icons::PEOPLE,
-                tr("Users file of the accounts of this PC"),
-                "",
-                Act::Users(UsersAct::OfThisPc),
-                acts,
-            );
         });
         menu_item(
             ui,
@@ -110,42 +114,7 @@ impl WinWeaver {
             Act::File(FileAct::OpenGuide),
             acts,
         );
-        if lite() {
-            menu_item(
-                ui,
-                icons::LICENSE,
-                tr("License"),
-                "",
-                Act::File(FileAct::OpenLicense),
-                acts,
-            );
-            menu_item(
-                ui,
-                icons::GEAR,
-                tr("Settings"),
-                keys::SETTINGS.text,
-                Act::Shell(ShellAct::OpenSettings),
-                acts,
-            );
-            ui.separator();
-            menu_item(
-                ui,
-                icons::INFO,
-                tr("About"),
-                "",
-                Act::Shell(ShellAct::About),
-                acts,
-            );
-            menu_item(
-                ui,
-                icons::EXIT,
-                tr("Exit"),
-                "",
-                Act::Shell(ShellAct::Exit),
-                acts,
-            );
-            return;
-        }
+        #[cfg(feature = "full")]
         menu_item(
             ui,
             icons::BOOKS,
@@ -162,42 +131,45 @@ impl WinWeaver {
             Act::File(FileAct::OpenLicense),
             acts,
         );
-        menu_item(
-            ui,
-            icons::STAR,
-            tr("Bookmarks"),
-            "",
-            Act::Marks(MarksAct::Open),
-            acts,
-        );
-        menu_item(
-            ui,
-            icons::REGISTRY,
-            tr("Registry"),
-            "",
-            Act::Registry(RegistryAct::Open("HKEY_LOCAL_MACHINE".to_owned(), None)),
-            acts,
-        );
-        menu_item(
-            ui,
-            icons::SCRIPT,
-            tr("Group Policy of the computer"),
-            "",
-            Act::Pol(PolAct::OpenSystem(
-                winweaver_core::pol::Scope::Computer,
-                None,
-                None,
-            )),
-            acts,
-        );
-        menu_item(
-            ui,
-            icons::LINK,
-            tr("MCP server"),
-            "",
-            Act::Mcp(McpAct::Open),
-            acts,
-        );
+        #[cfg(feature = "full")]
+        {
+            menu_item(
+                ui,
+                icons::STAR,
+                tr("Bookmarks"),
+                "",
+                Act::Marks(MarksAct::Open),
+                acts,
+            );
+            menu_item(
+                ui,
+                icons::REGISTRY,
+                tr("Registry"),
+                "",
+                Act::Registry(RegistryAct::Open("HKEY_LOCAL_MACHINE".to_owned(), None)),
+                acts,
+            );
+            menu_item(
+                ui,
+                icons::SCRIPT,
+                tr("Group Policy of the computer"),
+                "",
+                Act::Pol(PolAct::OpenSystem(
+                    winweaver_core::pol::Scope::Computer,
+                    None,
+                    None,
+                )),
+                acts,
+            );
+            menu_item(
+                ui,
+                icons::LINK,
+                tr("MCP server"),
+                "",
+                Act::Mcp(McpAct::Open),
+                acts,
+            );
+        }
         menu_item(
             ui,
             icons::GEAR,
@@ -225,6 +197,7 @@ impl WinWeaver {
         );
     }
 
+    #[cfg(feature = "full")]
     /// The menu a button of the command bar opens.
     pub(crate) fn bar_menu(
         &self,
@@ -249,6 +222,7 @@ impl WinWeaver {
         }
     }
 
+    #[cfg(feature = "full")]
     /// The menu Compare of a profile tab: a file, a preset, the unsaved changes.
     fn compare_profile_menu(
         &self,
@@ -274,6 +248,7 @@ impl WinWeaver {
         }
     }
 
+    #[cfg(feature = "full")]
     /// The menu Compare of a catalog tab: the loaded imports and the tabs of catalog files to
     /// compare the catalog of the tab with.
     fn compare_catalog_menu(
@@ -312,6 +287,7 @@ impl WinWeaver {
         }
     }
 
+    #[cfg(feature = "full")]
     /// The menu of the policy templates: the imports to open in a tab and the import commands.
     fn catalogs_menu(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         if self.imports.is_empty() {
@@ -362,6 +338,7 @@ impl WinWeaver {
     }
 }
 
+#[cfg(feature = "full")]
 /// Where the selected policy or group of a catalog tab is copied: the catalogs open in an
 /// editor, or a new catalog.
 fn copy_to_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
@@ -391,6 +368,7 @@ fn copy_to_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>
     }
 }
 
+#[cfg(feature = "full")]
 /// The hive the keys of the Group Policy file in front apply to; the files of Group Policy of
 /// this Windows have theirs from their folder.
 fn pol_root_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
@@ -417,6 +395,7 @@ fn pol_root_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act
     }
 }
 
+#[cfg(feature = "full")]
 /// The Group Policy files: the computer's and the users' of this Windows, or any file.
 fn pol_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
     use winweaver_core::pol::Scope;
@@ -444,6 +423,7 @@ fn pol_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
     }
 }
 
+#[cfg(feature = "full")]
 /// What of the registry file in front goes to this PC: the selected value, the selected key with
 /// its values, the whole file; each asks first.
 fn regfile_apply_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
@@ -471,6 +451,7 @@ fn regfile_apply_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Ve
     }
 }
 
+#[cfg(feature = "full")]
 /// The commands of This PC for the selection (offered only when a rule of it can be applied on a
 /// PC) and for the whole profile.
 fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>, applicable: bool) {

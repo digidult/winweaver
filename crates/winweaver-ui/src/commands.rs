@@ -1,14 +1,18 @@
 //! The command bar of each tab as data: the window draws the items, the menu and the keyboard
 //! name their keys, and every key text lives here once.
 
+#[cfg(feature = "full")]
 use winweaver_core::users::Operation;
-use ww::commands::{cmd, cmd_if, keyed, toggle, when};
+#[cfg(feature = "full")]
+use ww::commands::{cmd, cmd_if, when};
+use ww::commands::{keyed, toggle};
 
 use crate::i18n::tr;
+use crate::{Act, Doc, FileAct, ProfileAct, Shell, ShellAct, ShellDoc, WinWeaver, icons};
+#[cfg(feature = "full")]
 use crate::{
-    Act, CatalogAct, CatalogRef, DiffAct, Doc, FileAct, ImportAct, McpAct, PolAct, ProfileAct,
-    RegFileAct, RegistryAct, ScriptKind, Shell, ShellAct, ShellDoc, UsersAct, WinWeaver, icons,
-    regfileview, regview,
+    CatalogAct, CatalogRef, DiffAct, ImportAct, McpAct, PolAct, RegFileAct, RegistryAct,
+    ScriptKind, UsersAct, regfileview, regview,
 };
 
 /// The keys of the commands of WinWeaver beyond the ones of WW, each named once.
@@ -20,10 +24,12 @@ pub mod keys {
     pub const GUIDE: Keys = Keys::new("F1", Modifiers::NONE, Key::F1);
     pub const CHECK: Keys = Keys::new("F7", Modifiers::NONE, Key::F7);
     pub const BUILD: Keys = Keys::new("F9", Modifiers::NONE, Key::F9);
+    #[cfg(feature = "full")]
     pub const BOOKMARK: Keys = Keys::new("Ctrl+B", Modifiers::CTRL, Key::B);
     pub const FOLD: Keys = Keys::new("Ctrl+D", Modifiers::CTRL, Key::D);
     pub const BACK: Keys = Keys::new("Alt+Left", Modifiers::ALT, Key::ArrowLeft);
     pub const FORWARD: Keys = Keys::new("Alt+Right", Modifiers::ALT, Key::ArrowRight);
+    #[cfg(feature = "full")]
     pub const RENAME: Keys = Keys::new("F2", Modifiers::NONE, Key::F2);
 }
 
@@ -31,6 +37,7 @@ pub mod keys {
 pub type Item = ww::commands::Item<Act>;
 
 /// The menus of the command bar.
+#[cfg(feature = "full")]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Menu {
     ThisPc,
@@ -43,6 +50,7 @@ pub enum Menu {
     PolRoot,
 }
 
+#[cfg(feature = "full")]
 impl Menu {
     const ALL: [Menu; 8] = [
         Menu::ThisPc,
@@ -94,13 +102,33 @@ fn only_on(shell: &Shell<WinWeaver>) -> Item {
     toggle(icons::ONLY_ON, tr("Only on"), on, ProfileAct::OnlyOn)
 }
 
+#[cfg(feature = "full")]
 fn save_as() -> Item {
     keyed(icons::SAVE, tr("Save as"), &keys::SAVE_AS, ShellAct::SaveAs)
 }
 
 impl WinWeaver {
-    /// The command bar of the active tab, in its order.
+    /// The command bar of the active tab in the light edition: the profile alone.
+    #[cfg(not(feature = "full"))]
+    pub(crate) fn tab_commands(&self, shell: &Shell<WinWeaver>) -> Vec<Item> {
+        match shell.docs.get(shell.active) {
+            Some(Doc::Profile(_)) => vec![
+                new_profile(),
+                open(),
+                save(),
+                Item::Separator,
+                keyed(icons::CHECK, tr("Check"), &keys::CHECK, ProfileAct::Check),
+                keyed(icons::HAMMER, tr("Build"), &keys::BUILD, ProfileAct::Build),
+                Item::Separator,
+                only_on(shell),
+            ],
+            Some(Doc::Shell(ShellDoc::Settings(_))) => Vec::new(),
+            _ => vec![new_profile(), open()],
+        }
+    }
+
     /// Whether the diff in front changes a rule a PC can apply.
+    #[cfg(feature = "full")]
     fn diff_applicable(&self, shell: &Shell<WinWeaver>) -> bool {
         match shell.docs.get(shell.active) {
             Some(Doc::Diff(d)) => {
@@ -111,23 +139,9 @@ impl WinWeaver {
         }
     }
 
+    /// The command bar of the active tab, in its order.
+    #[cfg(feature = "full")]
     pub(crate) fn tab_commands(&self, shell: &Shell<WinWeaver>) -> Vec<Item> {
-        if crate::lite() {
-            return match shell.docs.get(shell.active) {
-                Some(Doc::Profile(_)) => vec![
-                    new_profile(),
-                    open(),
-                    save(),
-                    Item::Separator,
-                    keyed(icons::CHECK, tr("Check"), &keys::CHECK, ProfileAct::Check),
-                    keyed(icons::HAMMER, tr("Build"), &keys::BUILD, ProfileAct::Build),
-                    Item::Separator,
-                    only_on(shell),
-                ],
-                Some(Doc::Shell(ShellDoc::Settings(_))) => Vec::new(),
-                _ => vec![new_profile(), open()],
-            };
-        }
         match shell.docs.get(shell.active) {
             Some(Doc::Profile(_)) => vec![
                 new_profile(),
@@ -175,7 +189,7 @@ impl WinWeaver {
                 cmd(icons::BOOK, tr("As a page"), CatalogAct::ComparePage),
             ],
             Some(Doc::Mcp(_)) => {
-                let running = self.mcp.run.is_some();
+                let running = self.full.mcp.run.is_some();
                 vec![
                     open(),
                     save_as(),

@@ -8,8 +8,13 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 
+[features]
+default = ["users"]
+# The accounts of a users file read, made and changed on this PC; wwlite goes without them.
+users = ["winweaver-core/users"]
+
 [dependencies]
-winweaver-core = { path = "../winweaver-core" }
+winweaver-core = { path = "../winweaver-core", default-features = false }
 serde_json.workspace = true
 
 [target.'cfg(windows)'.dependencies]

@@ -58,6 +58,7 @@ pub(crate) fn profile_detail(ui: &mut egui::Ui, doc: &ProfileDoc) {
         });
 }
 
+#[cfg(feature = "full")]
 /// The button that looks for the catalogs of the unknown options among the imports.
 pub(crate) fn load_catalogs_button(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
     if ui
@@ -80,6 +81,7 @@ pub(crate) fn unknown_group_detail(ui: &mut egui::Ui, doc: &ProfileDoc, acts: &m
             style::chip(ui, &trf("{n} options", &[("n", &unknown.len())]), true);
         });
         ui.add_space(8.0);
+        #[cfg(feature = "full")]
         load_catalogs_button(ui, acts);
     });
     block(ui, |ui| {
@@ -110,6 +112,7 @@ pub(crate) fn unknown_group_detail(ui: &mut egui::Ui, doc: &ProfileDoc, acts: &m
 }
 
 /// An option of the profile whose catalog is not loaded: its id and its saved choice.
+#[cfg_attr(not(feature = "full"), allow(unused_variables, clippy::ptr_arg))]
 pub(crate) fn unknown_detail(ui: &mut egui::Ui, doc: &ProfileDoc, id: &str, acts: &mut Vec<Act>) {
     let Some(choice) = doc.profile.unknown.get(id) else {
         return;
@@ -122,6 +125,7 @@ pub(crate) fn unknown_detail(ui: &mut egui::Ui, doc: &ProfileDoc, id: &str, acts
             style::chip(ui, if on { tr("On") } else { tr("Off") }, on);
         });
         ui.add_space(8.0);
+        #[cfg(feature = "full")]
         load_catalogs_button(ui, acts);
     });
     block(ui, |ui| {
@@ -222,17 +226,20 @@ pub(crate) fn group_detail(
         });
     }
     // The passes of the installation and the first sign-in have nothing for a running PC.
-    let ids: Vec<String> = catalog
-        .rules_under(id)
-        .iter()
-        .map(|r| r.id.clone())
-        .collect();
-    if !crate::lite() && winweaver_core::export::applicable(catalog, &ids) {
-        block(ui, |ui| {
-            style::section_title(ui, tr("This PC, this selection"));
-            ui.add_space(4.0);
-            this_pc_buttons(ui, acts);
-        });
+    #[cfg(feature = "full")]
+    {
+        let ids: Vec<String> = catalog
+            .rules_under(id)
+            .iter()
+            .map(|r| r.id.clone())
+            .collect();
+        if winweaver_core::export::applicable(catalog, &ids) {
+            block(ui, |ui| {
+                style::section_title(ui, tr("This PC, this selection"));
+                ui.add_space(4.0);
+                this_pc_buttons(ui, acts);
+            });
+        }
     }
     block(ui, |ui| {
         style::section_title(ui, tr("Rules of this group"));
@@ -249,6 +256,7 @@ pub(crate) fn group_detail(
     });
 }
 
+#[cfg(feature = "full")]
 /// The commands of This PC for the selected rule or group.
 pub(crate) fn this_pc_buttons(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
     ui.horizontal_wrapped(|ui| {

@@ -20,9 +20,8 @@ impl WinWeaver {
             ui.checkbox(&mut parts.writes, tr("What it writes"));
             ui.checkbox(&mut parts.deps, tr("Dependencies and conflicts"));
             ui.checkbox(&mut parts.more, tr("Versions, check and rollback"));
-            if !lite() {
-                ui.checkbox(&mut parts.reference, tr("Reference"));
-            }
+            #[cfg(feature = "full")]
+            ui.checkbox(&mut parts.reference, tr("Reference"));
         });
         ui.checkbox(
             &mut extra.show_guide_at_start,
@@ -36,7 +35,8 @@ impl WinWeaver {
             &mut extra.hide_unknown,
             tr("Hide the options of the profile whose catalog is not loaded"),
         );
-        if !lite() {
+        #[cfg(feature = "full")]
+        {
             ui.checkbox(
                 &mut extra.writers_open,
                 tr("Show the rules that write a key of a registry file open"),
@@ -57,7 +57,8 @@ impl WinWeaver {
             "Settings file: {path}",
             &[("path", &shell.settings_path.display())],
         ));
-        let folders = [
+        #[cfg_attr(not(feature = "full"), allow(unused_mut))]
+        let mut folders = vec![
             (
                 trf(
                     "Profiles folder: {path}",
@@ -72,14 +73,15 @@ impl WinWeaver {
                 ),
                 output_dir(),
             ),
-            (
-                trf(
-                    "Policy templates folder: {path}",
-                    &[("path", &self.imports_dir.display())],
-                ),
-                self.imports_dir.clone(),
-            ),
         ];
+        #[cfg(feature = "full")]
+        folders.push((
+            trf(
+                "Policy templates folder: {path}",
+                &[("path", &self.full.imports_dir.display())],
+            ),
+            self.full.imports_dir.clone(),
+        ));
         for (text, path) in folders {
             ui.horizontal_wrapped(|ui| {
                 ui.label(text);
@@ -95,11 +97,12 @@ impl WinWeaver {
         }
     }
 
+    #[cfg(feature = "full")]
     /// Runs an act of the acts of the settings tab.
     pub(crate) fn apply_settings(&mut self, act: SettingsAct) {
         match act {
-            SettingsAct::StartRename(id, name) => self.renaming = Some((id, name)),
-            SettingsAct::CancelRename => self.renaming = None,
+            SettingsAct::StartRename(id, name) => self.full.renaming = Some((id, name)),
+            SettingsAct::CancelRename => self.full.renaming = None,
         }
     }
 }

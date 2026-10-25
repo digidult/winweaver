@@ -156,6 +156,10 @@ errors.
   unit, symbols stripped. A release build has no console (`windows_subsystem = "windows"`); the command
   line functions attach to the console of the parent when there is one, and the MCP stdio transport uses
   the pipes the client gives. The features `glow` and `wgpu` choose the renderers, both by default.
+  The feature `full` of winweaver-ui (on by default, named by winweaver) holds everything beyond the
+  profile editor, the check and the build; wwlite is built without it and alone (`cargo build -p
+  wwlite`, `cargo test -p wwlite`, `cargo clippy -p wwlite`), since cargo unifies the features of
+  one build; users files are the feature `users` of the core and of the Windows crate.
 - `winweaver_core::BUILD` is `<version>+<12 digits of the commit>`, from `build.rs` of the core and
   `WINWEAVER_COMMIT` set by CI.
 - CI (GitHub Actions, `AGENTS.md` section 5): a Linux job first (`cargo fmt --check` with a patch as an

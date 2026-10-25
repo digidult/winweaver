@@ -319,7 +319,7 @@ fn screenshots_of_the_window() {
             .unwrap();
         reg.set(key, "", &Data::Sz("the default value".to_owned()))
             .unwrap();
-        harness.state_mut().app.registry = reg;
+        harness.state_mut().app.full.registry = reg;
         harness
             .state_mut()
             .apply(vec![Act::Registry(RegistryAct::Open(
@@ -403,7 +403,7 @@ fn screenshots_of_the_window() {
     shot(&mut harness, "28-many-tabs");
     // The panel of the work in the background, open and folded, over an import that runs.
     let (tx, rx) = std::sync::mpsc::channel();
-    harness.state_mut().app.importing = Some(rx);
+    harness.state_mut().app.full.importing = Some(rx);
     shot(&mut harness, "29-jobs");
     harness.state_mut().shell.jobs_folded = true;
     shot(&mut harness, "29b-jobs-folded");

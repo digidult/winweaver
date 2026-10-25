@@ -2,11 +2,15 @@
 //! its acts, the command bar, the menus, the navigation row, the messages, the status bar, its
 //! settings, its keys and the work after a frame.
 
-use eframe::egui::{self, Key, Modifiers, RichText};
+use eframe::egui::{self, RichText};
+#[cfg(feature = "full")]
+use eframe::egui::{Key, Modifiers};
 use ww::commands::Item;
 use ww::{App, Messages, Nav, Shell, ShellAct, ShellDoc};
 
-use crate::commands::{Menu, keys};
+#[cfg(feature = "full")]
+use crate::commands::Menu;
+use crate::commands::keys;
 use crate::*;
 
 impl App for WinWeaver {
@@ -34,7 +38,14 @@ impl App for WinWeaver {
     const NEW_HINT: &'static str = "New profile (Ctrl+N)";
 
     fn languages() -> &'static [(&'static str, &'static str)] {
-        if lite() { &LANGUAGES_LITE } else { &LANGUAGES }
+        #[cfg(feature = "full")]
+        {
+            &LANGUAGES
+        }
+        #[cfg(not(feature = "full"))]
+        {
+            &LANGUAGES_LITE
+        }
     }
 
     fn name() -> &'static str {
@@ -50,7 +61,14 @@ impl App for WinWeaver {
     }
 
     fn system_language() -> Option<String> {
-        winweaver_win::ui_language()
+        #[cfg(windows)]
+        {
+            winweaver_win::ui_language()
+        }
+        #[cfg(not(windows))]
+        {
+            None
+        }
     }
 
     fn shell_doc(doc: ShellDoc) -> Doc {
@@ -73,10 +91,11 @@ impl App for WinWeaver {
     }
 
     /// The files next to the executable: the MCP configuration, the bookmarks, the imports.
+    #[cfg(feature = "full")]
     fn load(&mut self, shell: &mut Shell<Self>) {
         self.load_mcp_config(shell);
-        match Bookmarks::load_or_default(&self.marks_path) {
-            Ok(marks) => self.marks = marks,
+        match Bookmarks::load_or_default(&self.full.marks_path) {
+            Ok(marks) => self.full.marks = marks,
             Err(e) => shell.status = trf("Bookmarks not read: {e}", &[("e", &e)]),
         }
         self.load_imports(shell);
@@ -104,14 +123,23 @@ impl App for WinWeaver {
 
     fn save(&mut self, shell: &mut Shell<Self>, ask: bool) {
         match shell.active_doc().map(Doc::kind) {
+            #[cfg(feature = "full")]
             Some(DocKind::Mcp) if ask => self.save_mcp_as(shell),
+            #[cfg(feature = "full")]
             Some(DocKind::Mcp) => self.persist_mcp(),
+            #[cfg(feature = "full")]
             Some(DocKind::Diff) if ask => self.save_active_diff(shell),
+            #[cfg(feature = "full")]
             Some(DocKind::Diff) => self.save_diff(shell),
+            #[cfg(feature = "full")]
             Some(DocKind::CatalogEdit) => self.save_catalog_edit(shell),
+            #[cfg(feature = "full")]
             Some(DocKind::RegFile) => self.save_reg_doc(shell, ask),
+            #[cfg(feature = "full")]
             Some(DocKind::Users) => self.save_users_doc(shell, ask),
+            #[cfg(feature = "full")]
             Some(DocKind::Compare) => self.save_comparison(shell),
+            #[cfg(feature = "full")]
             Some(DocKind::Pol) => self.save_pol_doc(shell, ask),
             _ => self.save_active(shell, ask),
         }
@@ -129,7 +157,10 @@ impl App for WinWeaver {
             .and_then(serde_json::Value::as_str)
             .map(str::to_owned);
         match kind {
+            #[cfg(feature = "full")]
             Some(kind) => self.restore_other_draft(shell, &kind, key, path, &document),
+            #[cfg(not(feature = "full"))]
+            Some(_) => false,
             None => self.restore_profile_draft(shell, key, path, document),
         }
     }
@@ -142,6 +173,7 @@ impl App for WinWeaver {
         self.reveal_selection(shell);
     }
 
+    #[cfg(feature = "full")]
     fn settings_opened(&mut self, _shell: &mut Shell<Self>) {
         self.refresh_import_list();
     }
@@ -149,16 +181,26 @@ impl App for WinWeaver {
     fn draw(&mut self, shell: &mut Shell<Self>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         match shell.active_doc().map(Doc::kind) {
             Some(DocKind::Profile) => self.draw_profile(shell, ui, acts),
-            Some(DocKind::Diff) => self.draw_diff(shell, ui, acts),
             Some(DocKind::Markdown) => self.draw_markdown(shell, ui),
+            #[cfg(feature = "full")]
+            Some(DocKind::Diff) => self.draw_diff(shell, ui, acts),
+            #[cfg(feature = "full")]
             Some(DocKind::Bookmarks) => self.draw_marks(shell, ui, acts),
+            #[cfg(feature = "full")]
             Some(DocKind::Mcp) => self.draw_mcp(shell, ui, acts),
+            #[cfg(feature = "full")]
             Some(DocKind::Catalog) => self.draw_catalog(shell, ui, acts),
+            #[cfg(feature = "full")]
             Some(DocKind::Registry) => self.draw_registry(shell, ui, acts),
+            #[cfg(feature = "full")]
             Some(DocKind::CatalogEdit) => self.draw_catalog_editor(shell, ui, acts),
+            #[cfg(feature = "full")]
             Some(DocKind::RegFile) => self.draw_reg_file(shell, ui, acts),
+            #[cfg(feature = "full")]
             Some(DocKind::Users) => self.draw_users(shell, ui, acts),
+            #[cfg(feature = "full")]
             Some(DocKind::Pol) => self.draw_pol(shell, ui, acts),
+            #[cfg(feature = "full")]
             Some(DocKind::Compare) => {
                 if let Some(Doc::Compare(doc)) = shell.docs.get(shell.active) {
                     catalogdiff::compare_view(ui, doc, acts);
@@ -173,6 +215,7 @@ impl App for WinWeaver {
         self.tab_commands(shell)
     }
 
+    #[cfg(feature = "full")]
     fn menu_popup(&self, shell: &Shell<Self>, menu: usize, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         if let Some(menu) = Menu::from_id(menu) {
             self.bar_menu(shell, menu, ui, acts);
@@ -195,10 +238,15 @@ impl App for WinWeaver {
             )),
             _ => None,
         };
-        let star = self
-            .current_bookmark(shell)
-            .filter(|_| !lite())
-            .map(|b| (self.marks.find(&b).is_some(), Act::Marks(MarksAct::Toggle)));
+        #[cfg(feature = "full")]
+        let star = self.current_bookmark(shell).map(|b| {
+            (
+                self.full.marks.find(&b).is_some(),
+                Act::Marks(MarksAct::Toggle),
+            )
+        });
+        #[cfg(not(feature = "full"))]
+        let star = None;
         Some(Nav {
             history,
             crumbs: self.nav_crumbs(shell),
@@ -294,8 +342,9 @@ impl App for WinWeaver {
     }
 
     /// The MCP server, while it runs.
+    #[cfg(feature = "full")]
     fn status_right(&self, _shell: &Shell<Self>, ui: &mut egui::Ui) {
-        if let Some(run) = &self.mcp.run {
+        if let Some(run) = &self.full.mcp.run {
             let p = style::palette(ui);
             ui.label(
                 RichText::new(trf(
@@ -311,8 +360,9 @@ impl App for WinWeaver {
         }
     }
 
+    #[cfg(feature = "full")]
     fn jobs(&self, shell: &Shell<Self>) -> Vec<ww::Job<Act>> {
-        let since = |kind: &str| self.jobs_since.get(kind).copied();
+        let since = |kind: &str| self.full.jobs_since.get(kind).copied();
         let job = |kind: &str, title: &str| -> ww::Job<Act> {
             let job = ww::Job::new(title);
             match since(kind) {
@@ -321,7 +371,7 @@ impl App for WinWeaver {
             }
         };
         let mut jobs = Vec::new();
-        if let Some(read) = &self.pc_read {
+        if let Some(read) = &self.full.pc_read {
             let what = match &read.job {
                 PcJob::NewProfile { .. } => tr("Every rule, into a new profile"),
                 PcJob::Selection { .. } => tr("The selection, into its profile"),
@@ -329,11 +379,11 @@ impl App for WinWeaver {
             };
             jobs.push(job(JOB_PC, tr("Reading this PC")).detail(what));
         }
-        if self.importing.is_some() {
+        if self.full.importing.is_some() {
             let detail = tr("The templates are read and turned into rules");
             jobs.push(job(JOB_IMPORT, tr("Importing policy templates")).detail(detail));
         }
-        if self.running.is_some() {
+        if self.full.running.is_some() {
             let detail = tr("WinWeaver started as administrator changes this PC");
             jobs.push(job(JOB_APPLY, tr("Changing this PC")).detail(detail));
         }
@@ -354,11 +404,7 @@ impl App for WinWeaver {
     }
 
     fn settings_sections(&self) -> Vec<&'static str> {
-        SettingsSection::ALL
-            .iter()
-            .filter(|s| !lite() || **s == SettingsSection::Files)
-            .map(|s| s.title())
-            .collect()
+        SettingsSection::ALL.iter().map(|s| s.title()).collect()
     }
 
     fn settings_general(&mut self, shell: &mut Shell<Self>, ui: &mut egui::Ui) {
@@ -372,11 +418,8 @@ impl App for WinWeaver {
         ui: &mut egui::Ui,
         acts: &mut Vec<Act>,
     ) {
-        let shown: Vec<SettingsSection> = SettingsSection::ALL
-            .into_iter()
-            .filter(|s| !lite() || *s == SettingsSection::Files)
-            .collect();
-        match shown.get(section) {
+        match SettingsSection::ALL.get(section) {
+            #[cfg(feature = "full")]
             Some(SettingsSection::Templates) => {
                 style::block(ui, |ui| self.imports_view(ui, acts));
             }
@@ -385,81 +428,85 @@ impl App for WinWeaver {
             }
             None => {}
         }
+        #[cfg(not(feature = "full"))]
+        let _ = acts;
     }
 
     /// The keys of WinWeaver beyond the ones of the window; Escape cancels a plan waiting for
     /// its confirmation.
     fn shortcuts(&self, shell: &Shell<Self>, input: &mut egui::InputState) -> Vec<Act> {
         let mut acts = Vec::new();
-        let keyed: [(&keys::Keys, Act); 7] = [
+        #[cfg_attr(not(feature = "full"), allow(unused_mut))]
+        let mut keyed: Vec<(&keys::Keys, Act)> = vec![
             (&keys::FOLD, Act::Profile(ProfileAct::Fold)),
-            (&keys::BOOKMARK, Act::Marks(MarksAct::Toggle)),
             (&keys::GUIDE, Act::File(FileAct::OpenGuide)),
             (&keys::BUILD, Act::Profile(ProfileAct::Build)),
             (&keys::CHECK, Act::Profile(ProfileAct::Check)),
             (&keys::BACK, Act::Profile(ProfileAct::Back)),
             (&keys::FORWARD, Act::Profile(ProfileAct::Forward)),
         ];
+        #[cfg(feature = "full")]
+        keyed.push((&keys::BOOKMARK, Act::Marks(MarksAct::Toggle)));
         for (key, act) in keyed {
             if input.consume_shortcut(&key.shortcut()) {
                 acts.push(act);
             }
         }
-        // F2 renames in the registry tab while no field takes the keys.
-        if matches!(shell.active_doc(), Some(Doc::Registry(d)) if d.edit.is_none())
-            && input.consume_shortcut(&keys::RENAME.shortcut())
+        #[cfg(feature = "full")]
         {
-            acts.push(Act::Registry(RegistryAct::Rename));
+            // F2 renames in the registry tab while no field takes the keys.
+            if matches!(shell.active_doc(), Some(Doc::Registry(d)) if d.edit.is_none())
+                && input.consume_shortcut(&keys::RENAME.shortcut())
+            {
+                acts.push(Act::Registry(RegistryAct::Rename));
+            }
+            if self.full.confirm.is_some() && input.consume_key(Modifiers::NONE, Key::Escape) {
+                acts.push(Act::Pc(PcAct::Cancel));
+            }
         }
-        if self.confirm.is_some() && input.consume_key(Modifiers::NONE, Key::Escape) {
-            acts.push(Act::Pc(PcAct::Cancel));
-        }
+        #[cfg(not(feature = "full"))]
+        let _ = shell;
         acts
     }
 
     fn apply(&mut self, shell: &mut Shell<Self>, act: Act) {
-        // The light edition has none of these: an act of them, from a key or a link, does nothing.
-        if lite()
-            && matches!(
-                act,
-                Act::Pc(_)
-                    | Act::Users(_)
-                    | Act::Diff(_)
-                    | Act::Marks(_)
-                    | Act::Mcp(_)
-                    | Act::Catalog(_)
-                    | Act::Import(_)
-                    | Act::Registry(_)
-                    | Act::RegFile(_)
-                    | Act::Pol(_)
-            )
-        {
-            return;
-        }
         match act {
             Act::Profile(a) => self.apply_profile(shell, a),
             Act::File(a) => self.apply_file(shell, a),
+            #[cfg(feature = "full")]
             Act::Settings(a) => self.apply_settings(a),
+            #[cfg(feature = "full")]
             Act::Pc(a) => self.apply_pc(shell, a),
+            #[cfg(feature = "full")]
             Act::Users(a) => self.apply_users(shell, a),
+            #[cfg(feature = "full")]
             Act::Pol(a) => self.apply_pol(shell, a),
+            #[cfg(feature = "full")]
             Act::Diff(a) => self.apply_diff(shell, a),
+            #[cfg(feature = "full")]
             Act::Marks(a) => self.apply_marks(shell, a),
+            #[cfg(feature = "full")]
             Act::Mcp(a) => self.apply_mcp(shell, a),
+            #[cfg(feature = "full")]
             Act::Catalog(a) => self.apply_catalog(shell, a),
+            #[cfg(feature = "full")]
             Act::Import(a) => self.apply_import(shell, a),
+            #[cfg(feature = "full")]
             Act::Registry(a) => self.apply_registry(shell, a),
+            #[cfg(feature = "full")]
             Act::RegFile(a) => self.apply_reg_file(shell, a),
             // The window runs its own acts (`shell_act`); one that comes here goes back to it.
             Act::Shell(a) => shell.pending.push(Act::Shell(a)),
         }
     }
 
+    #[cfg(feature = "full")]
     fn dialogs(&mut self, _shell: &mut Shell<Self>, ctx: &egui::Context, acts: &mut Vec<Act>) {
         self.confirm_view(ctx, acts);
         self.users_import_view(ctx, acts);
     }
 
+    #[cfg(feature = "full")]
     fn after_frame(&mut self, shell: &mut Shell<Self>, ctx: &egui::Context) {
         self.track_jobs(shell);
         self.poll_running(shell, ctx);
@@ -471,31 +518,37 @@ impl App for WinWeaver {
 }
 
 /// The kinds of the work in the background, for the times of the panel of the work.
+#[cfg(feature = "full")]
 const JOB_PC: &str = "pc";
+#[cfg(feature = "full")]
 const JOB_IMPORT: &str = "import";
+#[cfg(feature = "full")]
 const JOB_APPLY: &str = "apply";
+#[cfg(feature = "full")]
 const JOB_SEARCH: &str = "search";
 
 impl WinWeaver {
     /// Notes when each kind of work in the background started, and forgets the ones that ended.
+    #[cfg(feature = "full")]
     fn track_jobs(&mut self, shell: &Shell<WinWeaver>) {
         let searching = shell
             .docs
             .iter()
             .any(|d| matches!(d, Doc::Registry(r) if r.search.running.is_some()));
         let now = [
-            (JOB_PC, self.pc_read.is_some()),
-            (JOB_IMPORT, self.importing.is_some()),
-            (JOB_APPLY, self.running.is_some()),
+            (JOB_PC, self.full.pc_read.is_some()),
+            (JOB_IMPORT, self.full.importing.is_some()),
+            (JOB_APPLY, self.full.running.is_some()),
             (JOB_SEARCH, searching),
         ];
         for (kind, running) in now {
             if running {
-                self.jobs_since
+                self.full
+                    .jobs_since
                     .entry(kind)
                     .or_insert_with(clock::Instant::now);
             } else {
-                self.jobs_since.remove(kind);
+                self.full.jobs_since.remove(kind);
             }
         }
     }
@@ -514,6 +567,7 @@ impl WinWeaver {
                     (label, Some(act))
                 })
                 .collect(),
+            #[cfg(feature = "full")]
             Some(Doc::Catalog(c)) => {
                 let Some(file) = c.catalog(&self.imports) else {
                     return Vec::new();

@@ -2,8 +2,8 @@
 //! `autounattend.xml`, the presets, the catalogs of the folder `imports` and the themes of the
 //! folder `themes` next to the program, a short guide as plain text, English and Ukrainian built
 //! in. Nothing reads or changes the PC; no MCP, registry, diffs, bookmarks, imports of policy
-//! templates or users files. The window is the one of WinWeaver with these parts left out
-//! (`winweaver_ui::lite`).
+//! templates or users files. The window is the one of WinWeaver built without its feature
+//! `full`, so none of that code is in the executable (`winweaver_ui::lite`).
 //!
 //! In a release build the executable has no console (`windows_subsystem`): the command line
 //! functions attach to the console of the parent when there is one.
@@ -64,7 +64,7 @@ fn main() -> ExitCode {
         }
         Some("--smoke-window") => {
             attach_console();
-            match winweaver_ui::smoke_window_lite(option(&args, "--renderer").as_deref()) {
+            match winweaver_ui::smoke_window(option(&args, "--renderer").as_deref()) {
                 Ok(info) => {
                     println!("the window started: {info}");
                     ExitCode::SUCCESS
@@ -95,7 +95,7 @@ fn main() -> ExitCode {
 
 /// Opens the window; its failure goes to the console of the parent if there is one.
 fn window(renderer: Option<&str>) -> ExitCode {
-    match winweaver_ui::run_lite(renderer) {
+    match winweaver_ui::run(renderer) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
             attach_console();

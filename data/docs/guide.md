@@ -122,6 +122,17 @@ password before the first save.
   the status bar shows the file in its folder in Explorer; Settings, Files opens the folders of the
   program.
 
+- **Menus and tabs**: every item of a menu has an icon. When the tabs are wider than the window, the
+  row scrolls with the wheel, the active tab comes into view, and a button at the right end lists
+  every tab.
+- **Only on** in the bar of a profile shows only the rules that are on, with their groups open; the MCP
+  tools `list_groups`, `list_rules` and `search_rules` take `only_on` the same way.
+- **Parameters**: the fields of a rule take the width of the panel; a text with a limit of the answer
+  file (the support contacts) counts its characters against it.
+- **Work in the background**: a read of this PC, an import of policy templates, a change of this PC and
+  a search of the registry show in a panel in the lower right corner with the time they have taken,
+  and Stop where the work can stop; the panel folds to a spinner.
+
 ## This PC
 
 **This PC** in the command bar reads the settings of this computer through Windows, without changing
@@ -203,6 +214,14 @@ templates starts an empty one of your own. A policy gets its title, its descript
 default user profile, and the registry values it writes or removes; **Apply** checks the whole file, and
 nothing changes when the check fails. Save (Ctrl+S) writes the file and loads it again.
 
+The comparison opens in a tab: the policies that differ in the tree of their categories, with switches
+for the ones only in the first catalog, only in the second and the different ones, and the selected
+policy as it is in both catalogs side by side. **Save the report** writes the report as a Markdown file,
+**As a page** shows it as a page. **Copy to** in the bar of a catalog tab copies the selected policy, or
+the selected group with the groups under it, into a catalog open in its editor (you choose which when
+several are open) or into a new catalog, with the same ids and the texts of other languages: a catalog
+of only the policies you need, to pass on as a file.
+
 ## The registry
 
 **Menu, Registry** opens the registry of this PC in a tab: the keys on the left, the values of the
@@ -227,6 +246,17 @@ catalogs that write the key or the selected value. **New key**, **New value**, *
 are in the bar, and a deletion asks first. **Save** writes every line back: the comments and the lines
 the program does not read stay where they were. A file saved from **This PC** names its rules in
 comments, and the arrow of such a comment shows the rule in the profile.
+
+A Group Policy file (`Registry.pol`) opens in a tab of its own as well: the files of the computer and of
+the users of this Windows (**Menu, Group Policy**; the bar of a profile, a catalog and the registry) or
+any `.pol` file. The keys are a tree on the left, the entries of the selected key on the right with what
+each one does. **New key**, **New value**, **Edit** (or a double click) and **Remove** change the entries
+in a window over the tab, like the values of a registry file; **Root** chooses whether a file outside
+Group Policy applies to the computer or to the user (the files of this Windows take it from their
+folder); **Add a file** takes the entries of another Group Policy file or the changes of a registry file
+of that root; **To .reg** saves the file as a registry file. Save writes the format of Group Policy back;
+the files of this Windows are saved as copies elsewhere, since Group Policy itself writes them. Unsaved
+changes come back from a draft after a restart.
 
 ## The MCP server
 

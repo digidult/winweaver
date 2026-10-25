@@ -8,6 +8,12 @@ license.workspace = true
 repository.workspace = true
 authors.workspace = true
 
+[features]
+default = ["users"]
+# Users files (users, userstore) with the crypto they need; wwlite and a web build go without
+# them, and getrandom needs a source of randomness of its own on wasm32.
+users = ["dep:pbkdf2", "dep:hmac", "dep:aes", "dep:cbc", "dep:base64", "dep:zeroize", "dep:getrandom"]
+
 [dependencies]
 ww-base = { path = "../ww-base" }
 serde.workspace = true
@@ -22,10 +28,10 @@ flate2 = "1"
 sha2 = "0.10"
 # The passwords of a users file (userstore): PBKDF2-SHA256, AES-256-CBC and HMAC-SHA256 of the
 # pure Rust RustCrypto crates, which Windows PowerShell 5.1 can read too.
-pbkdf2 = "0.12"
-hmac = "0.12"
-aes = "0.8"
-cbc = { version = "0.1", features = ["alloc"] }
-base64 = "0.22"
-zeroize = "1"
-getrandom = "0.4"
+pbkdf2 = { version = "0.12", optional = true }
+hmac = { version = "0.12", optional = true }
+aes = { version = "0.8", optional = true }
+cbc = { version = "0.1", features = ["alloc"], optional = true }
+base64 = { version = "0.22", optional = true }
+zeroize = { version = "1", optional = true }
+getrandom = { version = "0.4", optional = true }

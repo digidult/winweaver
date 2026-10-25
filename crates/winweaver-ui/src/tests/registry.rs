@@ -11,7 +11,7 @@ fn the_rights_of_a_key_change_after_a_question() {
     let reg = std::sync::Arc::new(MemoryRegistry::default());
     let key = "HKEY_CURRENT_USER\\Software\\WinWeaverRights";
     reg.create_key(key).unwrap();
-    app.app.registry = reg.clone();
+    app.app.full.registry = reg.clone();
     app.apply(vec![Act::Registry(RegistryAct::Open(key.to_owned(), None))]);
     app.apply(vec![Act::Registry(RegistryAct::Rights)]);
     let open = |app: &Window<WinWeaver>| match app.shell.docs.get(app.shell.active) {
@@ -51,11 +51,11 @@ fn the_registry_tab_edits_asks_and_bookmarks() {
     std::fs::create_dir_all(&dir).unwrap();
     let catalog = Catalog::embedded().unwrap();
     let mut app = Window::new(WinWeaver::new(catalog, Vec::new()), Settings::default());
-    app.app.marks_path = dir.join("marks.wwmarks");
+    app.app.full.marks_path = dir.join("marks.wwmarks");
     let reg = std::sync::Arc::new(MemoryRegistry::default());
     let key = "HKEY_CURRENT_USER\\Software\\WinWeaverTest";
     reg.create_key(key).unwrap();
-    app.app.registry = reg.clone();
+    app.app.full.registry = reg.clone();
     app.apply(vec![Act::Registry(RegistryAct::Open(
         "HKCU:\\Software\\WinWeaverTest".to_owned(),
         None,
@@ -85,6 +85,7 @@ fn the_registry_tab_edits_asks_and_bookmarks() {
     assert_eq!(reg.read(key).unwrap().values.len(), 1);
     assert!(
         app.app
+            .full
             .marks
             .items
             .iter()
@@ -117,7 +118,7 @@ fn the_registry_tab_searches_under_its_key() {
     let blue = Data::Sz("dark blue".to_owned());
     reg.create_key(&inner).unwrap();
     reg.set(&inner, "Colour", &blue).unwrap();
-    app.app.registry = reg;
+    app.app.full.registry = reg;
     app.apply(vec![Act::Registry(RegistryAct::Open(key.to_owned(), None))]);
     app.apply(vec![Act::Registry(RegistryAct::Search)]);
     assert!(search(&mut app).open);

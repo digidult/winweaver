@@ -2,6 +2,7 @@
 
 use crate::*;
 
+#[cfg(feature = "full")]
 pub(crate) use ww::dialogs::{kept_name, write_file};
 
 /// A file name stem made of a profile name.
@@ -9,8 +10,8 @@ pub fn file_stem(name: &str) -> String {
     ww::dialogs::file_stem(name, "profile")
 }
 
-/// The path with the profile extension when it has none.
 /// A path the save dialog gave, with the extension of a registry file when it has none.
+#[cfg(feature = "full")]
 pub(crate) fn reg_extension(path: PathBuf) -> PathBuf {
     if path.extension().is_some() {
         path
@@ -19,6 +20,7 @@ pub(crate) fn reg_extension(path: PathBuf) -> PathBuf {
     }
 }
 
+/// The path with the profile extension when it has none.
 pub(crate) fn with_extension(path: PathBuf) -> PathBuf {
     if path.extension().is_some() {
         path
@@ -27,6 +29,7 @@ pub(crate) fn with_extension(path: PathBuf) -> PathBuf {
     }
 }
 
+#[cfg(feature = "full")]
 pub(crate) fn file_dialog(kind: &str, extension: &str) -> rfd::FileDialog {
     let dir = profiles_dir();
     let dialog = rfd::FileDialog::new().add_filter(kind, &[extension]);
@@ -34,9 +37,11 @@ pub(crate) fn file_dialog(kind: &str, extension: &str) -> rfd::FileDialog {
 }
 
 pub(crate) fn profile_dialog() -> rfd::FileDialog {
-    file_dialog("WinWeaver profile", profile::EXTENSION)
+    let dialog = rfd::FileDialog::new().add_filter("WinWeaver profile", &[profile::EXTENSION]);
+    widgets::in_folder(dialog, &profiles_dir())
 }
 
+#[cfg(feature = "full")]
 pub(crate) fn pick_profile() -> Option<PathBuf> {
     profile_dialog().set_title(tr("Open a profile")).pick_file()
 }
@@ -44,14 +49,13 @@ pub(crate) fn pick_profile() -> Option<PathBuf> {
 /// The open dialog for every kind of file the program opens.
 pub(crate) fn open_dialog() -> rfd::FileDialog {
     let dir = profiles_dir();
-    if crate::lite() {
-        let dialog = rfd::FileDialog::new()
-            .set_title(tr("Open"))
-            .add_filter(tr("Profiles"), &[profile::EXTENSION])
-            .add_filter(tr("Answer files (the profile they embed)"), &["xml"])
-            .add_filter(tr("Older profiles and audit reports"), &["json"]);
-        return widgets::in_folder(dialog, &dir);
-    }
+    #[cfg(not(feature = "full"))]
+    let dialog = rfd::FileDialog::new()
+        .set_title(tr("Open"))
+        .add_filter(tr("Profiles"), &[profile::EXTENSION])
+        .add_filter(tr("Answer files (the profile they embed)"), &["xml"])
+        .add_filter(tr("Older profiles and audit reports"), &["json"]);
+    #[cfg(feature = "full")]
     let dialog = rfd::FileDialog::new()
         .set_title(tr("Open"))
         .add_filter(

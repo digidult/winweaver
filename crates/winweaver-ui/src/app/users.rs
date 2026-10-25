@@ -240,7 +240,7 @@ impl WinWeaver {
             Ok(file) if file.passwords.is_some() => {
                 let mut ask = usersview::MasterAsk::default();
                 ask.open(usersview::Purpose::Unlock);
-                self.users_import = Some(usersview::UsersImport { file, ask });
+                self.full.users_import = Some(usersview::UsersImport { file, ask });
             }
             Ok(file) => {
                 let n = file.users.len();
@@ -256,23 +256,23 @@ impl WinWeaver {
 
     /// The window of the master password of a users file loaded into a profile.
     pub(crate) fn users_import_view(&mut self, ctx: &egui::Context, acts: &mut Vec<Act>) {
-        let Some(import) = &mut self.users_import else {
+        let Some(import) = &mut self.full.users_import else {
             return;
         };
         match usersview::import_window(ctx, import) {
             usersview::ImportDone::Open => {}
-            usersview::ImportDone::Cancel => self.users_import = None,
+            usersview::ImportDone::Cancel => self.full.users_import = None,
             usersview::ImportDone::Without => {
                 acts.push(Act::Profile(ProfileAct::SetAccounts(
                     import.file.accounts(None),
                 )));
-                self.users_import = None;
+                self.full.users_import = None;
             }
             usersview::ImportDone::With(passwords) => {
                 acts.push(Act::Profile(ProfileAct::SetAccounts(
                     import.file.accounts(Some(&passwords)),
                 )));
-                self.users_import = None;
+                self.full.users_import = None;
             }
         }
     }
