@@ -39,16 +39,20 @@ pub enum Menu {
     CompareCatalog,
     RegFileApply,
     Pol,
+    CopyTo,
+    PolRoot,
 }
 
 impl Menu {
-    const ALL: [Menu; 6] = [
+    const ALL: [Menu; 8] = [
         Menu::ThisPc,
         Menu::CompareProfile,
         Menu::Catalogs,
         Menu::CompareCatalog,
         Menu::RegFileApply,
         Menu::Pol,
+        Menu::CopyTo,
+        Menu::PolRoot,
     ];
 
     /// The menu by the number of its button.
@@ -65,6 +69,8 @@ impl Menu {
             Menu::CompareCatalog => (icons::COMPARE, tr("Compare"), 300.0),
             Menu::RegFileApply => (icons::THIS_PC, tr("Apply to this PC"), 280.0),
             Menu::Pol => (icons::SCRIPT, tr("Group Policy"), 280.0),
+            Menu::CopyTo => (icons::DUPLICATE, tr("Copy to"), 280.0),
+            Menu::PolRoot => (icons::REGISTRY, tr("Root"), 300.0),
         };
         ww::commands::menu(icon, label, width, self as usize)
     }
@@ -198,6 +204,7 @@ impl WinWeaver {
                     tr("Edit"),
                     CatalogAct::Edit(CatalogRef::Tab(shell.active)),
                 ),
+                Menu::CopyTo.item(),
                 Menu::Pol.item(),
             ],
             Some(Doc::Catalog(c)) => vec![
@@ -217,6 +224,7 @@ impl WinWeaver {
                     tr("Edit"),
                     CatalogAct::Edit(CatalogRef::Import(c.id.clone())),
                 ),
+                Menu::CopyTo.item(),
                 Menu::Pol.item(),
             ],
             Some(Doc::CatalogEdit(_)) => vec![save()],
@@ -355,8 +363,28 @@ impl WinWeaver {
                 let known = d.pol.scope.hive().is_some();
                 vec![
                     open(),
+                    save(),
+                    save_as(),
                     cmd(icons::REFRESH, tr("Read again"), PolAct::Refresh),
                     Item::Separator,
+                    cmd(icons::FOLDER, tr("New key"), PolAct::NewEntry(true)),
+                    when(
+                        icons::ADD,
+                        tr("New value"),
+                        d.sel.is_some(),
+                        PolAct::NewEntry(false),
+                    ),
+                    when(icons::EDIT, tr("Edit"), d.entry.is_some(), PolAct::Edit),
+                    when(
+                        icons::DELETE,
+                        tr("Remove"),
+                        d.entry.is_some() || d.sel.is_some(),
+                        PolAct::AskRemove,
+                    ),
+                    Item::Separator,
+                    Menu::PolRoot.item(),
+                    cmd(icons::IMPORT, tr("Add a file"), PolAct::AddFile),
+                    when(icons::EXPORT, tr("To .reg"), known, PolAct::ExportReg),
                     cmd_if(
                         icons::REGISTRY,
                         tr("Open in the registry"),

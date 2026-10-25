@@ -288,6 +288,9 @@ pub enum CatalogAct {
     CompareSave,
     /// Opens the report of the comparison in front as a page.
     ComparePage,
+    /// Copies the selected policy or group of the catalog tab in front into the catalog of an
+    /// editor tab (its number), or (`None`) into a new catalog.
+    CopyTo(Option<usize>),
 }
 
 /// The acts of the imports of policy templates.
@@ -346,6 +349,22 @@ pub enum PolAct {
     OpenFile,
     /// Reads the file of the tab in front again.
     Refresh,
+    /// A new empty Group Policy file in a tab.
+    New,
+    /// Edits the selected entry of the file in front.
+    Edit,
+    /// Starts a new key (true) or a new value of the selected key in the file in front.
+    NewEntry(bool),
+    /// Asks before the selected entry or key leaves the file in front.
+    AskRemove,
+    /// Takes these entries out of the file in front.
+    Remove(Vec<usize>),
+    /// The hive the keys of the file in front apply to.
+    Root(winweaver_core::pol::Scope),
+    /// Adds the entries of a Group Policy or registry file chosen in a dialog.
+    AddFile,
+    /// Saves the file in front as a registry file in the hive of its root.
+    ExportReg,
 }
 
 /// The acts of the tab of a registry file.

@@ -36,7 +36,7 @@ const ADMX: &str = r#"<?xml version="1.0" encoding="utf-8"?>
           <item displayName="$(string.High)"><value><decimal value="2" /></value></item>
         </enum>
         <decimal id="Size" valueName="Size" minValue="1" maxValue="50" />
-        <text id="Name" valueName="Name" />
+        <text id="Name" valueName="Name" maxLength="40" />
       </elements>
     </policy>
     <policy name="Listed" class="Machine" displayName="$(string.Listed)" key="Software\Policies\Test">
@@ -236,6 +236,63 @@ fn a_policy_of_two_imports_shows_in_both_trees_and_they_compare() {
 
 /// A catalog file changes policy by policy and stays valid: a put that would break it changes
 /// nothing, a removal takes the Disabled rule and the conflicts with it.
+#[test]
+fn policies_and_groups_are_copied_into_another_catalog() {
+    let source = sample();
+    let mut mine = to_catalog_file(&Templates::default(), "custom-1", "Mine", "", "now");
+    let root = mine.groups[0].id.clone();
+    let n = mine
+        .copy_from(&source, CopyWhat::Policy("admx.sample.turnoff.off"), &root)
+        .unwrap();
+    assert_eq!(n, 1, "the policy with its Disabled rule");
+    let ids: Vec<&str> = mine.rules.iter().map(|r| r.id.as_str()).collect();
+    assert!(ids.contains(&"admx.sample.turnoff") && ids.contains(&"admx.sample.turnoff.off"));
+    let uk = mine
+        .texts
+        .get("uk")
+        .expect("the texts in Ukrainian come along");
+    assert!(uk.rules.contains_key("admx.sample.turnoff"));
+    // The group of the sample with the group inside it, made again under the root.
+    let sample_group = source
+        .groups
+        .iter()
+        .find(|g| g.title.starts_with("Sample"))
+        .unwrap()
+        .id
+        .clone();
+    let n = mine
+        .copy_from(&source, CopyWhat::Group(&sample_group), &root)
+        .unwrap();
+    assert!(n >= 2, "every policy of the group and of the group in it");
+    assert!(mine.groups.iter().any(|g| g.title == "Inner"));
+    let twice = mine.rules.len();
+    mine.copy_from(&source, CopyWhat::Group(&sample_group), &root)
+        .unwrap();
+    assert_eq!(mine.rules.len(), twice, "a copy again replaces the copies");
+    mine.check().unwrap();
+    assert!(
+        mine.copy_from(&source, CopyWhat::Policy("admx.none"), &root)
+            .is_err()
+    );
+    assert!(
+        mine.copy_from(&source, CopyWhat::Group(&sample_group), "admx.none")
+            .is_err()
+    );
+    // The maxLength of a text becomes the limit of its parameter.
+    let level = source
+        .rules
+        .iter()
+        .find(|r| r.id == "admx.sample.level")
+        .unwrap();
+    assert!(level.params.values().any(|p| matches!(
+        p,
+        Param::Text {
+            max_length: Some(40),
+            ..
+        }
+    )));
+}
+
 #[test]
 fn a_catalog_file_is_edited_policy_by_policy_and_stays_valid() {
     let mut f = sample();

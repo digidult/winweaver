@@ -25,6 +25,23 @@ pub const REGFILE_DRAFT: &str = "regfile";
 pub const DIFF_DRAFT: &str = "diff";
 pub const CATALOG_DRAFT: &str = "catalog-edit";
 pub const USERS_DRAFT: &str = "users";
+pub const POL_DRAFT: &str = "pol";
+
+/// The bytes of a Group Policy file as hexadecimal text, for its draft.
+pub fn hex_of(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// The bytes of [`hex_of`] back; `None` for a text that is not one.
+pub fn bytes_of_hex(text: &str) -> Option<Vec<u8>> {
+    if !text.len().is_multiple_of(2) {
+        return None;
+    }
+    (0..text.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(text.get(i..i + 2)?, 16).ok())
+        .collect()
+}
 
 /// The document of a draft: its kind and its text.
 fn draft_json(kind: &str, text: String) -> serde_json::Value {
@@ -277,6 +294,7 @@ impl Tab for Doc {
             Doc::Diff(d) => Some(d.draft.key.clone()),
             Doc::CatalogEdit(d) => Some(d.draft.key.clone()),
             Doc::Users(d) => Some(d.draft.key.clone()),
+            Doc::Pol(d) => Some(d.draft.key.clone()),
             Doc::Shell(d) => d.draft_key(),
             _ => None,
         }
@@ -317,6 +335,15 @@ impl Tab for Doc {
                 if d.draft.ready(d.dirty, all) {
                     let document = draft_json(USERS_DRAFT, d.file.to_json());
                     d.draft.offer(d.path.clone(), document)
+                } else {
+                    None
+                }
+            }
+            Doc::Pol(d) => {
+                if d.draft.ready(d.dirty, all) {
+                    let mut document = draft_json(POL_DRAFT, hex_of(&d.pol.to_bytes()));
+                    document["scope"] = serde_json::Value::from(d.pol.scope.name());
+                    d.draft.offer(Some(d.pol.path.clone()), document)
                 } else {
                     None
                 }

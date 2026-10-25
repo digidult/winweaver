@@ -278,6 +278,36 @@ fn screenshots_of_the_window() {
         );
     }
     shot(&mut harness, "21-pol");
+    // The editor of the selected entry over the tab.
+    harness.state_mut().apply(vec![Act::Pol(PolAct::Edit)]);
+    shot(&mut harness, "23-pol-edit");
+    if let Some(Doc::Pol(d)) = harness.state_mut().shell.docs.last_mut() {
+        d.edit = None;
+    }
+    // Two catalogs compared: the copy lacks a policy and changes the title of another.
+    let work = std::env::temp_dir().join(format!("winweaver-shots-{}", std::process::id()));
+    super::sample_import(&work);
+    let templates = admx::read_folder(&work.join("admx"));
+    let first = admx::to_catalog_file(&templates, "test", "Test templates", "", "now");
+    let mut second = admx::to_catalog_file(&templates, "copy", "Copy of the templates", "", "now");
+    second
+        .rules
+        .retain(|r| !r.id.starts_with("admx.sample.turnoff"));
+    if let Some(r) = second.rules.first_mut() {
+        r.title.push_str(" (changed)");
+    }
+    let mut cmp = crate::catalogdiff::CompareDoc::new(&first, &second);
+    cmp.sel = cmp
+        .entries
+        .iter()
+        .find(|e| e.side == crate::catalogdiff::Side::Both)
+        .map(|e| crate::catalogdiff::CmpKey::Policy(e.id.clone()));
+    harness
+        .state_mut()
+        .shell
+        .open_tab(Doc::Compare(Box::new(cmp)));
+    shot(&mut harness, "24-compare");
+    let _ = std::fs::remove_dir_all(&work);
     // The registry tab on a registry in memory: the values as a list.
     {
         use winweaver_core::registry::{Data, MemoryRegistry, Registry};
@@ -342,6 +372,30 @@ fn screenshots_of_the_window() {
     harness.set_size(egui::vec2(1440.0, 900.0));
     harness.state_mut().apply(vec![Act::Shell(ShellAct::About)]);
     shot(&mut harness, "20-about");
+    harness.state_mut().shell.about_open = false;
+    // The parameters of the support contacts in the width of the panel, with their limits.
+    harness.state_mut().apply(vec![
+        Act::Shell(ShellAct::Activate(0)),
+        Act::Profile(ProfileAct::Reveal(Sel::Rule("system.support-info".to_owned()))),
+    ]);
+    shot(&mut harness, "25-params");
+    harness
+        .state_mut()
+        .apply(vec![Act::Profile(ProfileAct::OnlyOn)]);
+    shot(&mut harness, "26-only-on");
+    harness
+        .state_mut()
+        .apply(vec![Act::Profile(ProfileAct::OnlyOn)]);
+    // The menu of the tab row with its icons.
+    harness.query_all_by_label("Menu").next().unwrap().click();
+    shot(&mut harness, "27-menu");
+    harness.key_press(egui::Key::Escape);
+    // More tabs than the row holds: the row scrolls and lists every tab.
+    let many: Vec<Act> = (0..14)
+        .map(|_| Act::File(FileAct::NewProfile(None)))
+        .collect();
+    harness.state_mut().apply(many);
+    shot(&mut harness, "28-many-tabs");
 }
 
 #[test]

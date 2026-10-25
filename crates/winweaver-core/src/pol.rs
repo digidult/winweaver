@@ -1,10 +1,12 @@
 //! Group Policy files (`Registry.pol`, the format PReg): the registry values the policies of
-//! Group Policy set, read as they are. A file of the computer (the folder `Machine`) applies to
-//! HKEY_LOCAL_MACHINE, a file of the users (the folder `User`) to HKEY_CURRENT_USER. The program
-//! only reads them: it shows them and links to them.
+//! Group Policy set. A file of the computer (the folder `Machine`) applies to HKEY_LOCAL_MACHINE,
+//! a file of the users (the folder `User`) to HKEY_CURRENT_USER; a file elsewhere has no hive
+//! until one is chosen. A file is read, changed entry by entry, written back in the same format,
+//! turned into a registry file, and takes the entries of another Group Policy or registry file.
 
 use std::path::{Path, PathBuf};
 
+use crate::regfile::{Change, Line, RegFile};
 use crate::registry::Data;
 
 pub const EXTENSION: &str = "pol";
@@ -15,7 +17,7 @@ pub const MAX_BYTES: u64 = 64 * 1024 * 1024;
 const ENTRIES_MAX: usize = 500_000;
 
 /// Whom the policies of a file are for.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Scope {
     Computer,
     User,
@@ -30,6 +32,24 @@ impl Scope {
             Scope::Computer => Some("HKEY_LOCAL_MACHINE"),
             Scope::User => Some("HKEY_CURRENT_USER"),
             Scope::Unknown => None,
+        }
+    }
+
+    /// The name of the scope in a draft.
+    pub fn name(self) -> &'static str {
+        match self {
+            Scope::Computer => "computer",
+            Scope::User => "user",
+            Scope::Unknown => "unknown",
+        }
+    }
+
+    /// The scope of a name of [`Scope::name`]; an unknown name is no hive.
+    pub fn from_name(name: &str) -> Self {
+        match name {
+            "computer" => Scope::Computer,
+            "user" => Scope::User,
+            _ => Scope::Unknown,
         }
     }
 
@@ -69,12 +89,62 @@ pub enum Action {
     CreateKey,
 }
 
+impl Action {
+    /// Whether the entry sets or deletes one value, so another entry of the same key and name
+    /// replaces it.
+    pub fn of_value(&self) -> bool {
+        matches!(self, Action::Set(_) | Action::Soft(_) | Action::Delete)
+    }
+}
+
 /// An entry of a file: the key (without a hive), the name of the value and what is done.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Entry {
     pub key: String,
     pub name: String,
     pub action: Action,
+}
+
+/// The type REG_SZ of an entry that only names what it deletes.
+const REG_SZ: u32 = 1;
+const REG_DWORD: u32 = 4;
+
+/// A text in UTF-16 LE with its zero.
+fn wide(text: &str) -> Vec<u8> {
+    text.encode_utf16()
+        .chain([0])
+        .flat_map(u16::to_le_bytes)
+        .collect()
+}
+
+impl Entry {
+    /// The name, the type and the data the file writes for the entry.
+    fn raw(&self) -> (String, u32, Vec<u8>) {
+        // The data of an entry that deletes: a space, as Group Policy writes it.
+        let space = || wide(" ");
+        match &self.action {
+            Action::Set(d) => {
+                let (kind, bytes) = d.to_raw();
+                (self.name.clone(), kind, bytes)
+            }
+            Action::Soft(d) => {
+                let (kind, bytes) = d.to_raw();
+                (format!("**soft.{}", self.name), kind, bytes)
+            }
+            Action::Delete => (format!("**del.{}", self.name), REG_SZ, space()),
+            Action::DeleteAll => ("**delvals.".to_owned(), REG_SZ, space()),
+            Action::DeleteValues(list) => {
+                ("**DeleteValues".to_owned(), REG_SZ, wide(&list.join(";")))
+            }
+            Action::DeleteKeys(list) => ("**DeleteKeys".to_owned(), REG_SZ, wide(&list.join(";"))),
+            Action::SecureKey(on) => (
+                "**SecureKey".to_owned(),
+                REG_DWORD,
+                u32::from(*on).to_le_bytes().to_vec(),
+            ),
+            Action::CreateKey => (String::new(), 0, Vec::new()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -208,6 +278,228 @@ impl PolFile {
         })
     }
 
+    /// An empty file at a path, of the scope of its folder.
+    pub fn empty(path: &Path) -> Self {
+        Self {
+            path: path.to_path_buf(),
+            scope: Scope::of_path(path),
+            entries: Vec::new(),
+        }
+    }
+
+    /// The bytes of the file: the signature, the version 1 and the entries, as Group Policy
+    /// writes them.
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut out = SIGNATURE.to_vec();
+        out.extend(1u32.to_le_bytes());
+        let ch = |c: char| (c as u16).to_le_bytes();
+        for e in &self.entries {
+            let (name, kind, data) = e.raw();
+            out.extend(ch('['));
+            out.extend(wide(&e.key));
+            out.extend(ch(';'));
+            out.extend(wide(&name));
+            out.extend(ch(';'));
+            out.extend(kind.to_le_bytes());
+            out.extend(ch(';'));
+            out.extend((data.len() as u32).to_le_bytes());
+            out.extend(ch(';'));
+            out.extend(data);
+            out.extend(ch(']'));
+        }
+        out
+    }
+
+    /// Writes the file through a temporary one beside it, so a failed write leaves the old file.
+    pub fn save(&self, path: &Path) -> Result<(), String> {
+        let io = |e: std::io::Error| format!("{}: {e}", path.display());
+        let tmp = path.with_extension("pol.tmp");
+        std::fs::write(&tmp, self.to_bytes()).map_err(io)?;
+        std::fs::rename(&tmp, path).map_err(io)
+    }
+
+    /// Sets an entry: one of the same key and value name that sets or deletes the value is
+    /// replaced (any case), else the entry goes at the end; the index of the entry.
+    pub fn put(&mut self, entry: Entry) -> usize {
+        let same = self.entries.iter().position(|e| {
+            entry.action.of_value()
+                && e.action.of_value()
+                && e.key.eq_ignore_ascii_case(&entry.key)
+                && e.name.eq_ignore_ascii_case(&entry.name)
+        });
+        match same {
+            Some(i) => {
+                self.entries[i] = entry;
+                i
+            }
+            None => {
+                self.entries.push(entry);
+                self.entries.len() - 1
+            }
+        }
+    }
+
+    /// Takes the entries of another Group Policy file, an entry of a value replacing the one of
+    /// the same value; the count taken.
+    pub fn merge(&mut self, other: &PolFile) -> usize {
+        for e in &other.entries {
+            self.put(e.clone());
+        }
+        other.entries.len()
+    }
+
+    /// The key of a path of regedit inside the hive of the file, without the hive; `None` for a
+    /// path of another hive or a file without one.
+    fn own_key(&self, path: &str) -> Option<String> {
+        let hive = self.scope.hive()?;
+        let full = crate::registry::normalize(path)?;
+        let (head, rest) = full.split_once('\\').unwrap_or((full.as_str(), ""));
+        (head.eq_ignore_ascii_case(hive) && !rest.is_empty()).then(|| rest.to_owned())
+    }
+
+    /// Takes the changes of a registry file whose keys are in the hive of the file: a value set
+    /// or deleted, a key made, a key deleted (as `**DeleteKeys` of its parent). The counts of
+    /// the changes taken and of the ones left out (another hive, a file without a hive).
+    pub fn merge_reg(&mut self, reg: &RegFile) -> (usize, usize) {
+        let (mut taken, mut left) = (0, 0);
+        for change in reg.changes(None) {
+            let path = match &change {
+                Change::CreateKey(p) | Change::DeleteKey(p) => p,
+                Change::Set { key, .. } | Change::DeleteValue { key, .. } => key,
+            };
+            let Some(key) = self.own_key(path) else {
+                left += 1;
+                continue;
+            };
+            taken += 1;
+            match change {
+                Change::CreateKey(_) => {
+                    if !self
+                        .entries
+                        .iter()
+                        .any(|e| e.key.eq_ignore_ascii_case(&key))
+                    {
+                        self.put(Entry {
+                            key,
+                            name: String::new(),
+                            action: Action::CreateKey,
+                        });
+                    }
+                }
+                Change::DeleteKey(_) => {
+                    let (parent, last) = key.rsplit_once('\\').unwrap_or(("", key.as_str()));
+                    self.put(Entry {
+                        key: parent.to_owned(),
+                        name: String::new(),
+                        action: Action::DeleteKeys(vec![last.to_owned()]),
+                    });
+                }
+                Change::Set { name, data, .. } => {
+                    self.put(Entry {
+                        key,
+                        name,
+                        action: Action::Set(data),
+                    });
+                }
+                Change::DeleteValue { name, .. } => {
+                    self.put(Entry {
+                        key,
+                        name,
+                        action: Action::Delete,
+                    });
+                }
+            }
+        }
+        (taken, left)
+    }
+
+    /// The file as a registry file in the hive of its scope: the keys in the order of their
+    /// first entry, a value set or deleted as a line, the values and keys deleted by a list as
+    /// lines, and what a registry file cannot hold (every value of a key deleted, the rights of
+    /// a key, a value set only when absent) said in comments. `None` without a hive.
+    pub fn to_reg(&self) -> Option<RegFile> {
+        let hive = self.scope.hive()?;
+        let mut file = RegFile::default();
+        let mut keys: Vec<&str> = Vec::new();
+        for e in &self.entries {
+            if !keys.iter().any(|k| k.eq_ignore_ascii_case(&e.key)) {
+                keys.push(&e.key);
+            }
+        }
+        for key in keys {
+            let path = if key.is_empty() {
+                hive.to_owned()
+            } else {
+                format!("{hive}\\{key}")
+            };
+            file.lines.push(Line::Blank);
+            file.lines.push(Line::Key {
+                path: path.clone(),
+                delete: false,
+            });
+            let mut after: Vec<Line> = Vec::new();
+            for e in self
+                .entries
+                .iter()
+                .filter(|e| e.key.eq_ignore_ascii_case(key))
+            {
+                match &e.action {
+                    Action::Set(d) => file.lines.push(Line::Value {
+                        name: e.name.clone(),
+                        data: Some(d.clone()),
+                    }),
+                    Action::Soft(d) => {
+                        let note =
+                            format!("; Group Policy sets {} only when it is not there", e.name);
+                        file.lines.push(Line::Comment(note));
+                        file.lines.push(Line::Value {
+                            name: e.name.clone(),
+                            data: Some(d.clone()),
+                        });
+                    }
+                    Action::Delete => file.lines.push(Line::Value {
+                        name: e.name.clone(),
+                        data: None,
+                    }),
+                    Action::DeleteValues(list) => {
+                        for name in list {
+                            file.lines.push(Line::Value {
+                                name: name.clone(),
+                                data: None,
+                            });
+                        }
+                    }
+                    Action::DeleteAll => file.lines.push(Line::Comment(
+                        "; Group Policy deletes every value of this key first".to_owned(),
+                    )),
+                    Action::SecureKey(on) => {
+                        let note = if *on {
+                            "; Group Policy lets only the administrators change this key"
+                        } else {
+                            "; Group Policy gives this key its own rights back"
+                        };
+                        file.lines.push(Line::Comment(note.to_owned()));
+                    }
+                    Action::DeleteKeys(list) => {
+                        for name in list {
+                            after.push(Line::Key {
+                                path: format!("{path}\\{name}"),
+                                delete: true,
+                            });
+                        }
+                    }
+                    Action::CreateKey => {}
+                }
+            }
+            if !after.is_empty() {
+                file.lines.push(Line::Blank);
+                file.lines.extend(after);
+            }
+        }
+        file.lines.push(Line::Blank);
+        Some(file)
+    }
+
     /// Reads a file, at most [`MAX_BYTES`].
     pub fn load(path: &Path) -> Result<Self, String> {
         let size = std::fs::metadata(path)
@@ -319,6 +611,90 @@ mod tests {
             "a value of DeleteValues"
         );
         assert!(pol.find(&full, Some("Other")).is_empty());
+    }
+
+    #[test]
+    fn a_file_is_written_back_turned_into_a_registry_file_and_merged() {
+        let path = Path::new("D:\\Policies\\Registry.pol");
+        let mut pol = PolFile::empty(path);
+        assert_eq!(pol.scope, Scope::Unknown);
+        assert!(pol.to_reg().is_none(), "no hive, no registry file");
+        let key = "Software\\Policies\\Test";
+        pol.put(Entry {
+            key: key.to_owned(),
+            name: "On".to_owned(),
+            action: Action::Set(Data::Dword(1)),
+        });
+        pol.put(Entry {
+            key: key.to_owned(),
+            name: "Old".to_owned(),
+            action: Action::Delete,
+        });
+        pol.put(Entry {
+            key: key.to_owned(),
+            name: String::new(),
+            action: Action::DeleteKeys(vec!["Sub".to_owned()]),
+        });
+        pol.put(Entry {
+            key: key.to_owned(),
+            name: String::new(),
+            action: Action::SecureKey(true),
+        });
+        // The same value again replaces its entry.
+        let i = pol.put(Entry {
+            key: key.to_lowercase(),
+            name: "on".to_owned(),
+            action: Action::Soft(Data::Sz("x".to_owned())),
+        });
+        assert_eq!(i, 0);
+        assert_eq!(pol.entries.len(), 4);
+        let again = PolFile::parse(&pol.to_bytes(), path).unwrap();
+        assert_eq!(again.entries, pol.entries, "what is written reads the same");
+        pol.scope = Scope::Computer;
+        // The keys as the first entry of each writes them, here in lower case.
+        let reg = pol.to_reg().unwrap().to_text().to_lowercase();
+        assert!(reg.contains("[hkey_local_machine\\software\\policies\\test]"));
+        assert!(reg.contains("\"old\"=-"));
+        assert!(reg.contains("[-hkey_local_machine\\software\\policies\\test\\sub]"));
+        assert!(reg.contains("; group policy lets only the administrators"));
+        // A registry file of two hives: the values of the hive of the file come in.
+        let text = "Windows Registry Editor Version 5.00\r\n\r\n\
+            [HKEY_LOCAL_MACHINE\\Software\\Policies\\Test]\r\n\
+            \"New\"=dword:00000002\r\n\
+            \"Gone\"=-\r\n\r\n\
+            [HKEY_CURRENT_USER\\Software\\Other]\r\n\
+            \"X\"=\"y\"\r\n";
+        let reg = RegFile::parse(text).unwrap();
+        let (taken, left) = pol.merge_reg(&reg);
+        assert_eq!(
+            (taken, left),
+            (3, 2),
+            "the key and two values in, the other hive out"
+        );
+        assert!(
+            pol.entries
+                .iter()
+                .any(|e| e.name == "New" && e.action == Action::Set(Data::Dword(2)))
+        );
+        assert!(
+            pol.entries
+                .iter()
+                .any(|e| e.name == "Gone" && e.action == Action::Delete)
+        );
+        let mut other = PolFile::empty(path);
+        other.put(Entry {
+            key: key.to_owned(),
+            name: "New".to_owned(),
+            action: Action::Set(Data::Dword(3)),
+        });
+        let count = pol.entries.len();
+        assert_eq!(pol.merge(&other), 1);
+        assert_eq!(
+            pol.entries.len(),
+            count,
+            "a value of the other file replaces its entry"
+        );
+        assert_eq!(Scope::from_name(Scope::User.name()), Scope::User);
     }
 
     #[test]

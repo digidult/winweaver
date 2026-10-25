@@ -316,6 +316,27 @@ fn removals_ask_first_and_two_catalogs_compare() {
         Act::Catalog(CatalogAct::Open("test".to_owned())),
         Act::Catalog(CatalogAct::Compare(CatalogRef::Import("copy".to_owned()))),
     ]);
+    let Some(Doc::Compare(cmp)) = app.shell.docs.get(app.shell.active) else {
+        panic!("a tab of the comparison: {}", app.shell.status);
+    };
+    assert!(
+        cmp.entries.iter().any(|e| e.id == "admx.sample.turnoff"),
+        "the policies only in the first catalog"
+    );
+    app.apply(vec![
+        Act::Catalog(CatalogAct::CompareSelect(
+            crate::catalogdiff::CmpKey::Policy("admx.sample.turnoff".to_owned()),
+        )),
+        Act::Catalog(CatalogAct::CompareShow(0)),
+    ]);
+    let Some(Doc::Compare(cmp)) = app.shell.docs.get(app.shell.active) else {
+        panic!("the comparison stays in front");
+    };
+    assert!(
+        !cmp.shown[0],
+        "the policies only in the first catalog hidden"
+    );
+    app.apply(vec![Act::Catalog(CatalogAct::ComparePage)]);
     let Some(Doc::Markdown(page)) = app.shell.docs.get(app.shell.active) else {
         panic!("a page of the comparison: {}", app.shell.status);
     };
@@ -325,5 +346,35 @@ fn removals_ask_first_and_two_catalogs_compare() {
         page.text
     );
     assert!(page.text.contains("`admx.sample.turnoff`"), "{}", page.text);
+    // A policy of the catalog tab copied into a new catalog, which opens in its editor.
+    let test_tab = app
+        .shell
+        .docs
+        .iter()
+        .position(|d| matches!(d, Doc::Catalog(c) if c.id == "test"))
+        .unwrap();
+    app.apply(vec![
+        Act::Shell(ShellAct::Activate(test_tab)),
+        Act::Catalog(CatalogAct::Select(Some(TreeKey::Rule(
+            "admx.sample.turnoff".to_owned(),
+        )))),
+        Act::Catalog(CatalogAct::CopyTo(None)),
+    ]);
+    assert_eq!(app.shell.active, test_tab, "the catalog tab stays in front");
+    let editor = app.shell.docs.iter().find_map(|d| match d {
+        Doc::CatalogEdit(e) => Some(e),
+        _ => None,
+    });
+    let editor = editor.expect("a new catalog in its editor");
+    assert!(editor.dirty);
+    assert!(
+        editor
+            .file
+            .rules
+            .iter()
+            .any(|r| r.id == "admx.sample.turnoff"),
+        "{}",
+        app.shell.status
+    );
     std::fs::remove_dir_all(&dir).unwrap();
 }

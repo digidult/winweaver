@@ -31,7 +31,7 @@ mod xml;
 
 pub use archive::{ARCHIVE_EXTENSION, Archive, read_archive};
 pub use compare::{Comparison, PolicyDifference, compare};
-pub use file::{CatalogFile, LangTexts};
+pub use file::{CatalogFile, CopyWhat, LangTexts};
 pub use merge::{merge, merge_texts};
 pub use rules::to_catalog_file;
 pub use templates::{Templates, Texts, Val, read_file, read_folder};

@@ -69,6 +69,26 @@ impl WinWeaver {
                 d.draft = draft;
                 Doc::CatalogEdit(Box::new(d))
             }
+            doc::POL_DRAFT => {
+                let Some(path) = path.clone() else {
+                    return false;
+                };
+                let bytes = doc::bytes_of_hex(text);
+                let Some(Ok(mut pol)) =
+                    bytes.map(|b| winweaver_core::pol::PolFile::parse(&b, &path))
+                else {
+                    return false;
+                };
+                let scope = document
+                    .get("scope")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or_default();
+                pol.scope = winweaver_core::pol::Scope::from_name(scope);
+                let mut d = polview::PolDoc::new(pol);
+                d.dirty = true;
+                d.draft = draft;
+                Doc::Pol(Box::new(d))
+            }
             doc::USERS_DRAFT => {
                 let Ok(file) = UsersFile::parse(text, "draft") else {
                     return false;

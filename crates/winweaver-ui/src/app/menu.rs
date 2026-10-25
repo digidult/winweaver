@@ -244,6 +244,8 @@ impl WinWeaver {
             Menu::CompareCatalog => self.compare_catalog_menu(shell, ui, acts),
             Menu::RegFileApply => regfile_apply_menu(shell, ui, acts),
             Menu::Pol => pol_menu(ui, acts),
+            Menu::CopyTo => copy_to_menu(shell, ui, acts),
+            Menu::PolRoot => pol_root_menu(shell, ui, acts),
         }
     }
 
@@ -360,6 +362,61 @@ impl WinWeaver {
     }
 }
 
+/// Where the selected policy or group of a catalog tab is copied: the catalogs open in an
+/// editor, or a new catalog.
+fn copy_to_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    let selected = matches!(
+        shell.active_doc(),
+        Some(Doc::Catalog(c)) if c.sel.is_some() || c.group.is_some()
+    );
+    if !selected {
+        ui.weak(tr("Select a policy or a group first."));
+        return;
+    }
+    let mut editors = 0;
+    for (i, doc) in shell.docs.iter().enumerate() {
+        if let Doc::CatalogEdit(e) = doc {
+            editors += 1;
+            if menu_entry(ui, icons::EDIT, &e.file.name, "", true) {
+                acts.push(Act::Catalog(CatalogAct::CopyTo(Some(i))));
+            }
+        }
+    }
+    if editors == 0 {
+        ui.weak(tr("No catalog is open in an editor."));
+    }
+    ui.separator();
+    if menu_entry(ui, icons::NEW, tr("A new catalog"), "", true) {
+        acts.push(Act::Catalog(CatalogAct::CopyTo(None)));
+    }
+}
+
+/// The hive the keys of the Group Policy file in front apply to; the files of Group Policy of
+/// this Windows have theirs from their folder.
+fn pol_root_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    use winweaver_core::pol::Scope;
+    let Some(Doc::Pol(d)) = shell.active_doc() else {
+        return;
+    };
+    let system = d.is_system();
+    if system {
+        ui.weak(tr("The folder of this file gives its root."));
+    }
+    for (scope, text) in [
+        (Scope::Computer, tr("The computer (HKEY_LOCAL_MACHINE)")),
+        (Scope::User, tr("The user (HKEY_CURRENT_USER)")),
+    ] {
+        let icon = if d.pol.scope == scope {
+            icons::CHECK
+        } else {
+            ""
+        };
+        if menu_entry(ui, icon, text, "", !system) {
+            acts.push(Act::Pol(PolAct::Root(scope)));
+        }
+    }
+}
+
 /// The Group Policy files: the computer's and the users' of this Windows, or any file.
 fn pol_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
     use winweaver_core::pol::Scope;
@@ -379,6 +436,7 @@ fn pol_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
             tr("Open a Group Policy file..."),
             PolAct::OpenFile,
         ),
+        (icons::NEW, tr("New Group Policy file"), PolAct::New),
     ] {
         if menu_entry(ui, icon, text, "", true) {
             acts.push(Act::Pol(act));

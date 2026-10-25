@@ -24,6 +24,15 @@ pub struct LangTexts {
     pub rules: IndexMap<String, (String, String)>,
 }
 
+/// What `CatalogFile::copy_from` takes of another catalog file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CopyWhat<'a> {
+    /// A policy (or its Disabled rule) with its Disabled rule `<id>.off`.
+    Policy(&'a str),
+    /// A group with the groups under it and their policies.
+    Group(&'a str),
+}
+
 /// A catalog file: the rules and groups of one import of policy templates.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CatalogFile {
@@ -119,6 +128,110 @@ impl CatalogFile {
             r.conflicts.retain(|c| c != &base && c != &off);
         }
         Ok(())
+    }
+
+    /// Copies a policy or a group of another catalog file into the group `into` of this one,
+    /// so a catalog of only the policies needed can be made and passed on. A policy keeps its
+    /// id (the same policy in two catalogs is one rule of the program, an alias in the other
+    /// tree) and replaces a copy made before; a group is made again under `into` by its title,
+    /// the groups under it too (a group of the same title there takes them), and the copied
+    /// rules keep only the conflicts with rules of this file. Their texts in other languages
+    /// come along. The whole file is checked and a failure changes nothing; the count of the
+    /// policies copied.
+    pub fn copy_from(
+        &mut self,
+        source: &CatalogFile,
+        what: CopyWhat<'_>,
+        into: &str,
+    ) -> Result<usize, String> {
+        let mut next = self.clone();
+        if !next.groups.iter().any(|g| g.id == into) {
+            return Err(format!("the file has no group {into}"));
+        }
+        // The groups of the source made again, each with the group of this file it became.
+        let mut groups: Vec<(String, String)> = Vec::new();
+        let rules: Vec<&Rule> = match what {
+            CopyWhat::Policy(id) => {
+                let base = id.strip_suffix(".off").unwrap_or(id);
+                let off = format!("{base}.off");
+                let found: Vec<&Rule> = source
+                    .rules
+                    .iter()
+                    .filter(|r| r.id == base || r.id == off)
+                    .collect();
+                if found.is_empty() {
+                    return Err(format!("the catalog has no policy {id}"));
+                }
+                found
+            }
+            CopyWhat::Group(gid) => {
+                let Some(top) = source.groups.iter().find(|g| g.id == gid) else {
+                    return Err(format!("the catalog has no group {gid}"));
+                };
+                let mut queue = vec![(top, into.to_owned())];
+                while let Some((group, parent)) = queue.pop() {
+                    let same = next.groups.iter().find(|x| {
+                        x.parent.as_deref() == Some(parent.as_str()) && x.title == group.title
+                    });
+                    let made = match same {
+                        Some(x) => x.id.clone(),
+                        None => next.new_group(&parent, &group.title)?,
+                    };
+                    if let Some(g) = next.groups.iter_mut().find(|x| x.id == made) {
+                        g.summary.clone_from(&group.summary);
+                    }
+                    for child in source
+                        .groups
+                        .iter()
+                        .filter(|c| c.parent.as_deref() == Some(group.id.as_str()))
+                    {
+                        queue.push((child, made.clone()));
+                    }
+                    groups.push((group.id.clone(), made));
+                }
+                source
+                    .rules
+                    .iter()
+                    .filter(|r| groups.iter().any(|(s, _)| *s == r.group))
+                    .collect()
+            }
+        };
+        let mut count = 0;
+        for rule in rules {
+            let mut copy = rule.clone();
+            copy.group = groups
+                .iter()
+                .find(|(s, _)| *s == rule.group)
+                .map_or_else(|| into.to_owned(), |(_, t)| t.clone());
+            if !copy.id.ends_with(".off") {
+                count += 1;
+            }
+            match next.rules.iter_mut().find(|r| r.id == copy.id) {
+                Some(r) => *r = copy,
+                None => next.rules.push(copy),
+            }
+            for (lang, texts) in &source.texts {
+                if let Some(t) = texts.rules.get(&rule.id) {
+                    let mine = next.texts.entry(lang.clone()).or_default();
+                    mine.rules.insert(rule.id.clone(), t.clone());
+                }
+            }
+        }
+        for (from, to) in &groups {
+            for (lang, texts) in &source.texts {
+                if let Some(title) = texts.groups.get(from) {
+                    let mine = next.texts.entry(lang.clone()).or_default();
+                    mine.groups.insert(to.clone(), title.clone());
+                }
+            }
+        }
+        let ids: HashSet<String> = next.rules.iter().map(|r| r.id.clone()).collect();
+        for rule in &mut next.rules {
+            rule.conflicts.retain(|c| ids.contains(c));
+        }
+        next.check()?;
+        *self = next;
+        Ok(count)
     }
 
     /// A new group of the file under one of its groups; its id.

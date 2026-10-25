@@ -112,6 +112,7 @@ impl App for WinWeaver {
             Some(DocKind::RegFile) => self.save_reg_doc(shell, ask),
             Some(DocKind::Users) => self.save_users_doc(shell, ask),
             Some(DocKind::Compare) => self.save_comparison(shell),
+            Some(DocKind::Pol) => self.save_pol_doc(shell, ask),
             _ => self.save_active(shell, ask),
         }
     }

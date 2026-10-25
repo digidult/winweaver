@@ -668,6 +668,64 @@ impl WinWeaver {
         shell.active = shell.docs.len() - 1;
     }
 
+    /// Copies the selected policy or group of the catalog tab in front into the catalog of an
+    /// editor tab, or into a new catalog made for it, under the group selected in the editor
+    /// (its root group without one). The catalog tab stays in front, so more can follow.
+    pub(crate) fn copy_to_catalog(&mut self, shell: &mut Shell<WinWeaver>, target: Option<usize>) {
+        let from = shell.active;
+        let Some(Doc::Catalog(c)) = shell.docs.get(from) else {
+            return;
+        };
+        let Some(source) = c.catalog(&self.imports).cloned() else {
+            return;
+        };
+        let (policy, group) = (c.sel.clone(), c.group.clone());
+        let target = match target {
+            Some(i) => i,
+            None => {
+                self.new_catalog(shell);
+                shell.active
+            }
+        };
+        let Some(Doc::CatalogEdit(e)) = shell.docs.get_mut(target) else {
+            return;
+        };
+        let what = match (&policy, &group) {
+            (Some(p), _) => admx::CopyWhat::Policy(p),
+            (None, Some(g)) => admx::CopyWhat::Group(g),
+            (None, None) => return,
+        };
+        let root = e
+            .file
+            .groups
+            .iter()
+            .find(|g| g.parent.as_deref() == Some(winweaver_core::catalog::ROOT_POLICIES))
+            .map(|g| g.id.clone());
+        let into = e
+            .group
+            .clone()
+            .filter(|g| e.file.groups.iter().any(|x| &x.id == g))
+            .or(root);
+        let Some(into) = into else {
+            return;
+        };
+        match e.file.copy_from(&source, what, &into) {
+            Ok(n) => {
+                e.dirty = true;
+                for g in &e.file.groups {
+                    e.expanded.insert(g.id.clone());
+                }
+                let name = e.file.name.clone();
+                shell.status = trf(
+                    "{n} policies copied into {name}",
+                    &[("n", &n), ("name", &name)],
+                );
+            }
+            Err(e) => shell.status = trf("Not copied: {e}", &[("e", &e)]),
+        }
+        shell.active = from;
+    }
+
     /// Saves the report of the comparison in front as a Markdown file.
     pub(crate) fn save_comparison(&mut self, shell: &mut Shell<WinWeaver>) {
         let Some(Doc::Compare(doc)) = shell.docs.get(shell.active) else {
@@ -746,6 +804,7 @@ impl WinWeaver {
                 self.reveal_selection(shell);
             }
             CatalogAct::ImportOpen => self.import_open_catalog(shell),
+            CatalogAct::CopyTo(target) => self.copy_to_catalog(shell, target),
             act @ (CatalogAct::CompareSelect(_)
             | CatalogAct::CompareExpand(..)
             | CatalogAct::CompareShow(_)
