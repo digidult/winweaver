@@ -121,6 +121,7 @@ fn check_param(id: &str, name: &str, param: &Param, rule: &Rule, problems: &mut 
             default,
             required,
             max_length,
+            pick,
             ..
         } => {
             if *required && default.is_empty() {
@@ -133,6 +134,15 @@ fn check_param(id: &str, name: &str, param: &Param, rule: &Rule, problems: &mut 
             {
                 problems.push(format!(
                     "rule {id}: parameter {name}: the default is longer than {max} characters"
+                ));
+            }
+            // A region is chosen into two parameters at once, so a rule has both picks.
+            if let Some(pick) = pick
+                && rule.param_picked(pick.partner()).is_none()
+            {
+                problems.push(format!(
+                    "rule {id}: parameter {name} picks {pick:?}, but no parameter of the rule picks {:?}",
+                    pick.partner()
                 ));
             }
         }

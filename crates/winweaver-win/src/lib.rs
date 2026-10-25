@@ -18,7 +18,8 @@ mod ffi;
 mod locales;
 #[cfg(windows)]
 mod native;
-
+#[cfg(windows)]
+mod regions;
 #[cfg(windows)]
 mod registry;
 #[cfg(all(windows, feature = "users"))]
@@ -65,6 +66,20 @@ pub fn locales() -> winweaver_core::resources::Locales {
     #[cfg(not(windows))]
     {
         winweaver_core::resources::Locales::default()
+    }
+}
+
+/// The regions of this Windows with their GeoIDs and names, the reader the window and the MCP
+/// server name for `winweaver_core::resources::set_region_reader`; none where the Windows API
+/// is not available.
+pub fn regions() -> winweaver_core::resources::Regions {
+    #[cfg(windows)]
+    {
+        regions::read()
+    }
+    #[cfg(not(windows))]
+    {
+        winweaver_core::resources::Regions::default()
     }
 }
 

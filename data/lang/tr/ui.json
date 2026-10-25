@@ -887,5 +887,8 @@
   "{n} running": "{n} çalışıyor",
   "{n} s": "{n} sn",
   "{taken} changes added, {left} of other hives left out": "{taken} değişiklik eklendi, diğer kovanlardan {left} tanesi dışarıda bırakıldı",
-  "{title} ({name}), default {value}": "{title} ({name}), varsayılan {value}"
+  "{title} ({name}), default {value}": "{title} ({name}), varsayılan {value}",
+  "a region": "bir bölge",
+  "The regions of Windows: a choice sets the GeoID and the code together": "Windows bölgeleri: bir seçim GeoID ve kodu birlikte ayarlar",
+  "Windows does not list this region": "Windows bu bölgeyi tanımıyor"
 }

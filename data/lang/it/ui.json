@@ -887,5 +887,8 @@
   "{n} running": "{n} in corso",
   "{n} s": "{n} s",
   "{taken} changes added, {left} of other hives left out": "{taken} modifiche aggiunte, {left} di altri hive escluse",
-  "{title} ({name}), default {value}": "{title} ({name}), predefinito {value}"
+  "{title} ({name}), default {value}": "{title} ({name}), predefinito {value}",
+  "a region": "una regione",
+  "The regions of Windows: a choice sets the GeoID and the code together": "Le regioni di Windows: una scelta imposta GeoID e codice insieme",
+  "Windows does not list this region": "Windows non conosce questa regione"
 }

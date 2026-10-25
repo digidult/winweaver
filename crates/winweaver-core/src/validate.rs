@@ -5,7 +5,7 @@
 
 use serde_json::Value;
 
-use crate::catalog::{Action, Catalog, Level, Param, Rule, check::same_value};
+use crate::catalog::{Action, Catalog, Level, Param, Pick, Rule, check::same_value};
 use crate::profile::{Account, Profile};
 use crate::resolver::{Resolution, State};
 
@@ -396,6 +396,9 @@ fn check_rules(
                 push(issues, Severity::Error, target(), text);
             }
         }
+        if let Some(text) = region_problem(catalog, profile, rule) {
+            push(issues, Severity::Warning, target(), text);
+        }
     }
     for (a, b) in &resolution.conflicts {
         push(
@@ -472,6 +475,38 @@ fn param_problems(
             }
             out
         }
+    }
+}
+
+/// What is wrong with the region of a rule whose parameters pick one: the GeoID and the code do
+/// not name one region Windows lists. Nothing where the list is empty (Windows is not there), so
+/// it is a warning of the check, never an error.
+fn region_problem(catalog: &Catalog, profile: &Profile, rule: &Rule) -> Option<String> {
+    let id_name = rule.param_picked(Pick::RegionId)?;
+    let code_name = rule.param_picked(Pick::Region)?;
+    let table = crate::regions::regions();
+    if table.is_empty() {
+        return None;
+    }
+    let text = |name: &str| {
+        profile
+            .param(catalog, &rule.id, name)
+            .and_then(|v| v.as_str().map(str::to_owned))
+            .unwrap_or_default()
+    };
+    let (id, code) = (text(id_name), text(code_name));
+    match (table.by_id(&id), table.by_code(&code)) {
+        (Some(a), Some(b)) if a.code == b.code => None,
+        (Some(a), Some(b)) => Some(format!(
+            "Parameters {id_name} and {code_name} name different regions: {id} is {} and {code} is {}",
+            a.name, b.name
+        )),
+        (None, _) => Some(format!(
+            "Parameter {id_name}: Windows lists no region with the GeoID {id}"
+        )),
+        (_, None) => Some(format!(
+            "Parameter {code_name}: Windows lists no region with the code {code}"
+        )),
     }
 }
 

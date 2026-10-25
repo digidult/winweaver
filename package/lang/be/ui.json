@@ -887,5 +887,8 @@
   "{n} running": "Выконваецца: {n}",
   "{n} s": "{n} с",
   "{taken} changes added, {left} of other hives left out": "Дададзена змен: {taken}, прапушчана з іншых кустоў: {left}",
-  "{title} ({name}), default {value}": "{title} ({name}), па змаўчанні {value}"
+  "{title} ({name}), default {value}": "{title} ({name}), па змаўчанні {value}",
+  "a region": "рэгіён",
+  "The regions of Windows: a choice sets the GeoID and the code together": "Рэгіёны Windows: выбар задае GeoID і код разам",
+  "Windows does not list this region": "Windows не ведае такога рэгіёну"
 }

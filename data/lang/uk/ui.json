@@ -887,5 +887,8 @@
   "{n} running": "Виконується: {n}",
   "{n} s": "{n} с",
   "{taken} changes added, {left} of other hives left out": "Додано змін: {taken}, пропущено з інших кущів: {left}",
-  "{title} ({name}), default {value}": "{title} ({name}), типово {value}"
+  "{title} ({name}), default {value}": "{title} ({name}), типово {value}",
+  "a region": "регіон",
+  "The regions of Windows: a choice sets the GeoID and the code together": "Регіони Windows: вибір задає GeoID і код разом",
+  "Windows does not list this region": "Windows не знає такого регіону"
 }

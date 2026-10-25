@@ -385,9 +385,13 @@ pub fn texts_for<'a>(texts: &'a [CatalogTexts], code: &str) -> Option<&'a Catalo
 
 impl WinWeaver {
     pub fn new(catalog: Catalog, texts: Vec<CatalogTexts>) -> Self {
-        // The input languages and layouts of this Windows, read at the first check of a profile.
+        // The input languages and layouts of this Windows, read at the first check of a profile,
+        // and its regions, read at the first check or detail of the rule of the user region.
         #[cfg(windows)]
-        winweaver_core::resources::set_locale_reader(winweaver_win::locales);
+        {
+            winweaver_core::resources::set_locale_reader(winweaver_win::locales);
+            winweaver_core::resources::set_region_reader(winweaver_win::regions);
+        }
         // The colours of the parts of the description, in every theme.
         style::install_colors(&views::SECTION_COLORS);
         Self {

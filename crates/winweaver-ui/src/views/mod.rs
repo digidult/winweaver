@@ -5,7 +5,7 @@ use eframe::egui::{self, CornerRadius, Margin, RichText, Stroke};
 use serde_json::Value;
 use winweaver_core::admx::CatalogFile;
 use winweaver_core::catalog::{
-    Action, Catalog, Group, ListNames, Param, ROOT_UNATTEND, Rule, check,
+    Action, Catalog, Group, ListNames, Param, Pick, ROOT_UNATTEND, Rule, check,
 };
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::resolver::State;

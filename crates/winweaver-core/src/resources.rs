@@ -241,6 +241,9 @@ impl Locales {
     }
 }
 
+/// The regions of Windows (the user region of a profile), read like the locales.
+pub use crate::regions::{Region, Regions, regions, set_region_reader};
+
 pub fn time_zones() -> &'static [TimeZone] {
     static ZONES: OnceLock<Vec<TimeZone>> = OnceLock::new();
     ZONES.get_or_init(|| jsonfile::parse(TIMEZONES, "timezones.json").unwrap_or_default())

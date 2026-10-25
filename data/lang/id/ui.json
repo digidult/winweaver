@@ -887,5 +887,8 @@
   "{n} running": "{n} berjalan",
   "{n} s": "{n} dtk",
   "{taken} changes added, {left} of other hives left out": "{taken} perubahan ditambahkan, {left} dari hive lain dilewati",
-  "{title} ({name}), default {value}": "{title} ({name}), bawaan {value}"
+  "{title} ({name}), default {value}": "{title} ({name}), bawaan {value}",
+  "a region": "sebuah wilayah",
+  "The regions of Windows: a choice sets the GeoID and the code together": "Wilayah Windows: satu pilihan mengatur GeoID dan kode bersama",
+  "Windows does not list this region": "Windows tidak mengenal wilayah ini"
 }

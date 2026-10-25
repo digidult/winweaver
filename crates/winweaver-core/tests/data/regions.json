@@ -1,0 +1,17 @@
+{
+  "regions": [
+    { "code": "AT", "id": 14, "name": "Austria" },
+    { "code": "CZ", "id": 75, "name": "Czechia" },
+    { "code": "DE", "id": 94, "name": "Germany" },
+    { "code": "ES", "id": 217, "name": "Spain" },
+    { "code": "FR", "id": 84, "name": "France" },
+    { "code": "GB", "id": 242, "name": "United Kingdom" },
+    { "code": "ID", "id": 111, "name": "Indonesia" },
+    { "code": "IT", "id": 118, "name": "Italy" },
+    { "code": "MD", "id": 200, "name": "Moldova" },
+    { "code": "PL", "id": 191, "name": "Poland" },
+    { "code": "TR", "id": 235, "name": "Turkey" },
+    { "code": "UA", "id": 241, "name": "Ukraine" },
+    { "code": "US", "id": 244, "name": "United States" }
+  ]
+}

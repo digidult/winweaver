@@ -14,6 +14,7 @@ pub mod import;
 pub mod pol;
 pub mod profile;
 pub mod regfile;
+pub mod regions;
 pub mod registry;
 pub mod render;
 pub mod resolver;

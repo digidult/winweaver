@@ -364,6 +364,7 @@ fn policy_rules(p: &Policy, id: &str, group: &str) -> Result<(Rule, Option<Rule>
                         default: default.clone(),
                         required: *required && !default.is_empty(),
                         max_length: max_length.filter(|&m| default.chars().count() <= m),
+                        pick: None,
                     },
                 )
             }

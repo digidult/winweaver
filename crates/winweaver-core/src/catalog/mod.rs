@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use std::path::Path;
 
 pub use model::{
-    Action, EnumValue, Group, GroupsFile, Level, Lines, ListNames, Param, Phase, RegKind, Rule,
-    RulesFile,
+    Action, EnumValue, Group, GroupsFile, Level, Lines, ListNames, Param, Phase, Pick, RegKind,
+    Rule, RulesFile,
 };
 
 use crate::jsonfile::{self, JsonError};

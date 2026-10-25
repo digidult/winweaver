@@ -6,12 +6,72 @@ use serde_json::Value;
 use winweaver_core::catalog::Catalog;
 use winweaver_core::profile::{Account, Profile};
 use winweaver_core::resolver;
+use winweaver_core::resources::{self, Regions};
 use winweaver_core::validate::{self, Severity, Target};
 
+/// The regions of the tests, in place of the ones of Windows.
+fn regions() -> Regions {
+    Regions::parse(include_str!("data/regions.json"))
+}
+
 fn preset(name: &str) -> Profile {
+    // Before the first check, since the list is read once a process.
+    resources::set_region_reader(regions);
     let path =
         Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("../../data/presets/{name}.wwprofile"));
     Profile::load(&path).unwrap()
+}
+
+/// The region of a profile is one Windows lists: its GeoID and its two-letter code name one
+/// region of the list, else the check warns (a warning, since without Windows the list is empty
+/// and nothing is checked).
+#[test]
+fn the_region_is_one_windows_lists() {
+    let catalog = Catalog::embedded().unwrap();
+    let rule = "default-user.region";
+    let mut profile = preset("office");
+    profile.set_on(rule, true);
+    let warnings = |profile: &Profile| -> Vec<String> {
+        check(&catalog, profile)
+            .into_iter()
+            .filter(|i| i.severity == Severity::Warning && i.target == Target::Rule(rule.into()))
+            .map(|i| i.text)
+            .collect()
+    };
+    assert!(warnings(&profile).is_empty(), "{:?}", warnings(&profile));
+    profile.set_param(&catalog, rule, "geo_id", Value::from("94"));
+    profile.set_param(&catalog, rule, "geo_name", Value::from("de"));
+    assert!(warnings(&profile).is_empty(), "{:?}", warnings(&profile));
+    profile.set_param(&catalog, rule, "geo_name", Value::from("UA"));
+    let texts = warnings(&profile);
+    assert!(
+        texts.iter().any(|t| t.contains("different regions")),
+        "{texts:?}"
+    );
+    profile.set_param(&catalog, rule, "geo_id", Value::from("999"));
+    let texts = warnings(&profile);
+    assert!(
+        texts
+            .iter()
+            .any(|t| t.contains("no region with the GeoID 999")),
+        "{texts:?}"
+    );
+    profile.set_param(&catalog, rule, "geo_id", Value::from("241"));
+    profile.set_param(&catalog, rule, "geo_name", Value::from("XX"));
+    let texts = warnings(&profile);
+    assert!(
+        texts
+            .iter()
+            .any(|t| t.contains("no region with the code XX")),
+        "{texts:?}"
+    );
+    assert_eq!(
+        catalog
+            .rule(rule)
+            .unwrap()
+            .param_picked(winweaver_core::catalog::Pick::Region),
+        Some("geo_name")
+    );
 }
 
 fn check(catalog: &Catalog, profile: &Profile) -> Vec<validate::Issue> {

@@ -2,7 +2,7 @@
 //! parameters.
 
 use serde_json::{Value, json};
-use winweaver_core::catalog::{Action, Catalog, Param, Rule, check};
+use winweaver_core::catalog::{Action, Catalog, Param, Pick, Rule, check};
 use winweaver_core::resolver::{self, State as RuleState};
 
 use super::{
@@ -48,7 +48,7 @@ pub(super) const LIST_RULES: Tool = Tool {
 
 pub(super) const GET_RULE: Tool = Tool {
     name: "get_rule",
-    description: "Everything about one rule: texts, parameters with their values in the current profile, what it writes, dependencies and conflicts.",
+    description: "Everything about one rule: texts, parameters with their values in the current profile (a text parameter chosen from a list of Windows names its pick: region-id or region), what it writes, dependencies and conflicts.",
     needs: Needs::READ,
     schema: || schema(json!({ "id": s("A rule id") }), &["id"]),
     run: get_rule,
@@ -86,14 +86,14 @@ pub(super) const SET_RULE: Tool = Tool {
 
 pub(super) const SET_PARAM: Tool = Tool {
     name: "set_param",
-    description: "Sets a parameter of a rule of the current profile. Mode edit.",
+    description: "Sets a parameter of a rule of the current profile. A parameter that picks a region (region-id or region) takes a GeoID or a two-letter code of a region Windows lists and sets both parameters of the rule. Mode edit.",
     needs: Needs::EDIT,
     schema: || {
         schema(
             json!({
                 "id": s("A rule id"),
                 "name": s("The parameter name"),
-                "value": { "description": "An option of an enum, a whole number in range, a text, or for a list an array of texts" },
+                "value": { "description": "An option of an enum, a whole number in range, a text, for a list an array of texts, for a region its GeoID or its two-letter code" },
             }),
             &["id", "name", "value"],
         )
@@ -215,9 +215,10 @@ fn param_json(
             default,
             required,
             max_length,
+            pick,
         } => json!({
             "name": name, "type": "string", "title": title, "default": default, "value": value, "required": required,
-            "max_length": max_length,
+            "max_length": max_length, "pick": pick,
         }),
         Param::List { title, default } => json!({
             "name": name, "type": "list", "title": title, "default": default, "value": value,
@@ -462,6 +463,9 @@ fn set_param(server: &Server, state: &mut State, args: &Args<'_>) -> Outcome {
         .get("value")
         .cloned()
         .ok_or_else(|| fail(Kind::Invalid, "the argument value is missing"))?;
+    if param.pick().is_some() {
+        return set_region(catalog, state, rule, &pname, value);
+    }
     let value = param_value(param, &pname, value)?;
     let doc = current_mut(state);
     let changed = doc.profile.set_param(catalog, &id, &pname, value.clone());
@@ -469,6 +473,63 @@ fn set_param(server: &Server, state: &mut State, args: &Args<'_>) -> Outcome {
         doc.dirty = true;
     }
     Ok(json!({ "id": id, "name": pname, "value": value, "changed": changed }))
+}
+
+/// Sets the region of a rule from a GeoID or a two-letter code: both parameters of the rule
+/// (the GeoID and the code) take the region Windows lists for it. Where Windows is not (no
+/// list), the parameter alone takes the text as it is.
+fn set_region(
+    catalog: &Catalog,
+    state: &mut State,
+    rule: &Rule,
+    pname: &str,
+    value: Value,
+) -> Outcome {
+    let text = value
+        .as_str()
+        .ok_or_else(|| fail(Kind::Invalid, "a text is needed"))?;
+    let text = super::profiles::one_line(text, 16)?;
+    let table = winweaver_core::resources::regions();
+    let Some(region) = table.find(&text) else {
+        if !table.is_empty() {
+            return Err(fail(
+                Kind::Invalid,
+                format!("Windows lists no region with the code or the GeoID {text}"),
+            ));
+        }
+        let doc = current_mut(state);
+        let changed = doc
+            .profile
+            .set_param(catalog, &rule.id, pname, Value::from(text.clone()));
+        if changed {
+            doc.dirty = true;
+        }
+        return Ok(json!({ "id": rule.id, "name": pname, "value": text, "changed": changed }));
+    };
+    let id_name = rule.param_picked(Pick::RegionId).unwrap_or(pname);
+    let code_name = rule.param_picked(Pick::Region).unwrap_or(pname);
+    let mut params = serde_json::Map::new();
+    params.insert(id_name.to_owned(), Value::from(region.id_text()));
+    params.insert(code_name.to_owned(), Value::from(region.code.clone()));
+    let doc = current_mut(state);
+    let mut changed = false;
+    for (name, value) in &params {
+        changed |= doc
+            .profile
+            .set_param(catalog, &rule.id, name, value.clone());
+    }
+    if changed {
+        doc.dirty = true;
+    }
+    let own = params.get(pname).cloned().unwrap_or(Value::from(text));
+    Ok(json!({
+        "id": rule.id,
+        "name": pname,
+        "value": own,
+        "changed": changed,
+        "region": { "code": region.code, "id": region.id, "name": region.name },
+        "params": params,
+    }))
 }
 
 fn set_group(server: &Server, state: &mut State, args: &Args<'_>) -> Outcome {

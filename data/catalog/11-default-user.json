@@ -349,8 +349,8 @@
       "effect": "Default is Ukraine (241, UA).",
       "versions": "Windows 10 1803+ reads the Name value first.",
       "params": {
-        "geo_id": {"type": "string", "title": "Country GeoID", "default": "241"},
-        "geo_name": {"type": "string", "title": "Two-letter country code", "default": "UA"}
+        "geo_id": {"type": "string", "title": "Country GeoID", "default": "241", "pick": "region-id"},
+        "geo_name": {"type": "string", "title": "Two-letter country code", "default": "UA", "pick": "region"}
       },
       "actions": [
         {

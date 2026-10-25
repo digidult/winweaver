@@ -46,8 +46,10 @@ fn failed(text: impl Into<String>) -> Stop {
 /// Runs a command and turns its end into the exit code: 0 when it wrote its files, 2 for a wrong
 /// use of the command line, 1 for a failure.
 pub fn run(command: &str, args: &[String]) -> ExitCode {
-    // The input languages and layouts of this Windows, read at the first check or build.
+    // The input languages and layouts of this Windows and its regions, read at the first check
+    // or build.
     winweaver_core::resources::set_locale_reader(winweaver_win::locales);
+    winweaver_core::resources::set_region_reader(winweaver_win::regions);
     let result = match command {
         "--build" => build(args),
         "--import-admx" => import_admx(args),

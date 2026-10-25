@@ -89,6 +89,28 @@ pub struct EnumValue {
     pub title: String,
 }
 
+/// A list of Windows a text parameter is chosen from: the window offers the list beside the
+/// field, the check of a profile names a value the list lacks, and the MCP server takes any
+/// item of the list. The two picks of a region come in pairs: choosing a region sets both.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Pick {
+    /// The GeoID of a region of Windows (`241`).
+    RegionId,
+    /// The two-letter code of a region of Windows (`UA`).
+    Region,
+}
+
+impl Pick {
+    /// The other pick of the pair a region sets together.
+    pub fn partner(self) -> Pick {
+        match self {
+            Pick::RegionId => Pick::Region,
+            Pick::Region => Pick::RegionId,
+        }
+    }
+}
+
 /// A parameter of a rule, filled into the `{name}` placeholders of its actions.
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(tag = "type")]
@@ -122,6 +144,9 @@ pub enum Param {
         /// template), none for no limit of its own.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         max_length: Option<usize>,
+        /// A list of Windows the text is chosen from (the regions), none for a free text.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pick: Option<Pick>,
     },
     /// A list of texts: the items of a `reg-list`, or the lines of a multi-line value written by a
     /// `reg` action whose value is the parameter alone. Empty items are left out.
@@ -155,6 +180,24 @@ impl Param {
             Param::Text { default, .. } => Value::from(default.as_str()),
             Param::List { default, .. } => Value::from(default.clone()),
         }
+    }
+
+    /// The list of Windows a text parameter is chosen from.
+    pub fn pick(&self) -> Option<Pick> {
+        match self {
+            Param::Text { pick, .. } => *pick,
+            _ => None,
+        }
+    }
+}
+
+impl Rule {
+    /// The name of the parameter of the rule chosen from a list of Windows.
+    pub fn param_picked(&self, pick: Pick) -> Option<&str> {
+        self.params
+            .iter()
+            .find(|(_, p)| p.pick() == Some(pick))
+            .map(|(name, _)| name.as_str())
     }
 }
 

@@ -482,6 +482,95 @@ pub(crate) fn rule_description(
     }
 }
 
+/// The most characters a GeoID or a code of a region takes in its field.
+const REGION_TEXT_MAX: usize = 16;
+
+/// A text parameter chosen from the regions of Windows: the field, typed freely, with the list
+/// of the regions beside it filtered by what is typed, and the name of the region after it. A
+/// choice from the list sets the GeoID and the code of the rule together, whichever field it
+/// is made in. Whether the text of the field changed.
+fn region_param(
+    ui: &mut egui::Ui,
+    rule: &Rule,
+    name: &str,
+    pick: Pick,
+    text: &mut String,
+    acts: &mut Vec<Act>,
+) -> bool {
+    let table = winweaver_core::resources::regions();
+    let mut changed = false;
+    ui.horizontal_wrapped(|ui| {
+        let field = egui::TextEdit::singleline(text)
+            .id_salt(format!("{}.{name}", rule.id))
+            .char_limit(REGION_TEXT_MAX)
+            .desired_width(style::size(ui, 100.0));
+        changed = ui.add(field).changed();
+        if table.is_empty() {
+            return;
+        }
+        let known = match pick {
+            Pick::RegionId => table.by_id(text),
+            Pick::Region => table.by_code(text),
+        };
+        let needle = if known.is_some() {
+            String::new()
+        } else {
+            text.trim().to_lowercase()
+        };
+        let shown = known.map_or_else(|| tr("a region").to_owned(), |r| r.name.clone());
+        let mut chosen = None;
+        egui::ComboBox::from_id_salt(("region", rule.id.as_str(), name))
+            .selected_text(shown)
+            .width(style::size(ui, 240.0))
+            .height(360.0)
+            .show_ui(ui, |ui| {
+                for region in &table.regions {
+                    let hay =
+                        format!("{} {} {}", region.name, region.code, region.id).to_lowercase();
+                    if !hay.contains(&needle) {
+                        continue;
+                    }
+                    let on = known.is_some_and(|k| k.code == region.code);
+                    let label = format!("{} ({}, {})", region.name, region.code, region.id);
+                    if ui.selectable_label(on, label).clicked() && !on {
+                        chosen = Some(region.clone());
+                    }
+                }
+            })
+            .response
+            .on_hover_text(tr(
+                "The regions of Windows: a choice sets the GeoID and the code together",
+            ));
+        match known {
+            Some(r) => {
+                let both = format!("{} {}", r.code, r.id);
+                ui.label(style::muted(ui, both, 12.0));
+            }
+            None if !text.trim().is_empty() => {
+                let warn = ui.visuals().warn_fg_color;
+                ui.colored_label(warn, tr("Windows does not list this region"));
+            }
+            None => {}
+        }
+        if let Some(r) = chosen {
+            let values = [
+                (Pick::RegionId, r.id_text()),
+                (Pick::Region, r.code.clone()),
+            ];
+            for (p, value) in values {
+                if let Some(param) = rule.param_picked(p) {
+                    acts.push(Act::Profile(ProfileAct::SetParam(
+                        rule.id.clone(),
+                        param.to_owned(),
+                        Value::from(value),
+                    )));
+                }
+            }
+        }
+    });
+    changed
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn param_editor(
     ui: &mut egui::Ui,
@@ -584,15 +673,23 @@ pub(crate) fn param_editor(
                 )));
             }
         }
-        Param::Text { max_length, .. } => {
+        Param::Text {
+            max_length, pick, ..
+        } => {
             let mut s = current.as_str().unwrap_or("").to_owned();
-            let mut edit = egui::TextEdit::singleline(&mut s)
-                .id_salt(format!("{}.{name}", rule.id))
-                .desired_width(ui.available_width());
-            if let Some(max) = max_length {
-                edit = edit.char_limit(*max);
-            }
-            if ui.add(edit).changed() {
+            let changed = match pick {
+                Some(pick) => region_param(ui, rule, name, *pick, &mut s, acts),
+                None => {
+                    let mut edit = egui::TextEdit::singleline(&mut s)
+                        .id_salt(format!("{}.{name}", rule.id))
+                        .desired_width(ui.available_width());
+                    if let Some(max) = max_length {
+                        edit = edit.char_limit(*max);
+                    }
+                    ui.add(edit).changed()
+                }
+            };
+            if changed {
                 acts.push(Act::Profile(ProfileAct::SetParam(
                     rule.id.clone(),
                     name.to_owned(),
