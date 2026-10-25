@@ -81,6 +81,8 @@ ersten Anmeldung nummeriert, etwa Russisch (Ukraine), erhält das Layout, das Wi
 bis zu dieser Anmeldung nennt die Antwortdatei die Sprache, zu der sie gehört. Die Sprachen und Layouts
 stammen aus dem Windows, auf dem WinWeaver läuft, mit ihren Namen in seiner Sprache.
 
+Die Regel **Benutzerregion** (`default-user.region`) im Standardbenutzerprofil hält die GeoID und den Zweibuchstabencode des Landes neuer Benutzer. Beide Felder werden frei getippt, und die Liste neben jedem hält alle Regionen, die Windows kennt, gefiltert nach dem Getippten: eine Auswahl setzt GeoID und Code zugleich, und der Name der Region erscheint nach den Feldern. Die Prüfung warnt, wenn die beiden Werte nicht eine Region der Liste benennen.
+
 ## Benutzerdateien
 
 Eine Benutzerdatei (`.wwusers`) listet die lokalen Konten, die auf einem PC anzulegen sind, mit ihren
@@ -214,6 +216,8 @@ Profil, stehen unter **Unbekannte Optionen** am Ende der Struktur und werden bei
 mit einer Warnung beim Öffnen des Profils und beim Erstellen der Antwortdatei. **Kataloge laden** in
 dieser Gruppe findet die Importe, die sie enthalten, und lädt nur diese. Eine Einstellung (Allgemein,
 Fenster) blendet die Gruppe aus.
+
+Das Menü **Kataloge** in der Leiste eines Profils führt jede Katalogdatei in `imports/` auf, geladen oder nicht: eine geladene trägt ein Häkchen und die Akzentfarbe, ein Klick öffnet ihre Registerkarte; eine andere wird mit einem Klick geladen und öffnet ebenfalls ihre Registerkarte. Die Liste wird bei jedem Öffnen des Menüs neu gelesen.
 
 Ein Zip-Archiv mit Vorlagen, wie Chrome, Edge und Firefox sie ausliefern, oder mit einer Katalogdatei wird
 mit **Archiv importieren...** importiert und ohne Entpacken gelesen.

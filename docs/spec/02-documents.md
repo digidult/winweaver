@@ -283,7 +283,7 @@ portable and bound to no machine: its only secret is the master password of the 
 ```
 
 `dark` names the base; a colour the theme leaves out keeps the base. The fonts are families of the fonts
-folder of Windows (empty: Segoe UI, Consolas and Segoe UI Emoji), the size from 10 to 20 points. `colors`
+folder of Windows (empty: Segoe UI, Consolas and Segoe UI Emoji), the size from 10 to 36 points. `colors`
 holds the colours of the palette by name, and the colours a program adds to the themes by their names. A
 file `themes/<id>.json` in the same layout is read too; a `.wwtheme` file of the same id wins.
 

@@ -58,6 +58,11 @@ lists the planned changes.
   names in the language of Windows, each item of the list with a layout of its choice).
 - The accounts of a users file go into the form Accounts, and the accounts of a profile make a users file
   (section 12).
+- The user region (`default-user.region`): its two text parameters pick a region of Windows (`pick`
+  `region-id` for the GeoID, `region` for the two-letter code; a catalog has both of the pair). The
+  regions come from the Windows the program runs on (`EnumSystemGeoNames`, their GeoIDs and names in the
+  language of Windows), never from an embedded list; the fields are typed freely with the list beside
+  them, and a choice sets both.
 - Drafts of unsaved profiles; the tabs of the last session; recent files; a new profile from a preset.
 
 ## 3. Check and build
@@ -70,7 +75,8 @@ lists the planned changes.
   one the profile lacks, a tag that is not a language tag, an input language Windows does not know, a rule
   chosen on but blocked, a baseline rule off, two rules in conflict, a parameter outside its options or
   range, an empty required text, two parameters that must differ, a text of a script outside ASCII, a list
-  item without `=` or a name twice, options of a catalog that is not loaded.
+  item without `=` or a name twice, options of a catalog that is not loaded, a region whose GeoID and
+  code do not name one region Windows lists (a warning, nothing where Windows is not).
 - Build (`F9`): `output/autounattend.xml` from the runtime templates (`data/templates/`: the skeleton and
   the scripts with their slots): the passes with their components for amd64 and arm64, the embedded
   scripts (Setup-System, Setup-User, Post-OOBE with its scheduled task, the script of the computer name
@@ -132,7 +138,9 @@ lists the planned changes.
 - An ADMX file (with the ADML of the folders of the cultures next to it) or a catalog file opens as a
   catalog tab without importing it; Import in its bar imports it.
 - Only the checked catalog files are ever read; the settings list the others by their header (the first
-  16 KB) with their size, and unchecking one drops it from memory and closes its tab.
+  16 KB) with their size, and unchecking one drops it from memory and closes its tab. The menu Catalogs of
+  a profile lists every file of the folder, read again when it opens: a loaded one marked and in the
+  accent colour opens its tab, another one loads at a click and opens its tab.
 - Options of a profile whose catalog is not loaded are kept, listed in the tree as unknown, warned of at
   the open and at the check, and left out of the build; Load catalogs reads only the rule ids of the files
   that are not loaded, and checks and loads the ones that hold some, the templates of this Windows first.
@@ -179,6 +187,9 @@ lists the planned changes.
   `create_registry_key`, `delete_registry_key`, `read_registry_rights`, `set_registry_rights`). Resources:
   the catalog, the current profile, the presets and the skill for agents (`winweaver://skill`). Every error
   starts with its kind (`not_allowed`, `not_found`, `invalid`, `write_failed`, `read_failed`).
+- `get_rule` names the pick of a text parameter chosen from a list of Windows (`region-id`, `region`);
+  `set_param` of such a parameter takes a GeoID or a two-letter code of a region Windows lists and sets
+  both parameters of the rule, naming the region and both values in its answer.
 - Nothing through MCP applies a profile to this PC, elevates or imports templates; the registry changes
   only with `registry` write (and the rights of the process), the bookmarks and catalog files only with
   `edit_library`. Passwords and product keys are `***` in every answer.

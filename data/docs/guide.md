@@ -75,6 +75,8 @@ sign-in, such as Russian (Ukraine), gets the layout Windows gives it then, and t
 language it belongs to until that sign-in. The languages and layouts are the ones of the Windows
 WinWeaver runs on, by their names in its language.
 
+The rule **User region** (`default-user.region`) under the default user profile holds the GeoID and the two-letter code of the country of new users. Its two fields are typed freely, and the list beside each holds every region Windows knows, filtered by what is typed: a choice sets both the GeoID and the code at once, and the name of the region shows after the fields. The check warns when the two do not name one region of the list.
+
 ## Users files
 
 A users file (`.wwusers`) lists the local accounts to make on a PC with their passwords, encrypted under
@@ -196,6 +198,8 @@ that is not loaded: they stay in the profile unchanged, are listed under **Unkno
 the tree and are left out of the build, with a warning when the profile opens and when the answer file is
 built. **Load catalogs** in that group finds the imports that hold them and loads only those. A setting
 (General, Window) hides the group.
+
+The menu **Catalogs** in the bar of a profile lists every catalog file of `imports/`, loaded or not: a loaded one has a mark and the accent colour, and a click opens its tab; another one loads at a click and opens its tab too. The list is read again every time the menu opens.
 
 A zip archive of templates, as Chrome, Edge and Firefox ship them, or of a catalog file is imported with
 **Import an archive...** and read without unpacking it.

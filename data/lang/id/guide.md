@@ -77,6 +77,8 @@ Rusia (Ukraina), mendapat tata letak yang diberikan Windows saat itu, dan sampai
 menyebut bahasa induknya. Bahasa dan tata letak berasal dari Windows tempat WinWeaver berjalan, dengan
 nama dalam bahasanya.
 
+Aturan **Wilayah pengguna** (`default-user.region`) pada profil pengguna bawaan menyimpan GeoID dan kode dua huruf negara pengguna baru. Kedua bidangnya diketik bebas, dan daftar di samping masing-masing memuat semua wilayah yang dikenal Windows, disaring menurut yang diketik: satu pilihan mengatur GeoID dan kode sekaligus, dan nama wilayah tampil setelah bidang. Pemeriksaan memperingatkan bila kedua nilai itu tidak menyebut satu wilayah yang sama dari daftar.
+
 ## File pengguna
 
 File pengguna (`.wwusers`) mencantumkan akun lokal yang akan dibuat di PC beserta kata sandinya,
@@ -198,6 +200,8 @@ impor yang tidak dimuat: opsi tetap di profil tanpa perubahan, tercantum di **Op
 pohon, dan tidak disertakan dalam pembuatan, dengan peringatan saat profil dibuka dan saat file jawaban
 dibuat. **Muat katalog** di grup itu menemukan impor yang memuatnya dan hanya memuat impor tersebut.
 Sebuah pengaturan (Umum, Jendela) menyembunyikan grup itu.
+
+Menu **Katalog** pada bilah profil mencantumkan setiap berkas katalog di `imports/`, dimuat atau tidak: yang dimuat bertanda centang dan berwarna aksen, dan klik membuka tabnya; yang lain dimuat dengan klik dan juga membuka tabnya. Daftar dibaca ulang setiap kali menu dibuka.
 
 Arsip zip berisi templat, seperti yang dirilis Chrome, Edge, dan Firefox, atau berisi file katalog diimpor
 dengan **Impor arsip...** dan dibaca tanpa diekstrak.

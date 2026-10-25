@@ -77,6 +77,8 @@ Ukraynaca (Genişletilmiş) ve Ukraynaca. Windows'un yalnızca ilk oturum açmad
 dilin ait olduğu dili adlandırır. Diller ve düzenler, WinWeaver'ın çalıştığı Windows'tan, onun dilindeki
 adlarıyla gelir.
 
+Varsayılan kullanıcı profilindeki **Kullanıcı bölgesi** (`default-user.region`) kuralı, yeni kullanıcıların ülkesinin GeoID'sini ve iki harfli kodunu tutar. İki alanı da serbestçe yazılır ve her birinin yanındaki liste, Windows'un bildiği bütün bölgeleri yazılana göre süzülmüş olarak içerir: bir seçim GeoID ve kodu birlikte ayarlar, bölgenin adı alanlardan sonra gösterilir. Denetim, iki değer listedeki tek bir bölgeyi adlandırmadığında uyarır.
+
 ## Kullanıcı dosyaları
 
 Bir kullanıcı dosyası (`.wwusers`), bir bilgisayarda oluşturulacak yerel hesapları, aynı dosyada bir ana
@@ -201,6 +203,8 @@ yüklenmemiş bir içeri aktarımın seçeneklerini içerebilir: bunlar profilde
 sonunda **Bilinmeyen seçenekler** altında listelenir ve oluşturmaya alınmaz; profil açılırken ve yanıt
 dosyası oluşturulurken bir uyarı verilir. Bu gruptaki **Katalogları yükle**, onları içeren içeri
 aktarımları bulur ve yalnızca bunları yükler. Bir ayar (Genel, Pencere) grubu gizler.
+
+Bir profilin çubuğundaki **Kataloglar** menüsü, yüklü olsun olmasın `imports/` içindeki her katalog dosyasını listeler: yüklü olanın bir işareti ve vurgu rengi vardır, tıklamak sekmesini açar; diğeri tıklamayla yüklenir ve o da sekmesini açar. Liste, menü her açıldığında yeniden okunur.
 
 Chrome, Edge ve Firefox'un yayımladığı biçimdeki bir şablon zip arşivi veya bir katalog dosyası arşivi
 **Arşiv içeri aktar...** ile içeri aktarılır ve açılmadan okunur.

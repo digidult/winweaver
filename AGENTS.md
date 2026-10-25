@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 25.10.2026.
+Updated with every change of structure, commands or task status. Last update: 26.10.2026.
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -69,7 +69,9 @@ text editor wedit.
 │   │                      translations), paths (a file inside the program folder kept relative to it),
 │   │                      profile (.wwprofile, set_param and set_group of an edit), resolver, validate (the
 │   │                      check of a profile by what it checks), resources (time zones, editions with their
-│   │                      keys, the input languages and layouts Windows lists), diff (.wwdiff, ItemKey: the
+│   │                      keys, the input languages and layouts Windows lists), regions (the regions of
+│   │                      Windows with their GeoIDs, read like the locales; re-exported by resources),
+│   │                      diff (.wwdiff, ItemKey: the
 │   │                      keys of its items), bookmarks (.wwmarks), clock, render/ (autounattend.xml from the
 │   │                      templates: text, params, ps, xml, languages, name, accounts, answer: one function a
 │   │                      pass), thispc/ (plan, report, evaluate, judge, capture, memory: the checks of a
@@ -96,8 +98,8 @@ text editor wedit.
 │   │                      Windows), execute/ (the executor of an apply plan with its backup, one function an
 │   │                      operation in ops.rs, the hive of the default user in hive.rs, the start of the
 │   │                      executable as administrator), locales.rs (the input languages and layouts of
-│   │                      Windows), users.rs (the accounts of this PC read, created and changed for a users
-│   │                      file)
+│   │                      Windows), regions.rs (the regions of Windows: EnumSystemGeoNames, GetGeoInfoEx),
+│   │                      users.rs (the accounts of this PC read, created and changed for a users file)
 │   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal with Outcome, token),
 │   │                      config.rs (the .wwmcp configuration files), log.rs (the JSON lines log, the crash
 │   │                      handlers), tools/ (mod.rs: the table TOOLS of the 36 tools, each with its name,
@@ -337,6 +339,31 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - Of the actions of one rule on one value (a removal for a clean start, then the value) only the last is
   checked (`thispc::plan`). A rule partly in effect is read as off, and the read names what differs
   (`Reading::differing`, `CaptureSummary::partly`, a warning on the rule in the message bar).
+- The user region (`default-user.region`): the two text parameters pick a region (`Param::Text` has
+  `pick`: `Pick::RegionId` on the GeoID, `Pick::Region` on the two-letter code; the catalog check wants both
+  of the pair, `Rule::param_picked` finds them). `resources::Regions` (`regions.rs` of the core) holds what
+  Windows lists, read once at the first use by the reader the window, the MCP server and the command line
+  name (`set_region_reader(winweaver_win::regions)`: every nation of `EnumSystemGeoNames` with its GeoID
+  and its name of `GetGeoInfoEx`); the core tests read `tests/data/regions.json` in the helper `preset` of
+  `tests/validate.rs`, before the first check. The detail panel (`views::region_param`) types the field
+  freely with the list beside it filtered by the text, and a choice sets both parameters
+  (`ProfileAct::SetParam` twice); the check warns when the GeoID and the code do not name one region of the
+  list, nothing where the list is empty (no Windows). MCP: `get_rule` names the `pick` of a parameter and
+  `set_param` of such a parameter takes a code or a GeoID and sets both (`set_region`).
+- The menu Catalogs lists every catalog file of `imports/` (`Full::import_list`, read again by
+  `ImportAct::RefreshList` when the menu opens: `catalogs_menu` sees a gap in `cumulative_pass_nr`), a
+  loaded one with `icons::CHECK` and its text in the accent colour (`ww::shell::menu_entry_colored`), a
+  click on one not loaded `CatalogAct::LoadAndOpen` (load, rebuild, open its tab).
+- Text sizes: a theme has a size of `style::SIZES` (10 to 36), offered as `style::SIZE_STEPS` (by one to
+  20, then 22, 24, 26, 28, 32, 36). The chrome scales with it through `style::at_least` (never below the
+  size of the layout): the buttons of the command bar, the icon buttons, the tabs (`shell/tabs.rs`), the
+  widths the navigation row keeps, the list of the settings sections. A new fixed size of the chrome goes
+  through `at_least`. The screenshots `35-size-28`, `35-size-36` and `36-size-*-settings` show it.
+- Fields: a text of any length (a name, a description, a path, a title) takes the width of the panel
+  (`forms::wide_field`, `desired_width(f32::INFINITY)` in a window over a tab); a short value takes a
+  width in the text size of the theme (`forms::short_field`). The windows over a tab of the registry, a
+  registry file and a Group Policy file open with `regedit::modal_width` (half of the window, three
+  quarters for data of several lines). The screenshots `30-` to `34-` show the forms and the editors.
 - The local accounts are read natively the way the audit script reads them: `NetUserEnum` (level 20, normal
   accounts) without the disabled ones and the relative ids 500, 501, 503 and 504; the group is Administrators
   or Users by direct membership (`NetUserGetLocalGroups`) in the groups S-1-5-32-544 and S-1-5-32-545, whose

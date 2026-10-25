@@ -76,6 +76,8 @@ Windows numera solo al primo accesso, come Russo (Ucraina), riceve il layout che
 allora, e fino a quell'accesso il file di risposte nomina la lingua a cui appartiene. Le lingue e i
 layout sono quelli del Windows su cui gira WinWeaver, con i nomi nella sua lingua.
 
+La regola **Regione dell'utente** (`default-user.region`) del profilo utente predefinito contiene il GeoID e il codice di due lettere del paese dei nuovi utenti. I suoi due campi si scrivono liberamente, e l'elenco accanto a ciascuno contiene tutte le regioni che Windows conosce, filtrate da ciò che si scrive: una scelta imposta GeoID e codice insieme, e il nome della regione compare dopo i campi. Il controllo avvisa quando i due valori non indicano una stessa regione dell'elenco.
+
 ## File utenti
 
 Un file utenti (`.wwusers`) elenca gli account locali da creare su un PC con le loro password, cifrate
@@ -205,6 +207,8 @@ elencate in **Opzioni sconosciute** alla fine dell'albero e sono escluse dalla g
 all'apertura del profilo e alla generazione del file di risposte. **Carica cataloghi** in quel gruppo trova
 le importazioni che le contengono e carica solo quelle. Un'impostazione (Generale, Finestra) nasconde il
 gruppo.
+
+Il menu **Cataloghi** nella barra di un profilo elenca ogni file di catalogo in `imports/`, caricato o no: uno caricato ha un segno di spunta e il colore di accento, e un clic apre la sua scheda; un altro si carica con un clic e apre anch'esso la sua scheda. L'elenco viene riletto ogni volta che il menu si apre.
 
 Un archivio zip di modelli, come li distribuiscono Chrome, Edge e Firefox, o di un file di catalogo si
 importa con **Importa un archivio...** e si legge senza estrarlo.

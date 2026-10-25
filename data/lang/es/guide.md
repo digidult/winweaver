@@ -80,6 +80,8 @@ la distribución elegida; el mismo idioma puede aparecer dos veces con dos distr
 respuesta nombra el idioma al que pertenece. Los idiomas y distribuciones son los del Windows en el que
 se ejecuta WinWeaver, con sus nombres en su idioma.
 
+La regla **Región del usuario** (`default-user.region`) del perfil de usuario predeterminado guarda el GeoID y el código de dos letras del país de los nuevos usuarios. Sus dos campos se escriben libremente, y la lista junto a cada uno contiene todas las regiones que Windows conoce, filtradas por lo escrito: una elección establece el GeoID y el código a la vez, y el nombre de la región aparece después de los campos. La comprobación avisa cuando los dos valores no nombran una misma región de la lista.
+
 ## Archivos de usuarios
 
 Un archivo de usuarios (`.wwusers`) enumera las cuentas locales que hay que crear en un PC con sus
@@ -214,6 +216,8 @@ cambios en el perfil, aparecen en **Opciones desconocidas** al final del árbol 
 generación, con un aviso al abrir el perfil y al generar el archivo de respuesta. **Cargar catálogos** en
 ese grupo encuentra las importaciones que las contienen y carga solo esas. Un ajuste (General, Ventana)
 oculta el grupo.
+
+El menú **Catálogos** de la barra de un perfil lista todos los archivos de catálogo de `imports/`, cargados o no: uno cargado lleva una marca y el color de acento, y un clic abre su pestaña; otro se carga con un clic y también abre su pestaña. La lista se vuelve a leer cada vez que se abre el menú.
 
 Un archivo zip de plantillas, como las publican Chrome, Edge y Firefox, o de un archivo de catálogo se
 importa con **Importar un archivo comprimido...** y se lee sin descomprimirlo.

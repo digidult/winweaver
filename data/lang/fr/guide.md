@@ -80,6 +80,8 @@ la disposition choisie ; la même langue peut venir deux fois avec deux disposit
 réponses nomme la langue à laquelle elle appartient. Les langues et dispositions sont celles du Windows
 sur lequel WinWeaver s'exécute, avec leurs noms dans sa langue.
 
+La règle **Région de l'utilisateur** (`default-user.region`) du profil utilisateur par défaut contient le GeoID et le code à deux lettres du pays des nouveaux utilisateurs. Ses deux champs se saisissent librement, et la liste à côté de chacun contient toutes les régions que Windows connaît, filtrées par la saisie : un choix définit le GeoID et le code ensemble, et le nom de la région apparaît après les champs. La vérification avertit quand les deux valeurs ne désignent pas une même région de la liste.
+
 ## Fichiers d'utilisateurs
 
 Un fichier d'utilisateurs (`.wwusers`) liste les comptes locaux à créer sur un PC avec leurs mots de
@@ -217,6 +219,8 @@ dans le profil, sont listées sous **Options inconnues** à la fin de l'arboresc
 génération, avec un avertissement à l'ouverture du profil et à la génération du fichier de réponses.
 **Charger les catalogues** dans ce groupe trouve les importations qui les contiennent et ne charge que
 celles-ci. Un paramètre (Général, Fenêtre) masque le groupe.
+
+Le menu **Catalogues** de la barre d'un profil liste tous les fichiers de catalogue de `imports/`, chargés ou non : un fichier chargé porte une coche et la couleur d'accent, et un clic ouvre son onglet ; un autre se charge d'un clic et ouvre aussi son onglet. La liste est relue à chaque ouverture du menu.
 
 Une archive zip de modèles, comme Chrome, Edge et Firefox les distribuent, ou d'un fichier de catalogue
 s'importe avec **Importer une archive...** et se lit sans être décompressée.
