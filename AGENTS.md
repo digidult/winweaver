@@ -168,7 +168,8 @@ text editor wedit.
 ├── crates/wwlite/         the light edition: main.rs (the command line, winweaver_ui::run without the
 │                          feature full; on wasm32 the start in the canvas of the page through
 │                          winweaver_ui::run_web), web/index.html (the page of the browser edition, with
-│                          the module and the glue wasm-bindgen writes next to it), tests.rs (what it
+│                          the module and the glue wasm-bindgen writes next to it), web/single.py (the
+│                          same page as one file, wwlite.html: the edition by default), tests.rs (what it
 │                          leaves out, the screenshots l1- to l4-; run alone: cargo test -p wwlite)
 ├── package-wwlite/        what the archive of wwlite adds: README.md, lang/de/guide-lite.txt (German, with
 │                          data/lang/de/ui.json copied by CI)
@@ -213,8 +214,10 @@ of the older format; the id of an embedded theme replaces it).
 5. No PowerShell inside the program: reading and applying on this PC use the Windows API (the native
    elevated apply); PowerShell appears only in the generated answer file and the stand-alone scripts. The
    program never runs a script itself.
-6. The customer's work PC is untouchable: only reading there. Rust is not installed on it and must not be:
-   builds and tests run in CI or in a VM, and the program is not started on that PC by an agent.
+6. The work PC of the customer is only read: no setting of Windows changes there, and the program is
+   never started there by an agent. Builds and the safe tests run on the computer of the developer
+   before a commit (section 5); the tests that change Windows run only in CI or in a VM. A toolchain
+   on a work PC is installed only on the explicit word of its owner.
 7. Text files are UTF-8 without a byte order mark with LF line endings; `rustfmt` and `clippy -D warnings`.
 8. Untrusted input (profiles, diffs, reports, answer files, MCP requests, policy templates) is read
    with size, depth and character limits and turned into a message, never into a crash.
@@ -259,41 +262,42 @@ cargo build --release -p wwlite --no-default-features --features glow --target w
 wasm-bindgen --target web --no-typescript --out-dir dist-web/wwlite-web target/wasm32-unknown-unknown/release/wwlite.wasm
 ```
 
-CI does not run at every push, since its Windows minutes are the dear ones:
+Before every commit, on the computer of the developer (items 12 and 13 of the list of 28.10.2026), the
+checks of the start of this section: `cargo fmt --all`, the clippy runs with `-D warnings` (the
+workspace, wwlite alone, wwlite for wasm32), `cargo test --workspace` and `cargo test -p wwlite`. The
+format and the fixes of clippy go into the commit they belong to, never into a commit of their own
+(and never a commit such as "The format of the last run"). A plain `cargo test` leaves out the tests
+that change Windows (a test key of HKCU, the hive of the default user, an account, DISM, the package
+API): they carry `#[ignore = "changes this Windows: run in CI or a VM, AGENTS.md section 5"]` and run
+only by name, in CI or in a VM, as administrator:
 
-1. Open a pull request as a draft (`gh pr create --draft`) and push to it as often as needed: a draft runs
-   nothing.
-2. When the work is complete, `gh pr ready <number>` (or "Ready for review" on GitHub) runs CI once. Every
-   later push to a ready pull request runs it again, so gather the fixes into one push; `gh pr ready
-   <number> --undo` makes it a draft again.
-3. A check on demand, of a draft or any branch: `gh workflow run ci.yml --ref <branch>` (or Actions, CI,
-   Run workflow); `gh run list --branch <branch> --workflow ci.yml` finds the run.
-4. A head commit with `[skip ci]` in its message runs nothing; a newer push cancels the run of the same pull
-   request or branch.
-5. The Linux job comes first and the Windows job only after it: an unformatted push, or clippy of any crate
-   (the whole workspace is checked for the target `x86_64-pc-windows-gnu` there, tests included, without a
-   link; wwlite for `wasm32-unknown-unknown` too) or a test of the core that fails, stops before Windows. A
-   run on demand with `-f windows=false` stops after the Linux job: the cheap check of a change, about two
-   minutes. The job `build-web` (Ubuntu: wwlite for the browser, the artifact `wwlite-web-<version>`) also
-   follows the Linux job; `-f web=false` leaves it out.
-6. `main` runs after every merge (its archive is the build for the acceptance), a tag `v*` for the release.
-7. The mirror: when the Actions minutes of digidult/winweaver are used up, its run
-   fails in a few seconds with the annotation "The job was not started because recent account payments have
-   failed or your spending limit needs to be increased". Only then the same commit runs in the private
-   mirror https://github.com/stanislavperec-ua/winweaver (the remote `mirror` of the clone): `git push mirror
-   <branch>`, then `gh workflow run ci.yml --ref <branch> -R stanislavperec-ua/winweaver`; after a merge
-   `main` is pushed there too (its run gives the archive for the acceptance); tags never go there. The pull
-   requests and the merges stay in digidult/winweaver, and a pull request links the run of the mirror. CI
-   goes back to digidult/winweaver as soon as its runs start again (the minutes reset on the first day of a
-   month, or the customer sets a budget) and moves to the mirror again the next time they run out; a ready
-   pull request always tries digidult/winweaver first, so the switch back needs nothing.
+```bash
+cargo test -p winweaver-win -- --ignored
+```
 
-When `cargo fmt` finds differences, the Linux job fails and uploads `fmt.patch` with `Cargo.lock` in the
-artifact `ci-files`: `gh run download <run id> -n ci-files -D <folder>`, then `git apply <folder>/fmt.patch`.
-The patch goes into the commit it belongs to, never into a commit of its own: `git commit -a --amend
---no-edit`, then `git push --force-with-lease` of the feature branch
-(origin and mirror), never of `main`. rustfmt cannot run on the customer's PC (rule 6), so the code is
-written in the widths of rustfmt from the start and checked by the Linux run before the full one.
+CI builds only releases (item 11 of the list of 28.10.2026):
+
+1. A tag `v<version>` runs everything and publishes the release. A tag is pushed only when the
+   customer asks for the release of that version in so many words; finished work alone never makes one.
+2. Any branch runs on demand: `gh workflow run ci.yml --ref <branch>` (or Actions, CI, Run workflow);
+   `-f windows=false` stops after the Linux job, `-f web=false` leaves out the browser edition;
+   `gh run list --branch <branch> --workflow ci.yml` finds the run. It is the place of the tests that
+   change Windows, the screenshots of the window and the archives for an acceptance.
+3. Pushes, pull requests and merges run nothing. A newer run of the same branch cancels the older one.
+4. The Linux job comes first and the Windows job only after it; the job `build-web` (Ubuntu: wwlite for
+   the browser, the artifact `wwlite-web-<version>`) also follows the Linux job.
+5. The mirror: when the Actions minutes of digidult/winweaver are used up, its run fails in a few
+   seconds with the annotation "The job was not started because recent account payments have failed
+   or your spending limit needs to be increased". Then the same commit runs in the private mirror
+   https://github.com/stanislavperec-ua/winweaver (the remote `mirror` of the clone): `git push mirror
+   <branch>`, then `gh workflow run ci.yml --ref <branch> -R stanislavperec-ua/winweaver`; tags never go
+   there. The pull requests and the merges stay in digidult/winweaver. The minutes reset on the first
+   day of a month, or the customer sets a budget.
+
+When the Linux job of a run finds a format difference, it uploads `fmt.patch` with `Cargo.lock` in the
+artifact `ci-files`; that means a check was skipped before the commit: apply the patch to the commit it
+belongs to (`git commit -a --amend --no-edit`, `git push --force-with-lease` of the feature branch,
+never of `main`).
 
 The MCP server without the window (the stdio transport is started by the client; the HTTP one needs a token
 of at least 32 characters):
@@ -304,7 +308,8 @@ winweaver --mcp http --port 8765 --token <token> --mode edit --read-pc
 ```
 
 A release: set `version` in the workspace `Cargo.toml`, add `docs/releases/v<version>.md`, merge, then tag
-(the customer's call); the job `release` publishes the zip with the notes:
+only when the customer asks for the release of that version in so many words; the job `release`
+publishes the zips with the notes:
 
 ```bash
 git tag -a v0.3.0 -m "WinWeaver 0.3.0"
@@ -317,9 +322,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 
 ## 6. Facts that are easy to lose
 
-- Without a local toolchain the workflow is: write, push, `gh run watch`, read the failed step with
-  `gh run view <id> --log-failed`, fix. Clippy runs with `-D warnings` on the Windows job for the whole
-  workspace; the Linux job only builds the core.
+- The workflow: write, then the checks of section 5 on the computer of the developer, then the commit;
+  CI only for a release or on demand (`gh run view <id> --log-failed` reads a failed step).
 - Agents editing from Git Bash: a heredoc swallows doubled backslashes (`\\` becomes `\`), so Rust or Python
   text with backslashes is written with the file tools or a script file, never through `<<'EOF'`.
 - The audit reads the default user profile (`DU:` paths) in HKCU of the current user, with the note "current
@@ -676,7 +680,6 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   is linked to it: the tree and the group counts show it on (`Resolution::shown_on`), its check box is
   disabled with the built-in rule in the tip, the profile keeps it off, and `get_rule` names it in
   `linked_by`. A policy chosen on stays a normal rule.
-- Pull requests: the CI of a pull request is read with the app's PR tools (`get_status`), not by polling with gh.
 - The archive: the job Package copies the exe, LICENSE, `package/README.md`, the presets as `profiles/`,
   `package/lang/` and `agents/` into `dist/WinWeaver` and uploads `dist/`, so the artifact is the one archive; a
   tag zips the same folder for the release. Agent texts stay short (local models with small contexts) and name no
@@ -879,10 +882,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - The command line (`crates/winweaver/src/cli.rs`): `--build`, `--import-admx`, `--export-catalog`,
   `--read-pc`, `--diff` beside `--script` and `--reg`; `--out` names the file when it ends with the
   extension the command writes, else a folder for the default name (`export::out_path`).
-- The cheap check: the Linux job checks the whole workspace for Windows (clippy on the
-  target `x86_64-pc-windows-gnu`), so `gh workflow run ci.yml --ref <branch> -f windows=false` is the
-  cheap check of a change of any crate; the Windows job runs when the tests of the window, the runner's
-  registry or the archive are needed.
+- The Linux job checks the whole workspace for Windows (clippy on the target
+  `x86_64-pc-windows-gnu`), so a run on demand with `-f windows=false` checks a change of any crate
+  in a few minutes; the Windows job runs the tests of the window, the tests that change Windows and
+  the archives.
 - The browser edition of wwlite (`docs/wasm.md`): the same window built for `wasm32-unknown-unknown`
   with the feature `glow` alone (WebGL; the wgpu of WW is DirectX 12 only). `ww::web::start` (eframe's
   `WebRunner`, the canvas `wwlite` of `crates/wwlite/web/index.html`, `WebLogger` for the console)
@@ -901,10 +904,12 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   sync dialogs of rfd, the title bar colours, `ww::run` and the fallback of renderers are native only
   (`cfg(not(target_arch = "wasm32"))`). CI: the Linux job checks it with clippy, the job `build-web`
   (Ubuntu, left out by `-f web=false`) builds it in release and runs the wasm-bindgen of the version
-  of Cargo.lock into the artifact `wwlite-web-<version>` (index.html, wwlite.js, wwlite_bg.wasm,
-  README.md), zipped by a tag. Open: the keys Ctrl+N, Ctrl+W and Ctrl+Tab belong to the browser (the
-  menu does the same), no question before the page closes, the page is served over http, never from
-  `file://`, and the names of the input languages and the regions are English (the embedded lists).
+  of Cargo.lock into the artifact `wwlite-web-<version>` (`wwlite.html`, the edition in one file
+  by `crates/wwlite/web/single.py`, the module packed with gzip into base64 and unpacked by
+  `DecompressionStream`, so it opens from the disk too; README.md; `files/` with index.html, wwlite.js
+  and wwlite_bg.wasm for a server), zipped by a tag. Open: the keys Ctrl+N, Ctrl+W and Ctrl+Tab
+  belong to the browser (the menu does the same), no question before the page closes, the folder
+  `files/` is served over http, never from `file://`, and the names of the input languages and the regions are English (the embedded lists).
   The menu of a page has no Open recent and no Exit (`cfg(not(target_arch = "wasm32"))` in
   `app/menu.rs`). `docs/wasm.md` section 6 builds the page by hand, without CI.
 
@@ -922,7 +927,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Done in pull request #61 (0.25.0) | The list of the customer of 24.10.2026 in six groups: the shell (keys, focus, About, links, icons, the question of a closing tab), the documents, the profile (links between catalogs, colours of the panels, `.reg` and `.ps1` of a diff and a whole profile, the command line), the registry and `.pol` files, drafts of every document, `wwlite` and a study of a Wasm edition |
 | Done in pull request #62 (0.26.0) | The list of the customer of 25.10.2026, 14 items: the command line (the answer file, the import and export of templates, a read of this PC, diffs, `--out` as a file), Open and Save as of the MCP tab, the comparison of catalogs as a tab with its report, the panel of the work in the background, the Group Policy editor, Copy to of a catalog, Only on, the scrolling tab row, the catalog by mechanism with the root Policies, icons in every menu, wwlite without the code of the full edition, the hammer of Build, the parameters in the width of the panel with their limits |
 | Done in pull request #63 (0.27.0) | The second list of the customer of 25.10.2026: the region of the default user profile from the list of Windows, the editors in the width they have, text sizes up to 36, every catalog file in the menu Catalogs, wwlite for the browser (the store, the web start, the embedded input languages, the artifact wwlite-web), the presentation of the screenshots |
-| Done in pull request #64 (0.28.0) | The list of the customer of 28.10.2026: a group removed in the catalog editor, no recent files and no Exit in the menu of the browser edition, its list of regions, the build of the page by hand, every catalog of `imports/` in wwlite, the built-in catalog flatter (the small groups of Other into its root, the network and the logging of PowerShell into Security, the browsers into Apps), the whole description of a rule and the titles of the values in the language of the window |
+| Done in pull request #64 (0.28.0) | The list of the customer of 28.10.2026: a group removed in the catalog editor, no recent files and no Exit in the menu of the browser edition, its list of regions, the build of the page by hand, every catalog of `imports/` in wwlite, the built-in catalog flatter (the small groups of Other into its root, the network and the logging of PowerShell into Security, the browsers into Apps), the whole description of a rule and the titles of the values in the language of the window, the browser edition in one file `wwlite.html`, CI only for a release or on demand, the checks before a commit on the computer of the developer, the tests that change Windows ignored by a plain `cargo test` |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the

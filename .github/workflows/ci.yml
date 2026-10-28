@@ -1,17 +1,14 @@
 name: CI
 
-# CI does not run at every push (AGENTS.md, section 5): a draft pull request runs nothing; a pull request
-# runs when it is opened ready, marked ready for review or pushed while ready; main runs after a merge, a
-# tag v* for the release; any branch on demand (Actions, CI, Run workflow, or gh workflow run ci.yml --ref
-# <branch>). A newer push cancels the run of the same pull request or branch, and a head commit with
-# [skip ci] in its message runs nothing. A run on demand with windows=false (gh workflow run ci.yml --ref
-# <branch> -f windows=false) stops after the Linux job, which checks the whole workspace for Windows.
+# CI builds only a release (AGENTS.md, section 5): a tag v* (pushed on the explicit word of the customer)
+# runs everything and publishes the release; any branch runs on demand (Actions, CI, Run workflow, or gh
+# workflow run ci.yml --ref <branch>), for the tests that change Windows and the screenshots. Pushes and
+# pull requests run nothing: the format, clippy and the safe tests run on the computer of the developer
+# before every commit. A run on demand with windows=false stops after the Linux job, web=false leaves
+# out the browser edition.
 on:
   push:
-    branches: [main]
     tags: ["v*"]
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
       windows:
@@ -24,19 +21,17 @@ on:
         default: true
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
-  # The commit the build names (--version, About, the logs): the head of a pull request, not the merge
-  # commit GitHub tests.
-  WINWEAVER_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+  # The commit the build names (--version, About, the logs).
+  WINWEAVER_COMMIT: ${{ github.sha }}
 
 jobs:
   check:
     name: Format, clippy, tests (Linux)
-    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -102,6 +97,10 @@ jobs:
         run: cargo test --workspace
         env:
           WINWEAVER_SCREENSHOTS: ${{ github.workspace }}/target/screenshots
+      - name: Tests that change Windows (a test key of HKCU, the hive of the default user, an account, DISM, apps)
+        # Ignored by a plain cargo test, so the computer of a developer never runs them; the runner is
+        # an administrator. By hand in a VM: cargo test -p winweaver-win -- --ignored
+        run: cargo test -p winweaver-win -- --ignored
       - name: Tests of wwlite (alone, without the feature full)
         run: cargo test -p wwlite
         env:
@@ -249,17 +248,20 @@ jobs:
         run: cargo build --release -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown
       - name: Page of the browser edition
         # wasm-bindgen of the version Cargo.lock names (its crate and its tool must match), the prebuilt
-        # binary of its release: it writes the module and the JavaScript glue next to index.html.
+        # binary of its release: it writes the module and the JavaScript glue next to index.html in
+        # files/, and single.py makes of them wwlite.html, the whole edition in one file.
         run: |
           v="$(grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | grep '^version' | cut -d'"' -f2)"
           tool="wasm-bindgen-$v-x86_64-unknown-linux-musl"
           curl -sSL -o wasm-bindgen.tar.gz "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/$v/$tool.tar.gz"
           tar xzf wasm-bindgen.tar.gz
           out="dist-web/wwlite-web"
-          "./$tool/wasm-bindgen" --target web --no-typescript --out-dir "$out" target/wasm32-unknown-unknown/release/wwlite.wasm
-          cp crates/wwlite/web/index.html "$out/index.html"
+          "./$tool/wasm-bindgen" --target web --no-typescript --out-dir "$out/files" target/wasm32-unknown-unknown/release/wwlite.wasm
+          cp crates/wwlite/web/index.html "$out/files/index.html"
+          # The edition by default: one HTML file with the glue and the packed module inside.
+          python3 crates/wwlite/web/single.py "$out/files" "$out/wwlite.html"
           cp package-wwlite/README.md "$out/README.md"
-          ls -l "$out"
+          ls -l "$out" "$out/files"
           version="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
           echo "VERSION=$version" >> "$GITHUB_ENV"
       - uses: actions/upload-artifact@v4

@@ -304,6 +304,7 @@ mod tests {
     use winweaver_core::security::{Entry, Rights, Scope};
 
     #[test]
+    #[ignore = "changes this Windows: run in CI or a VM, AGENTS.md section 5"]
     fn the_rights_of_a_test_key_are_read_and_written() {
         let pid = std::process::id();
         let key = format!("HKEY_CURRENT_USER\\Software\\WinWeaverRights-{pid}");

@@ -116,8 +116,9 @@ mod tests {
     /// The package API answers an administrator, which the CI runner is: a name of no app
     /// removes nothing.
     #[test]
+    #[ignore = "changes this Windows: run in CI or a VM, AGENTS.md section 5"]
     fn a_name_of_no_app_removes_nothing() {
-        if std::env::var_os("GITHUB_ACTIONS").is_none() || !crate::native::elevated() {
+        if !crate::native::elevated() {
             return;
         }
         let none = remove_apps(&["WinWeaver.NoSuchApp".to_owned()]).expect("the package API");

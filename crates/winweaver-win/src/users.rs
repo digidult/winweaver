@@ -472,9 +472,10 @@ mod tests {
     /// its password, updated by its orders, read back, and deleted again (the program never
     /// deletes one; the test cleans up with NetUserDel).
     #[test]
+    #[ignore = "changes this Windows: run in CI or a VM, AGENTS.md section 5"]
     fn an_account_is_created_updated_and_read_on_the_runner() {
         use windows_sys::Win32::NetworkManagement::NetManagement::NetUserDel;
-        if std::env::var("GITHUB_ACTIONS").is_err() {
+        if !crate::native::elevated() {
             return;
         }
         let name = "WwUsersTest";

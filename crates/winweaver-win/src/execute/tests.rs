@@ -2,6 +2,7 @@ use super::*;
 use winweaver_core::apply::{Step, plan_undo};
 
 #[test]
+#[ignore = "changes this Windows: run in CI or a VM, AGENTS.md section 5"]
 fn a_plan_writes_backs_up_and_undoes_in_a_test_key() {
     let key = format!("HKCU:\\Software\\WinWeaverTest-{}", std::process::id());
     let step = |op| Step {
@@ -105,9 +106,10 @@ fn a_plan_writes_backs_up_and_undoes_in_a_test_key() {
 }
 
 #[test]
+#[ignore = "changes this Windows: run in CI or a VM, AGENTS.md section 5"]
 fn the_default_user_profile_is_loaded_written_and_unloaded() {
     // It writes the default user profile: only on the build machine of CI, as administrator.
-    if std::env::var_os("GITHUB_ACTIONS").is_none() || !crate::native::elevated() {
+    if !crate::native::elevated() {
         return;
     }
     let users = RegKey::predef(HKEY_USERS);
@@ -156,6 +158,7 @@ fn the_default_user_profile_is_loaded_written_and_unloaded() {
 }
 
 #[test]
+#[ignore = "changes this Windows: run in CI or a VM, AGENTS.md section 5"]
 fn the_native_script_steps_work_and_undo_in_a_test_key() {
     let key = format!("HKCU:\\Software\\WinWeaverSteps-{}", std::process::id());
     let (one, two, deep) = (

@@ -290,9 +290,10 @@ mod tests {
     /// DISM answers an administrator, which the CI runner is; elsewhere it must refuse with a
     /// message and never crash.
     #[test]
+    #[ignore = "changes this Windows: run in CI or a VM, AGENTS.md section 5"]
     fn the_running_windows_lists_its_features_and_capabilities() {
         let read = components();
-        if std::env::var_os("GITHUB_ACTIONS").is_some() && crate::native::elevated() {
+        if crate::native::elevated() {
             let features = read.features.expect("features");
             assert!(features.len() > 20, "{features:?}");
             assert!(features.iter().all(|(n, _)| !n.is_empty()), "{features:?}");
