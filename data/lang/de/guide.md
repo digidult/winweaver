@@ -235,7 +235,7 @@ gewählt, welche Teile der Beschreibung zuerst geöffnet sind.
 Menü der Vorlagen beginnt einen leeren eigenen. Eine Richtlinie bekommt ihren Titel, ihre Beschreibung, den
 Computer oder das Standardbenutzerprofil und die Registrierungswerte, die sie schreibt oder entfernt;
 **Übernehmen** prüft die ganze Datei, und nichts ändert sich, wenn die Prüfung fehlschlägt. Speichern
-(Ctrl+S) schreibt die Datei und lädt sie neu.
+(Ctrl+S) schreibt die Datei und lädt sie neu. Eine gewählte Gruppe entfernt **Gruppe entfernen** nach einer Frage mit allen Gruppen und Richtlinien darin; die oberste Gruppe der Datei bleibt.
 
 Der Vergleich öffnet sich in einem Tab: die abweichenden Richtlinien im Baum ihrer Kategorien, mit
 Schaltern für die nur im ersten Katalog, nur im zweiten und die unterschiedlichen, und die gewählte

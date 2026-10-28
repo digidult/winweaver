@@ -756,6 +756,11 @@ impl WinWeaver {
                     d.remove(&id);
                 }
             }
+            CatalogAct::EditRemoveGroup(id) => {
+                if let Some(Doc::CatalogEdit(d)) = shell.docs.get_mut(shell.active) {
+                    d.remove_group(&id);
+                }
+            }
             CatalogAct::Open(id) => self.open_catalog(shell, &id),
             CatalogAct::LoadAndOpen(id) => match self.load_import(shell, &id) {
                 Ok(()) => {

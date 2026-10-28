@@ -892,5 +892,7 @@
   "{title} ({name}), default {value}": "{title} ({name}), по умолчанию {value}",
   "a region": "регион",
   "The regions of Windows: a choice sets the GeoID and the code together": "Регионы Windows: выбор задаёт GeoID и код вместе",
-  "Windows does not list this region": "Windows не знает такого региона"
+  "Windows does not list this region": "Windows не знает такого региона",
+  "Remove the group": "Удалить группу",
+  "Remove the group {name} with all it holds? It leaves the file at the next save.": "Удалить группу {name} со всеми группами и политиками в ней? Она исчезнет из файла при следующем сохранении."
 }

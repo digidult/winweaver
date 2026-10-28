@@ -217,7 +217,7 @@ penanda opsi itu juga. Di Pengaturan, Umum dipilih bagian deskripsi mana yang te
 **Sunting** di bilah tab katalog membuka katalog di editor, dan **Katalog baru** di menu templat memulai katalog
 kosong milik Anda. Sebuah kebijakan mendapat judul, deskripsi, komputer atau profil pengguna bawaan, dan nilai
 registri yang ditulis atau dihapusnya; **Terapkan** memeriksa seluruh file, dan tidak ada yang berubah bila
-pemeriksaan gagal. Simpan (Ctrl+S) menulis file dan memuatnya lagi.
+pemeriksaan gagal. Simpan (Ctrl+S) menulis file dan memuatnya lagi. **Hapus grup** menghapus grup yang dipilih, setelah sebuah pertanyaan, beserta semua grup dan kebijakan di dalamnya; grup teratas file tetap ada.
 
 Perbandingan terbuka di sebuah tab: kebijakan yang berbeda dalam pohon kategorinya, dengan sakelar untuk
 yang hanya ada di katalog pertama, hanya di katalog kedua dan yang berbeda, serta kebijakan terpilih apa

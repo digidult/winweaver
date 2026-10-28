@@ -44,6 +44,19 @@ pub fn change_rights(path: &str) -> Question {
     )
 }
 
+/// Before a group of a catalog file goes with every group and policy under it.
+pub fn remove_group(title: &str, id: String) -> Question {
+    Question::new(
+        tr("Remove the group"),
+        trf(
+            "Remove the group {name} with all it holds? It leaves the file at the next save.",
+            &[("name", &title)],
+        ),
+        tr("Remove"),
+        CatalogAct::EditRemoveGroup(id),
+    )
+}
+
 /// Before a policy is removed from the catalog being edited.
 pub fn remove_policy(id: String) -> Question {
     Question::new(

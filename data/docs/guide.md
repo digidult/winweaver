@@ -216,7 +216,7 @@ the description open at first.
 **Edit** in the bar of a catalog tab opens the catalog in an editor, and **New catalog** in the menu of the
 templates starts an empty one of your own. A policy gets its title, its description, the computer or the
 default user profile, and the registry values it writes or removes; **Apply** checks the whole file, and
-nothing changes when the check fails. Save (Ctrl+S) writes the file and loads it again.
+nothing changes when the check fails. Save (Ctrl+S) writes the file and loads it again. A selected group goes with **Remove the group**, after a question, with every group and policy under it; the top group of the file stays.
 
 The comparison opens in a tab: the policies that differ in the tree of their categories, with switches
 for the ones only in the first catalog, only in the second and the different ones, and the selected

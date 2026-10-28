@@ -221,7 +221,7 @@ açık olacağı seçilir.
 Bir katalog sekmesinin çubuğundaki **Düzenle** kataloğu bir düzenleyicide açar, şablon menüsündeki **Yeni katalog**
 de size ait boş bir katalog başlatır. Bir ilke başlığını, açıklamasını, bilgisayarı veya varsayılan kullanıcı
 profilini ve yazdığı ya da kaldırdığı kayıt defteri değerlerini alır; **Uygula** tüm dosyayı denetler ve denetim
-başarısız olursa hiçbir şey değişmez. Kaydet (Ctrl+S) dosyayı yazar ve yeniden yükler.
+başarısız olursa hiçbir şey değişmez. Kaydet (Ctrl+S) dosyayı yazar ve yeniden yükler. Seçili grup, bir sorudan sonra **Grubu kaldır** ile içindeki tüm grup ve ilkelerle birlikte kaldırılır; dosyanın en üst grubu kalır.
 
 Karşılaştırma bir sekmede açılır: farklı ilkeler kategorilerinin ağacında, yalnızca ilk katalogda,
 yalnızca ikincisinde olanlar ve farklı olanlar için anahtarlarla; seçili ilke her iki katalogdaki haliyle

@@ -300,6 +300,8 @@ pub enum CatalogAct {
     /// Makes an empty catalog file among the imports and opens its editor.
     New,
     EditRemove(String),
+    /// Removes a group of the catalog in the editor in front, with what it holds.
+    EditRemoveGroup(String),
     /// Compares the catalog of the active tab with another one in a page.
     Compare(CatalogRef),
     /// Opens the tab of an import.

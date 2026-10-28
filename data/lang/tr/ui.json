@@ -892,5 +892,7 @@
   "{title} ({name}), default {value}": "{title} ({name}), varsayılan {value}",
   "a region": "bir bölge",
   "The regions of Windows: a choice sets the GeoID and the code together": "Windows bölgeleri: bir seçim GeoID ve kodu birlikte ayarlar",
-  "Windows does not list this region": "Windows bu bölgeyi tanımıyor"
+  "Windows does not list this region": "Windows bu bölgeyi tanımıyor",
+  "Remove the group": "Grubu kaldır",
+  "Remove the group {name} with all it holds? It leaves the file at the next save.": "{name} grubu içindeki tüm grup ve ilkelerle birlikte kaldırılsın mı? Bir sonraki kaydetmede dosyadan çıkar."
 }

@@ -323,6 +323,16 @@ fn a_catalog_file_is_edited_policy_by_policy_and_stays_valid() {
         matches!(&kept.actions[0], Action::Reg { path, .. } if path.starts_with("HKLM:")),
         "a put that fails changes nothing"
     );
+    let top = f.groups[0].id.clone();
+    assert!(f.remove_group(&top).is_err(), "the top group stays");
+    let sub = f.new_group(&top, "Removed later").unwrap();
+    let inner = f.new_group(&sub, "Inner").unwrap();
+    let doomed = f.new_policy(&inner, "Doomed").unwrap();
+    let doomed_id = doomed.id.clone();
+    f.put_rule(doomed).unwrap();
+    assert_eq!(f.remove_group(&sub).unwrap(), 1);
+    assert!(f.groups.iter().all(|g| g.id != sub && g.id != inner));
+    assert!(f.rules.iter().all(|r| r.id != doomed_id));
     f.remove_rule("admx.sample.turnoff.off").unwrap();
     assert!(
         !f.rules

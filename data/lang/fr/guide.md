@@ -239,7 +239,7 @@ choisit quelles parties de la description sont ouvertes d'abord.
 catalogue** dans le menu des modèles en commence un vide à vous. Une stratégie reçoit son titre, sa
 description, l'ordinateur ou le profil utilisateur par défaut et les valeurs du registre qu'elle écrit ou
 supprime ; **Appliquer** contrôle tout le fichier, et rien ne change si le contrôle échoue. Enregistrer
-(Ctrl+S) écrit le fichier et le recharge.
+(Ctrl+S) écrit le fichier et le recharge. **Supprimer le groupe** retire le groupe sélectionné, après une question, avec tous les groupes et stratégies qu'il contient ; le groupe supérieur du fichier reste.
 
 La comparaison s'ouvre dans un onglet : les stratégies qui diffèrent dans l'arbre de leurs catégories,
 avec des cases pour celles du premier catalogue seul, du second seul et les différentes, et la stratégie

@@ -225,7 +225,7 @@ sceglie quali parti della descrizione sono aperte all'inizio.
 **Modifica** nella barra di una scheda di catalogo lo apre in un editor, e **Nuovo catalogo** nel menu dei
 modelli ne avvia uno vuoto tutto vostro. Un criterio riceve titolo, descrizione, il computer o il profilo
 utente predefinito e i valori del registro che scrive o rimuove; **Applica** controlla tutto il file, e
-nulla cambia se il controllo fallisce. Salva (Ctrl+S) scrive il file e lo ricarica.
+nulla cambia se il controllo fallisce. Salva (Ctrl+S) scrive il file e lo ricarica. **Rimuovi il gruppo** rimuove il gruppo selezionato, dopo una domanda, con tutti i gruppi e i criteri che contiene; il gruppo superiore del file resta.
 
 Il confronto si apre in una scheda: i criteri che differiscono nell'albero delle loro categorie, con
 interruttori per quelli solo nel primo catalogo, solo nel secondo e i diversi, e il criterio selezionato

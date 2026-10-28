@@ -283,6 +283,24 @@ impl EditorDoc {
         }
     }
 
+    /// Removes a group with every group and policy under it; the group above it is selected.
+    pub fn remove_group(&mut self, id: &str) {
+        let parent = self
+            .file
+            .groups
+            .iter()
+            .find(|g| g.id == id)
+            .and_then(|g| g.parent.clone());
+        match self.file.remove_group(id) {
+            Ok(_) => {
+                self.dirty = true;
+                self.form = None;
+                self.group = parent;
+            }
+            Err(e) => self.error = Some(e),
+        }
+    }
+
     /// Removes a policy with its Disabled rule.
     pub fn remove(&mut self, id: &str) {
         match self.file.remove_rule(id) {
@@ -386,6 +404,22 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
         ui.weak(tr(
             "Select a policy in the tree to edit it, or a group to add one to it.",
         ));
+        // A group under the top one of the file goes with what it holds, after a question.
+        let group = doc
+            .group
+            .as_ref()
+            .and_then(|g| doc.file.groups.iter().find(|x| x.id == *g))
+            .filter(|g| g.parent.as_deref() != Some(ROOT_POLICIES));
+        if let Some(g) = group {
+            ui.add_space(10.0);
+            ui.label(style::strong(ui, &g.title, 18.0));
+            crate::views::id_line(ui, &g.id);
+            ui.add_space(6.0);
+            if ui.button(tr("Remove the group")).clicked() {
+                let question = crate::question::remove_group(&g.title, g.id.clone());
+                acts.push(question.into());
+            }
+        }
         return;
     };
     let mut apply = false;

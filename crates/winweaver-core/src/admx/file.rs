@@ -130,6 +130,47 @@ impl CatalogFile {
         Ok(())
     }
 
+    /// Takes a group out of the file with every group under it, their policies, the conflicts
+    /// that name those policies and the texts of all of them in other languages. The top group
+    /// of the file (the one under the root of the policies) stays, since the file is the import;
+    /// the count of the rules removed.
+    pub fn remove_group(&mut self, id: &str) -> Result<usize, String> {
+        let Some(group) = self.groups.iter().find(|g| g.id == id) else {
+            return Err(format!("the file has no group {id}"));
+        };
+        if group.parent.as_deref() == Some(ROOT_POLICIES) || group.parent.is_none() {
+            return Err("the top group of the file stays: remove the file instead".to_owned());
+        }
+        let mut gone: Vec<String> = vec![id.to_owned()];
+        let mut i = 0;
+        while i < gone.len() {
+            let parent = gone[i].clone();
+            gone.extend(
+                self.groups
+                    .iter()
+                    .filter(|g| g.parent.as_deref() == Some(parent.as_str()))
+                    .map(|g| g.id.clone()),
+            );
+            i += 1;
+        }
+        let rules: Vec<String> = self
+            .rules
+            .iter()
+            .filter(|r| gone.contains(&r.group))
+            .map(|r| r.id.clone())
+            .collect();
+        self.groups.retain(|g| !gone.contains(&g.id));
+        self.rules.retain(|r| !rules.contains(&r.id));
+        for r in &mut self.rules {
+            r.conflicts.retain(|c| !rules.contains(c));
+        }
+        for texts in self.texts.values_mut() {
+            texts.groups.retain(|g, _| !gone.contains(g));
+            texts.rules.retain(|r, _| !rules.contains(r));
+        }
+        Ok(rules.len())
+    }
+
     /// Copies a policy or a group of another catalog file into the group `into` of this one,
     /// so a catalog of only the policies needed can be made and passed on. A policy keeps its
     /// id (the same policy in two catalogs is one rule of the program, an alias in the other

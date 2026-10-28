@@ -892,5 +892,7 @@
   "{title} ({name}), default {value}": "{title} ({name}), predeterminado {value}",
   "a region": "una región",
   "The regions of Windows: a choice sets the GeoID and the code together": "Las regiones de Windows: una elección establece el GeoID y el código a la vez",
-  "Windows does not list this region": "Windows no conoce esta región"
+  "Windows does not list this region": "Windows no conoce esta región",
+  "Remove the group": "Quitar el grupo",
+  "Remove the group {name} with all it holds? It leaves the file at the next save.": "¿Quitar el grupo {name} con todos los grupos y directivas que contiene? Saldrá del archivo al guardarlo la próxima vez."
 }

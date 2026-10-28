@@ -234,7 +234,7 @@ General se elige qué partes de la descripción se abren al principio.
 **Editar** en la barra de una pestaña de catálogo lo abre en un editor, y **Nuevo catálogo** en el menú de las
 plantillas empieza uno vacío propio. Una directiva recibe su título, su descripción, el equipo o el perfil
 de usuario predeterminado y los valores del registro que escribe o quita; **Aplicar** comprueba todo el
-archivo, y nada cambia si la comprobación falla. Guardar (Ctrl+S) escribe el archivo y lo vuelve a cargar.
+archivo, y nada cambia si la comprobación falla. Guardar (Ctrl+S) escribe el archivo y lo vuelve a cargar. **Quitar el grupo** quita el grupo seleccionado, tras una pregunta, con todos los grupos y directivas que contiene; el grupo superior del archivo se queda.
 
 La comparación se abre en una pestaña: las directivas que difieren en el árbol de sus categorías, con
 interruptores para las que solo están en el primer catálogo, solo en el segundo y las distintas, y la
