@@ -399,15 +399,16 @@ pub(crate) fn rule_description(
     if !open {
         return;
     }
+    let desc = rdesc(texts, rule);
     section(ui, "desc-what", tr("What it does"), parts.what, |ui| {
         style::selectable_text(ui, ("what", rule.id.as_str()), rsummary(texts, rule));
-        if !rule.effect.is_empty() {
-            style::selectable_text(ui, ("effect", rule.id.as_str()), &rule.effect);
+        if !desc.effect.is_empty() {
+            style::selectable_text(ui, ("effect", rule.id.as_str()), desc.effect);
         }
     });
-    if !rule.risk.is_empty() {
+    if !desc.risk.is_empty() {
         section(ui, "desc-risk", tr("Risk"), parts.risk, |ui| {
-            style::selectable_text(ui, ("risk", rule.id.as_str()), &rule.risk);
+            style::selectable_text(ui, ("risk", rule.id.as_str()), desc.risk);
         });
     }
     section(
@@ -454,14 +455,14 @@ pub(crate) fn rule_description(
             },
         );
     }
-    if !rule.versions.is_empty() || !rule.rollback.is_empty() || !rule.verify.is_empty() {
+    if !desc.versions.is_empty() || !desc.rollback.is_empty() || !desc.verify.is_empty() {
         section(
             ui,
             "desc-more",
             tr("Versions, check and rollback"),
             parts.more,
             |ui| {
-                for (i, text) in [&rule.versions, &rule.verify, &rule.rollback]
+                for (i, text) in [desc.versions, desc.verify, desc.rollback]
                     .into_iter()
                     .enumerate()
                 {
@@ -600,14 +601,18 @@ pub(crate) fn param_editor(
             let shown = values
                 .iter()
                 .find(|v| check::same_value(&v.value, &current))
-                .map_or_else(|| current.to_string(), |v| v.title.clone());
+                .map_or_else(
+                    || current.to_string(),
+                    |v| vtitle(texts, rule, name, v).to_owned(),
+                );
             egui::ComboBox::from_id_salt(format!("{}.{name}", rule.id))
                 .selected_text(shown)
                 .width(ui.available_width().max(160.0))
                 .show_ui(ui, |ui| {
                     for v in values {
                         let chosen = check::same_value(&v.value, &current);
-                        if ui.selectable_label(chosen, &v.title).clicked() && !chosen {
+                        let title = vtitle(texts, rule, name, v);
+                        if ui.selectable_label(chosen, title).clicked() && !chosen {
                             acts.push(Act::Profile(ProfileAct::SetParam(
                                 rule.id.clone(),
                                 name.to_owned(),

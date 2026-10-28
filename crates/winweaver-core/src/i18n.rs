@@ -7,7 +7,7 @@ use indexmap::IndexMap;
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::catalog::{Group, Rule, embedded};
+use crate::catalog::{EnumValue, Group, Rule, embedded};
 use crate::jsonfile::{self, JsonError};
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -121,6 +121,58 @@ impl CatalogTexts {
             .get(&rule.id)
             .and_then(|t| t.summary.as_deref())
             .unwrap_or(&rule.summary)
+    }
+
+    /// A text of a rule in this language, or the English one the file lacks.
+    fn rule_field<'a>(
+        &'a self,
+        rule: &'a Rule,
+        field: fn(&RuleText) -> Option<&str>,
+        english: &'a str,
+    ) -> &'a str {
+        self.rules.get(&rule.id).and_then(field).unwrap_or(english)
+    }
+
+    pub fn rule_effect<'a>(&'a self, rule: &'a Rule) -> &'a str {
+        self.rule_field(rule, |t| t.effect.as_deref(), &rule.effect)
+    }
+
+    pub fn rule_risk<'a>(&'a self, rule: &'a Rule) -> &'a str {
+        self.rule_field(rule, |t| t.risk.as_deref(), &rule.risk)
+    }
+
+    pub fn rule_versions<'a>(&'a self, rule: &'a Rule) -> &'a str {
+        self.rule_field(rule, |t| t.versions.as_deref(), &rule.versions)
+    }
+
+    pub fn rule_verify<'a>(&'a self, rule: &'a Rule) -> &'a str {
+        self.rule_field(rule, |t| t.verify.as_deref(), &rule.verify)
+    }
+
+    pub fn rule_rollback<'a>(&'a self, rule: &'a Rule) -> &'a str {
+        self.rule_field(rule, |t| t.rollback.as_deref(), &rule.rollback)
+    }
+
+    /// The search words of a rule in this language (the English ones are searched too).
+    pub fn rule_tags<'a>(&'a self, rule: &'a Rule) -> &'a [String] {
+        self.rules
+            .get(&rule.id)
+            .and_then(|t| t.tags.as_deref())
+            .unwrap_or(&[])
+    }
+
+    /// The title of a value of an enum parameter of a rule; the file keys the values by their
+    /// text (`1`, `Warn`).
+    pub fn value_title<'a>(&'a self, rule: &'a Rule, name: &str, value: &'a EnumValue) -> &'a str {
+        let key = match &value.value {
+            Value::String(s) => s.clone(),
+            other => other.to_string(),
+        };
+        self.rules
+            .get(&rule.id)
+            .and_then(|t| t.values.get(name))
+            .and_then(|v| v.get(&key))
+            .map_or(value.title.as_str(), String::as_str)
     }
 
     pub fn group_title<'a>(&'a self, group: &'a Group) -> &'a str {

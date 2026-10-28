@@ -107,7 +107,7 @@ pub(crate) fn tree_rows(
             right: if switch.is_some() {
                 String::new()
             } else {
-                param_summary(catalog, doc, rule)
+                param_summary(catalog, texts, doc, rule)
             },
             check,
             open: None,

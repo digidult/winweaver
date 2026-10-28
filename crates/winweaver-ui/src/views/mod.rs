@@ -5,7 +5,7 @@ use eframe::egui::{self, CornerRadius, Margin, RichText, Stroke};
 use serde_json::Value;
 use winweaver_core::admx::CatalogFile;
 use winweaver_core::catalog::{
-    Action, Catalog, Group, ListNames, Param, Pick, ROOT_UNATTEND, Rule, check,
+    Action, Catalog, EnumValue, Group, ListNames, Param, Pick, ROOT_UNATTEND, Rule, check,
 };
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::resolver::State;
@@ -35,6 +35,45 @@ pub fn rtitle<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule) -> &'a str {
 
 pub fn rsummary<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule) -> &'a str {
     texts.map_or(rule.summary.as_str(), |t| t.rule_summary(rule))
+}
+
+/// The texts of the description of a rule in the language of the catalog, English where the
+/// translation has none.
+pub struct RuleDesc<'a> {
+    pub effect: &'a str,
+    pub risk: &'a str,
+    pub versions: &'a str,
+    pub verify: &'a str,
+    pub rollback: &'a str,
+}
+
+pub fn rdesc<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule) -> RuleDesc<'a> {
+    match texts {
+        Some(t) => RuleDesc {
+            effect: t.rule_effect(rule),
+            risk: t.rule_risk(rule),
+            versions: t.rule_versions(rule),
+            verify: t.rule_verify(rule),
+            rollback: t.rule_rollback(rule),
+        },
+        None => RuleDesc {
+            effect: &rule.effect,
+            risk: &rule.risk,
+            versions: &rule.versions,
+            verify: &rule.verify,
+            rollback: &rule.rollback,
+        },
+    }
+}
+
+/// The title of a value of an enum parameter in the language of the catalog.
+pub fn vtitle<'a>(
+    texts: Option<&'a CatalogTexts>,
+    rule: &'a Rule,
+    name: &str,
+    value: &'a EnumValue,
+) -> &'a str {
+    texts.map_or(value.title.as_str(), |t| t.value_title(rule, name, value))
 }
 
 pub fn gtitle<'a>(texts: Option<&'a CatalogTexts>, group: &'a Group) -> &'a str {
@@ -183,6 +222,10 @@ pub(crate) fn matches(texts: Option<&CatalogTexts>, rule: &Rule, words: &[String
     );
     hay.push(' ');
     hay.push_str(rsummary(texts, rule));
+    for tag in texts.map_or(&[][..], |t| t.rule_tags(rule)) {
+        hay.push(' ');
+        hay.push_str(tag);
+    }
     matches_words(&hay, words)
 }
 
@@ -248,7 +291,12 @@ pub(crate) fn level_title(l: winweaver_core::catalog::Level) -> &'static str {
 }
 
 /// The parameter of a rule in a few words, for the right end of its row.
-fn param_summary(catalog: &Catalog, doc: &ProfileDoc, rule: &Rule) -> String {
+fn param_summary(
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    doc: &ProfileDoc,
+    rule: &Rule,
+) -> String {
     let Some((name, param)) = rule.params.iter().next() else {
         return String::new();
     };
@@ -260,7 +308,10 @@ fn param_summary(catalog: &Catalog, doc: &ProfileDoc, rule: &Rule) -> String {
         Param::Enum { values, .. } => values
             .iter()
             .find(|v| check::same_value(&v.value, &value))
-            .map_or_else(|| value.to_string(), |v| v.title.clone()),
+            .map_or_else(
+                || value.to_string(),
+                |v| vtitle(texts, rule, name, v).to_owned(),
+            ),
         Param::List { .. } => {
             let n = value.as_array().map_or(0, |a| {
                 a.iter()
