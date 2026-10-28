@@ -44,7 +44,9 @@ The three blockers of the customer's words, as they were resolved:
    in a browser too. Against the native read the lists lack the names in the language of the user's
    Windows and anything a newer Windows adds.
 
-What stays open: the keys Ctrl+N, Ctrl+W and Ctrl+Tab belong to the browser (the menu does the same),
+The keys (item 16 of the list of 28.10.2026): a page takes Alt+N for New, Alt+W for Close, Alt+PgDn and Alt+PgUp for the next and the previous tab and Alt+Shift+PgUp/PgDn to move a tab, since a browser keeps Ctrl+N, Ctrl+W, Ctrl+Tab and Ctrl+Shift+PgUp/PgDn for itself (`ww::keys`), and Alt+I for the guide, since F1 opens the help of the browser (`commands::keys::GUIDE`); the page stops the browser from
+acting on F2, F3, F7, F9, Ctrl+F, Ctrl+D and Ctrl+B (a listener of `index.html`), eframe does on
+Ctrl+O, Ctrl+S and Ctrl+,. What stays open:
 nothing asks before the page closes with unsaved changes (the drafts in the storage of the page come
 back at the next start), the menu has no recent files and no Exit (a page keeps no paths and cannot
 close its tab), the tabs of the last session have no meaning there, the

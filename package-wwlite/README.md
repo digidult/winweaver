@@ -62,4 +62,7 @@ What it does not: no scripts beside the answer file (Windows alone writes them),
 folder `imports`, no themes from a folder `themes`, no languages from a folder `lang` (English and
 Ukrainian are built in), no recent files, no tabs of the last session, no log file (the console of the
 browser shows it). The names of the input languages are in English, from a list of Windows 11 built
-in. Ctrl+N, Ctrl+W and Ctrl+Tab belong to the browser: use the menu and the buttons instead.
+in. The browser keeps Ctrl+N, Ctrl+W and Ctrl+Tab, so there a new profile is Alt+N, closing a tab
+Alt+W, the next and the previous tab Alt+PgDn and Alt+PgUp, moving a tab Alt+Shift+PgUp and
+Alt+Shift+PgDn, and the guide opens at Alt+I instead of F1, the help of the browser; the other
+keys are the ones of Windows.

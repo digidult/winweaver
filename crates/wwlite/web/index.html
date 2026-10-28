@@ -16,6 +16,21 @@
 <body>
   <canvas id="wwlite"></canvas>
   <p id="loading_text">wwlite is loading...</p>
+  <script>
+    // The keys of wwlite a browser would also act on (caret browsing, find, a bookmark):
+    // the page keeps them, so only the program answers. Letters by their place (code), so a
+    // Cyrillic layout keeps them too; the keys the browser keeps for itself are never asked.
+    window.addEventListener("keydown", (e) => {
+      const plain = !e.ctrlKey && !e.altKey && !e.metaKey;
+      const ctrl = e.ctrlKey && !e.altKey && !e.metaKey;
+      const alt = e.altKey && !e.ctrlKey && !e.metaKey;
+      if ((plain && ["F2", "F3", "F7", "F9"].includes(e.key))
+        || (ctrl && ["KeyF", "KeyD", "KeyB"].includes(e.code))
+        || (alt && ["KeyN", "KeyW", "KeyI", "PageUp", "PageDown"].includes(e.code))) {
+        e.preventDefault();
+      }
+    }, true);
+  </script>
   <script type="module">
     import init from "./wwlite.js";
     init().catch((e) => {

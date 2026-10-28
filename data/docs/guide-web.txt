@@ -46,6 +46,12 @@ the page needs no internet once it is open. It does not read or change this comp
    size of the text.
 
 7. Keys
-   Ctrl+N, Ctrl+W and Ctrl+Tab belong to the browser: use the menu and the buttons for a new
-   profile, to close a tab and to go to another one. The names of the input languages and of the
-   regions are shown in English.
+   Alt+N a new profile, Ctrl+O open, Ctrl+S save, Ctrl+Shift+S save as, Alt+W close the tab,
+   Alt+PgDn and Alt+PgUp the next and the previous tab, Alt+Shift+PgUp and Alt+Shift+PgDn move
+   the tab, F7 check, F9 build, Ctrl+F find, Ctrl+D fold or show the description, Alt+Left and
+   Alt+Right back and forward through the rules you looked at, Ctrl+, the settings, Alt+I this
+   guide. The menu shows the key beside each command. The browser keeps Ctrl+N, Ctrl+W and
+   Ctrl+Tab for its own windows and tabs and opens its own help at F1, so wwlite takes Alt for
+   them.
+
+The names of the input languages and of the regions are shown in English.

@@ -283,17 +283,19 @@ impl<A: App> Window<A> {
             if i.consume_shortcut(&keys::SETTINGS.shortcut()) {
                 acts.push(ShellAct::OpenSettings.into());
             }
-            if count > 1 && i.consume_shortcut(&keys::PREVIOUS_TAB.shortcut()) {
-                acts.push(ShellAct::Activate((active + count - 1) % count).into());
-            }
-            if count > 1 && i.consume_shortcut(&keys::NEXT_TAB.shortcut()) {
-                acts.push(ShellAct::Activate((active + 1) % count).into());
-            }
+            // The keys with Shift first: a shortcut matches with an extra Shift too, and in a
+            // browser the moves are the switches with Shift.
             if active > 0 && i.consume_shortcut(&keys::TAB_LEFT.shortcut()) {
                 acts.push(ShellAct::MoveTab(active, active - 1).into());
             }
             if active + 1 < count && i.consume_shortcut(&keys::TAB_RIGHT.shortcut()) {
                 acts.push(ShellAct::MoveTab(active, active + 1).into());
+            }
+            if count > 1 && i.consume_shortcut(&keys::PREVIOUS_TAB.shortcut()) {
+                acts.push(ShellAct::Activate((active + count - 1) % count).into());
+            }
+            if count > 1 && i.consume_shortcut(&keys::NEXT_TAB.shortcut()) {
+                acts.push(ShellAct::Activate((active + 1) % count).into());
             }
             acts.extend(self.app.shortcuts(&self.shell, i));
             if asking && i.consume_key(Modifiers::NONE, Key::Escape) {
@@ -376,7 +378,8 @@ impl<A: App> Window<A> {
             Some(ShellDoc::Theme(_)) => self.shell.theme_view(ui, acts),
             None if self.shell.docs.is_empty() => {
                 egui::CentralPanel::default().show(ui, |ui| {
-                    ui.label(tr("No document is open. Use Menu, New or Ctrl+N."));
+                    let text = "No document is open. Use Menu, New or {keys}.";
+                    ui.label(trf(text, &[("keys", &keys::NEW.text)]));
                 });
             }
             None => self.app.draw(&mut self.shell, ui, acts),

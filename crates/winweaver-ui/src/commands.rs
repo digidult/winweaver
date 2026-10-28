@@ -21,7 +21,12 @@ pub mod keys {
 
     pub use ww::keys::*;
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub const GUIDE: Keys = Keys::new("F1", Modifiers::NONE, Key::F1);
+    /// A browser opens its own help at F1; Alt+I is free in Chrome, Edge and Firefox, also with
+    /// the access keys of its Russian and Ukrainian menus.
+    #[cfg(target_arch = "wasm32")]
+    pub const GUIDE: Keys = Keys::new("Alt+I", Modifiers::ALT, Key::I);
     pub const CHECK: Keys = Keys::new("F7", Modifiers::NONE, Key::F7);
     pub const BUILD: Keys = Keys::new("F9", Modifiers::NONE, Key::F9);
     #[cfg(feature = "full")]

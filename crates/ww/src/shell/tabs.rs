@@ -8,9 +8,9 @@ use super::{
     Window,
 };
 use crate::doc::Document;
-use crate::i18n::tr;
-use crate::icons;
+use crate::i18n::{tr, trf};
 use crate::style::{self, Palette};
+use crate::{icons, keys};
 
 impl<A: App> Window<A> {
     /// The tab row: the menu button, the tabs with their icons, the new tab button.
@@ -206,7 +206,8 @@ fn tab<A: App>(
         egui::WidgetInfo::selected(egui::WidgetType::SelectableLabel, true, active, &title)
     });
     close.widget_info(|| {
-        egui::WidgetInfo::labeled(egui::WidgetType::Button, true, tr("Close (Ctrl+W)"))
+        let label = trf("Close ({keys})", &[("keys", &keys::CLOSE.text)]);
+        egui::WidgetInfo::labeled(egui::WidgetType::Button, true, label)
     });
     if close.clicked() {
         acts.push(ShellAct::CloseTab(i, false).into());
@@ -217,16 +218,23 @@ fn tab<A: App>(
         acts.push(ShellAct::CloseTab(i, false).into());
     }
     response.context_menu(|ui| {
-        let left = tr("Move the tab left (Ctrl+Shift+PgUp)");
-        if menu_entry(ui, icons::BACK, left, "", i > 0) {
+        let left = trf(
+            "Move the tab left ({keys})",
+            &[("keys", &keys::TAB_LEFT.text)],
+        );
+        if menu_entry(ui, icons::BACK, &left, "", i > 0) {
             acts.push(ShellAct::MoveTab(i, i - 1).into());
         }
-        let right = tr("Move the tab right (Ctrl+Shift+PgDn)");
-        if menu_entry(ui, icons::FORWARD, right, "", i < last) {
+        let right = trf(
+            "Move the tab right ({keys})",
+            &[("keys", &keys::TAB_RIGHT.text)],
+        );
+        if menu_entry(ui, icons::FORWARD, &right, "", i < last) {
             acts.push(ShellAct::MoveTab(i, i + 1).into());
         }
         ui.separator();
-        if menu_entry(ui, icons::CLOSE, tr("Close (Ctrl+W)"), "", true) {
+        let close = trf("Close ({keys})", &[("keys", &keys::CLOSE.text)]);
+        if menu_entry(ui, icons::CLOSE, &close, "", true) {
             acts.push(ShellAct::CloseTab(i, false).into());
         }
     });

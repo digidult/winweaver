@@ -350,5 +350,9 @@ the page; Save and Save as download the profile, Build downloads `autounattend.x
 are embedded in it); the settings, the drafts and the fonts of the theme stay in the storage of the
 page; the input languages and layouts come from the embedded list of a Windows 11 with English names.
 It has no folders (no catalogs of `imports`, no themes of `themes`, no languages of `lang` beyond the
-built-in English and Ukrainian), no recent files, no tabs of the last session, no log file; the keys
-Ctrl+N, Ctrl+W and Ctrl+Tab belong to the browser, the menu does the same.
+built-in English and Ukrainian), no recent files, no tabs of the last session, no log file. Its keys
+work in a browser (item 16 of the list of 28.10.2026): Alt+N for New, Alt+W for Close, Alt+PgDn and
+Alt+PgUp for the next and the previous tab, Alt+Shift+PgUp/PgDn to move a tab, since a browser keeps
+Ctrl+N, Ctrl+W, Ctrl+Tab and Ctrl+Shift+PgUp/PgDn for itself, and Alt+I for the guide, since F1 opens
+the help of the browser; the page stops the browser from acting on F2, F3, F7, F9, Ctrl+F, Ctrl+D and
+Ctrl+B, and eframe on Ctrl+O and Ctrl+S.
