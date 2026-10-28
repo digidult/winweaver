@@ -1,0 +1,51 @@
+wwlite in the browser
+=====================
+
+wwlite prepares an unattended installation of Windows 11. You choose here what the installation
+should do, and wwlite writes the answer file autounattend.xml. Windows Setup finds this file on
+the installation USB stick and installs Windows without the questions you answered here.
+
+Everything happens in this browser tab. The files you open are read here and sent nowhere, and
+the page needs no internet once it is open. It does not read or change this computer.
+
+1. What you see
+   The tab holds a profile: the choices of one installation. At the first start the profile
+   Office is open, a good start for a PC of an office. The button with three lines at the top
+   left opens the menu. Under the tabs is the command bar: New, Open, Save, Check, Build and
+   Only on.
+
+2. The tree and the forms
+   On the left are the rules of the installation in their groups Installation, Policies and
+   Other. A check box turns a rule on or off. A click on a rule shows it on the right: its
+   parameters and what it does, what it risks and how to undo it. At the top of the tree, under
+   Installation, the forms Installation, Accounts and Languages hold the edition of Windows, the
+   product key, the disk, the name of the computer, the user accounts, the languages and the
+   time zone. Only on shows only the rules that are on. The magnifier at the right finds a rule
+   by its words.
+
+3. Check and build
+   Check (F7) lists under the command bar what is wrong or worth a look; the rules it names are
+   links. Build (F9) checks the profile, stops at an error, and downloads autounattend.xml
+   through the browser, usually into the folder Downloads. Copy that file to the root of a
+   Windows 11 installation USB stick (made with the Media Creation Tool of Microsoft, for
+   example) and start the computer from the stick.
+
+4. Keep your profile
+   Save (Ctrl+S) and Save as download the profile as a .wwprofile file. To go on later, open it
+   again with Open (Ctrl+O) or drop the file onto the page. Open also takes an autounattend.xml
+   built here, since the profile is inside it, and older profiles (.json). New starts an empty
+   profile or one of the presets Office, Strict, Laptop and Home.
+
+5. What the browser keeps
+   The settings and the changes not saved yet stay in this browser: open the page again in the
+   same browser and they come back. Another browser, a private window or clearing the data of
+   the site starts clean, so download what you want to keep. Closing the tab asks nothing.
+
+6. Settings
+   Menu, Settings, General: the language of the window (English or Ukrainian), the theme and the
+   size of the text.
+
+7. Keys
+   Ctrl+N, Ctrl+W and Ctrl+Tab belong to the browser: use the menu and the buttons for a new
+   profile, to close a tab and to go to another one. The names of the input languages and of the
+   regions are shown in English.

@@ -1,6 +1,8 @@
 //! The pages of WinWeaver: the guide in the language of the interface, the license and the
 //! reference of the parameters, embedded in the executable.
 
+// The browser edition of wwlite reads no file here: its guide is embedded.
+#[cfg(any(feature = "full", not(target_arch = "wasm32")))]
 use crate::*;
 
 /// The guide shown at the first start and from the menu (F1).
@@ -150,14 +152,32 @@ pub fn license_text() -> String {
 /// The short guide of wwlite, plain text: the title of its tab and the embedded texts.
 #[cfg(not(feature = "full"))]
 pub const GUIDE_LITE_TITLE: &str = "Guide.txt";
-#[cfg(not(feature = "full"))]
+#[cfg(all(not(feature = "full"), not(target_arch = "wasm32")))]
 const GUIDE_LITE: &str = include_str!("../../../data/docs/guide-lite.txt");
-#[cfg(not(feature = "full"))]
+#[cfg(all(not(feature = "full"), not(target_arch = "wasm32")))]
 const GUIDE_LITE_UK: &str = include_str!("../../../data/lang/uk/guide-lite.txt");
+/// The guide of the browser edition, written for someone who sees wwlite there first: a page,
+/// downloads, the storage of the browser (item 14 of the list of 28.10.2026).
+#[cfg(all(not(feature = "full"), target_arch = "wasm32"))]
+const GUIDE_WEB: &str = include_str!("../../../data/docs/guide-web.txt");
+#[cfg(all(not(feature = "full"), target_arch = "wasm32"))]
+const GUIDE_WEB_UK: &str = include_str!("../../../data/lang/uk/guide-web.txt");
+
+/// The guide of the browser edition in a language: Ukrainian or English, the languages a page
+/// has; no folder of languages is there.
+#[cfg(all(not(feature = "full"), target_arch = "wasm32"))]
+pub fn guide_lite_text(code: &str) -> String {
+    if code == "uk" {
+        GUIDE_WEB_UK
+    } else {
+        GUIDE_WEB
+    }
+    .to_owned()
+}
 
 /// The guide of wwlite in a language: a file `lang/<code>/guide-lite.txt` next to the
 /// executable, the Ukrainian one, or the English one.
-#[cfg(not(feature = "full"))]
+#[cfg(all(not(feature = "full"), not(target_arch = "wasm32")))]
 pub fn guide_lite_text(code: &str) -> String {
     let file = lang_dir().join(code).join("guide-lite.txt");
     if code != "en"

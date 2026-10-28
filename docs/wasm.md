@@ -14,7 +14,8 @@ wwlite and `files/` with `index.html` (`crates/wwlite/web/index.html`), `wwlite.
 module script, the module packed with gzip into base64 and unpacked by the browser
 (`DecompressionStream`), so it opens from the disk too; it refuses a glue that imports a snippet file.
 The folder `files/` is served over http only (a page of it opened from `file://` cannot load the
-module).
+module). The menu Guide of a page shows `data/docs/guide-web.txt` (Ukrainian:
+`data/lang/uk/guide-web.txt`), the guide for someone who knows only the browser edition.
 
 The three blockers of the customer's words, as they were resolved:
 

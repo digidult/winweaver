@@ -160,7 +160,9 @@ text editor wedit.
 │   ├── themes/            light, dark, latte, matrix .wwtheme: the embedded themes (a base, the colours it
 │   │                      changes, the fonts and the font of the icons)
 │   └── docs/              guide.md, the English guide shown at the first start; guide-lite.txt, the plain
-│                          guide of wwlite (its Ukrainian one in lang/uk/guide-lite.txt)
+│                          guide of wwlite (its Ukrainian one in lang/uk/guide-lite.txt); guide-web.txt,
+│                          the guide of the browser edition for someone who sees only it (its
+│                          Ukrainian one in lang/uk/guide-web.txt, both embedded in that build alone)
 ├── agents/                shipped in the archive: AGENTS.md (the assistant for any agent, short for small
 │                          contexts), README.md, skills/ (winweaver: the tools, served as winweaver://skill;
 │                          winweaver-review, -change, -this-pc), pi-agent/ (Dockerfile of the latest pi and
@@ -910,6 +912,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   and wwlite_bg.wasm for a server), zipped by a tag. Open: the keys Ctrl+N, Ctrl+W and Ctrl+Tab
   belong to the browser (the menu does the same), no question before the page closes, the folder
   `files/` is served over http, never from `file://`, and the names of the input languages and the regions are English (the embedded lists).
+  The guide of a page is `data/docs/guide-web.txt` (`pages::guide_lite_text` under
+  `cfg(target_arch = "wasm32")`, English and Ukrainian), written for someone who knows no other
+  edition (item 14 of the list of 28.10.2026): a change of the browser edition changes it too.
   The menu of a page has no Open recent and no Exit (`cfg(not(target_arch = "wasm32"))` in
   `app/menu.rs`). `docs/wasm.md` section 6 builds the page by hand, without CI.
 
@@ -927,7 +932,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Done in pull request #61 (0.25.0) | The list of the customer of 24.10.2026 in six groups: the shell (keys, focus, About, links, icons, the question of a closing tab), the documents, the profile (links between catalogs, colours of the panels, `.reg` and `.ps1` of a diff and a whole profile, the command line), the registry and `.pol` files, drafts of every document, `wwlite` and a study of a Wasm edition |
 | Done in pull request #62 (0.26.0) | The list of the customer of 25.10.2026, 14 items: the command line (the answer file, the import and export of templates, a read of this PC, diffs, `--out` as a file), Open and Save as of the MCP tab, the comparison of catalogs as a tab with its report, the panel of the work in the background, the Group Policy editor, Copy to of a catalog, Only on, the scrolling tab row, the catalog by mechanism with the root Policies, icons in every menu, wwlite without the code of the full edition, the hammer of Build, the parameters in the width of the panel with their limits |
 | Done in pull request #63 (0.27.0) | The second list of the customer of 25.10.2026: the region of the default user profile from the list of Windows, the editors in the width they have, text sizes up to 36, every catalog file in the menu Catalogs, wwlite for the browser (the store, the web start, the embedded input languages, the artifact wwlite-web), the presentation of the screenshots |
-| Done in pull request #64 (0.28.0) | The list of the customer of 28.10.2026: a group removed in the catalog editor, no recent files and no Exit in the menu of the browser edition, its list of regions, the build of the page by hand, every catalog of `imports/` in wwlite, the built-in catalog flatter (the small groups of Other into its root, the network and the logging of PowerShell into Security, the browsers into Apps), the whole description of a rule and the titles of the values in the language of the window, the browser edition in one file `wwlite.html`, CI only for a release or on demand, the checks before a commit on the computer of the developer, the tests that change Windows ignored by a plain `cargo test` |
+| Done in pull request #64 (0.28.0) | The list of the customer of 28.10.2026: a group removed in the catalog editor, no recent files and no Exit in the menu of the browser edition, its list of regions, the build of the page by hand, every catalog of `imports/` in wwlite, the built-in catalog flatter (the small groups of Other into its root, the network and the logging of PowerShell into Security, the browsers into Apps), the whole description of a rule and the titles of the values in the language of the window, the browser edition in one file `wwlite.html`, CI only for a release or on demand, the checks before a commit on the computer of the developer, the tests that change Windows ignored by a plain `cargo test`, the guide of the browser edition for a first-time user |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the
