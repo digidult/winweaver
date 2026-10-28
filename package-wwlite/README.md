@@ -13,7 +13,7 @@ Nothing is installed: unzip the archive anywhere and run `wwlite.exe` on Windows
 | `wwlite.exe` | The program |
 | `profiles/` | The presets Office, Strict, Laptop and Home as profiles to open and change |
 | `lang/de/` | German: `ui.json` (the interface) and `guide-lite.txt` (the guide) |
-| `imports/` | Made by you when wanted: catalog files `.wwcatalog` whose rules join the tree and the answer file |
+| `imports/` | Made by you when wanted: catalog files `.wwcatalog`, every one read at the start, whose rules join the tree and the answer file |
 | `themes/` | Made by you when wanted: theme files `.wwtheme` to choose in Settings |
 
 The program writes next to itself: `wwlite.settings.json`, `drafts/` (unsaved profiles) and the

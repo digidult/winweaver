@@ -23,8 +23,9 @@ changes nothing on it.
 
 4. Catalogs and themes
    The catalog of rules is built in. More catalogs (.wwcatalog files made by WinWeaver or by
-   hand) are read from the folder imports next to the program, and their rules join the tree and
-   the answer file. Themes (.wwtheme files) are read from the folder themes and chosen in
+   hand) are read from the folder imports next to the program, every file of it at the start, and
+   their rules join the tree and the answer file; to leave a catalog out, move its file out of the
+   folder. Themes (.wwtheme files) are read from the folder themes and chosen in
    Settings, General.
 
 5. Languages

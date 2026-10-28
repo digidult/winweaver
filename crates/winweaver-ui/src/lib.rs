@@ -638,9 +638,52 @@ pub const LANGUAGES_LITE: [(&str, &str); 1] =
 pub fn run(cli_renderer: Option<&str>) -> Result<(), String> {
     let catalog = Catalog::embedded().map_err(|e| format!("catalog: {e}"))?;
     let texts = CatalogTexts::embedded().map_err(|e| format!("translations: {e}"))?;
+    #[cfg(not(feature = "full"))]
+    let (catalog, texts) = with_every_import(catalog, texts);
     ww::run::<WinWeaver>(cli_renderer, move |_| {
         WinWeaver::new(catalog.clone(), texts.clone())
     })
+}
+
+/// wwlite has no settings of the imports: every catalog file of the folder `imports` next to it
+/// is merged at the start, the templates of this Windows first, and the user manages the files
+/// there. A file that cannot be read or merged is left out. The full edition loads the imports its
+/// settings name; the browser edition has no folder.
+#[cfg(all(not(feature = "full"), not(target_arch = "wasm32")))]
+fn with_every_import(
+    catalog: Catalog,
+    mut texts: Vec<CatalogTexts>,
+) -> (Catalog, Vec<CatalogTexts>) {
+    use winweaver_core::admx;
+    let Ok(entries) = std::fs::read_dir(imports_dir()) else {
+        return (catalog, texts);
+    };
+    let mut paths: Vec<PathBuf> = entries
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e == admx::CATALOG_EXTENSION))
+        .collect();
+    paths.sort_by_key(|p| {
+        let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or_default();
+        (!stem.starts_with("system"), stem.to_owned())
+    });
+    let mut files = Vec::new();
+    for path in paths {
+        let stem = path.file_stem().and_then(|s| s.to_str());
+        let Some(id) = stem.map(str::to_owned) else {
+            continue;
+        };
+        if let Ok(mut file) = admx::CatalogFile::load(&path) {
+            file.id = id;
+            files.push(file);
+        }
+    }
+    let catalog = match admx::merge(&catalog, &files) {
+        Ok((merged, _)) => merged,
+        Err(_) => catalog,
+    };
+    admx::merge_texts(&mut texts, &files);
+    (catalog, texts)
 }
 
 /// The smoke test of the renderers for CI (`--smoke-window`): a small window drawn twice.
