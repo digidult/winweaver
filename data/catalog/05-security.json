@@ -295,7 +295,7 @@
     },
     {
       "id": "accounts.lockout",
-      "group": "security.other",
+      "group": "other",
       "phase": "specialize",
       "title": "Lock out accounts after wrong passwords",
       "level": "recommended",
@@ -333,7 +333,7 @@
     },
     {
       "id": "accounts.password-never-expires",
-      "group": "security.other",
+      "group": "other",
       "phase": "specialize",
       "title": "Passwords never expire (initial accounts)",
       "level": "recommended",

@@ -3,7 +3,7 @@
   "rules": [
     {
       "id": "privacy.telemetry-minimal",
-      "group": "privacy.other",
+      "group": "other",
       "phase": "specialize",
       "title": "Minimal telemetry without disabling compatibility assessment",
       "level": "recommended",
@@ -181,7 +181,7 @@
     },
     {
       "id": "privacy.copilot-recall-off",
-      "group": "privacy.other",
+      "group": "other",
       "phase": "specialize",
       "title": "Copilot, Recall and Click to Do turned off",
       "level": "recommended",

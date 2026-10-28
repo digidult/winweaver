@@ -121,7 +121,7 @@
     },
     {
       "id": "scripts.remove-vbscript",
-      "group": "system.other",
+      "group": "other",
       "phase": "specialize",
       "title": "Remove the VBScript engine",
       "level": "risky",

@@ -3,7 +3,7 @@
   "rules": [
     {
       "id": "network.smb1-off",
-      "group": "network.other",
+      "group": "other",
       "phase": "specialize",
       "title": "SMB1 disabled and removed",
       "level": "recommended",
@@ -31,7 +31,7 @@
     },
     {
       "id": "network.smb-signing",
-      "group": "network",
+      "group": "security",
       "phase": "specialize",
       "title": "SMB signing required (server and client)",
       "level": "recommended",
@@ -81,7 +81,7 @@
     },
     {
       "id": "network.llmnr-off",
-      "group": "network",
+      "group": "security",
       "phase": "specialize",
       "title": "LLMNR disabled (protection against name spoofing on the network)",
       "level": "recommended",
@@ -106,7 +106,7 @@
     },
     {
       "id": "network.netbios-off",
-      "group": "network.other",
+      "group": "other",
       "phase": "specialize",
       "title": "NetBIOS over TCP/IP disabled",
       "level": "risky",
@@ -141,7 +141,7 @@
     },
     {
       "id": "network.firewall",
-      "group": "network",
+      "group": "security",
       "phase": "specialize",
       "title": "Firewall on for all profiles, inbound blocked, dropped packets logged",
       "level": "recommended",

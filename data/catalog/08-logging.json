@@ -3,7 +3,7 @@
   "rules": [
     {
       "id": "logging.eventlog-sizes",
-      "group": "logging",
+      "group": "other",
       "phase": "specialize",
       "title": "Larger event logs (Security 256 MB, System and Application 64 MB, PowerShell 128 MB)",
       "level": "recommended",
@@ -28,7 +28,7 @@
     },
     {
       "id": "logging.audit-policy",
-      "group": "logging",
+      "group": "other",
       "phase": "specialize",
       "title": "Auditing: process creation with command line, logons, lockouts, accounts, removable storage",
       "level": "recommended",
@@ -116,7 +116,7 @@
     },
     {
       "id": "logging.powershell",
-      "group": "logging.policies",
+      "group": "security",
       "phase": "specialize",
       "title": "PowerShell logging: script blocks and cmdlet invocations",
       "level": "recommended",
@@ -156,7 +156,7 @@
     },
     {
       "id": "logging.powershell-v2-off",
-      "group": "logging",
+      "group": "other",
       "phase": "specialize",
       "title": "PowerShell 2.0 disabled",
       "level": "recommended",

@@ -4325,7 +4325,7 @@
     },
     "security": {
       "title": "Güvenlik",
-      "summary": "UAC, hesaplar, kimlik bilgisi koruması, uzaktan erişim, şifreleme."
+      "summary": "UAC, hesaplar, kimlik bilgisi koruması, uzaktan erişim, şifreleme. SMB imzalama, ad çözümleme, güvenlik duvarı. PowerShell günlüğe kaydı."
     },
     "security.accounts": {
       "title": "Hesaplar ve oturum açma"
@@ -4336,14 +4336,6 @@
     "security.remote": {
       "title": "Uzaktan erişim"
     },
-    "network": {
-      "title": "Ağ ve paylaşım",
-      "summary": "SMB imzalama, ad çözümleme, güvenlik duvarı."
-    },
-    "browsers": {
-      "title": "Tarayıcılar",
-      "summary": "Microsoft Edge, Google Chrome ve Brave ilkeleri: güvenlik, telemetri, reklam, yapay zeka özellikleri. İlkelerin bir bölümü varsayılan olarak açıktır: telemetri, reklam, yapay zeka özellikleri, sayfa çevirisi, kart otomatik doldurma, Brave cüzdanı ve VPN; eşitleme, tarayıcıda oturum açma ve parola yöneticileri kapalıdır. Yüklü olmayan bir tarayıcıya yönelik ilkelerin etkisi yoktur."
-    },
     "browsers.edge": {
       "title": "Microsoft Edge"
     },
@@ -4352,10 +4344,6 @@
     },
     "browsers.brave": {
       "title": "Brave"
-    },
-    "logging": {
-      "title": "İncelemeler için günlüğe kaydetme",
-      "summary": "Denetim, günlük boyutları, PowerShell 2.0'ı devre dışı bırakma."
     },
     "privacy": {
       "title": "Telemetri, reklamlar, yapay zeka",
@@ -4425,14 +4413,6 @@
       "title": "İlk oturum açma",
       "summary": "Her yeni kullanıcının ilk oturum açma betikleri: sabitlenen görüntüleme dili, profilin giriş dilleri."
     },
-    "security.other": {
-      "title": "Güvenlik",
-      "summary": "net accounts ile ayarlanan hesap kilitleme ve parola süresi."
-    },
-    "privacy.other": {
-      "title": "Telemetri, reklamlar, yapay zeka",
-      "summary": "Hizmetleri ve görevleriyle en az telemetri; Recall özelliğiyle birlikte kapatılan Copilot, Recall ve Click to Do."
-    },
     "privacy.ads": {
       "title": "Reklamlar ve öneriler",
       "summary": "Reklam kimliği, ipuçları ve öneriler, önceden yüklenmiş uygulamalar, kilit ekranı, Dosya Gezgini'ndeki ve Ayarlar'daki reklamlar."
@@ -4443,19 +4423,7 @@
     },
     "apps.policies": {
       "title": "Uygulamalar",
-      "summary": "Uygulamaların ilkeleri ve değerleri: OneDrive."
-    },
-    "logging.policies": {
-      "title": "İncelemeler için günlüğe kaydetme",
-      "summary": "PowerShell günlüğe kaydı."
-    },
-    "network.other": {
-      "title": "Ağ ve paylaşım",
-      "summary": "SMB 1.0 ve TCP/IP üzerinden NetBIOS."
-    },
-    "system.other": {
-      "title": "Sistem",
-      "summary": "Engelleri kaldırılan Windows Update, kaldırılan VBScript, gezinti bölmesinde yalnızca bir kez görünen USB sürücüler."
+      "summary": "Uygulamaların ilkeleri ve değerleri: OneDrive. Microsoft Edge, Google Chrome ve Brave ilkeleri: güvenlik, telemetri, reklam, yapay zeka özellikleri. İlkelerin bir bölümü varsayılan olarak açıktır: telemetri, reklam, yapay zeka özellikleri, sayfa çevirisi, kart otomatik doldurma, Brave cüzdanı ve VPN; eşitleme, tarayıcıda oturum açma ve parola yöneticileri kapalıdır. Yüklü olmayan bir tarayıcıya yönelik ilkelerin etkisi yoktur."
     }
   }
 }

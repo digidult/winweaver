@@ -2,7 +2,7 @@
 
 Browser policies from the request "Web Browsers debloat", which came with three .cmd scripts (`DebloatEdge.cmd`,
 `DebloatChrome.cmd`, `DebloatBrave.cmd`); every policy name and value was checked against the vendors' definitions
-(see Sources). Each working policy is a separate rule of the "Browsers" section (`data/catalog/14-browsers.json`),
+(see Sources). Each working policy is a separate rule of the groups Microsoft Edge, Google Chrome and Brave under Policies, Apps (`data/catalog/14-browsers.json`),
 so any of them can be disabled.
 
 All rules write machine policies (`HKLM`) in the specialize pass, apply to every user and cannot be changed

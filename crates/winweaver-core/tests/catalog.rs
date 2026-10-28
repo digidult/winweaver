@@ -15,7 +15,7 @@ fn data_dir() -> PathBuf {
 fn embedded_catalog_loads() {
     let catalog = Catalog::embedded().expect("the embedded catalog loads");
     assert_eq!(catalog.rules().len(), 284);
-    assert_eq!(catalog.groups().len(), 43);
+    assert_eq!(catalog.groups().len(), 35);
     assert_eq!(catalog.version(), embedded::CATALOG_VERSION);
     for root in TREE_ROOTS {
         assert!(catalog.group(root).is_some(), "root {root}");
@@ -207,14 +207,55 @@ fn every_rule_sits_under_a_root_of_its_mechanism() {
     assert!(wrong.is_empty(), "{}", wrong.join("\n"));
 }
 
+/// The roots Installation and Policies hold groups only; Other holds its few rules directly
+/// beside the group of the apps (the customer's decision of 28.10.2026: groups of two or three
+/// rules made a hierarchy without a use).
 #[test]
-fn no_rule_sits_directly_in_a_root() {
+fn only_the_root_other_holds_rules_directly() {
     let catalog = Catalog::embedded().unwrap();
     let direct: Vec<&str> = catalog
         .rules()
         .iter()
-        .filter(|r| TREE_ROOTS.contains(&r.group.as_str()))
+        .filter(|r| TREE_ROOTS.contains(&r.group.as_str()) && r.group != catalog::ROOT_OTHER)
         .map(|r| r.id.as_str())
         .collect();
     assert!(direct.is_empty(), "{direct:?}");
+    assert!(catalog.rules_in(catalog::ROOT_OTHER).len() > 5);
+}
+
+/// The texts of the description and the titles of the values come from the translation: the
+/// window showed the effect, the risk and the values of a rule in English beside a translated
+/// summary until 28.10.2026, though every language had them.
+#[test]
+fn the_description_and_the_values_come_from_the_translation() {
+    let catalog = Catalog::embedded().unwrap();
+    for texts in CatalogTexts::embedded().unwrap() {
+        for rule in catalog.rules() {
+            let Some(t) = texts.rules.get(&rule.id) else {
+                continue;
+            };
+            let pairs = [
+                (&t.effect, texts.rule_effect(rule)),
+                (&t.risk, texts.rule_risk(rule)),
+                (&t.versions, texts.rule_versions(rule)),
+                (&t.verify, texts.rule_verify(rule)),
+                (&t.rollback, texts.rule_rollback(rule)),
+            ];
+            for (own, shown) in pairs {
+                if let Some(own) = own {
+                    assert_eq!(shown, own.as_str(), "{}: {}", texts.code, rule.id);
+                }
+            }
+            for (name, param) in &rule.params {
+                let catalog::Param::Enum { values, .. } = param else {
+                    continue;
+                };
+                for v in values {
+                    let title = texts.value_title(rule, name, v);
+                    let english = std::ptr::eq(title.as_ptr(), v.title.as_ptr());
+                    assert!(!english, "{}: {} {name} {}", texts.code, rule.id, v.value);
+                }
+            }
+        }
+    }
 }

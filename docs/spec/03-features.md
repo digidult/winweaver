@@ -33,9 +33,10 @@ lists the planned changes.
   registry values, their removals and lists, under any key, and every imported template; Other holds the
   rest: services, features, capabilities, apps, programs, scripts on a running Windows and their mixes
   with registry values. A rule of only script steps lives under Installation or Other, as the catalog
-  decides. A thematic group sits under the root of most of its rules and a rule of another mechanism lives
-  in a mirror group under the right root (Security, Network and sharing, Logging, Telemetry, System). A rule
-  in the wrong root fails the tests, and no rule sits directly in a root.
+  decides. A thematic group sits under the root of most of its rules; the few rules of other mechanisms
+  (security, network, logging, telemetry, system) sit directly in the root Other beside its group of the
+  apps, and the network and the logging of PowerShell are part of Security, the browsers part of Apps
+  under Policies. A rule in the wrong root fails the tests, and only the root Other holds rules directly.
 - The catalog is English with a translation file per built-in language (the titles and texts of the rules
   and the groups); a test fails when a rule lacks its texts in one of them.
 - The catalog version is kept in the profile; a profile of another catalog version loads, and its unknown

@@ -4320,7 +4320,7 @@
     },
     "security": {
       "title": "Seguridad",
-      "summary": "UAC, cuentas, protección de credenciales, acceso remoto, cifrado."
+      "summary": "UAC, cuentas, protección de credenciales, acceso remoto, cifrado. Firma SMB, resolución de nombres, firewall. Registro de PowerShell."
     },
     "security.accounts": {
       "title": "Cuentas e inicio de sesión"
@@ -4331,14 +4331,6 @@
     "security.remote": {
       "title": "Acceso remoto"
     },
-    "network": {
-      "title": "Red y uso compartido",
-      "summary": "Firma SMB, resolución de nombres, firewall."
-    },
-    "browsers": {
-      "title": "Navegadores",
-      "summary": "Directivas de Microsoft Edge, Google Chrome y Brave: seguridad, telemetría, publicidad, características de IA. Parte de las directivas está activada de forma predeterminada: telemetría, publicidad, características de IA, traducción de páginas, autorrelleno de tarjetas, la cartera y la VPN de Brave; la sincronización, el inicio de sesión en el navegador y los administradores de contraseñas están desactivados. Las directivas de un navegador que no está instalado no tienen efecto."
-    },
     "browsers.edge": {
       "title": "Microsoft Edge"
     },
@@ -4347,10 +4339,6 @@
     },
     "browsers.brave": {
       "title": "Brave"
-    },
-    "logging": {
-      "title": "Registro para investigaciones",
-      "summary": "Auditoría, tamaños de los registros, deshabilitación de PowerShell 2.0."
     },
     "privacy": {
       "title": "Telemetría, anuncios, IA",
@@ -4420,14 +4408,6 @@
       "title": "Primer inicio de sesión",
       "summary": "Scripts del primer inicio de sesión de cada usuario nuevo: el idioma de visualización fijado, los idiomas de entrada del perfil."
     },
-    "security.other": {
-      "title": "Seguridad",
-      "summary": "Bloqueo de cuentas y caducidad de las contraseñas, configurados con net accounts."
-    },
-    "privacy.other": {
-      "title": "Telemetría, anuncios, IA",
-      "summary": "Telemetría mínima con sus servicios y tareas; Copilot, Recall y Click to Do desactivados junto con la característica Recall."
-    },
     "privacy.ads": {
       "title": "Anuncios y recomendaciones",
       "summary": "Id. de publicidad, consejos y sugerencias, aplicaciones preinstaladas, la pantalla de bloqueo, anuncios en el Explorador de archivos y en Configuración."
@@ -4438,19 +4418,7 @@
     },
     "apps.policies": {
       "title": "Aplicaciones",
-      "summary": "Directivas y valores de aplicaciones: OneDrive."
-    },
-    "logging.policies": {
-      "title": "Registro para investigaciones",
-      "summary": "Registro de PowerShell."
-    },
-    "network.other": {
-      "title": "Red y uso compartido",
-      "summary": "SMB 1.0 y NetBIOS sobre TCP/IP."
-    },
-    "system.other": {
-      "title": "Sistema",
-      "summary": "Windows Update sin bloqueos, VBScript quitado, unidades USB una sola vez en el panel de navegación."
+      "summary": "Directivas y valores de aplicaciones: OneDrive. Directivas de Microsoft Edge, Google Chrome y Brave: seguridad, telemetría, publicidad, características de IA. Parte de las directivas está activada de forma predeterminada: telemetría, publicidad, características de IA, traducción de páginas, autorrelleno de tarjetas, la cartera y la VPN de Brave; la sincronización, el inicio de sesión en el navegador y los administradores de contraseñas están desactivados. Las directivas de un navegador que no está instalado no tienen efecto."
     }
   }
 }

@@ -61,36 +61,15 @@
       "id": "security",
       "title": "Security",
       "order": 60,
-      "summary": "UAC, accounts, credential protection, remote access, encryption.",
+      "summary": "UAC, accounts, credential protection, remote access, encryption. SMB signing, name resolution, firewall. PowerShell logging.",
       "parent": "policies"
     },
     {"id": "security.accounts", "parent": "security", "title": "Accounts and sign-in", "order": 2},
     {"id": "security.lsa", "parent": "security", "title": "Credential protection (LSA, NTLM)", "order": 3},
     {"id": "security.remote", "parent": "security", "title": "Remote access", "order": 4},
-    {
-      "id": "network",
-      "title": "Network and sharing",
-      "order": 70,
-      "summary": "SMB signing, name resolution, firewall.",
-      "parent": "policies"
-    },
-    {
-      "id": "browsers",
-      "title": "Browsers",
-      "order": 85,
-      "summary": "Microsoft Edge, Google Chrome and Brave policies: security, telemetry, advertising, AI features. Part of the policies is on by default: telemetry, advertising, AI features, page translation, card autofill, the Brave wallet and VPN; sync, browser sign-in and password managers are off. Policies for a browser that is not installed have no effect.",
-      "parent": "policies"
-    },
-    {"id": "browsers.edge", "parent": "browsers", "title": "Microsoft Edge", "order": 1},
-    {"id": "browsers.chrome", "parent": "browsers", "title": "Google Chrome", "order": 2},
-    {"id": "browsers.brave", "parent": "browsers", "title": "Brave", "order": 3},
-    {
-      "id": "logging",
-      "title": "Logging for investigations",
-      "order": 90,
-      "summary": "Auditing, log sizes, disabling PowerShell 2.0.",
-      "parent": "other"
-    },
+    {"id": "browsers.edge", "parent": "apps.policies", "title": "Microsoft Edge", "order": 3},
+    {"id": "browsers.chrome", "parent": "apps.policies", "title": "Google Chrome", "order": 4},
+    {"id": "browsers.brave", "parent": "apps.policies", "title": "Brave", "order": 5},
     {
       "id": "privacy",
       "title": "Telemetry, ads, AI",
@@ -205,20 +184,6 @@
       "summary": "Scripts of the first sign-in of every new user: the display language pinned, the input languages of the profile."
     },
     {
-      "id": "security.other",
-      "parent": "other",
-      "title": "Security",
-      "order": 60,
-      "summary": "Account lockout and password expiry, set with net accounts."
-    },
-    {
-      "id": "privacy.other",
-      "parent": "other",
-      "title": "Telemetry, ads, AI",
-      "order": 100,
-      "summary": "Minimal telemetry with its services and tasks; Copilot, Recall and Click to Do off together with the Recall feature."
-    },
-    {
       "id": "privacy.ads",
       "parent": "privacy",
       "title": "Ads and recommendations",
@@ -237,28 +202,7 @@
       "parent": "policies",
       "title": "Apps",
       "order": 120,
-      "summary": "Policies and values of apps: OneDrive."
-    },
-    {
-      "id": "logging.policies",
-      "parent": "policies",
-      "title": "Logging for investigations",
-      "order": 90,
-      "summary": "PowerShell logging."
-    },
-    {
-      "id": "network.other",
-      "parent": "other",
-      "title": "Network and sharing",
-      "order": 70,
-      "summary": "SMB 1.0 and NetBIOS over TCP/IP."
-    },
-    {
-      "id": "system.other",
-      "parent": "other",
-      "title": "System",
-      "order": 110,
-      "summary": "Windows Update unblocked, VBScript removed, USB drives once in the navigation pane."
+      "summary": "Policies and values of apps: OneDrive and the browsers. Microsoft Edge, Google Chrome and Brave policies: security, telemetry, advertising, AI features. Part of the policies is on by default: telemetry, advertising, AI features, page translation, card autofill, the Brave wallet and VPN; sync, browser sign-in and password managers are off. Policies for a browser that is not installed have no effect."
     }
   ]
 }

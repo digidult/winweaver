@@ -4326,7 +4326,7 @@
     },
     "security": {
       "title": "Sicurezza",
-      "summary": "Controllo dell'account utente, account, protezione delle credenziali, accesso remoto, crittografia."
+      "summary": "Controllo dell'account utente, account, protezione delle credenziali, accesso remoto, crittografia. Firma SMB, risoluzione dei nomi, firewall. Registrazione di PowerShell."
     },
     "security.accounts": {
       "title": "Account e accesso"
@@ -4337,14 +4337,6 @@
     "security.remote": {
       "title": "Accesso remoto"
     },
-    "network": {
-      "title": "Rete e condivisione",
-      "summary": "Firma SMB, risoluzione dei nomi, firewall."
-    },
-    "browsers": {
-      "title": "Browser",
-      "summary": "Criteri di Microsoft Edge, Google Chrome e Brave: sicurezza, telemetria, pubblicità, funzionalità di IA. Una parte dei criteri è attivata per impostazione predefinita: telemetria, pubblicità, funzionalità di IA, traduzione delle pagine, compilazione automatica delle carte, il portafoglio e la VPN di Brave; sincronizzazione, accesso al browser e gestione delle password sono disattivati. I criteri per un browser non installato non hanno effetto."
-    },
     "browsers.edge": {
       "title": "Microsoft Edge"
     },
@@ -4353,10 +4345,6 @@
     },
     "browsers.brave": {
       "title": "Brave"
-    },
-    "logging": {
-      "title": "Registrazione per le indagini",
-      "summary": "Controllo, dimensioni dei registri, disattivazione di PowerShell 2.0."
     },
     "privacy": {
       "title": "Telemetria, pubblicità, IA",
@@ -4426,14 +4414,6 @@
       "title": "Primo accesso",
       "summary": "Script del primo accesso di ogni nuovo utente: la lingua di visualizzazione fissata, le lingue di input del profilo."
     },
-    "security.other": {
-      "title": "Sicurezza",
-      "summary": "Blocco degli account e scadenza delle password, impostati con net accounts."
-    },
-    "privacy.other": {
-      "title": "Telemetria, pubblicità, IA",
-      "summary": "Telemetria minima con i suoi servizi e le sue attività; Copilot, Recall e Click to Do disattivati insieme alla funzionalità Recall."
-    },
     "privacy.ads": {
       "title": "Pubblicità e suggerimenti",
       "summary": "ID pubblicità, suggerimenti e consigli, app preinstallate, schermata di blocco, pubblicità in Esplora file e in Impostazioni."
@@ -4444,19 +4424,7 @@
     },
     "apps.policies": {
       "title": "App",
-      "summary": "Criteri e valori delle app: OneDrive."
-    },
-    "logging.policies": {
-      "title": "Registrazione per le indagini",
-      "summary": "Registrazione di PowerShell."
-    },
-    "network.other": {
-      "title": "Rete e condivisione",
-      "summary": "SMB 1.0 e NetBIOS su TCP/IP."
-    },
-    "system.other": {
-      "title": "Sistema",
-      "summary": "Windows Update senza blocchi, VBScript rimosso, unità USB una sola volta nel riquadro di spostamento."
+      "summary": "Criteri e valori delle app: OneDrive. Criteri di Microsoft Edge, Google Chrome e Brave: sicurezza, telemetria, pubblicità, funzionalità di IA. Una parte dei criteri è attivata per impostazione predefinita: telemetria, pubblicità, funzionalità di IA, traduzione delle pagine, compilazione automatica delle carte, il portafoglio e la VPN di Brave; sincronizzazione, accesso al browser e gestione delle password sono disattivati. I criteri per un browser non installato non hanno effetto."
     }
   }
 }

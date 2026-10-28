@@ -319,7 +319,7 @@
     },
     {
       "id": "nav.removable-drives-once",
-      "group": "system.other",
+      "group": "other",
       "phase": "specialize",
       "title": "Show USB drives only under \"This PC\" in the navigation pane",
       "level": "optional",

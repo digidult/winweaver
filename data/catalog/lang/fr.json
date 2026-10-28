@@ -4304,7 +4304,7 @@
     },
     "security": {
       "title": "Sécurité",
-      "summary": "Contrôle de compte d'utilisateur (UAC), comptes, protection des informations d'identification, accès à distance, chiffrement."
+      "summary": "Contrôle de compte d'utilisateur (UAC), comptes, protection des informations d'identification, accès à distance, chiffrement. Signature SMB, résolution de noms, pare-feu. Journalisation PowerShell."
     },
     "security.accounts": {
       "title": "Comptes et connexion"
@@ -4315,14 +4315,6 @@
     "security.remote": {
       "title": "Accès à distance"
     },
-    "network": {
-      "title": "Réseau et partage",
-      "summary": "Signature SMB, résolution de noms, pare-feu."
-    },
-    "browsers": {
-      "title": "Navigateurs",
-      "summary": "Stratégies de Microsoft Edge, Google Chrome et Brave : sécurité, télémétrie, publicité, fonctionnalités d'IA. Une partie des stratégies est activée par défaut : télémétrie, publicité, fonctionnalités d'IA, traduction des pages, remplissage automatique des cartes, portefeuille et VPN de Brave ; la synchronisation, la connexion au navigateur et les gestionnaires de mots de passe sont désactivés. Les stratégies d'un navigateur non installé n'ont aucun effet."
-    },
     "browsers.edge": {
       "title": "Microsoft Edge"
     },
@@ -4331,10 +4323,6 @@
     },
     "browsers.brave": {
       "title": "Brave"
-    },
-    "logging": {
-      "title": "Journalisation pour les investigations",
-      "summary": "Audit, tailles des journaux, désactivation de PowerShell 2.0."
     },
     "privacy": {
       "title": "Télémétrie, publicité, IA",
@@ -4404,14 +4392,6 @@
       "title": "Première connexion",
       "summary": "Scripts de la première connexion de chaque nouvel utilisateur : la langue d'affichage fixée, les langues de saisie du profil."
     },
-    "security.other": {
-      "title": "Sécurité",
-      "summary": "Verrouillage des comptes et expiration des mots de passe, définis avec net accounts."
-    },
-    "privacy.other": {
-      "title": "Télémétrie, publicité, IA",
-      "summary": "Télémétrie minimale avec ses services et ses tâches ; Copilot, Recall et Click to Do désactivés avec la fonctionnalité Recall."
-    },
     "privacy.ads": {
       "title": "Publicité et recommandations",
       "summary": "Identifiant de publicité, conseils et suggestions, applications préinstallées, écran de verrouillage, publicité dans l'Explorateur de fichiers et dans Paramètres."
@@ -4422,19 +4402,7 @@
     },
     "apps.policies": {
       "title": "Applications",
-      "summary": "Stratégies et valeurs des applications : OneDrive."
-    },
-    "logging.policies": {
-      "title": "Journalisation pour les investigations",
-      "summary": "Journalisation PowerShell."
-    },
-    "network.other": {
-      "title": "Réseau et partage",
-      "summary": "SMB 1.0 et NetBIOS sur TCP/IP."
-    },
-    "system.other": {
-      "title": "Système",
-      "summary": "Windows Update débloqué, VBScript supprimé, lecteurs USB une seule fois dans le volet de navigation."
+      "summary": "Stratégies et valeurs des applications : OneDrive. Stratégies de Microsoft Edge, Google Chrome et Brave : sécurité, télémétrie, publicité, fonctionnalités d'IA. Une partie des stratégies est activée par défaut : télémétrie, publicité, fonctionnalités d'IA, traduction des pages, remplissage automatique des cartes, portefeuille et VPN de Brave ; la synchronisation, la connexion au navigateur et les gestionnaires de mots de passe sont désactivés. Les stratégies d'un navigateur non installé n'ont aucun effet."
     }
   }
 }

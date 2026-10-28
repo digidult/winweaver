@@ -4328,7 +4328,7 @@
     },
     "security": {
       "title": "Keamanan",
-      "summary": "UAC, akun, perlindungan kredensial, akses jarak jauh, enkripsi."
+      "summary": "UAC, akun, perlindungan kredensial, akses jarak jauh, enkripsi. Penandatanganan SMB, resolusi nama, firewall. Pencatatan PowerShell."
     },
     "security.accounts": {
       "title": "Akun dan masuk"
@@ -4339,14 +4339,6 @@
     "security.remote": {
       "title": "Akses jarak jauh"
     },
-    "network": {
-      "title": "Jaringan dan berbagi",
-      "summary": "Penandatanganan SMB, resolusi nama, firewall."
-    },
-    "browsers": {
-      "title": "Browser",
-      "summary": "Kebijakan Microsoft Edge, Google Chrome, dan Brave: keamanan, telemetri, iklan, fitur AI. Sebagian kebijakan aktif secara default: telemetri, iklan, fitur AI, terjemahan halaman, isi otomatis kartu, dompet dan VPN Brave; sinkronisasi, masuk ke browser, dan pengelola kata sandi nonaktif. Kebijakan untuk browser yang tidak terinstal tidak berpengaruh."
-    },
     "browsers.edge": {
       "title": "Microsoft Edge"
     },
@@ -4355,10 +4347,6 @@
     },
     "browsers.brave": {
       "title": "Brave"
-    },
-    "logging": {
-      "title": "Pencatatan untuk investigasi",
-      "summary": "Audit, ukuran log, penonaktifan PowerShell 2.0."
     },
     "privacy": {
       "title": "Telemetri, iklan, AI",
@@ -4428,14 +4416,6 @@
       "title": "Masuk pertama kali",
       "summary": "Skrip saat setiap pengguna baru masuk pertama kali: bahasa tampilan yang disematkan, bahasa input dari profil."
     },
-    "security.other": {
-      "title": "Keamanan",
-      "summary": "Penguncian akun dan masa berlaku kata sandi, diatur dengan net accounts."
-    },
-    "privacy.other": {
-      "title": "Telemetri, iklan, AI",
-      "summary": "Telemetri minimal beserta layanan dan tugasnya; Copilot, Recall, dan Click to Do dinonaktifkan bersama fitur Recall."
-    },
     "privacy.ads": {
       "title": "Iklan dan rekomendasi",
       "summary": "ID iklan, tips dan saran, aplikasi prainstal, layar kunci, iklan di File Explorer dan Pengaturan."
@@ -4446,19 +4426,7 @@
     },
     "apps.policies": {
       "title": "Aplikasi",
-      "summary": "Kebijakan dan nilai aplikasi: OneDrive."
-    },
-    "logging.policies": {
-      "title": "Pencatatan untuk investigasi",
-      "summary": "Pencatatan PowerShell."
-    },
-    "network.other": {
-      "title": "Jaringan dan berbagi",
-      "summary": "SMB 1.0 dan NetBIOS over TCP/IP."
-    },
-    "system.other": {
-      "title": "Sistem",
-      "summary": "Windows Update tanpa blokir, VBScript dihapus, drive USB hanya sekali di panel navigasi."
+      "summary": "Kebijakan dan nilai aplikasi: OneDrive. Kebijakan Microsoft Edge, Google Chrome, dan Brave: keamanan, telemetri, iklan, fitur AI. Sebagian kebijakan aktif secara default: telemetri, iklan, fitur AI, terjemahan halaman, isi otomatis kartu, dompet dan VPN Brave; sinkronisasi, masuk ke browser, dan pengelola kata sandi nonaktif. Kebijakan untuk browser yang tidak terinstal tidak berpengaruh."
     }
   }
 }

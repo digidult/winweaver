@@ -4643,7 +4643,7 @@
     },
     "security": {
       "title": "Sicherheit",
-      "summary": "UAC, Konten, Schutz von Anmeldeinformationen, Remotezugriff, Verschlüsselung."
+      "summary": "UAC, Konten, Schutz von Anmeldeinformationen, Remotezugriff, Verschlüsselung. SMB-Signierung, Namensauflösung, Firewall. PowerShell-Protokollierung."
     },
     "security.accounts": {
       "title": "Konten und Anmeldung"
@@ -4654,14 +4654,6 @@
     "security.remote": {
       "title": "Remotezugriff"
     },
-    "network": {
-      "title": "Netzwerk und Freigabe",
-      "summary": "SMB-Signierung, Namensauflösung, Firewall."
-    },
-    "browsers": {
-      "title": "Browser",
-      "summary": "Richtlinien für Microsoft Edge, Google Chrome und Brave: Sicherheit, Telemetrie, Werbung, KI-Features. Ein Teil der Richtlinien ist standardmäßig eingeschaltet: Telemetrie, Werbung, KI-Features, Seitenübersetzung, AutoAusfüllen von Zahlungskarten, Brave Wallet und VPN; Synchronisierung, Anmeldung im Browser und Kennwort-Manager sind ausgeschaltet. Richtlinien für einen Browser, der nicht installiert ist, haben keine Wirkung."
-    },
     "browsers.edge": {
       "title": "Microsoft Edge"
     },
@@ -4670,10 +4662,6 @@
     },
     "browsers.brave": {
       "title": "Brave"
-    },
-    "logging": {
-      "title": "Protokollierung für Untersuchungen",
-      "summary": "Überwachung, Protokollgrößen, Deaktivieren von PowerShell 2.0."
     },
     "privacy": {
       "title": "Telemetrie, Werbung, KI",
@@ -4743,14 +4731,6 @@
       "title": "Erste Anmeldung",
       "summary": "Skripts der ersten Anmeldung jedes neuen Benutzers: die festgelegte Anzeigesprache, die Eingabesprachen des Profils."
     },
-    "security.other": {
-      "title": "Sicherheit",
-      "summary": "Kontosperrung und Kennwortablauf, festgelegt mit net accounts."
-    },
-    "privacy.other": {
-      "title": "Telemetrie, Werbung, KI",
-      "summary": "Minimale Telemetrie mit ihren Diensten und Aufgaben; Copilot, Recall und Click to Do deaktiviert, samt dem Feature Recall."
-    },
     "privacy.ads": {
       "title": "Werbung und Empfehlungen",
       "summary": "Werbe-ID, Tipps und Vorschläge, vorinstallierte Apps, der Sperrbildschirm, Werbung im Explorer und in den Einstellungen."
@@ -4761,19 +4741,7 @@
     },
     "apps.policies": {
       "title": "Apps",
-      "summary": "Richtlinien und Werte von Apps: OneDrive."
-    },
-    "logging.policies": {
-      "title": "Protokollierung für Untersuchungen",
-      "summary": "PowerShell-Protokollierung."
-    },
-    "network.other": {
-      "title": "Netzwerk und Freigabe",
-      "summary": "SMB 1.0 und NetBIOS über TCP/IP."
-    },
-    "system.other": {
-      "title": "System",
-      "summary": "Windows Update ohne Sperren, VBScript entfernt, USB-Laufwerke nur einmal im Navigationsbereich."
+      "summary": "Richtlinien und Werte von Apps: OneDrive. Richtlinien für Microsoft Edge, Google Chrome und Brave: Sicherheit, Telemetrie, Werbung, KI-Features. Ein Teil der Richtlinien ist standardmäßig eingeschaltet: Telemetrie, Werbung, KI-Features, Seitenübersetzung, AutoAusfüllen von Zahlungskarten, Brave Wallet und VPN; Synchronisierung, Anmeldung im Browser und Kennwort-Manager sind ausgeschaltet. Richtlinien für einen Browser, der nicht installiert ist, haben keine Wirkung."
     }
   }
 }
