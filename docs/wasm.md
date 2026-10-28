@@ -8,9 +8,13 @@ the code was checked and built in CI only; nobody has opened the page in a brows
 
 The job `build-web` of CI builds wwlite for `wasm32-unknown-unknown` with the renderer `glow` alone
 (WebGL), runs the wasm-bindgen of the version `Cargo.lock` names and uploads `wwlite-web-<version>`:
-`index.html` (`crates/wwlite/web/index.html`), `wwlite.js`, `wwlite_bg.wasm` and the README of wwlite.
-The folder is served over http from any static server (a page opened from `file://` cannot load the
-module); the Linux job checks the build with clippy at every run.
+`wwlite.html`, the edition by default in one file (item 10 of the list of 28.10.2026), the README of
+wwlite and `files/` with `index.html` (`crates/wwlite/web/index.html`), `wwlite.js` and
+`wwlite_bg.wasm`. `crates/wwlite/web/single.py` makes the one file of `files/`: the glue inlined as a
+module script, the module packed with gzip into base64 and unpacked by the browser
+(`DecompressionStream`), so it opens from the disk too; it refuses a glue that imports a snippet file.
+The folder `files/` is served over http only (a page of it opened from `file://` cannot load the
+module).
 
 The three blockers of the customer's words, as they were resolved:
 
@@ -203,11 +207,11 @@ change takes a minute or two.
    `cargo build --release -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown`.
 7. Write the page next to it:
    `wasm-bindgen --target web --no-typescript --out-dir dist-web/wwlite-web target/wasm32-unknown-unknown/release/wwlite.wasm`.
-8. Copy `crates/wwlite/web/index.html` and `package-wwlite/README.md` into `dist-web/wwlite-web`.
-9. Serve the folder over http: `python -m http.server 8080 --directory dist-web/wwlite-web`
-   (any static server does; a page opened from `file://` cannot load the module).
-10. Open `http://localhost:8080/` in a browser. The folder `dist-web/wwlite-web` is the whole edition:
-    copy it to any static host to publish it.
+8. Copy `crates/wwlite/web/index.html` into `dist-web/wwlite-web`.
+9. Make the one file: `python crates/wwlite/web/single.py dist-web/wwlite-web dist-web/wwlite.html`.
+10. Open `dist-web/wwlite.html` with a double click: it is the whole edition, to copy anywhere or
+    put on any static host. The folder with `index.html` works only over http:
+    `python -m http.server 8080 --directory dist-web/wwlite-web`, then `http://localhost:8080/`.
 
 ## Sources
 

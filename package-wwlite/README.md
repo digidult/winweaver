@@ -47,9 +47,10 @@ and, if wanted, `guide-lite.txt`; German comes this way. Choose it in Settings, 
 
 ## The browser edition
 
-`wwlite-web-<version>.zip` is the same program for a browser: `index.html`, `wwlite.js` and
-`wwlite_bg.wasm`. Put the folder on any web server and open `index.html` over http (a page opened
-from `file://` cannot load the module). It runs in a current Chromium, Firefox or Safari with WebGL.
+`wwlite-web-<version>.zip` is the same program for a browser. `wwlite.html` is the whole of it in
+one file: open it with a double click, or put it on any web server. The folder `files` holds the same
+edition as three files for a server (`index.html`, `wwlite.js`, `wwlite_bg.wasm`, opened over http
+only). It runs in a current Chromium, Firefox or Safari with WebGL.
 
 What it does: opens a profile, an answer file with the profile it embeds or an older profile through
 the file dialog of the browser (Menu, Open or the button Open) or by a drop of the file on the page;
