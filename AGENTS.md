@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 25.10.2026.
+Updated with every change of structure, commands or task status. Last update: 28.10.2026.
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -150,8 +150,9 @@ text editor wedit.
 │   │                      (catalog 0.11)
 │   ├── presets/           office, strict, laptop, home .wwprofile
 │   ├── resources/         timezones.json; locales.json (the input languages and keyboard layouts of a
-│   │                      Windows 11 with English names, read once through the Windows API: embedded in a
-│   │                      browser build only, never in one for Windows, which asks the system)
+│   │                      Windows 11 with English names, read once through the Windows API) and
+│   │                      regions.json (its regions with their GeoIDs): embedded in a browser build
+│   │                      only, never in one for Windows, which asks the system
 │   ├── templates/         the runtime templates: the answer file skeleton and the scripts with {{slot}}s,
 │   │                      VERSION 0.11;
 │   │                      Create-Users.runtime.ps1, the stand-alone script of a users file
@@ -201,10 +202,11 @@ of the older format; the id of an embedded theme replaces it).
 3. The program code is the project's own; the rule catalog, its translations, the presets, the time
    zones and the runtime templates (PowerShell of the answer file and of the stand-alone scripts) are data.
    Behaviour is written from the specification. Old profiles of JSON and their answer files are still
-   read (`winweaver_core::import`). The lists of the system (the input languages and keyboard layouts)
-   are read from Windows at run time, never embedded, with one exception: the browser edition of wwlite
-   has no Windows to ask and embeds `data/resources/locales.json`, the list of a Windows 11 (section 6);
-   a build for Windows never carries it.
+   read (`winweaver_core::import`). The lists of the system (the input languages and keyboard layouts,
+   the regions) are read from Windows at run time, never embedded, with one exception: the browser
+   edition of wwlite has no Windows to ask and embeds `data/resources/locales.json` and
+   `data/resources/regions.json`, the lists of a Windows 11 (section 6); a build for Windows never
+   carries them.
 4. Dependencies: popular, well known, open source Rust crates that need no extra DLL next to the executable.
    The executable and its configuration stay portable: nothing is installed, nothing is written outside the
    program folder and the system temp folder.
@@ -380,7 +382,12 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   freely with the list beside it filtered by the text, and a choice sets both parameters
   (`ProfileAct::SetParam` twice); the check warns when the GeoID and the code do not name one region of the
   list, nothing where the list is empty (no Windows). MCP: `get_rule` names the `pick` of a parameter and
-  `set_param` of such a parameter takes a code or a GeoID and sets both (`set_region`).
+  `set_param` of such a parameter takes a code or a GeoID and sets both (`set_region`). A build for
+  `wasm32` embeds `data/resources/regions.json` (`regions()` takes it when no reader is named, under
+  `cfg(target_arch = "wasm32")` alone): the 249 nations of a Windows 11 read on 28.10.2026 by a
+  PowerShell script that only reads (`EnumSystemGeoNames`, `GetGeoInfoEx` for the GeoID, the English
+  names of .NET `RegionInfo`, five names by hand where it has none, ASCII without diacritics), sorted
+  by name; the test `the_regions_of_the_browser_edition_are_whole` checks the file.
 - The menu Catalogs lists every catalog file of `imports/` (`Full::import_list`, read again by
   `ImportAct::RefreshList` when the menu opens: `catalogs_menu` sees a gap in `cumulative_pass_nr`), a
   loaded one with `icons::CHECK` and its text in the accent colour (`ww::shell::menu_entry_colored`), a
@@ -821,16 +828,22 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   users files through the features `users` of the core and of the Windows crate) is not in its
   executable. Cargo unifies the features of one build, so wwlite is checked, tested and built alone
   (`-p wwlite`, the steps of CI); its tests say so and pass in a build with the feature. CI packages
-  `wwlite-<version>.zip` from the build of wwlite alone.
+  `wwlite-<version>.zip` from the build of wwlite alone. wwlite for Windows has no settings of the
+  imports: `run` merges every catalog file of `imports/` next to it at the start
+  (`with_every_import` of `lib.rs`, the templates of this Windows first, a file it cannot read left
+  out), so the user chooses the catalogs by the files of the folder; the browser edition reads none.
 - The catalog by mechanism (`Catalog::mechanism`, `Mechanism::roots`, the test
   `every_rule_sits_under_a_root_of_its_mechanism`): a rule of answer file settings alone is
   `Unattend` (under Installation), of registry actions alone `Registry` (under Policies, whatever
   the key), of PowerShell steps alone `Script` (Installation or Other), anything else or a mix
   `Other`. Installation holds `install`, `oobe`, `install.scripts`, `user-logon` and `post-oobe`;
-  Policies the groups of registry rules (`security`, `network`, `logging.policies`, `privacy` with
-  `ads` and `speech`, `system` with `explorer`, `apps.policies` with `onedrive`, `default-user`,
-  the imports); Other the mirror groups `security.other`, `network.other`, `logging`,
-  `privacy.other`, `system.other` and `apps` with `apps.remove`. No rule sits directly in a root.
+  Policies the groups of registry rules (`update`, `defender`, `security` with the network and
+  the logging of PowerShell, `privacy` with `ads` and `speech`, `system` with `explorer`,
+  `apps.policies` with `onedrive` and the browsers `browsers.edge`, `browsers.chrome` and
+  `browsers.brave`, `default-user`, the imports); Other its few rules directly (security,
+  network, logging, telemetry, system: the customer's decision of 28.10.2026, a group of two or
+  three rules is no use) and `apps` with `apps.remove`. Only the root Other holds rules directly
+  (the test `only_the_root_other_holds_rules_directly`).
 - Text parameters have `max_length` (`Param::Text`, checked by the catalog check and the check of a
   profile, the field counts its characters against it; `set_param` of MCP takes it as its limit):
   the support contacts have the limits of the answer file (256, the URL 2083), the autologon
@@ -891,7 +904,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   of Cargo.lock into the artifact `wwlite-web-<version>` (index.html, wwlite.js, wwlite_bg.wasm,
   README.md), zipped by a tag. Open: the keys Ctrl+N, Ctrl+W and Ctrl+Tab belong to the browser (the
   menu does the same), no question before the page closes, the page is served over http, never from
-  `file://`, and the names of the input languages are English (the embedded list).
+  `file://`, and the names of the input languages and the regions are English (the embedded lists).
+  The menu of a page has no Open recent and no Exit (`cfg(not(target_arch = "wasm32"))` in
+  `app/menu.rs`). `docs/wasm.md` section 6 builds the page by hand, without CI.
 
 ## 7. Work status
 
@@ -907,6 +922,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Done in pull request #61 (0.25.0) | The list of the customer of 24.10.2026 in six groups: the shell (keys, focus, About, links, icons, the question of a closing tab), the documents, the profile (links between catalogs, colours of the panels, `.reg` and `.ps1` of a diff and a whole profile, the command line), the registry and `.pol` files, drafts of every document, `wwlite` and a study of a Wasm edition |
 | Done in pull request #62 (0.26.0) | The list of the customer of 25.10.2026, 14 items: the command line (the answer file, the import and export of templates, a read of this PC, diffs, `--out` as a file), Open and Save as of the MCP tab, the comparison of catalogs as a tab with its report, the panel of the work in the background, the Group Policy editor, Copy to of a catalog, Only on, the scrolling tab row, the catalog by mechanism with the root Policies, icons in every menu, wwlite without the code of the full edition, the hammer of Build, the parameters in the width of the panel with their limits |
 | Done in pull request #63 (0.27.0) | The second list of the customer of 25.10.2026: the region of the default user profile from the list of Windows, the editors in the width they have, text sizes up to 36, every catalog file in the menu Catalogs, wwlite for the browser (the store, the web start, the embedded input languages, the artifact wwlite-web), the presentation of the screenshots |
+| Done in pull request #64 (0.28.0) | The list of the customer of 28.10.2026: a group removed in the catalog editor, no recent files and no Exit in the menu of the browser edition, its list of regions, the build of the page by hand, every catalog of `imports/` in wwlite, the built-in catalog flatter (the small groups of Other into its root, the network and the logging of PowerShell into Security, the browsers into Apps), the whole description of a rule and the titles of the values in the language of the window |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the
