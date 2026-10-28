@@ -915,6 +915,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   The guide of a page is `data/docs/guide-web.txt` (`pages::guide_lite_text` under
   `cfg(target_arch = "wasm32")`, English and Ukrainian), written for someone who knows no other
   edition (item 14 of the list of 28.10.2026): a change of the browser edition changes it too.
+  A page draws with the fonts of egui alone (Ubuntu Light, Noto Emoji, its icon font), and a sign
+  they lack is an empty box: the cross of a tab (U+2715) was one. `ww::icons` gives a build for
+  wasm32 signs they have for the cross, the arrows and the small triangles; a new icon a page shows
+  is checked against those fonts (a glyph of 0 in their cmap is the box).
   The menu of a page has no Open recent and no Exit (`cfg(not(target_arch = "wasm32"))` in
   `app/menu.rs`). `docs/wasm.md` section 6 builds the page by hand, without CI.
 

@@ -1,5 +1,9 @@
 //! The icons of the window, each named once: the command bar, the tabs, the rows of the chrome
 //! and the views draw them by name.
+//!
+//! A page in a browser has only the fonts of egui (Ubuntu Light, Noto Emoji and its icon font),
+//! which draw the arrows, the small triangles and the light cross of Segoe UI as an empty box:
+//! a build for wasm32 takes signs those fonts have for them.
 
 pub const NEW: &str = "\u{1F4C4}";
 pub const OPEN: &str = "\u{1F4C2}";
@@ -23,8 +27,14 @@ pub const ADD: &str = "\u{2795}";
 pub const DELETE: &str = "\u{1F5D1}";
 pub const REGISTRY: &str = "\u{1F5C2}";
 pub const DUPLICATE: &str = "\u{29C9}";
+#[cfg(not(target_arch = "wasm32"))]
 pub const UP: &str = "\u{2191}";
+#[cfg(target_arch = "wasm32")]
+pub const UP: &str = "\u{2B06}";
+#[cfg(not(target_arch = "wasm32"))]
 pub const DOWN: &str = "\u{2193}";
+#[cfg(target_arch = "wasm32")]
+pub const DOWN: &str = "\u{2B07}";
 pub const UNLOCKED: &str = "\u{1F513}";
 pub const KEY: &str = "\u{1F511}";
 pub const MASTER_KEY: &str = "\u{1F510}";
@@ -52,14 +62,29 @@ pub const UNDO: &str = "\u{21A9}";
 pub const ARCHIVE: &str = "\u{1F5DC}";
 pub const COPY_ALL: &str = "\u{1F4D1}";
 pub const GO_TO: &str = "\u{2197}";
+#[cfg(not(target_arch = "wasm32"))]
 pub const FOLDED: &str = "\u{25B8}";
+#[cfg(target_arch = "wasm32")]
+pub const FOLDED: &str = "\u{23F5}";
+#[cfg(not(target_arch = "wasm32"))]
 pub const UNFOLDED: &str = "\u{25BE}";
+#[cfg(target_arch = "wasm32")]
+pub const UNFOLDED: &str = "\u{23F7}";
 pub const BULLET: &str = "\u{2022}";
 pub const ELLIPSIS: &str = "\u{2026}";
 pub const CRUMB: &str = "\u{203A}";
+#[cfg(not(target_arch = "wasm32"))]
 pub const BACK: &str = "\u{2190}";
+#[cfg(target_arch = "wasm32")]
+pub const BACK: &str = "\u{2B05}";
+#[cfg(not(target_arch = "wasm32"))]
 pub const FORWARD: &str = "\u{2192}";
+#[cfg(target_arch = "wasm32")]
+pub const FORWARD: &str = "\u{27A1}";
 pub const MENU: &str = "\u{2630}";
 pub const WARNING: &str = "\u{26A0}";
 pub const ERROR: &str = "\u{26D4}";
+#[cfg(not(target_arch = "wasm32"))]
 pub const CLOSE: &str = "\u{2715}";
+#[cfg(target_arch = "wasm32")]
+pub const CLOSE: &str = "\u{1F5D9}";
