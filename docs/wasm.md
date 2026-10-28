@@ -33,12 +33,16 @@ The three blockers of the customer's words, as they were resolved:
    languages and keyboard layouts of a Windows 11 (build 26300) read once through the Windows API by a
    PowerShell script that only reads, with the English display names; `resources::locales` takes it
    when no reader is named, under `cfg(target_arch = "wasm32")` alone, so a build for Windows never
-   carries it (AGENTS.md, rule 3 and section 6; `02-documents.md` section 3). Against the native read
-   the list lacks the names in the language of the user's Windows and anything a newer Windows adds.
+   carries it (AGENTS.md, rule 3 and section 6; `02-documents.md` section 3). The regions of the user
+   region come the same way from `data/resources/regions.json` (249 nations with their GeoIDs and
+   English names, read on 28.10.2026), so the field of the rule `default-user.region` has its list
+   in a browser too. Against the native read the lists lack the names in the language of the user's
+   Windows and anything a newer Windows adds.
 
 What stays open: the keys Ctrl+N, Ctrl+W and Ctrl+Tab belong to the browser (the menu does the same),
 nothing asks before the page closes with unsaved changes (the drafts in the storage of the page come
-back at the next start), the recent files and the tabs of the last session have no meaning there, the
+back at the next start), the menu has no recent files and no Exit (a page keeps no paths and cannot
+close its tab), the tabs of the last session have no meaning there, the
 fonts are the ones of egui (no Segoe UI), the input languages show their English names, and the host
 of the page is the customer's decision (section 5). The size of the module is read from the artifact.
 
@@ -177,6 +181,33 @@ Chromium); whether drafts of profiles with passwords may stay in `localStorage`.
    -- -D warnings`, then trunk, `dist/` as the artifact `wwlite-web`; on `main`, if Pages is chosen,
    `actions/upload-pages-artifact` and `actions/deploy-pages` (eframe_template pushes to `gh-pages` with
    `JamesIves/github-pages-deploy-action` [6]). Small.
+
+## 6. Building the page by hand
+
+The same steps as the job `build-web`, on any computer with Rust (never the customer's work PC,
+AGENTS.md rule 6). The first build takes 10-30 minutes and about 3 GB in `target/`; a build after a
+change takes a minute or two.
+
+1. Install Rust with rustup (https://rustup.rs). On Windows the build scripts of the crates need a
+   linker for the computer itself: either the Visual Studio Build Tools with the workload "Desktop
+   development with C++" for the default toolchain, or the toolchain that carries its own linker:
+   `rustup default stable-x86_64-pc-windows-gnu`.
+2. Add the target of the browser: `rustup target add wasm32-unknown-unknown`.
+3. Get the sources: `git clone https://github.com/digidult/winweaver` and go into the folder.
+4. Read the version of wasm-bindgen the build uses: the line after `name = "wasm-bindgen"` in
+   `Cargo.lock` (0.2.129 on 28.10.2026). The tool must have the same version as the crate.
+5. Install the tool of that version: `cargo install wasm-bindgen-cli --version 0.2.129 --locked`
+   (a few minutes), or unpack the binary of its release from
+   https://github.com/wasm-bindgen/wasm-bindgen/releases.
+6. Build the module:
+   `cargo build --release -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown`.
+7. Write the page next to it:
+   `wasm-bindgen --target web --no-typescript --out-dir dist-web/wwlite-web target/wasm32-unknown-unknown/release/wwlite.wasm`.
+8. Copy `crates/wwlite/web/index.html` and `package-wwlite/README.md` into `dist-web/wwlite-web`.
+9. Serve the folder over http: `python -m http.server 8080 --directory dist-web/wwlite-web`
+   (any static server does; a page opened from `file://` cannot load the module).
+10. Open `http://localhost:8080/` in a browser. The folder `dist-web/wwlite-web` is the whole edition:
+    copy it to any static host to publish it.
 
 ## Sources
 

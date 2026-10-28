@@ -168,7 +168,8 @@ errors.
   `crates/wwlite/web/index.html`, which loads them; the folder is served over http. `ww::web::start`
   (eframe's `WebRunner`) replaces `ww::run`, `ww::store` keeps the files of the window in the storage of
   the page, a save is a download, the files to open come by their bytes (`App::open_bytes`), and the input
-  languages come from `data/resources/locales.json`, embedded for this target alone.
+  languages and the regions come from `data/resources/locales.json` and `regions.json`, embedded for
+  this target alone.
 - `winweaver_core::BUILD` is `<version>+<12 digits of the commit>`, from `build.rs` of the core and
   `WINWEAVER_COMMIT` set by CI.
 - CI (GitHub Actions, `AGENTS.md` section 5): a Linux job first (`cargo fmt --check` with a patch as an

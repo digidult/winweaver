@@ -73,7 +73,8 @@ extensions are registered nowhere (portability).
   first) or a layout id (`0422:00000422`: the language of that locale id with that layout); the first item
   is the default. The languages and layouts are the ones Windows lists, never a list of the program; the
   one exception is the browser edition of wwlite, which has no Windows to ask and embeds the list of a
-  Windows 11 with English names (`data/resources/locales.json`, never in a build for Windows).
+  Windows 11 with English names (`data/resources/locales.json`, never in a build for Windows). The
+  regions of the rule `default-user.region` follow the same rule (`data/resources/regions.json`).
 - `rules` holds only the rules that are on or have parameters; a rule not listed is off. Parameters are
   written only when they differ from the defaults. A `source` of a choice, when a file has one, is kept.
 - `unknown` (written only when it has entries) keeps the choices of rules the loaded catalog does not have,

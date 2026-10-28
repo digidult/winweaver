@@ -67,6 +67,8 @@ impl WinWeaver {
             Act::Shell(ShellAct::Open),
             acts,
         );
+        // A page keeps no paths of files and cannot close its window: no recent files, no Exit.
+        #[cfg(not(target_arch = "wasm32"))]
         ui.add_enabled_ui(!shell.settings.recent.is_empty(), |ui| {
             sub_menu(ui, icons::RECENT, tr("Open recent"), |ui| {
                 for path in &shell.settings.recent {
@@ -187,6 +189,7 @@ impl WinWeaver {
             Act::Shell(ShellAct::About),
             acts,
         );
+        #[cfg(not(target_arch = "wasm32"))]
         menu_item(
             ui,
             icons::EXIT,

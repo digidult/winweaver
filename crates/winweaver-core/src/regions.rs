@@ -1,7 +1,8 @@
 //! The regions (countries) Windows lists for the user region of a profile: the two-letter code,
 //! the GeoID and the name in the language of Windows. They are read once from the system by the
 //! reader the window and the MCP server name (`set_region_reader`), a list of their own in the
-//! tests; the program embeds no list of them.
+//! tests. Only a build for a browser, which has no Windows to ask, embeds the list of a Windows 11
+//! with English names (`data/resources/regions.json`).
 
 use std::sync::OnceLock;
 
@@ -38,6 +39,11 @@ pub struct Regions {
 static READER: OnceLock<fn() -> Regions> = OnceLock::new();
 static REGIONS: OnceLock<Regions> = OnceLock::new();
 
+/// The regions of a Windows 11 with their English names, read once from a PC through the Windows
+/// API: the list of a build for a browser. A build for Windows carries no list.
+#[cfg(target_arch = "wasm32")]
+const EMBEDDED_REGIONS: &str = include_str!("../../../data/resources/regions.json");
+
 /// Names the function that reads the regions of Windows; the first one named is called at the
 /// first use. The window and the MCP server name `winweaver_win::regions`, the tests a list of
 /// their own.
@@ -45,9 +51,16 @@ pub fn set_region_reader(read: fn() -> Regions) {
     let _ = READER.set(read);
 }
 
-/// The regions of Windows, read once; empty when no reader was named or Windows is not there.
+/// The regions of Windows, read once; empty when no reader was named, but in a browser, which
+/// takes the embedded list then.
 pub fn regions() -> &'static Regions {
-    REGIONS.get_or_init(|| READER.get().map_or_else(Regions::default, |read| read()))
+    REGIONS.get_or_init(|| match READER.get() {
+        Some(read) => read(),
+        #[cfg(target_arch = "wasm32")]
+        None => Regions::parse(EMBEDDED_REGIONS),
+        #[cfg(not(target_arch = "wasm32"))]
+        None => Regions::default(),
+    })
 }
 
 impl Regions {
@@ -96,5 +109,18 @@ mod tests {
         assert!(r.find("XX").is_none() && r.find("999").is_none());
         assert!(r.by_id("UA").is_none());
         assert!(Regions::parse("not json").is_empty());
+    }
+
+    /// The list a browser build embeds is whole and ASCII; a native build never reads it.
+    #[test]
+    fn the_regions_of_the_browser_edition_are_whole() {
+        let text = include_str!("../../../data/resources/regions.json");
+        assert!(text.is_ascii());
+        let r = Regions::parse(text);
+        assert!(r.regions.len() > 200, "{} regions", r.regions.len());
+        assert!(r.regions.iter().all(|x| x.code.len() == 2 && x.id > 0));
+        assert!(r.regions.iter().all(|x| !x.name.is_empty()));
+        assert_eq!(r.by_code("UA").unwrap().name, "Ukraine");
+        assert_eq!(r.by_id("244").unwrap().code, "US");
     }
 }
