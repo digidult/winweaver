@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 28.10.2026.
+Updated with every change of structure, commands or task status. Last update: 29.10.2026.
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -397,7 +397,12 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 - The menu Catalogs lists every catalog file of `imports/` (`Full::import_list`, read again by
   `ImportAct::RefreshList` when the menu opens: `catalogs_menu` sees a gap in `cumulative_pass_nr`), a
   loaded one with `icons::CHECK` and its text in the accent colour (`ww::shell::menu_entry_colored`), a
-  click on one not loaded `CatalogAct::LoadAndOpen` (load, rebuild, open its tab).
+  click loads or unloads it (`ImportAct::Toggle`, the setting by default); with
+  `Extra::catalog_menu_opens` (General, A click on a catalog of the menu Catalogs) it lists the loaded
+  ones alone and a click opens the tab (`CatalogAct::Open`), the settings loading the others. The
+  comparison of two catalogs marks every field of the selected policy on both sides
+  (`catalogdiff::Mark`: the same, differs, absent, only here; a tinted frame and a word, a legend
+  above). A profile tab has the disc `icons::PROFILE`, the gear is the settings'.
 - Text sizes: a theme has a size of `style::SIZES` (10 to 36), offered as `style::SIZE_STEPS` (by one to
   20, then 22, 24, 26, 28, 32, 36). The chrome scales with it through `style::at_least` (never below the
   size of the layout): the buttons of the command bar, the icon buttons, the tabs (`shell/tabs.rs`), the
@@ -944,6 +949,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Done in pull request #62 (0.26.0) | The list of the customer of 25.10.2026, 14 items: the command line (the answer file, the import and export of templates, a read of this PC, diffs, `--out` as a file), Open and Save as of the MCP tab, the comparison of catalogs as a tab with its report, the panel of the work in the background, the Group Policy editor, Copy to of a catalog, Only on, the scrolling tab row, the catalog by mechanism with the root Policies, icons in every menu, wwlite without the code of the full edition, the hammer of Build, the parameters in the width of the panel with their limits |
 | Done in pull request #63 (0.27.0) | The second list of the customer of 25.10.2026: the region of the default user profile from the list of Windows, the editors in the width they have, text sizes up to 36, every catalog file in the menu Catalogs, wwlite for the browser (the store, the web start, the embedded input languages, the artifact wwlite-web), the presentation of the screenshots |
 | Done in pull request #64 (0.28.0) | The list of the customer of 28.10.2026: a group removed in the catalog editor, no recent files and no Exit in the menu of the browser edition, its list of regions, the build of the page by hand, every catalog of `imports/` in wwlite, the built-in catalog flatter (the small groups of Other into its root, the network and the logging of PowerShell into Security, the browsers into Apps), the whole description of a rule and the titles of the values in the language of the window, the browser edition in one file `wwlite.html`, CI only for a release or on demand, the checks before a commit on the computer of the developer, the tests that change Windows ignored by a plain `cargo test`, the guide of the browser edition for a first-time user, its icons in the fonts of egui, its keys that work in a browser |
+| Done in pull request #65 (0.29.0) | The lists of the customer of 29.10.2026: renamed accounts in a users file (the full name in the list, a change of group moves the account, the account of the process by its SID), the read of the whole PC with the loaded templates, every refused change of a registry file shown, the address row of the registry at large sizes, the click of the menu Catalogs with its setting, the marks of the fields of a comparison of catalogs, the disc of a profile tab |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the
