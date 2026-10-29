@@ -709,3 +709,15 @@ mod windows_tests {
         assert!(!f.rules.is_empty());
     }
 }
+
+/// A read of the whole PC covers the policies of the loaded imports too (they were left out
+/// until 0.28.1, so a new profile of this PC never had them).
+#[test]
+fn a_read_of_the_whole_pc_covers_the_loaded_imports() {
+    let base = Catalog::embedded().unwrap();
+    let f = sample();
+    let (merged, _) = merge(&base, std::slice::from_ref(&f)).unwrap();
+    let ids = crate::thispc::whole_pc_rules(&merged);
+    assert!(f.rules.iter().all(|r| ids.contains(&r.id)));
+    assert_eq!(ids.len(), merged.rules().len());
+}

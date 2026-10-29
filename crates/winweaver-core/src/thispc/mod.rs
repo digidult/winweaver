@@ -87,14 +87,10 @@ pub fn exclusion(rule: &Rule) -> Option<&'static str> {
     None
 }
 
-/// The rules a read of the whole PC covers: every rule of the catalog but the imported policies.
+/// The rules a read of the whole PC covers: every rule of the catalog, the policies of the loaded
+/// imports too (the catalog holds only the imports that are loaded).
 pub fn whole_pc_rules(catalog: &Catalog) -> Vec<String> {
-    catalog
-        .rules()
-        .iter()
-        .filter(|r| !r.id.starts_with(crate::admx::RULE_PREFIX))
-        .map(|r| r.id.clone())
-        .collect()
+    catalog.rules().iter().map(|r| r.id.clone()).collect()
 }
 
 /// The name of the profile a read of the whole PC makes: the name of the computer, `This PC`

@@ -111,7 +111,7 @@ lists the planned changes.
   window runs as administrator; the window says so), or as on a clean Windows (a value equal to its
   default, an absent policy value: no evidence, so the rule keeps the state of the open profile). The
   values of the default user profile are read in the current user, with a note. The read of the whole PC
-  leaves the imported policies out. Parameters take the values read when they fit (list parameters are
+  covers the policies of the loaded imports too. Parameters take the values read when they fit (list parameters are
   not read); the forms take the edition, the time zone, the locales, the input languages and layouts and
   the local accounts with their groups (no password), never the computer name.
 - The result is a new profile named after the computer, or the selection read into the open profile; Check
