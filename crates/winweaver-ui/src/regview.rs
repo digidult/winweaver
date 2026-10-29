@@ -434,17 +434,24 @@ pub fn registry_view(
                 .inner_margin(egui::Margin::symmetric(10, 6)),
         )
         .show(ui, |ui| {
+            // The button at the right end and the field in the width left, whatever the size of
+            // the text: a fixed room for the button cut it and the label at large sizes.
             ui.horizontal(|ui| {
-                ui.label(tr("Key"));
-                let edit = ui.add(
-                    egui::TextEdit::singleline(&mut doc.address)
-                        .desired_width(ui.available_width() - 70.0)
-                        .font(egui::TextStyle::Monospace),
-                );
-                let enter = edit.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
-                if ui.button(tr("Go")).clicked() || enter {
-                    acts.push(Act::Registry(RegistryAct::Go(doc.address.clone(), None)));
-                }
+                let label = egui::Label::new(tr("Key")).wrap_mode(egui::TextWrapMode::Extend);
+                ui.add(label);
+                let right = egui::Layout::right_to_left(egui::Align::Center);
+                ui.with_layout(right, |ui| {
+                    let go = ui.button(tr("Go"));
+                    let edit = ui.add(
+                        egui::TextEdit::singleline(&mut doc.address)
+                            .desired_width(ui.available_width())
+                            .font(egui::TextStyle::Monospace),
+                    );
+                    let enter = edit.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                    if go.clicked() || enter {
+                        acts.push(Act::Registry(RegistryAct::Go(doc.address.clone(), None)));
+                    }
+                });
             });
         });
     if doc.search.open {
