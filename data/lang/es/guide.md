@@ -217,7 +217,7 @@ generación, con un aviso al abrir el perfil y al generar el archivo de respuest
 ese grupo encuentra las importaciones que las contienen y carga solo esas. Un ajuste (General, Ventana)
 oculta el grupo.
 
-El menú **Catálogos** de la barra de un perfil lista todos los archivos de catálogo de `imports/`, cargados o no: uno cargado lleva una marca y el color de acento, y un clic abre su pestaña; otro se carga con un clic y también abre su pestaña. La lista se vuelve a leer cada vez que se abre el menú.
+El menú **Catálogos** de la barra de un perfil lista todos los archivos de catálogo de `imports/`, cargados o no: uno cargado lleva una marca y el color de acento, y un clic abre su pestaña; otro se carga con un clic y también abre su pestaña. La lista se vuelve a leer cada vez que se abre el menú. De forma predeterminada, un clic en un catálogo del menú lo carga o lo descarga; en Configuración, General, la otra opción deja en el menú solo los catálogos cargados y un clic abre la pestaña de uno.
 
 Un archivo zip de plantillas, como las publican Chrome, Edge y Firefox, o de un archivo de catálogo se
 importa con **Importar un archivo comprimido...** y se lee sin descomprimirlo.

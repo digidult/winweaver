@@ -896,5 +896,11 @@
   "Remove the group": "Grubu kaldır",
   "Remove the group {name} with all it holds? It leaves the file at the next save.": "{name} grubu içindeki tüm grup ve ilkelerle birlikte kaldırılsın mı? Bir sonraki kaydetmede dosyadan çıkar.",
   "Name is the name of the account; Windows shows the full name at the sign-in, and a rename in its Settings or Control Panel usually changes only that. The folder of the profile keeps its first name.": "Ad, hesabın adıdır; Windows oturum açarken tam adı gösterir ve Ayarlar ya da Denetim Masası'nda yeniden adlandırma genellikle yalnızca onu değiştirir. Profil klasörü ilk adını korur.",
-  "{n} changes were not applied to this PC": "{n} değişiklik bu bilgisayara uygulanmadı"
+  "{n} changes were not applied to this PC": "{n} değişiklik bu bilgisayara uygulanmadı",
+  "Category": "Kategori",
+  "differs": "farklı",
+  "only here": "yalnızca burada",
+  "A click on a catalog of the menu Catalogs:": "Kataloglar menüsünde bir kataloğa tıklama:",
+  "loads or unloads it": "onu yükler veya kaldırır",
+  "opens its tab, of the loaded ones": "sekmesini açar, yalnızca yüklü olanlar"
 }

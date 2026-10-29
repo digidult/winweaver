@@ -201,7 +201,7 @@ pohon, dan tidak disertakan dalam pembuatan, dengan peringatan saat profil dibuk
 dibuat. **Muat katalog** di grup itu menemukan impor yang memuatnya dan hanya memuat impor tersebut.
 Sebuah pengaturan (Umum, Jendela) menyembunyikan grup itu.
 
-Menu **Katalog** pada bilah profil mencantumkan setiap berkas katalog di `imports/`, dimuat atau tidak: yang dimuat bertanda centang dan berwarna aksen, dan klik membuka tabnya; yang lain dimuat dengan klik dan juga membuka tabnya. Daftar dibaca ulang setiap kali menu dibuka.
+Menu **Katalog** pada bilah profil mencantumkan setiap berkas katalog di `imports/`, dimuat atau tidak: yang dimuat bertanda centang dan berwarna aksen, dan klik membuka tabnya; yang lain dimuat dengan klik dan juga membuka tabnya. Daftar dibaca ulang setiap kali menu dibuka. Secara default, klik pada katalog di menu memuat atau melepasnya; di Pengaturan, Umum, pilihan lain membuat menu hanya mencantumkan katalog yang dimuat dan klik membuka tabnya.
 
 Arsip zip berisi templat, seperti yang dirilis Chrome, Edge, dan Firefox, atau berisi file katalog diimpor
 dengan **Impor arsip...** dan dibaca tanpa diekstrak.

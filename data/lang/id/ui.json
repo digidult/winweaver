@@ -896,5 +896,11 @@
   "Remove the group": "Hapus grup",
   "Remove the group {name} with all it holds? It leaves the file at the next save.": "Hapus grup {name} beserta semua grup dan kebijakan di dalamnya? Grup akan hilang dari file pada penyimpanan berikutnya.",
   "Name is the name of the account; Windows shows the full name at the sign-in, and a rename in its Settings or Control Panel usually changes only that. The folder of the profile keeps its first name.": "Nama adalah nama akun; saat masuk Windows menampilkan nama lengkap, dan penggantian nama di Pengaturan atau Panel Kontrol biasanya hanya mengubah itu. Folder profil tetap memakai nama pertamanya.",
-  "{n} changes were not applied to this PC": "{n} perubahan tidak diterapkan ke PC ini"
+  "{n} changes were not applied to this PC": "{n} perubahan tidak diterapkan ke PC ini",
+  "Category": "Kategori",
+  "differs": "berbeda",
+  "only here": "hanya di sini",
+  "A click on a catalog of the menu Catalogs:": "Klik pada katalog di menu Katalog:",
+  "loads or unloads it": "memuat atau melepasnya",
+  "opens its tab, of the loaded ones": "membuka tabnya, hanya yang dimuat"
 }

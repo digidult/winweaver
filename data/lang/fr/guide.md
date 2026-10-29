@@ -220,7 +220,7 @@ génération, avec un avertissement à l'ouverture du profil et à la générati
 **Charger les catalogues** dans ce groupe trouve les importations qui les contiennent et ne charge que
 celles-ci. Un paramètre (Général, Fenêtre) masque le groupe.
 
-Le menu **Catalogues** de la barre d'un profil liste tous les fichiers de catalogue de `imports/`, chargés ou non : un fichier chargé porte une coche et la couleur d'accent, et un clic ouvre son onglet ; un autre se charge d'un clic et ouvre aussi son onglet. La liste est relue à chaque ouverture du menu.
+Le menu **Catalogues** de la barre d'un profil liste tous les fichiers de catalogue de `imports/`, chargés ou non : un fichier chargé porte une coche et la couleur d'accent, et un clic ouvre son onglet ; un autre se charge d'un clic et ouvre aussi son onglet. La liste est relue à chaque ouverture du menu. Par défaut, un clic sur un catalogue du menu le charge ou le décharge ; dans Paramètres, Général, l'autre choix ne laisse dans le menu que les catalogues chargés, et un clic ouvre l'onglet de l'un d'eux.
 
 Une archive zip de modèles, comme Chrome, Edge et Firefox les distribuent, ou d'un fichier de catalogue
 s'importe avec **Importer une archive...** et se lit sans être décompressée.

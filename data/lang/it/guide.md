@@ -208,7 +208,7 @@ all'apertura del profilo e alla generazione del file di risposte. **Carica catal
 le importazioni che le contengono e carica solo quelle. Un'impostazione (Generale, Finestra) nasconde il
 gruppo.
 
-Il menu **Cataloghi** nella barra di un profilo elenca ogni file di catalogo in `imports/`, caricato o no: uno caricato ha un segno di spunta e il colore di accento, e un clic apre la sua scheda; un altro si carica con un clic e apre anch'esso la sua scheda. L'elenco viene riletto ogni volta che il menu si apre.
+Il menu **Cataloghi** nella barra di un profilo elenca ogni file di catalogo in `imports/`, caricato o no: uno caricato ha un segno di spunta e il colore di accento, e un clic apre la sua scheda; un altro si carica con un clic e apre anch'esso la sua scheda. L'elenco viene riletto ogni volta che il menu si apre. Per impostazione predefinita un clic su un catalogo del menu lo carica o lo scarica; in Impostazioni, Generale, l'altra scelta lascia nel menu solo i cataloghi caricati e un clic apre la scheda di uno.
 
 Un archivio zip di modelli, come li distribuiscono Chrome, Edge e Firefox, o di un file di catalogo si
 importa con **Importa un archivio...** e si legge senza estrarlo.

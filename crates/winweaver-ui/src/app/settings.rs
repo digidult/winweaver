@@ -45,6 +45,12 @@ impl WinWeaver {
                 &mut extra.pol_with_pc,
                 tr("Open the Group Policy files of this Windows when this PC is read"),
             );
+            ui.horizontal_wrapped(|ui| {
+                ui.label(tr("A click on a catalog of the menu Catalogs:"));
+                let opens = &mut extra.catalog_menu_opens;
+                ui.radio_value(opens, false, tr("loads or unloads it"));
+                ui.radio_value(opens, true, tr("opens its tab, of the loaded ones"));
+            });
         }
         ui.add_space(4.0);
     }

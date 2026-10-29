@@ -896,5 +896,11 @@
   "Remove the group": "Supprimer le groupe",
   "Remove the group {name} with all it holds? It leaves the file at the next save.": "Supprimer le groupe {name} avec tous les groupes et stratégies qu'il contient ? Il quittera le fichier au prochain enregistrement.",
   "Name is the name of the account; Windows shows the full name at the sign-in, and a rename in its Settings or Control Panel usually changes only that. The folder of the profile keeps its first name.": "Nom est le nom du compte ; à l'ouverture de session Windows affiche le nom complet, et un renommage dans ses Paramètres ou le Panneau de configuration ne change en général que celui-ci. Le dossier du profil garde son premier nom.",
-  "{n} changes were not applied to this PC": "{n} modifications n'ont pas été appliquées à ce PC"
+  "{n} changes were not applied to this PC": "{n} modifications n'ont pas été appliquées à ce PC",
+  "Category": "Catégorie",
+  "differs": "diffère",
+  "only here": "seulement ici",
+  "A click on a catalog of the menu Catalogs:": "Un clic sur un catalogue du menu Catalogues :",
+  "loads or unloads it": "le charge ou le décharge",
+  "opens its tab, of the loaded ones": "ouvre son onglet, seulement les chargés"
 }

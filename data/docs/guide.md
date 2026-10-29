@@ -199,7 +199,7 @@ the tree and are left out of the build, with a warning when the profile opens an
 built. **Load catalogs** in that group finds the imports that hold them and loads only those. A setting
 (General, Window) hides the group.
 
-The menu **Catalogs** in the bar of a profile lists every catalog file of `imports/`, loaded or not: a loaded one has a mark and the accent colour, and a click opens its tab; another one loads at a click and opens its tab too. The list is read again every time the menu opens.
+The menu **Catalogs** in the bar of a profile lists every catalog file of `imports/`, loaded or not: a loaded one has a mark and the accent colour, and a click opens its tab; another one loads at a click and opens its tab too. The list is read again every time the menu opens. By default a click on a catalog of the menu loads or unloads it; in Settings, General, the other choice makes the menu list the loaded catalogs alone and a click open the tab of one.
 
 A zip archive of templates, as Chrome, Edge and Firefox ship them, or of a catalog file is imported with
 **Import an archive...** and read without unpacking it.

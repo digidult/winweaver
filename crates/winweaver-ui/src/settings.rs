@@ -40,6 +40,9 @@ pub struct Extra {
     pub regfile_tree: bool,
     /// The Group Policy files of this Windows open in their tabs when this PC is read.
     pub pol_with_pc: bool,
+    /// A click on a catalog in the menu Catalogs opens its tab, and the menu lists the loaded ones
+    /// alone; off (the default), a click loads or unloads it and every catalog file is listed.
+    pub catalog_menu_opens: bool,
 }
 
 impl Default for Extra {
@@ -57,6 +60,7 @@ impl Default for Extra {
             writers_open: true,
             regfile_tree: true,
             pol_with_pc: false,
+            catalog_menu_opens: false,
         }
     }
 }

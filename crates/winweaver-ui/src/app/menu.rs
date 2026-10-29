@@ -216,7 +216,10 @@ impl WinWeaver {
                 this_pc_menu(ui, acts, applicable);
             }
             Menu::CompareProfile => self.compare_profile_menu(shell, ui, acts),
-            Menu::Catalogs => self.catalogs_menu(ui, acts),
+            Menu::Catalogs => {
+                let opens = shell.settings.extra.catalog_menu_opens;
+                self.catalogs_menu(ui, opens, acts);
+            }
             Menu::CompareCatalog => self.compare_catalog_menu(shell, ui, acts),
             Menu::RegFileApply => regfile_apply_menu(shell, ui, acts),
             Menu::Pol => pol_menu(ui, acts),
@@ -295,7 +298,10 @@ impl WinWeaver {
     /// with a mark and in the accent colour (a click opens its tab), another one plain (a click
     /// loads it and opens its tab); then the import commands. The files are listed again each
     /// time the menu opens.
-    fn catalogs_menu(&self, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    /// The catalog files of `imports/`. By default a click loads or unloads one, and every file is
+    /// listed with a mark on the loaded ones; with `opens` (the setting of General) only the
+    /// loaded ones are listed and a click opens the tab of one, which loads only in the settings.
+    fn catalogs_menu(&self, ui: &mut egui::Ui, opens: bool, acts: &mut Vec<Act>) {
         // The menu opened this frame when it was not drawn in the frame before: the folder is
         // read again once, since files may have come or gone meanwhile.
         let drawn = egui::Id::new("catalogs-menu-drawn");
@@ -311,17 +317,20 @@ impl WinWeaver {
         }
         for entry in &self.full.import_list {
             let loaded = self.imports.iter().any(|f| f.id == entry.id);
+            if opens && !loaded {
+                continue;
+            }
             let (icon, color) = if loaded {
                 (icons::CHECK, Some(accent))
             } else {
                 ("", None)
             };
             if menu_entry_colored(ui, icon, &entry.name, "", true, color) {
-                acts.push(Act::Catalog(if loaded {
-                    CatalogAct::Open(entry.id.clone())
+                acts.push(if opens {
+                    Act::Catalog(CatalogAct::Open(entry.id.clone()))
                 } else {
-                    CatalogAct::LoadAndOpen(entry.id.clone())
-                }));
+                    Act::Import(ImportAct::Toggle(entry.id.clone()))
+                });
             }
         }
         ui.separator();

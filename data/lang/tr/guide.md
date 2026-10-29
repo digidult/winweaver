@@ -204,7 +204,7 @@ sonunda **Bilinmeyen seçenekler** altında listelenir ve oluşturmaya alınmaz;
 dosyası oluşturulurken bir uyarı verilir. Bu gruptaki **Katalogları yükle**, onları içeren içeri
 aktarımları bulur ve yalnızca bunları yükler. Bir ayar (Genel, Pencere) grubu gizler.
 
-Bir profilin çubuğundaki **Kataloglar** menüsü, yüklü olsun olmasın `imports/` içindeki her katalog dosyasını listeler: yüklü olanın bir işareti ve vurgu rengi vardır, tıklamak sekmesini açar; diğeri tıklamayla yüklenir ve o da sekmesini açar. Liste, menü her açıldığında yeniden okunur.
+Bir profilin çubuğundaki **Kataloglar** menüsü, yüklü olsun olmasın `imports/` içindeki her katalog dosyasını listeler: yüklü olanın bir işareti ve vurgu rengi vardır, tıklamak sekmesini açar; diğeri tıklamayla yüklenir ve o da sekmesini açar. Liste, menü her açıldığında yeniden okunur. Varsayılan olarak menüdeki bir kataloğa tıklama onu yükler veya kaldırır; Ayarlar, Genel'deki diğer seçenek menüde yalnızca yüklü katalogları bırakır ve tıklama birinin sekmesini açar.
 
 Chrome, Edge ve Firefox'un yayımladığı biçimdeki bir şablon zip arşivi veya bir katalog dosyası arşivi
 **Arşiv içeri aktar...** ile içeri aktarılır ve açılmadan okunur.

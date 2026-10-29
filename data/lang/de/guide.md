@@ -217,7 +217,7 @@ mit einer Warnung beim Öffnen des Profils und beim Erstellen der Antwortdatei. 
 dieser Gruppe findet die Importe, die sie enthalten, und lädt nur diese. Eine Einstellung (Allgemein,
 Fenster) blendet die Gruppe aus.
 
-Das Menü **Kataloge** in der Leiste eines Profils führt jede Katalogdatei in `imports/` auf, geladen oder nicht: eine geladene trägt ein Häkchen und die Akzentfarbe, ein Klick öffnet ihre Registerkarte; eine andere wird mit einem Klick geladen und öffnet ebenfalls ihre Registerkarte. Die Liste wird bei jedem Öffnen des Menüs neu gelesen.
+Das Menü **Kataloge** in der Leiste eines Profils führt jede Katalogdatei in `imports/` auf, geladen oder nicht: eine geladene trägt ein Häkchen und die Akzentfarbe, ein Klick öffnet ihre Registerkarte; eine andere wird mit einem Klick geladen und öffnet ebenfalls ihre Registerkarte. Die Liste wird bei jedem Öffnen des Menüs neu gelesen. Standardmäßig lädt oder entlädt ein Klick auf einen Katalog des Menüs ihn; in Einstellungen, Allgemein, lässt die andere Wahl nur die geladenen Kataloge im Menü, und ein Klick öffnet den Tab eines Katalogs.
 
 Ein Zip-Archiv mit Vorlagen, wie Chrome, Edge und Firefox sie ausliefern, oder mit einer Katalogdatei wird
 mit **Archiv importieren...** importiert und ohne Entpacken gelesen.

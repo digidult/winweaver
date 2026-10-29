@@ -896,5 +896,11 @@
   "Remove the group": "Удалить группу",
   "Remove the group {name} with all it holds? It leaves the file at the next save.": "Удалить группу {name} со всеми группами и политиками в ней? Она исчезнет из файла при следующем сохранении.",
   "Name is the name of the account; Windows shows the full name at the sign-in, and a rename in its Settings or Control Panel usually changes only that. The folder of the profile keeps its first name.": "Имя: имя учётной записи; на экране входа Windows показывает полное имя, и переименование в Параметрах или Панели управления обычно меняет только его. Папка профиля сохраняет своё первоначальное имя.",
-  "{n} changes were not applied to this PC": "Не применено к этому ПК изменений: {n}"
+  "{n} changes were not applied to this PC": "Не применено к этому ПК изменений: {n}",
+  "Category": "Категория",
+  "differs": "отличается",
+  "only here": "только здесь",
+  "A click on a catalog of the menu Catalogs:": "Щелчок по каталогу в меню Каталоги:",
+  "loads or unloads it": "загружает или выгружает его",
+  "opens its tab, of the loaded ones": "открывает его вкладку, только загруженные"
 }
