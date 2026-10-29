@@ -233,6 +233,9 @@ pub struct RegFileDoc {
     /// The keys folded in the tree of the outline, in lower case.
     pub closed: HashSet<String>,
     pub draft: ww::DraftState,
+    /// The errors of the last Apply to this PC, one a change this PC refused, shown in the
+    /// message bar of the tab until it is cleared.
+    pub applied: Vec<String>,
 }
 
 impl RegFileDoc {
@@ -252,6 +255,7 @@ impl RegFileDoc {
             writers: None,
             closed: HashSet::new(),
             draft,
+            applied: Vec::new(),
         }
     }
 

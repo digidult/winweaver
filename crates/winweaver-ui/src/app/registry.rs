@@ -483,6 +483,14 @@ impl WinWeaver {
             "INFO",
             &format!("registry file applied: {done} changes, {failed} failed"),
         );
+        // Every change this PC refused, in the log and in the message bar of the tab: the status
+        // names the first one only.
+        for e in &errors {
+            shell.log("WARN", &format!("registry file: {e}"));
+        }
+        if let Some(Doc::RegFile(d)) = shell.docs.get_mut(shell.active) {
+            d.applied = errors;
+        }
     }
 
     pub(crate) fn apply_reg_file(&mut self, shell: &mut Shell<WinWeaver>, act: RegFileAct) {
@@ -514,6 +522,11 @@ impl WinWeaver {
                 }
             }
             RegFileAct::Apply(scope) => self.apply_reg_file_to_pc(shell, scope),
+            RegFileAct::ClearMessages => {
+                if let Some(Doc::RegFile(d)) = shell.docs.get_mut(shell.active) {
+                    d.applied.clear();
+                }
+            }
             RegFileAct::Outline(tree) => {
                 shell.settings.extra.regfile_tree = tree;
                 shell.settings_dirty = true;

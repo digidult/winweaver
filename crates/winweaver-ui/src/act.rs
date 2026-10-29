@@ -426,4 +426,6 @@ pub enum RegFileAct {
     AskApply(regfileview::ApplyScope),
     /// Applies the selected value, key or the whole file to the registry of this PC.
     Apply(regfileview::ApplyScope),
+    /// Clears the errors of the last apply from the message bar of the tab.
+    ClearMessages,
 }

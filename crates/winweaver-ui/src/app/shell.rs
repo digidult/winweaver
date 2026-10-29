@@ -269,6 +269,18 @@ impl App for WinWeaver {
 
     /// The checks and warnings of a profile tab.
     fn messages(&self, shell: &Shell<Self>) -> Option<Messages<Act>> {
+        // The changes of a registry file this PC refused at the last Apply to this PC.
+        #[cfg(feature = "full")]
+        if let Some(Doc::RegFile(d)) = shell.active_doc()
+            && !d.applied.is_empty()
+        {
+            let n = d.applied.len();
+            return Some(Messages {
+                error: true,
+                summary: trf("{n} changes were not applied to this PC", &[("n", &n)]),
+                clear: Act::RegFile(RegFileAct::ClearMessages),
+            });
+        }
         let Some(Doc::Profile(doc)) = shell.active_doc() else {
             return None;
         };
@@ -283,6 +295,21 @@ impl App for WinWeaver {
     }
 
     fn messages_body(&self, shell: &Shell<Self>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+        #[cfg(feature = "full")]
+        if let Some(Doc::RegFile(d)) = shell.active_doc() {
+            let p = style::palette(ui);
+            let texts = texts_for(&self.texts, &i18n::current());
+            for error in &d.applied {
+                ui.horizontal_wrapped(|ui| {
+                    let color = ui.visuals().error_fg_color;
+                    let size = style::size(ui, 12.0);
+                    ui.label(RichText::new(tr("Error")).color(color).size(size));
+                    let link = views::RuleLink::Profile;
+                    views::linked_text(ui, &self.catalog, texts, error, p.msg_fg, link, acts);
+                });
+            }
+            return;
+        }
         let Some(Doc::Profile(doc)) = shell.active_doc() else {
             return;
         };
