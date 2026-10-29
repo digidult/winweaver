@@ -398,53 +398,155 @@ fn detail(ui: &mut egui::Ui, doc: &CompareDoc, lang: &str, acts: &mut Vec<Act>) 
             ui.label(style::muted(ui, entry.path.join(" \u{203A} "), 12.0));
         }
     });
+    legend(ui);
     ui.columns(2, |cols| {
-        side(&mut cols[0], &doc.first, lang, id, acts);
-        side(&mut cols[1], &doc.second, lang, id, acts);
+        side(&mut cols[0], &doc.first, &doc.second, lang, id, acts);
+        side(&mut cols[1], &doc.second, &doc.first, lang, id, acts);
     });
 }
 
-/// One catalog's side of a policy: its texts, its values, its values when off, its parameters.
-fn side(ui: &mut egui::Ui, file: &CatalogFile, lang: &str, id: &str, acts: &mut Vec<Act>) {
+/// How a field of a policy compares with the same field of the other catalog.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Mark {
+    Same,
+    Differs,
+    /// The field is not in this catalog, the other one has it.
+    Absent,
+    /// The field is only in this catalog.
+    OnlyHere,
+}
+
+impl Mark {
+    /// The mark of a field from its value here and in the other catalog, `None` when absent.
+    fn of<T: PartialEq>(here: Option<T>, there: Option<T>) -> Self {
+        match (here, there) {
+            (Some(a), Some(b)) if a == b => Mark::Same,
+            (Some(_), Some(_)) => Mark::Differs,
+            (None, Some(_)) => Mark::Absent,
+            (Some(_), None) => Mark::OnlyHere,
+            (None, None) => Mark::Same,
+        }
+    }
+
+    /// The colour and the word of a mark; none for a field that is the same.
+    fn look(self, ui: &egui::Ui) -> Option<(egui::Color32, &'static str)> {
+        let p = style::palette(ui);
+        match self {
+            Mark::Same => None,
+            Mark::Differs => Some((p.warn, tr("differs"))),
+            Mark::Absent => Some((ui.visuals().error_fg_color, tr("absent"))),
+            Mark::OnlyHere => Some((p.ok, tr("only here"))),
+        }
+    }
+}
+
+/// The colours of the marks, above the two sides.
+fn legend(ui: &mut egui::Ui) {
+    ui.horizontal_wrapped(|ui| {
+        for mark in [Mark::Differs, Mark::Absent, Mark::OnlyHere] {
+            if let Some((color, word)) = mark.look(ui) {
+                ui.label(egui::RichText::new("\u{25A0}").color(color));
+                ui.label(style::muted(ui, word, 12.0));
+            }
+        }
+    });
+}
+
+/// A field of a side in a frame tinted by its mark, with the word of the mark after its title.
+fn field(ui: &mut egui::Ui, mark: Mark, title: &str, add: impl FnOnce(&mut egui::Ui)) {
+    let look = mark.look(ui);
+    let mut frame = egui::Frame::new().inner_margin(egui::Margin::symmetric(6, 3));
+    if let Some((color, _)) = look {
+        frame = frame
+            .fill(color.gamma_multiply(0.12))
+            .stroke(egui::Stroke::new(1.0, color.gamma_multiply(0.6)))
+            .corner_radius(egui::CornerRadius::same(4));
+    }
+    frame.show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.horizontal_wrapped(|ui| {
+            if !title.is_empty() {
+                ui.label(style::strong(ui, title, 12.0));
+            }
+            if let Some((color, word)) = look {
+                let size = style::size(ui, 11.0);
+                ui.label(egui::RichText::new(word).color(color).size(size));
+            }
+        });
+        add(ui);
+    });
+    ui.add_space(4.0);
+}
+
+/// One catalog's side of a policy: its texts, its values, its values when off, its parameters,
+/// each field marked as the same, different, absent or only here against the other catalog.
+fn side(
+    ui: &mut egui::Ui,
+    file: &CatalogFile,
+    other: &CatalogFile,
+    lang: &str,
+    id: &str,
+    acts: &mut Vec<Act>,
+) {
     views::block(ui, |ui| {
         style::section_title(ui, &file.name);
         let Some(rule) = file.rules.iter().find(|r| r.id == id) else {
             ui.weak(tr("Not in this catalog."));
             return;
         };
+        let twin = other.rules.iter().find(|r| r.id == id);
+        let off_id = format!("{id}.off");
+        let off = file.rules.iter().find(|r| r.id == off_id);
+        let twin_off = other.rules.iter().find(|r| r.id == off_id);
         let (title, summary) = rule_texts(file, lang, rule);
-        ui.label(style::strong(ui, title, 13.0));
         let path = category_path(file, lang, rule);
-        if !path.is_empty() {
-            ui.label(style::muted(ui, path.join(" \u{203A} "), 12.0));
+        let texts = twin.map(|r| rule_texts(other, lang, r));
+        let twin_path = twin.map(|r| category_path(other, lang, r));
+        let text = |s: &str| (!s.is_empty()).then(|| s.to_owned());
+        let mark = Mark::of(Some(title.to_owned()), texts.map(|t| t.0.to_owned()));
+        field(ui, mark, "", |ui| {
+            ui.label(style::strong(ui, title, 13.0));
+        });
+        let there = twin_path.filter(|p| !p.is_empty());
+        let mark = Mark::of((!path.is_empty()).then(|| path.clone()), there);
+        if !path.is_empty() || mark != Mark::Same {
+            field(ui, mark, tr("Category"), |ui| {
+                ui.label(style::muted(ui, path.join(" \u{203A} "), 12.0));
+            });
         }
-        if !summary.is_empty() {
-            ui.add_space(4.0);
-            style::selectable_text(ui, ("compare-summary", &file.id, id), summary);
+        let mark = Mark::of(text(summary), texts.and_then(|t| text(t.1)));
+        if !summary.is_empty() || mark != Mark::Same {
+            field(ui, mark, tr("Description"), |ui| {
+                style::selectable_text(ui, ("compare-summary", &file.id, id), summary);
+            });
         }
-        ui.add_space(6.0);
-        ui.label(style::strong(ui, tr("Values"), 12.0));
-        views::writes(ui, rule, acts);
-        let off = format!("{id}.off");
-        if let Some(off) = file.rules.iter().find(|r| r.id == off) {
-            ui.add_space(6.0);
-            ui.label(style::strong(ui, tr("Values when off"), 12.0));
-            views::writes(ui, off, acts);
+        let mark = Mark::of(Some(&rule.actions), twin.map(|r| &r.actions));
+        field(ui, mark, tr("Values"), |ui| views::writes(ui, rule, acts));
+        let mark = Mark::of(off.map(|r| &r.actions), twin_off.map(|r| &r.actions));
+        if off.is_some() || mark != Mark::Same {
+            field(ui, mark, tr("Values when off"), |ui| {
+                if let Some(off) = off {
+                    views::writes(ui, off, acts);
+                }
+            });
         }
-        if !rule.params.is_empty() {
-            ui.add_space(6.0);
-            ui.label(style::strong(ui, tr("Parameters"), 12.0));
-            for (name, param) in &rule.params {
-                let default = param.default_value();
-                ui.label(trf(
-                    "{title} ({name}), default {value}",
-                    &[
-                        ("title", &param.title()),
-                        ("name", name),
-                        ("value", &default),
-                    ],
-                ));
-            }
+        let params = (!rule.params.is_empty()).then_some(&rule.params);
+        let twin_params = twin.and_then(|r| (!r.params.is_empty()).then_some(&r.params));
+        let mark = Mark::of(params, twin_params);
+        if params.is_some() || mark != Mark::Same {
+            field(ui, mark, tr("Parameters"), |ui| {
+                for (name, param) in &rule.params {
+                    let default = param.default_value();
+                    ui.label(trf(
+                        "{title} ({name}), default {value}",
+                        &[
+                            ("title", &param.title()),
+                            ("name", name),
+                            ("value", &default),
+                        ],
+                    ));
+                }
+            });
         }
     });
 }
