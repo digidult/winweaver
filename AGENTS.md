@@ -473,7 +473,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   its test runs only on the CI runner as administrator (`GITHUB_ACTIONS`).
 - Imports: a policy is `admx.<prefix>.<name>` with `<id>.off`; groups `admx.<import>` under `policies`; a catalog
   file brings only Reg and RegRemove actions under `HKLM:\` or `DU:\` (checked at every load). Turning a group
-  on skips imported policies; the read of the whole PC leaves them out.
+  on skips imported policies; the read of the whole PC covers the loaded ones (`thispc::whole_pc_rules`: every rule of the catalog, since 0.28.1).
 - Archives (`admx::read_archive`, the button Import an archive): a `.zip` is read in memory with the crate
   `zip` (deflate only, pure Rust); its ADMX files with the ADML of `<dir>/<culture>/<name>.adml` (any case)
   become an import `archive-<fnv of the path>`, else its one `.wwcatalog` is imported like a catalog file.
@@ -697,7 +697,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   the window to be elevated (`winweaver_win::elevated`), so the master password crosses no process: no
   helper and no plan file for them. The semantics: an account that exists changes
   only by its orders, no account is deleted, a profile elsewhere is kept, the account of the process stays
-  in Administrators; a change of them changes `winweaver_win::users` and
+  in Administrators (known by the SID of its token, `native::current_sid`: a rename leaves `USERNAME`
+  old until the next sign-in; the built-in accounts the apply disables are compared the same way);
+  the tab lists the name and the full name, and a change of the group in the form sets `force_group`; a change of them changes `winweaver_win::users` and
   `data/templates/Create-Users.runtime.ps1` together. The script names its users file in Base64
   (`users::script`, any name; the comment of its first line through `render::ascii_text`). The test of
   the Windows runner makes and deletes
@@ -809,7 +811,9 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   window. Apply to this PC applies the selected value, key or the whole file
   (`RegFile::changes`, `regfile::apply_changes` with the registry of the window) after a question
   that counts the changes and the deletions; the keys of the computer need the window as
-  administrator.
+  administrator. Every change this PC refused goes to the log and to the message bar of the tab
+  (`RegFileDoc::applied`, the messages of `App::messages` for a registry file, its paths as links);
+  the status names the first one.
 - Group Policy files (`winweaver_core::pol`, `polview.rs`, `app/pol.rs`): `Registry.pol` of the
   computer (`Machine`, HKLM) and of the users (`User`, HKCU) of this Windows or any `.pol` file in a
   tab: the keys as a tree, the entries with what each does (set, set when absent, delete, delete
