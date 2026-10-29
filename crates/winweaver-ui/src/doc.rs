@@ -104,7 +104,8 @@ impl DocKind {
     /// The icon of the tab.
     pub fn icon(self) -> &'static str {
         match self {
-            DocKind::Profile | DocKind::Settings => icons::GEAR,
+            DocKind::Profile => icons::PROFILE,
+            DocKind::Settings => icons::GEAR,
             DocKind::Markdown => icons::BOOK,
             DocKind::Theme => icons::PALETTE,
             #[cfg(feature = "full")]

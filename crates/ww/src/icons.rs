@@ -48,6 +48,8 @@ pub const BOOK: &str = "\u{1F4D6}";
 pub const LINK: &str = "\u{1F517}";
 pub const PALETTE: &str = "\u{1F3A8}";
 pub const PAGE: &str = "\u{1F4C3}";
+/// A profile of an installation: the disc of the media, apart from the gear of the settings.
+pub const PROFILE: &str = "\u{1F4BF}";
 pub const PEOPLE: &str = "\u{1F465}";
 pub const PERSON: &str = "\u{1F464}";
 pub const GLOBE: &str = "\u{1F310}";
