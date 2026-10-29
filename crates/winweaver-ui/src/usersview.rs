@@ -313,6 +313,7 @@ fn list_panel(ui: &mut egui::Ui, doc: &mut UsersDoc, acts: &mut Vec<Act>) {
     let words = doc.search.words();
     let columns = [
         list::Column::new(tr("Name"), 140.0),
+        list::Column::new(tr("Full name"), 160.0),
         list::Column::new(tr("Group"), 110.0),
         list::Column::new(tr("State"), 80.0),
         list::Column::new(tr("Password"), 80.0),
@@ -344,6 +345,7 @@ fn list_panel(ui: &mut egui::Ui, doc: &mut UsersDoc, acts: &mut Vec<Act>) {
                 key: i,
                 cells: vec![
                     name,
+                    list::Cell::new(u.full_name.clone()),
                     list::Cell::new(u.group()),
                     list::Cell::new(state_text(u.state)),
                     password,
@@ -424,6 +426,14 @@ fn user_form(ui: &mut egui::Ui, doc: &mut UsersDoc) {
             );
             ui.end_row();
         });
+    // A change of the group in the form is the order to move an account that exists, which
+    // keeps its other membership without it.
+    if u.admin != before.admin {
+        u.force_group = true;
+    }
+    ui.weak(tr(
+        "Name is the name of the account; Windows shows the full name at the sign-in, and a rename in its Settings or Control Panel usually changes only that. The folder of the profile keeps its first name.",
+    ));
     ui.add_space(8.0);
     style::section_title(ui, tr("When the account already exists on the PC"));
     ui.weak(tr(

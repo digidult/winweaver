@@ -100,7 +100,7 @@ administrador; el resultado queda bajo el formulario, una línea por cuenta. **S
 `Create-<nombre>.ps1` junto al archivo de usuarios: pide la contraseña maestra por sí mismo y hace lo
 mismo en otro PC desde un símbolo del sistema abierto como administrador (`-PasswordsOnly` solo establece
 las contraseñas). En el formulario **Cuentas** de un perfil, **De un archivo de usuarios** carga sus
-cuentas, con sus contraseñas si da la contraseña maestra.
+cuentas, con sus contraseñas si da la contraseña maestra. Un cambio del grupo en el formulario marca exactamente este grupo, así la cuenta pasa entre Administradores y Usuarios; la cuenta con la que se ejecuta WinWeaver se queda en Administradores.
 
 Mientras el archivo está desbloqueado, el formulario muestra la contraseña de la cuenta seleccionada como
 puntos, con **Mostrar** y **Copiar** (el historial del portapapeles de Windows conserva lo copiado). En

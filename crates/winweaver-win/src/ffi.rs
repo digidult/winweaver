@@ -295,11 +295,6 @@ pub(crate) fn system_root() -> PathBuf {
     PathBuf::from(std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_owned()))
 }
 
-/// The name of the account this process runs as, empty when the environment does not say.
-pub(crate) fn user_name() -> String {
-    std::env::var("USERNAME").unwrap_or_default()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

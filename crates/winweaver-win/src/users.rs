@@ -19,10 +19,10 @@ use zeroize::Zeroize;
 
 use crate::accounts::{self, DISABLED, NEVER_EXPIRES};
 use crate::ffi::{
-    DaclError, NetBuffer, Sid, USER_NOT_FOUND, each_user, net_error, set_dacl, user_name,
-    utf16_bytes, wide, wide_text,
+    DaclError, NetBuffer, Sid, USER_NOT_FOUND, each_user, net_error, set_dacl, utf16_bytes, wide,
+    wide_text,
 };
-use crate::native::{builtin_group, groups_of};
+use crate::native::{builtin_group, current_sid, groups_of};
 use crate::registry::NativeRegistry;
 
 const PROFILE_LIST: &str = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList";
@@ -218,16 +218,6 @@ fn membership(group: &str, sid: &Sid, add: bool) -> Result<(), String> {
         "not {what} the group {group} ({})",
         net_error(status)
     ))
-}
-
-/// The identifier of the account this process runs as, which is never removed from
-/// Administrators.
-fn current_sid() -> Option<String> {
-    let name = user_name();
-    if name.is_empty() {
-        return None;
-    }
-    NativeRegistry.account_sid(&name)
 }
 
 /// Brings the groups of an account in line with `admin`: the wanted group is added, and with

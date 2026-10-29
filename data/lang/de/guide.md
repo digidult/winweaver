@@ -101,7 +101,7 @@ dem Formular, eine Zeile je Konto. **Skript** speichert `Create-<Name>.ps1` nebe
 fragt das Masterkennwort selbst und tut dasselbe auf einem anderen PC aus einer als Administrator
 geöffneten Eingabeaufforderung (`-PasswordsOnly` setzt nur die Kennwörter). Im Formular **Konten** eines
 Profils lädt **Aus einer Benutzerdatei** deren Konten, mit ihren Kennwörtern, wenn Sie das Masterkennwort
-eingeben.
+eingeben. Ein Wechsel der Gruppe im Formular markiert genau diese Gruppe, sodass das Konto zwischen Administratoren und Benutzern wechselt; das Konto, unter dem WinWeaver läuft, bleibt bei den Administratoren.
 
 Solange die Datei entsperrt ist, zeigt das Formular das Kennwort des gewählten Kontos als Punkte, mit
 **Anzeigen** und **Kopieren** (der Zwischenablageverlauf von Windows behält das Kopierte). Im Formular

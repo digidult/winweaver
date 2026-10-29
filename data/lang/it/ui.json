@@ -894,5 +894,7 @@
   "The regions of Windows: a choice sets the GeoID and the code together": "Le regioni di Windows: una scelta imposta GeoID e codice insieme",
   "Windows does not list this region": "Windows non conosce questa regione",
   "Remove the group": "Rimuovi il gruppo",
-  "Remove the group {name} with all it holds? It leaves the file at the next save.": "Rimuovere il gruppo {name} con tutti i gruppi e i criteri che contiene? Uscirà dal file al prossimo salvataggio."
+  "Remove the group {name} with all it holds? It leaves the file at the next save.": "Rimuovere il gruppo {name} con tutti i gruppi e i criteri che contiene? Uscirà dal file al prossimo salvataggio.",
+  "Name is the name of the account; Windows shows the full name at the sign-in, and a rename in its Settings or Control Panel usually changes only that. The folder of the profile keeps its first name.": "Nome è il nome dell'account; all'accesso Windows mostra il nome completo, e una ridenominazione nelle Impostazioni o nel Pannello di controllo di solito cambia solo quello. La cartella del profilo mantiene il suo primo nome.",
+  "{n} changes were not applied to this PC": "{n} modifiche non sono state applicate a questo PC"
 }

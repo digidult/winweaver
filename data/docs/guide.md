@@ -93,7 +93,7 @@ after a question and need WinWeaver run as administrator; the result stands unde
 account. **Script** saves `Create-<name>.ps1` next to the users file: it asks the master password itself
 and does the same on another PC from a command prompt opened as administrator (`-PasswordsOnly` sets the
 passwords only). In the form **Accounts** of a profile, **From a users file** loads its accounts, with
-their passwords when you give the master password.
+their passwords when you give the master password. A change of the group in the form marks exactly this group, so the account moves between Administrators and Users; the account WinWeaver runs as stays in Administrators.
 
 While the file is unlocked, the form shows the password of the selected account as dots, with **Show**
 and **Copy** (the clipboard history of Windows keeps what is copied). In the form **Accounts** of a

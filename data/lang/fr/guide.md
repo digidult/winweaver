@@ -101,7 +101,7 @@ administrateur ; le résultat s'affiche sous le formulaire, une ligne par compte
 fait la même chose sur un autre PC depuis une invite de commandes ouverte en administrateur
 (`-PasswordsOnly` ne définit que les mots de passe). Dans le formulaire **Comptes** d'un profil, **D'un
 fichier d'utilisateurs** charge ses comptes, avec leurs mots de passe si vous donnez le mot de passe
-principal.
+principal. Un changement du groupe dans le formulaire coche exactement ce groupe, et le compte passe entre Administrateurs et Utilisateurs ; le compte sous lequel WinWeaver s'exécute reste dans Administrateurs.
 
 Tant que le fichier est déverrouillé, le formulaire montre le mot de passe du compte sélectionné sous
 forme de points, avec **Afficher** et **Copier** (l'historique du presse-papiers de Windows conserve ce

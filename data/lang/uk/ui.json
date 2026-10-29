@@ -894,5 +894,7 @@
   "The regions of Windows: a choice sets the GeoID and the code together": "Регіони Windows: вибір задає GeoID і код разом",
   "Windows does not list this region": "Windows не знає такого регіону",
   "Remove the group": "Видалити групу",
-  "Remove the group {name} with all it holds? It leaves the file at the next save.": "Видалити групу {name} з усіма групами й політиками в ній? Вона зникне з файлу під час наступного збереження."
+  "Remove the group {name} with all it holds? It leaves the file at the next save.": "Видалити групу {name} з усіма групами й політиками в ній? Вона зникне з файлу під час наступного збереження.",
+  "Name is the name of the account; Windows shows the full name at the sign-in, and a rename in its Settings or Control Panel usually changes only that. The folder of the profile keeps its first name.": "Ім'я: ім'я облікового запису; на екрані входу Windows показує повне ім'я, і перейменування в Параметрах або Панелі керування зазвичай змінює лише його. Тека профілю зберігає своє первісне ім'я.",
+  "{n} changes were not applied to this PC": "Не застосовано до цього ПК змін: {n}"
 }

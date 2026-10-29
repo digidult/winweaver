@@ -96,7 +96,7 @@ gerektirir; sonuç formun altında, hesap başına bir satır olarak durur. **Be
 yanına `Create-<ad>.ps1` kaydeder: ana parolayı kendisi sorar ve yönetici olarak açılmış bir komut
 isteminden başka bir bilgisayarda aynısını yapar (`-PasswordsOnly` yalnızca parolaları ayarlar). Bir
 profilin **Hesaplar** formunda **Kullanıcı dosyasından**, ana parolayı verirseniz parolalarıyla birlikte
-hesaplarını yükler.
+hesaplarını yükler. Formda grubun değişmesi tam olarak bu grubu işaretler, böylece hesap Administrators ile Users arasında geçer; WinWeaver'ın çalıştığı hesap Administrators'da kalır.
 
 Dosyanın kilidi açıkken form, seçili hesabın parolasını nokta olarak gösterir; **Göster** ve **Kopyala**
 düğmeleri vardır (Windows pano geçmişi kopyalananı saklar). Bir profilin **Hesaplar** formunda

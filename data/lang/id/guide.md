@@ -96,7 +96,7 @@ di bawah formulir, satu baris per akun. **Skrip** menyimpan `Create-<nama>.ps1` 
 skrip itu meminta kata sandi utama sendiri dan melakukan hal yang sama di PC lain dari prompt perintah
 yang dibuka sebagai administrator (`-PasswordsOnly` hanya mengatur kata sandi). Di formulir **Akun**
 sebuah profil, **Dari file pengguna** memuat akunnya, beserta kata sandinya jika Anda memberikan kata
-sandi utama.
+sandi utama. Mengubah grup di formulir menandai tepat grup ini, sehingga akun berpindah antara Administrators dan Users; akun yang menjalankan WinWeaver tetap di Administrators.
 
 Selama file terbuka, formulir menampilkan kata sandi akun yang dipilih sebagai titik, dengan
 **Tampilkan** dan **Salin** (riwayat papan klip Windows menyimpan apa yang disalin). Di formulir **Akun**

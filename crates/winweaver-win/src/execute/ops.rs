@@ -189,11 +189,14 @@ pub(crate) fn disable_builtin(backup: &mut Backup) -> Outcome {
         Ok(found) => found,
         Err(e) => return ("failed", e),
     };
-    let me = user_name();
+    // By the identifier: an account renamed while signed in keeps its old name in `USERNAME`.
+    let me = crate::native::current_sid();
     let mut notes = Vec::new();
     let mut failed = false;
     for name in found {
-        if name.eq_ignore_ascii_case(&me) {
+        use winweaver_core::registry::Registry;
+        let sid = crate::registry::NativeRegistry.account_sid(&name);
+        if sid.is_some() && sid == me {
             notes.push(format!("{name}: left on, it is the account in use"));
             continue;
         }

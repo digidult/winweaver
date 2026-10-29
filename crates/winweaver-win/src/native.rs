@@ -89,6 +89,48 @@ pub(crate) fn elevated() -> bool {
     ok != 0 && elevation.TokenIsElevated != 0
 }
 
+/// The identifier of the account this process runs as, from its token: an account renamed while
+/// it is signed in keeps its old name in `USERNAME` until the next sign-in, the token never.
+pub(crate) fn current_sid() -> Option<String> {
+    use windows_sys::Win32::Foundation::{CloseHandle, HANDLE};
+    use windows_sys::Win32::Security::Authorization::ConvertSidToStringSidW;
+    use windows_sys::Win32::Security::{GetTokenInformation, TOKEN_QUERY, TOKEN_USER, TokenUser};
+    use windows_sys::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
+    let mut token: HANDLE = std::ptr::null_mut();
+    // SAFETY: the pseudo handle of the current process is always valid; the token handle is
+    // written by the call and closed below.
+    if unsafe { OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &mut token) } == 0 {
+        return None;
+    }
+    // A TOKEN_USER with its identifier after it, aligned for the pointer it starts with.
+    let mut buffer = [0u64; 64];
+    let mut size = 0u32;
+    // SAFETY: the buffer is valid for the size passed.
+    let ok = unsafe {
+        GetTokenInformation(
+            token,
+            TokenUser,
+            buffer.as_mut_ptr().cast(),
+            std::mem::size_of_val(&buffer) as u32,
+            &mut size,
+        )
+    };
+    // SAFETY: the token handle came from OpenProcessToken.
+    unsafe { CloseHandle(token) };
+    if ok == 0 {
+        return None;
+    }
+    // SAFETY: the call wrote a TOKEN_USER at the start of the aligned buffer.
+    let user = unsafe { &*buffer.as_ptr().cast::<TOKEN_USER>() };
+    let mut out: *mut u16 = std::ptr::null_mut();
+    // SAFETY: the identifier lives in the buffer; the text is allocated by the call.
+    if unsafe { ConvertSidToStringSidW(user.User.Sid, &mut out) } == 0 {
+        return None;
+    }
+    // SAFETY: the text is null-terminated and allocated by the call above.
+    Some(unsafe { ffi::take_text(out) })
+}
+
 /// The name of a built-in group in the language of this Windows, such as `Administratoren` on a
 /// German Windows.
 pub(crate) fn builtin_group(

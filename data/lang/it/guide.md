@@ -95,7 +95,7 @@ domanda e richiedono WinWeaver eseguito come amministratore; il risultato sta so
 per account. **Script** salva `Create-<nome>.ps1` accanto al file utenti: chiede da sé la password
 principale e fa lo stesso su un altro PC da un prompt dei comandi aperto come amministratore
 (`-PasswordsOnly` imposta solo le password). Nel modulo **Account** di un profilo, **Da un file utenti**
-carica i suoi account, con le loro password se date la password principale.
+carica i suoi account, con le loro password se date la password principale. Un cambio del gruppo nel modulo spunta esattamente questo gruppo, così l'account passa tra Administrators e Users; l'account con cui gira WinWeaver resta in Administrators.
 
 Finché il file è sbloccato, il modulo mostra la password dell'account selezionato come punti, con
 **Mostra** e **Copia** (la cronologia degli appunti di Windows conserva ciò che viene copiato). Nel
