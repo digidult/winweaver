@@ -27,16 +27,24 @@ pub(crate) fn short_field(ui: &egui::Ui, at: f32) -> f32 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Form {
+    /// The name, the author and the comment of the profile.
+    Profile,
     Install,
     Accounts,
     Languages,
 }
 
 impl Form {
-    pub const ALL: [Form; 3] = [Form::Install, Form::Accounts, Form::Languages];
+    pub const ALL: [Form; 4] = [
+        Form::Profile,
+        Form::Install,
+        Form::Accounts,
+        Form::Languages,
+    ];
 
     pub fn title(self) -> &'static str {
         match self {
+            Form::Profile => "Profile",
             Form::Install => "Installation",
             Form::Accounts => "Accounts",
             Form::Languages => "Languages",
@@ -45,6 +53,7 @@ impl Form {
 
     pub fn id(self) -> &'static str {
         match self {
+            Form::Profile => "form.profile",
             Form::Install => "form.install",
             Form::Accounts => "form.accounts",
             Form::Languages => "form.languages",
@@ -60,6 +69,35 @@ pub fn form_view(
     acts: &mut Vec<Act>,
 ) {
     match form {
+        Form::Profile => {
+            let p = &doc.profile;
+            let (mut name, mut author, mut comment) =
+                (p.name.clone(), p.author.clone(), p.comment.clone());
+            ui.heading(tr(Form::Profile.title()));
+            ui.add_space(6.0);
+            egui::Grid::new("profile-form")
+                .num_columns(2)
+                .spacing([16.0, 6.0])
+                .show(ui, |ui| {
+                    let wide = wide_field(ui);
+                    ui.label(tr("Name"));
+                    ui.add(egui::TextEdit::singleline(&mut name).desired_width(wide));
+                    ui.end_row();
+                    ui.label(tr("Author"));
+                    ui.add(egui::TextEdit::singleline(&mut author).desired_width(wide));
+                    ui.end_row();
+                    ui.label(tr("Comment"));
+                    let field = egui::TextEdit::multiline(&mut comment)
+                        .desired_rows(4)
+                        .desired_width(wide);
+                    ui.add(field);
+                    ui.end_row();
+                });
+            if (&name, &author, &comment) != (&p.name, &p.author, &p.comment) {
+                let info = Box::new((name, author, comment));
+                acts.push(Act::Profile(ProfileAct::SetInfo(info)));
+            }
+        }
         Form::Install => {
             let mut install = doc.profile.install.clone();
             install_form(ui, &mut install, language);

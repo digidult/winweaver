@@ -79,6 +79,8 @@ pub struct DescSections {
     pub deps: bool,
     pub more: bool,
     pub reference: bool,
+    /// The coloured stripe of each part inside its card; the tint of the card stays always.
+    pub stripes: bool,
 }
 
 impl Default for DescSections {
@@ -90,6 +92,7 @@ impl Default for DescSections {
             deps: false,
             more: false,
             reference: false,
+            stripes: true,
         }
     }
 }

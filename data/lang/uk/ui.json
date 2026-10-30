@@ -902,5 +902,9 @@
   "only here": "лише тут",
   "A click on a catalog of the menu Catalogs:": "Клік на каталозі в меню Каталоги:",
   "loads or unloads it": "завантажує або вивантажує його",
-  "opens its tab, of the loaded ones": "відкриває його вкладку, лише завантажені"
+  "opens its tab, of the loaded ones": "відкриває його вкладку, лише завантажені",
+  "Author": "Автор",
+  "Edit the name, the author and the comment": "Змінити ім'я, автора й коментар",
+  "Read the selection: open a profile first": "Прочитати вибране: спершу відкрийте профіль",
+  "Coloured stripes in the parts of the description": "Кольорові смужки в частинах опису"
 }

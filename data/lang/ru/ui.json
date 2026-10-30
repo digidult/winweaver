@@ -902,5 +902,9 @@
   "only here": "только здесь",
   "A click on a catalog of the menu Catalogs:": "Щелчок по каталогу в меню Каталоги:",
   "loads or unloads it": "загружает или выгружает его",
-  "opens its tab, of the loaded ones": "открывает его вкладку, только загруженные"
+  "opens its tab, of the loaded ones": "открывает его вкладку, только загруженные",
+  "Author": "Автор",
+  "Edit the name, the author and the comment": "Изменить имя, автора и комментарий",
+  "Read the selection: open a profile first": "Прочитать выбранное: сначала откройте профиль",
+  "Coloured stripes in the parts of the description": "Цветные полоски в частях описания"
 }

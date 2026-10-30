@@ -400,22 +400,37 @@ pub(crate) fn rule_description(
         return;
     }
     let desc = rdesc(texts, rule);
-    section(ui, "desc-what", tr("What it does"), parts.what, |ui| {
-        style::selectable_text(ui, ("what", rule.id.as_str()), rsummary(texts, rule));
-        if !desc.effect.is_empty() {
-            style::selectable_text(ui, ("effect", rule.id.as_str()), desc.effect);
-        }
-    });
+    section(
+        ui,
+        "desc-what",
+        tr("What it does"),
+        parts.what,
+        parts.stripes,
+        |ui| {
+            style::selectable_text(ui, ("what", rule.id.as_str()), rsummary(texts, rule));
+            if !desc.effect.is_empty() {
+                style::selectable_text(ui, ("effect", rule.id.as_str()), desc.effect);
+            }
+        },
+    );
     if !desc.risk.is_empty() {
-        section(ui, "desc-risk", tr("Risk"), parts.risk, |ui| {
-            style::selectable_text(ui, ("risk", rule.id.as_str()), desc.risk);
-        });
+        section(
+            ui,
+            "desc-risk",
+            tr("Risk"),
+            parts.risk,
+            parts.stripes,
+            |ui| {
+                style::selectable_text(ui, ("risk", rule.id.as_str()), desc.risk);
+            },
+        );
     }
     section(
         ui,
         "desc-writes",
         tr("What it writes"),
         parts.writes,
+        parts.stripes,
         |ui| writes(ui, rule, acts),
     );
     // The rules it names and the rules that name it, both ways.
@@ -436,6 +451,7 @@ pub(crate) fn rule_description(
             "desc-deps",
             tr("Dependencies and conflicts"),
             parts.deps,
+            parts.stripes,
             |ui| {
                 for (label, list) in [
                     (tr("Needs"), &requires),
@@ -461,6 +477,7 @@ pub(crate) fn rule_description(
             "desc-more",
             tr("Versions, check and rollback"),
             parts.more,
+            parts.stripes,
             |ui| {
                 for (i, text) in [desc.versions, desc.verify, desc.rollback]
                     .into_iter()
@@ -475,11 +492,18 @@ pub(crate) fn rule_description(
     }
     #[cfg(feature = "full")]
     if !rule.doc.is_empty() {
-        section(ui, "desc-ref", tr("Reference"), parts.reference, |ui| {
-            if ui.link(rule.doc.as_str()).clicked() {
-                acts.push(Act::Shell(ShellAct::OpenLink(rule.doc.clone())));
-            }
-        });
+        section(
+            ui,
+            "desc-ref",
+            tr("Reference"),
+            parts.reference,
+            parts.stripes,
+            |ui| {
+                if ui.link(rule.doc.as_str()).clicked() {
+                    acts.push(Act::Shell(ShellAct::OpenLink(rule.doc.clone())));
+                }
+            },
+        );
     }
 }
 

@@ -402,6 +402,15 @@ impl WinWeaver {
                 }
                 self.refresh_active(shell);
             }
+            ProfileAct::SetInfo(info) => {
+                if let Some(doc) = self.active_profile(shell) {
+                    let (name, author, comment) = *info;
+                    doc.profile.name = name;
+                    doc.profile.author = author;
+                    doc.profile.comment = comment;
+                }
+                self.refresh_active(shell);
+            }
             ProfileAct::SetAccounts(accounts) => {
                 if let Some(doc) = self.active_profile(shell) {
                     doc.profile.accounts = accounts;

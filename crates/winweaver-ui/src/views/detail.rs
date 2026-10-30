@@ -2,10 +2,20 @@
 
 use super::*;
 
-pub(crate) fn profile_detail(ui: &mut egui::Ui, doc: &ProfileDoc) {
+/// The view of the profile: its name and comment, the forms in short, each title a link to its form
+/// (the first crumb of the navigation row leads here).
+pub(crate) fn profile_detail(ui: &mut egui::Ui, doc: &ProfileDoc, acts: &mut Vec<Act>) {
     let p = &doc.profile;
+    let form_link = |ui: &mut egui::Ui, form: Form, acts: &mut Vec<Act>| {
+        if ui.link(style::strong(ui, tr(form.title()), 13.0)).clicked() {
+            acts.push(Act::Profile(ProfileAct::Select(Sel::Form(form))));
+        }
+    };
     header(ui, |ui| {
         ui.label(style::strong(ui, p.name.as_str(), 18.0));
+        if !p.author.is_empty() {
+            ui.label(style::muted(ui, p.author.as_str(), 12.0));
+        }
         ui.horizontal_wrapped(|ui| {
             style::chip(
                 ui,
@@ -17,9 +27,16 @@ pub(crate) fn profile_detail(ui: &mut egui::Ui, doc: &ProfileDoc) {
             ui.add_space(4.0);
             style::selectable_text(ui, "profile-comment", &p.comment);
         }
+        ui.add_space(4.0);
+        if ui
+            .link(tr("Edit the name, the author and the comment"))
+            .clicked()
+        {
+            acts.push(Act::Profile(ProfileAct::Select(Sel::Form(Form::Profile))));
+        }
     });
     block(ui, |ui| {
-        style::section_title(ui, tr("Installation"));
+        form_link(ui, Form::Install, acts);
         ui.label(trf(
             "Edition {edition}, product key {key}, time zone {zone}, computer name {name}, accounts {accounts}, disk {disk}",
             &[
@@ -33,7 +50,7 @@ pub(crate) fn profile_detail(ui: &mut egui::Ui, doc: &ProfileDoc) {
         ));
     });
     block(ui, |ui| {
-        style::section_title(ui, tr("Languages"));
+        form_link(ui, Form::Languages, acts);
         ui.label(trf(
             "Display {ui}, system {system}, user {user}, input {input}",
             &[
@@ -45,7 +62,7 @@ pub(crate) fn profile_detail(ui: &mut egui::Ui, doc: &ProfileDoc) {
         ));
     });
     block(ui, |ui| {
-        style::section_title(ui, tr("Accounts"));
+        form_link(ui, Form::Accounts, acts);
         for a in &p.accounts {
             ui.label(format!("{} ({})", a.name, a.group));
         }
@@ -304,7 +321,7 @@ pub fn detail_view(
     egui::ScrollArea::vertical()
         .auto_shrink(false)
         .show(ui, |ui| match &doc.sel {
-            Sel::None => profile_detail(ui, doc),
+            Sel::None => profile_detail(ui, doc, acts),
             Sel::Group(id) if id == UNKNOWN_GROUP => unknown_group_detail(ui, doc, acts),
             Sel::Group(id) => group_detail(ui, catalog, texts, doc, id, acts),
             Sel::Unknown(id) => unknown_detail(ui, doc, id, acts),

@@ -902,5 +902,9 @@
   "only here": "seulement ici",
   "A click on a catalog of the menu Catalogs:": "Un clic sur un catalogue du menu Catalogues :",
   "loads or unloads it": "le charge ou le décharge",
-  "opens its tab, of the loaded ones": "ouvre son onglet, seulement les chargés"
+  "opens its tab, of the loaded ones": "ouvre son onglet, seulement les chargés",
+  "Author": "Auteur",
+  "Edit the name, the author and the comment": "Modifier le nom, l'auteur et le commentaire",
+  "Read the selection: open a profile first": "Lire la sélection : ouvrez d'abord un profil",
+  "Coloured stripes in the parts of the description": "Bandes de couleur dans les parties de la description"
 }

@@ -334,6 +334,7 @@ fn param_summary(
 
 fn form_icon(form: Form) -> &'static str {
     match form {
+        Form::Profile => icons::PROFILE,
         Form::Install => icons::CLIPBOARD,
         Form::Accounts => icons::PERSON,
         Form::Languages => icons::GLOBE,
@@ -382,8 +383,17 @@ pub const SECTION_COLORS: [style::ExtraColor; 6] = [
     },
 ];
 
-/// A part of the description: a card that folds, with the colour of its kind on its left edge.
-fn section(ui: &mut egui::Ui, id: &str, title: &str, open: bool, add: impl FnOnce(&mut egui::Ui)) {
+/// A part of the description: a card that folds, tinted by the colour of its kind, with a stripe
+/// of that colour inside its left margin when `stripe` (a setting of General; item 1 of the list
+/// of 30.10.2026).
+fn section(
+    ui: &mut egui::Ui,
+    id: &str,
+    title: &str,
+    open: bool,
+    stripe: bool,
+    add: impl FnOnce(&mut egui::Ui),
+) {
     let p = style::palette(ui);
     let kind = id.strip_prefix("desc-").unwrap_or(id);
     let color = style::extra(ui, &format!("section-{kind}"));
@@ -411,15 +421,12 @@ fn section(ui: &mut egui::Ui, id: &str, title: &str, open: bool, add: impl FnOnc
                 .default_open(open)
                 .show(ui, add);
         });
-    let rect = shown.response.rect;
-    let stripe = egui::Rect::from_min_size(rect.min, egui::vec2(4.0, rect.height()));
-    let corners = CornerRadius {
-        nw: 6,
-        sw: 6,
-        ne: 0,
-        se: 0,
-    };
-    ui.painter().rect_filled(stripe, corners, color);
+    if stripe {
+        // Inside the card, in its left margin, clear of the border.
+        let rect = shown.response.rect.shrink2(egui::vec2(6.0, 6.0));
+        let bar = egui::Rect::from_min_size(rect.min, egui::vec2(3.0, rect.height()));
+        ui.painter().rect_filled(bar, CornerRadius::same(2), color);
+    }
 }
 
 /// The id of an item, selectable, with a button that copies it.

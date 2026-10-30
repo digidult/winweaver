@@ -902,5 +902,9 @@
   "only here": "nur hier",
   "A click on a catalog of the menu Catalogs:": "Ein Klick auf einen Katalog im Menü Kataloge:",
   "loads or unloads it": "lädt oder entlädt ihn",
-  "opens its tab, of the loaded ones": "öffnet seinen Tab, nur die geladenen"
+  "opens its tab, of the loaded ones": "öffnet seinen Tab, nur die geladenen",
+  "Author": "Autor",
+  "Edit the name, the author and the comment": "Name, Autor und Kommentar bearbeiten",
+  "Read the selection: open a profile first": "Auswahl lesen: zuerst ein Profil öffnen",
+  "Coloured stripes in the parts of the description": "Farbige Streifen in den Teilen der Beschreibung"
 }

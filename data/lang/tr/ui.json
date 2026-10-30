@@ -902,5 +902,9 @@
   "only here": "yalnızca burada",
   "A click on a catalog of the menu Catalogs:": "Kataloglar menüsünde bir kataloğa tıklama:",
   "loads or unloads it": "onu yükler veya kaldırır",
-  "opens its tab, of the loaded ones": "sekmesini açar, yalnızca yüklü olanlar"
+  "opens its tab, of the loaded ones": "sekmesini açar, yalnızca yüklü olanlar",
+  "Author": "Yazar",
+  "Edit the name, the author and the comment": "Adı, yazarı ve yorumu düzenle",
+  "Read the selection: open a profile first": "Seçimi oku: önce bir profil açın",
+  "Coloured stripes in the parts of the description": "Açıklama bölümlerinde renkli şeritler"
 }

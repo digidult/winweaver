@@ -24,6 +24,10 @@ impl WinWeaver {
             ui.checkbox(&mut parts.reference, tr("Reference"));
         });
         ui.checkbox(
+            &mut extra.desc_sections.stripes,
+            tr("Coloured stripes in the parts of the description"),
+        );
+        ui.checkbox(
             &mut extra.show_guide_at_start,
             tr("Open the guide at the next start"),
         );

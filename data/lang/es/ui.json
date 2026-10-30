@@ -902,5 +902,9 @@
   "only here": "solo aquí",
   "A click on a catalog of the menu Catalogs:": "Un clic en un catálogo del menú Catálogos:",
   "loads or unloads it": "lo carga o lo descarga",
-  "opens its tab, of the loaded ones": "abre su pestaña, solo los cargados"
+  "opens its tab, of the loaded ones": "abre su pestaña, solo los cargados",
+  "Author": "Autor",
+  "Edit the name, the author and the comment": "Editar el nombre, el autor y el comentario",
+  "Read the selection: open a profile first": "Leer la selección: abra primero un perfil",
+  "Coloured stripes in the parts of the description": "Franjas de color en las partes de la descripción"
 }

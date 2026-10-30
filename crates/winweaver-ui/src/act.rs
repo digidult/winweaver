@@ -159,6 +159,8 @@ pub enum ProfileAct {
     /// Shows a group in the tree of the first profile tab.
     ShowGroupInProfile(String),
     SetInstall(Box<Install>),
+    /// The name, the author and the comment of the profile in front.
+    SetInfo(Box<(String, String, String)>),
     SetAccounts(Vec<Account>),
     SetLanguages(Languages),
     Check,
