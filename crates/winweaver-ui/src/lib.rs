@@ -686,6 +686,72 @@ fn with_every_import(
     (catalog, texts)
 }
 
+/// The culture and the input languages of a profile made of a preset: the language of the window
+/// with the country of the user's Windows when the two languages agree, else the usual country of
+/// that language, English (United States) when Windows lists neither; the input languages of this
+/// Windows, none (English International) where they cannot be read.
+pub(crate) fn preset_languages() -> (String, Vec<String>) {
+    const USUAL: [(&str, &str); 10] = [
+        ("en", "en-US"),
+        ("uk", "uk-UA"),
+        ("ru", "ru-RU"),
+        ("de", "de-DE"),
+        ("es", "es-ES"),
+        ("fr", "fr-FR"),
+        ("id", "id-ID"),
+        ("it", "it-IT"),
+        ("tr", "tr-TR"),
+        ("be", "be-BY"),
+    ];
+    let code = i18n::current();
+    let code = if code.is_empty() {
+        "en".to_owned()
+    } else {
+        code
+    };
+    #[cfg(windows)]
+    let system = winweaver_win::this_pc().map(|m| m.system_info());
+    #[cfg(not(windows))]
+    let system: Option<winweaver_core::thispc::SystemInfo> = None;
+    let user = system
+        .as_ref()
+        .map(|s| s.user_locale.clone())
+        .unwrap_or_default();
+    let same = user.split('-').next() == Some(code.as_str());
+    let usual = USUAL
+        .iter()
+        .find(|(c, _)| *c == code)
+        .map(|(_, t)| (*t).to_owned());
+    let table = winweaver_core::resources::locales();
+    let known = |tag: &str| table.languages.is_empty() || table.language(tag).is_some();
+    let tag = [same.then_some(user), usual]
+        .into_iter()
+        .flatten()
+        .find(|t| known(t))
+        .unwrap_or_else(|| "en-US".to_owned());
+    let mut input: Vec<String> = Vec::new();
+    for language in system.iter().flat_map(|s| s.input.iter()) {
+        for item in table
+            .read_items(&language.tag, &language.tips)
+            .unwrap_or_default()
+        {
+            if !input.iter().any(|k| k.eq_ignore_ascii_case(&item)) {
+                input.push(item);
+            }
+        }
+    }
+    (tag, input)
+}
+
+/// A profile of a built-in preset with the culture of the user (`preset_languages`).
+pub(crate) fn preset_profile(name: &str, text: &str, catalog: &Catalog) -> Profile {
+    let mut profile =
+        Profile::parse(text, name).unwrap_or_else(|_| Profile::from_defaults(name, catalog));
+    let (tag, input) = preset_languages();
+    profile.localize(catalog, &tag, input);
+    profile
+}
+
 /// The smoke test of the renderers for CI (`--smoke-window`): a small window drawn twice.
 #[cfg(not(target_arch = "wasm32"))]
 pub fn smoke_window(cli_renderer: Option<&str>) -> Result<String, String> {

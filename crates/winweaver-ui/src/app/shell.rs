@@ -84,8 +84,7 @@ impl App for WinWeaver {
 
     /// The first tab: the preset Office.
     fn started(&mut self, shell: &mut Shell<Self>) {
-        let profile = Profile::parse(PRESETS[0].1, PRESETS[0].0)
-            .unwrap_or_else(|_| Profile::from_defaults(PRESETS[0].0, &self.catalog));
+        let profile = preset_profile(PRESETS[0].0, PRESETS[0].1, &self.catalog);
         let doc = ProfileDoc::new(profile, None, &self.catalog);
         shell.open_tab(Doc::Profile(Box::new(doc)));
     }

@@ -443,8 +443,7 @@ impl WinWeaver {
         match act {
             FileAct::NewProfile(preset) => {
                 let profile = match preset.and_then(|n| PRESETS.iter().find(|p| p.0 == n)) {
-                    Some((name, text)) => Profile::parse(text, name)
-                        .unwrap_or_else(|_| Profile::from_defaults(name, &self.catalog)),
+                    Some((name, text)) => preset_profile(name, text, &self.catalog),
                     None => Profile::new("New profile", self.catalog.version()),
                 };
                 let doc = ProfileDoc::new(profile, None, &self.catalog);

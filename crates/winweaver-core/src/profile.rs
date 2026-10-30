@@ -9,6 +9,12 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+/// The input language a localized profile gets when none is given: English (United States) with
+/// the layout United States-International.
+pub const ENGLISH_INTERNATIONAL: &str = "0409:00020409";
+/// The rule of the user region, whose two parameters `localize` sets.
+const REGION_RULE: &str = "default-user.region";
+
 use crate::admx::RULE_PREFIX;
 use crate::catalog::{Catalog, Param, check};
 use crate::jsonfile::{self, DocError, Document};
@@ -227,6 +233,28 @@ impl Profile {
 
     /// Sets a parameter of a rule: the value, or nothing when it is the default of the
     /// parameter; whether the choice changed.
+    /// The languages and the user region set for one culture (`de-DE`): the display language and
+    /// both locales, the input languages given (English International when none are), and the
+    /// GeoID and the code of the country of the culture for `default-user.region` when Windows
+    /// lists it. The built-in presets are written for Ukraine; a profile made of one takes the
+    /// culture of the user this way (item 5 of the list of 30.10.2026).
+    pub fn localize(&mut self, catalog: &Catalog, tag: &str, input: Vec<String>) {
+        self.languages.ui_language = tag.to_owned();
+        self.languages.system_locale = tag.to_owned();
+        self.languages.user_locale = tag.to_owned();
+        self.languages.input = if input.is_empty() {
+            vec![ENGLISH_INTERNATIONAL.to_owned()]
+        } else {
+            input
+        };
+        let country = tag.rsplit('-').next().unwrap_or_default();
+        if let Some(region) = crate::resources::regions().by_code(country) {
+            let (id, code) = (region.id_text(), region.code.clone());
+            self.set_param(catalog, REGION_RULE, "geo_id", Value::from(id));
+            self.set_param(catalog, REGION_RULE, "geo_name", Value::from(code));
+        }
+    }
+
     pub fn set_param(&mut self, catalog: &Catalog, id: &str, name: &str, value: Value) -> bool {
         let changed = self
             .param(catalog, id, name)
