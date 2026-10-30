@@ -107,6 +107,11 @@ impl WinWeaver {
             Act::Shell(ShellAct::CloseTab(shell.active, false)),
             acts,
         );
+        // This PC from any tab: the acts that need no profile stay on.
+        #[cfg(feature = "full")]
+        sub_menu(ui, icons::THIS_PC, tr("This PC"), |ui| {
+            self.this_pc_menu(shell, ui, acts);
+        });
         ui.separator();
         menu_item(
             ui,
@@ -200,6 +205,15 @@ impl WinWeaver {
         );
     }
 
+    /// The menu This PC for the tab in front.
+    #[cfg(feature = "full")]
+    fn this_pc_menu(&self, shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+        let profile = matches!(shell.docs.get(shell.active), Some(Doc::Profile(_)));
+        let ids = self.selection_ids(shell);
+        let applicable = !ids.is_empty() && winweaver_core::export::applicable(&self.catalog, &ids);
+        this_pc_menu(ui, acts, profile, applicable);
+    }
+
     #[cfg(feature = "full")]
     /// The menu a button of the command bar opens.
     pub(crate) fn bar_menu(
@@ -210,11 +224,7 @@ impl WinWeaver {
         acts: &mut Vec<Act>,
     ) {
         match menu {
-            Menu::ThisPc => {
-                let ids = self.selection_ids(shell);
-                let applicable = winweaver_core::export::applicable(&self.catalog, &ids);
-                this_pc_menu(ui, acts, applicable);
-            }
+            Menu::ThisPc => self.this_pc_menu(shell, ui, acts),
             Menu::CompareProfile => self.compare_profile_menu(shell, ui, acts),
             Menu::Catalogs => {
                 let opens = shell.settings.extra.catalog_menu_opens;
@@ -489,19 +499,23 @@ fn regfile_apply_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Ve
 #[cfg(feature = "full")]
 /// The commands of This PC for the selection (offered only when a rule of it can be applied on a
 /// PC) and for the whole profile.
-fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>, applicable: bool) {
+/// The menu This PC: the acts on the selection need a profile in front whose selection a PC has
+/// something of, the acts on the whole profile a profile in front; a read into a new profile, an
+/// undo and an audit report need none (item 6 and 7 of the list of 30.10.2026).
+fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>, profile: bool, applicable: bool) {
     let mut item = |ui: &mut egui::Ui, icon: &str, text: &str, act: Act| {
-        let selection = matches!(
-            act,
+        let enabled = match &act {
             Act::Pc(
                 PcAct::ReadSelection
-                    | PcAct::Check
-                    | PcAct::SaveScript(_)
-                    | PcAct::SaveRegFile(_)
-                    | PcAct::PlanNative(_)
-            )
-        );
-        if menu_entry(ui, icon, text, "", applicable || !selection) {
+                | PcAct::Check
+                | PcAct::SaveScript(_)
+                | PcAct::SaveRegFile(_)
+                | PcAct::PlanNative(_),
+            ) => profile && applicable,
+            Act::Pc(PcAct::SaveScriptAll(_) | PcAct::SaveRegFileAll(_)) => profile,
+            _ => true,
+        };
+        if menu_entry(ui, icon, text, "", enabled) {
             acts.push(act);
         }
     };

@@ -5,27 +5,32 @@ use crate::*;
 impl WinWeaver {
     /// Reads this PC: every rule into a new profile tab, or the selection into the open profile.
     pub(crate) fn read_pc(&mut self, shell: &mut Shell<WinWeaver>, only_selection: bool) {
-        let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
-            shell.status =
-                tr("Read this PC: open a profile first; its rules and forms are the base")
-                    .to_owned();
-            return;
+        let active = match shell.docs.get(shell.active) {
+            Some(Doc::Profile(doc)) => Some((doc.profile.clone(), doc.draft_key.clone())),
+            _ => None,
+        };
+        let job = match (only_selection, active) {
+            (true, Some((base, doc))) => PcJob::Selection { doc, base },
+            (true, None) => {
+                shell.status = tr("Read the selection: open a profile first").to_owned();
+                return;
+            }
+            (false, Some((base, _))) => PcJob::NewProfile { base },
+            // Without a profile in front the read of the whole PC starts from an empty one.
+            (false, None) => PcJob::NewProfile {
+                base: Profile::new("This PC", self.catalog.version()),
+            },
         };
         let ids = if only_selection {
             self.selection_ids(shell)
         } else {
             thispc::whole_pc_rules(&self.catalog)
         };
-        let base = doc.profile.clone();
-        let plan = thispc::plan(&self.catalog, &base, &ids);
-        let job = if only_selection {
-            PcJob::Selection {
-                doc: doc.draft_key.clone(),
-                base,
-            }
-        } else {
-            PcJob::NewProfile { base }
+        let base = match &job {
+            PcJob::Selection { base, .. } | PcJob::NewProfile { base } => base.clone(),
+            _ => return,
         };
+        let plan = thispc::plan(&self.catalog, &base, &ids);
         self.start_pc_read(shell, job, plan, !only_selection);
     }
 
