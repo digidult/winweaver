@@ -144,6 +144,8 @@ password attendono una password principale prima del primo salvataggio.
 **Questo PC** nella barra dei comandi legge le impostazioni di questo computer tramite Windows, senza
 modificare nulla:
 
+**Il profilo.** Il modulo Profilo, primo nell'albero, modifica il nome, l'autore e il commento del profilo; la prima parte della riga di navigazione mostra il profilo con i suoi moduli in breve. Un modello si apre con la lingua della finestra e la regione del tuo Windows, e le lingue di input di questo Windows (English International se non si possono leggere). **Menu, Questo PC** funziona da ogni scheda: la lettura in un nuovo profilo non richiede un profilo aperto.
+
 - **Leggi questo PC in un nuovo profilo**: ogni regola che si può valutare su un Windows in esecuzione
   diventa attivata (in vigore), disattivata (in vigore solo in parte o non in vigore) oppure mantiene
   il suo stato (non leggibile, o come in un Windows appena installato); i moduli ricevono l'edizione, il

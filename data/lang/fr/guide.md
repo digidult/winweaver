@@ -152,6 +152,8 @@ premier enregistrement.
 **Ce PC** dans la barre de commandes lit les paramètres de cet ordinateur par l'intermédiaire de
 Windows, sans rien modifier :
 
+**Le profil.** Le formulaire Profil, premier de l'arbre, modifie le nom, l'auteur et le commentaire du profil ; la première partie de la ligne de navigation montre le profil avec ses formulaires en bref. Un modèle s'ouvre avec la langue de la fenêtre et la région de votre Windows, et les langues de saisie de ce Windows (English International quand elles ne se lisent pas). **Menu, Ce PC** fonctionne depuis tout onglet : la lecture dans un nouveau profil n'a pas besoin d'un profil ouvert.
+
 - **Lire ce PC dans un nouveau profil** : chaque règle qui peut être évaluée sur un Windows en cours
   d'exécution devient activée (en vigueur), désactivée (partiellement ou pas en vigueur) ou garde son
   état (illisible, ou comme sur un Windows neuf) ; les formulaires reprennent l'édition, le fuseau

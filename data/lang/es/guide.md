@@ -150,6 +150,8 @@ cuentas; sus contraseñas esperan una contraseña maestra antes del primer guard
 **Este equipo**, en la barra de comandos, lee la configuración de este equipo a través de Windows, sin
 cambiar nada:
 
+**El perfil.** El formulario Perfil, el primero del árbol, edita el nombre, el autor y el comentario del perfil; la primera parte de la fila de navegación muestra el perfil con sus formularios en breve. Una plantilla se abre con el idioma de la ventana y la región de su Windows, y los idiomas de entrada de este Windows (English International si no se pueden leer). **Menú, Este PC** funciona desde cualquier pestaña: leer en un perfil nuevo no necesita un perfil abierto.
+
 - **Leer este equipo en un perfil nuevo**: cada regla que se puede evaluar en un Windows en ejecución queda
   activada (en vigor), desactivada (en vigor solo en parte o sin efecto) o mantiene su estado (no se puede
   leer, o está como en un Windows limpio); los formularios toman la edición, la zona horaria y los idiomas.

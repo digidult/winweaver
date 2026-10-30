@@ -140,6 +140,8 @@ password before the first save.
 **This PC** in the command bar reads the settings of this computer through Windows, without changing
 anything:
 
+**The profile.** The form Profile, first in the tree, edits the name, the author and the comment of the profile; the first part of the navigation row shows the profile with its forms in short. A preset opens with the language of the window and the region of your Windows, and the input languages of this Windows (English International when they cannot be read). **Menu, This PC** works from any tab: a read into a new profile needs no open profile.
+
 - **Read this PC into a new profile**: every rule that can be judged on a running Windows becomes on
   (in effect), off (partly or not in effect) or keeps its state (not readable, or as on a clean
   Windows); the forms take the edition, the time zone and the languages.

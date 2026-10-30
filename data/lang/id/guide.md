@@ -141,6 +141,8 @@ sandi utama sebelum penyimpanan pertama.
 **PC Ini** di bilah perintah membaca pengaturan komputer ini melalui Windows, tanpa mengubah
 apa pun:
 
+**Profil.** Formulir Profil, yang pertama di pohon, mengubah nama, penulis, dan komentar profil; bagian pertama baris navigasi menampilkan profil dengan formulirnya secara ringkas. Templat terbuka dengan bahasa jendela dan wilayah Windows Anda, serta bahasa input Windows ini (English International bila tidak terbaca). **Menu, PC ini** bekerja dari tab mana pun: membaca ke profil baru tidak memerlukan profil yang terbuka.
+
 - **Baca PC ini ke profil baru**: setiap aturan yang dapat dinilai pada Windows yang sedang berjalan menjadi
   aktif (berlaku), nonaktif (berlaku sebagian atau tidak berlaku), atau mempertahankan statusnya (tidak dapat
   dibaca, atau sama seperti pada Windows yang bersih); formulir mengambil edisi, zona waktu, dan bahasa.

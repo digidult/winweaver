@@ -150,6 +150,8 @@ Kennwörter warten vor dem ersten Speichern auf ein Masterkennwort.
 **Dieser PC** in der Befehlsleiste liest die Einstellungen dieses Computers über Windows aus, ohne etwas zu
 ändern:
 
+**Das Profil.** Das Formular Profil, als erstes im Baum, bearbeitet Name, Autor und Kommentar des Profils; der erste Teil der Navigationszeile zeigt das Profil mit seinen Formularen kurz. Eine Vorlage öffnet sich mit der Sprache des Fensters und der Region Ihres Windows und den Eingabesprachen dieses Windows (English International, wenn sie nicht lesbar sind). **Menü, Dieser PC** wirkt von jedem Tab: Das Lesen in ein neues Profil braucht kein offenes Profil.
+
 - **Diesen PC in ein neues Profil einlesen**: Jede Regel, die sich auf einem laufenden Windows beurteilen
   lässt, wird eingeschaltet (wirksam), ausgeschaltet (teilweise oder nicht wirksam) oder behält ihren
   Zustand (nicht lesbar oder wie auf einem frisch installierten Windows); die Formulare übernehmen die

@@ -143,6 +143,8 @@ ana parola bekler.
 Komut çubuğundaki **Bu bilgisayar**, bu bilgisayarın ayarlarını hiçbir şeyi değiştirmeden Windows
 üzerinden okur:
 
+**Profil.** Ağaçtaki ilk form olan Profil, profilin adını, yazarını ve yorumunu düzenler; gezinti satırının ilk bölümü profili formlarıyla kısaca gösterir. Bir şablon pencerenin dili ve Windows'unuzun bölgesiyle ve bu Windows'un giriş dilleriyle açılır (okunamazlarsa English International). **Menü, Bu bilgisayar** her sekmeden çalışır: yeni bir profile okumak için açık profil gerekmez.
+
 - **Bu bilgisayarı yeni bir profile oku**: çalışan bir Windows'ta değerlendirilebilen her kural açık
   (geçerli) veya kapalı (kısmen geçerli ya da geçerli değil) olur ya da durumunu korur (okunamıyorsa
   veya temiz bir Windows'taki gibiyse); formlar sürümü, saat dilimini ve dilleri alır.
