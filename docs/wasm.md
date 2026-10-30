@@ -195,6 +195,11 @@ The same steps as the job `build-web`, on any computer with Rust (never the cust
 AGENTS.md rule 6). The first build takes 10-30 minutes and about 3 GB in `target/`; a build after a
 change takes a minute or two.
 
+On Windows, `build-all.cmd` in the root of the repository does steps 4 to 9 itself, with the archives
+of the other programs (AGENTS.md, section 5): the page is `dist/wwlite-web/wwlite.html`, the folder
+for a server `dist/wwlite-web/files`, and the archive `dist/wwlite-web-<version>.zip`. The steps below
+are the same by hand.
+
 1. Install Rust with rustup (https://rustup.rs). On Windows the build scripts of the crates need a
    linker for the computer itself: either the Visual Studio Build Tools with the workload "Desktop
    development with C++" for the default toolchain, or the toolchain that carries its own linker:

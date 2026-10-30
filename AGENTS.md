@@ -42,7 +42,9 @@ text editor wedit.
 ├── rust-toolchain.toml    stable with rustfmt and clippy
 ├── rustfmt.toml           max_width 100
 ├── .cargo/config.toml     static CRT for the Windows target
-├── .gitattributes         LF for every text file (data/templates too)
+├── .gitattributes         LF for every text file (data/templates too), CRLF for .cmd, .bat, .ps1
+├── build-all.cmd          what CI makes, built on a computer of Windows: the archives of a release
+│                          in dist/, on demand the checks, the screenshots, the slides (section 5)
 ├── .github/workflows/ci.yml  CI: fmt (a patch artifact), clippy (wwlite for wasm32 too) and tests of
 │                          winweaver-core on Linux; clippy, tests, the catalog check, the release build and
 │                          the zip on Windows; the job build-web (wwlite for the browser, the artifact
@@ -262,6 +264,30 @@ rustup target add wasm32-unknown-unknown
 cargo clippy -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown -- -D warnings
 cargo build --release -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown
 wasm-bindgen --target web --no-typescript --out-dir dist-web/wwlite-web target/wasm32-unknown-unknown/release/wwlite.wasm
+```
+
+On a computer of Windows, `build-all.cmd` of the root makes what CI makes (the list of 30.10.2026):
+the release builds of the workspace and of wwlite alone, wwlite for the browser (wasm-bindgen of the
+version of `Cargo.lock`, `single.py`), the folders of the step Package and the four archives of a
+release, `dist/WinWeaver-<version>.zip`, `wedit-`, `wwlite-` and `wwlite-web-<version>.zip`, each
+with its folder inside as the job `release` zips it (`tar.exe` of Windows). `check` runs the checks of
+a commit first (the format, the three clippy runs, both test runs, `--check-catalog`), `screenshots`
+the tests with `WINWEAVER_SCREENSHOTS` set to `dist/screenshots`, `presentation` the slides into
+`dist/presentation` (python-pptx and pillow), `all` the three; `noweb` leaves out the browser
+edition. The tools come from `WW_CARGO` (a script that runs cargo on half of the processor, say),
+`WW_PYTHON` and `WW_WASM_BINDGEN`, else from the PATH; a wasm-bindgen that is missing comes once into
+`target/tools` from its release on GitHub, as CI takes it, with its SHA-256 checked. Every tool is
+found before the first long step. It never runs the tests that change Windows and starts the
+program only for `--check-catalog`; the smoke tests of the window and of the command line stay in
+CI. A change of the steps Package or build-web of `ci.yml` changes `build-all.cmd` too. The file keeps
+CRLF (`.gitattributes`): cmd finds its labels by the offsets of the lines and reads a running script
+from the disk again, so it is never edited while it runs.
+
+```bat
+build-all.cmd
+build-all.cmd check
+build-all.cmd all
+build-all.cmd noweb
 ```
 
 Before every commit, on the computer of the developer (items 12 and 13 of the list of 28.10.2026), the
@@ -963,6 +989,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Done in pull request #64 (0.28.0) | The list of the customer of 28.10.2026: a group removed in the catalog editor, no recent files and no Exit in the menu of the browser edition, its list of regions, the build of the page by hand, every catalog of `imports/` in wwlite, the built-in catalog flatter (the small groups of Other into its root, the network and the logging of PowerShell into Security, the browsers into Apps), the whole description of a rule and the titles of the values in the language of the window, the browser edition in one file `wwlite.html`, CI only for a release or on demand, the checks before a commit on the computer of the developer, the tests that change Windows ignored by a plain `cargo test`, the guide of the browser edition for a first-time user, its icons in the fonts of egui, its keys that work in a browser |
 | Done in pull request #65 (0.29.0) | The lists of the customer of 29.10.2026: renamed accounts in a users file (the full name in the list, a change of group moves the account, the account of the process by its SID), the read of the whole PC with the loaded templates, every refused change of a registry file shown, the address row of the registry at large sizes, the click of the menu Catalogs with its setting, the marks of the fields of a comparison of catalogs, the disc of a profile tab |
 | Done in pull request #66 (0.30.0) | The list of the customer of 30.10.2026: presets with the culture of the user, the form Profile, This PC in the main menu with its items on where they apply, a read of this PC without a profile, the stripes of the description inside their cards and optional, the window maximized without a blink |
+| Done in pull request #67 (0.30.1) | `build-all.cmd`: what CI makes (the four archives of a release, on demand the checks, the screenshots and the slides) built on a computer of Windows; the programs of 0.30.0 |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the

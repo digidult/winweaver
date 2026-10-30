@@ -22,7 +22,8 @@ Licence: [MIT](LICENSE).
 ## Status
 
 Alpha: the window builds in CI (`WinWeaver-<version>.zip` and `wedit-<version>.zip` in the artifacts of
-every run; a tag `v<version>` publishes a release). Profiles, the check, the forms, the build of
+every run; a tag `v<version>` publishes a release). On a computer of Windows with Rust, `build-all.cmd`
+makes the same archives in `dist/` (`AGENTS.md`, section 5). Profiles, the check, the forms, the build of
 `autounattend.xml`, comparison and diff files, the native read of this PC and its native apply, return to
 defaults and undo (with a backup the stand-alone scripts understand, the default user profile included),
 the stand-alone apply, revert and audit scripts, the registry tab with the permissions of keys, registry
