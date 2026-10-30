@@ -25,23 +25,23 @@ pub struct Window<A: App> {
     placed: bool,
 }
 
-/// The window fitted to the monitor it opened on: moved inside it, and shrunk when it is larger
-/// (a maximized window stays as it is).
-fn fit_window(ctx: &egui::Context) {
+/// The window fitted to the monitor it opened on: moved inside it, and shrunk when it is larger.
+/// A window maximized at the last close, or whose state the first frame does not know yet, stays
+/// as it is: a size sent to a maximized window restored it and maximized it again, a blink at
+/// the start (item 4 of the list of 30.10.2026). Whether the window is placed; not yet while its
+/// rectangles or its state are unknown.
+fn fit_window(ctx: &egui::Context, was_maximized: bool) -> bool {
     let (outer, inner, monitor, maximized) = ctx.input(|i| {
         let v = i.viewport();
-        (
-            v.outer_rect,
-            v.inner_rect,
-            v.monitor_size,
-            v.maximized.unwrap_or(false),
-        )
+        (v.outer_rect, v.inner_rect, v.monitor_size, v.maximized)
     });
-    let (Some(outer), Some(inner), Some(monitor)) = (outer, inner, monitor) else {
-        return;
+    let (Some(outer), Some(inner), Some(monitor), Some(maximized)) =
+        (outer, inner, monitor, maximized)
+    else {
+        return false;
     };
-    if maximized || monitor.x <= 0.0 || monitor.y <= 0.0 {
-        return;
+    if was_maximized || maximized || monitor.x <= 0.0 || monitor.y <= 0.0 {
+        return true;
     }
     let frame = outer.size() - inner.size();
     let room = monitor - frame;
@@ -61,6 +61,7 @@ fn fit_window(ctx: &egui::Context) {
     if pos != outer.min {
         ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(pos));
     }
+    true
 }
 
 impl<A: App> Window<A> {
@@ -484,8 +485,15 @@ impl<A: App> eframe::App for Window<A> {
             ui.ctx().send_viewport_cmd(egui::ViewportCommand::Close);
         }
         if !self.placed {
-            self.placed = true;
-            fit_window(ui.ctx());
+            let was_maximized = self
+                .shell
+                .settings
+                .window
+                .as_ref()
+                .is_some_and(|w| w.maximized);
+            // A few frames to learn the state of the window, then it is left as it is.
+            let late = ui.ctx().cumulative_pass_nr() > 10;
+            self.placed = fit_window(ui.ctx(), was_maximized) || late;
         }
         self.shell.apply_visuals(ui.ctx());
         #[cfg(not(target_arch = "wasm32"))]
