@@ -147,11 +147,16 @@ pub fn locales() -> &'static Locales {
     })
 }
 
-/// Whether a locale id is one Windows hands at the first sign-in to a language without its own
-/// (0x2000 to 0x4C00 by steps of 0x400, as in `2000:00000419` of `ru-UA`).
-fn transient(lcid: &str) -> bool {
-    let id = u32::from_str_radix(lcid, 16).unwrap_or(0);
+/// Whether a locale id is one Windows hands to a language without its own once a user has it as
+/// an input language (0x2000 to 0x4C00 by steps of 0x400, as in `2000:00000419` of `ru-UA`): it
+/// belongs to that user of that Windows, never to the language.
+pub fn is_transient(id: u32) -> bool {
     (0x2000..=0x4C00).contains(&id) && id.is_multiple_of(0x400)
+}
+
+/// `is_transient` of a locale id in hex.
+fn transient(lcid: &str) -> bool {
+    is_transient(u32::from_str_radix(lcid, 16).unwrap_or(0))
 }
 
 impl Locales {
@@ -266,6 +271,19 @@ pub fn time_zones() -> &'static [TimeZone] {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_transient_ids_are_the_ones_windows_lends() {
+        for id in [0x2000, 0x2400, 0x2800, 0x2C00, 0x4C00] {
+            assert!(is_transient(id), "{id:04X}");
+        }
+        for id in [
+            0, 0x0419, 0x0422, 0x1000, 0x1C00, 0x2001, 0x2200, 0x5000, 0x0C0A,
+        ] {
+            assert!(!is_transient(id), "{id:04X}");
+        }
+        assert!(transient("2000") && transient("2c00") && !transient("0419") && !transient(""));
+    }
 
     #[test]
     fn resources_load() {

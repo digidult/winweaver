@@ -1,7 +1,7 @@
 # AGENTS.md: map of the WinWeaver repository
 
 For agents and developers: where things are, what to read first, which rules apply, the state of the work.
-Updated with every change of structure, commands or task status. Last update: 30.10.2026.
+Updated with every change of structure, commands or task status. Last update: 02.11.2026.
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -377,7 +377,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   `resources::Locales` holds what Windows lists, read once at the first use by the reader the
   window and the MCP server name (`set_locale_reader(winweaver_win::locales)` in `App::new` and
   `Server::new`): every locale of `EnumSystemLocalesEx` with its locale id (empty for one Windows numbers
-  at the first sign-in, such as `ru-UA`), its localized name, its parent and the first input profile of
+  at the first sign-in, such as `ru-UA`, also when `LocaleNameToLCID` gives the transient id Windows
+  lends it once the user has it as an input language, `resources::is_transient`), its localized name, its parent and the first input profile of
   `LOCALE_SKEYBOARDSTOINSTALL`, and every layout of `Keyboard Layouts` in the registry with the name of
   `Layout Display Name` (`RegLoadMUIStringW`), input methods (`E...`) left out. The core tests read
   `crates/winweaver-core/tests/data/locales.json` (set in the helpers `preset` and `office`, before the
@@ -990,6 +991,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Done in pull request #65 (0.29.0) | The lists of the customer of 29.10.2026: renamed accounts in a users file (the full name in the list, a change of group moves the account, the account of the process by its SID), the read of the whole PC with the loaded templates, every refused change of a registry file shown, the address row of the registry at large sizes, the click of the menu Catalogs with its setting, the marks of the fields of a comparison of catalogs, the disc of a profile tab |
 | Done in pull request #66 (0.30.0) | The list of the customer of 30.10.2026: presets with the culture of the user, the form Profile, This PC in the main menu with its items on where they apply, a read of this PC without a profile, the stripes of the description inside their cards and optional, the window maximized without a blink |
 | Done in pull request #67 (0.30.1) | `build-all.cmd`: what CI makes (the four archives of a release, on demand the checks, the screenshots and the slides) built on a computer of Windows; the programs of 0.30.0 |
+| Done in pull request #68 (0.30.2) | The languages of Windows without a locale id of their own read without the transient id Windows lends them as input languages of the user (`ru-UA` as 2000) |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the

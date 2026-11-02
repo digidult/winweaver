@@ -9,7 +9,7 @@ use windows_sys::Win32::Globalization::{
 use windows_sys::Win32::System::Registry::{HKEY, RegLoadMUIStringW};
 use winreg::RegKey;
 use winreg::enums::HKEY_LOCAL_MACHINE;
-use winweaver_core::resources::{InputLanguage, KeyboardLayout, Locales};
+use winweaver_core::resources::{self, InputLanguage, KeyboardLayout, Locales};
 
 use crate::ffi::{buffer_text, wide, wide_text};
 
@@ -60,12 +60,14 @@ fn info(name: &[u16], kind: u32) -> String {
     String::from_utf16_lossy(&buffer[..written as usize - 1])
 }
 
-/// A locale with its id, its names and the first input profile it installs.
+/// A locale with its id, its names and the first input profile it installs. A locale without an
+/// id of its own has none here, also when Windows lends it a transient one because this user has
+/// it as an input language (`ru-UA` as 2000).
 fn language(name: String) -> InputLanguage {
     let wide = wide(&name);
     // SAFETY: the name is null-terminated.
     let id = unsafe { LocaleNameToLCID(wide.as_ptr(), LOCALE_ALLOW_NEUTRAL_NAMES) };
-    let lcid = if id == 0 || id == NO_ID {
+    let lcid = if id == 0 || id == NO_ID || resources::is_transient(id) {
         String::new()
     } else {
         format!("{id:04X}")
