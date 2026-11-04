@@ -11,6 +11,9 @@ the exception such a program makes to the rule of one executable (AGENTS.md, rul
 stay as close to ordinary Rust as it can: traits, `egui::Ui`, the types of W#, no C layer in
 between.
 
+wview is a direction of its own, apart from WinWeaver, and plugins by other people stay possible
+(the decisions of the customer of 04.11.2026, sections 6.5 and 6.7).
+
 ## 2. The ways Rust has
 
 | Way | The plugin draws in the window of the host | Base code in each plugin | ABI | Verdict |
@@ -268,13 +271,41 @@ the relocations, debug, TLS, load config, the certificates and the header of .NE
    hexadecimal and the text views.
 5. wv-binary 2: the rest of PE, `.wwbin`.
 6. `.wwbindiff`: the tree of the differences, the comments and the bookmarks.
+7. Plugins of others: the SDK of a release and the stable interface for data (section 6.7).
+
+### 6.7 Plugins of others
+
+The customer keeps them possible (04.11.2026). The native interface of section 6.1 is no stable
+ABI: a plugin of it works with the one build of wview it was made with. Three ways stay open to
+other people, the lightest first:
+
+1. **Descriptions, no code.** A `.wwformat` of wv-binary (section 6.4) is data: anyone adds a
+   binary format with a JSON file, read with the limits of every untrusted input (rule 8).
+2. **Native plugins with the SDK of a release.** Every release of wview publishes what its build
+   was: the version of wwrt, the compiler, its `Cargo.lock` and a template workspace of a plugin.
+   A plugin made with it draws with egui as the plugins of the repository do and is built again
+   for every release, since the loader refuses it otherwise (finding 5): a way for partners who
+   follow the releases.
+3. **A stable interface for data.** For a plugin that must outlive the releases or comes in
+   another language: a C ABI of versioned structures, with a Rust crate over it that keeps the
+   unsafe part out of the plugin. Such a plugin reads a file and hands the host a model the host
+   draws itself: an image (its pixels), a text, a tree of structures with their byte ranges (the
+   views of wv-binary). It carries its own std (some hundreds of KB) and no egui, and the version
+   of the interface is checked at the load instead of the build. A plugin nobody vouches for could
+   later run as WebAssembly in a sandbox, hosted by a native plugin (`wv-wasm`), so that wview
+   carries a runtime of WebAssembly only where that plugin is installed.
+
+A native plugin of others has the rights of the program (finding 9). The page of the plugins names
+where each one comes from, and a setting may allow only the plugins whose SHA-256 or signature
+(Authenticode, checked with `WinVerifyTrust`) it lists. For phase 2 this means a native interface
+kept small and with a version of its own beside the build, so that the stable one can mirror it.
 
 ## 7. Open questions
 
 - The size of `std-*.dll` of msvc and of `wwrt.dll` built with msvc: CI measures them at the
   first build of phase 2.
-- Plugins by other people would need the same compiler and lock file, or a second, stable
-  interface for data alone (section 2).
+- Which way of section 6.7 comes first for plugins of others, and when: it shapes how much of
+  the native interface phase 2 keeps fixed.
 - WinWeaver and wedit could move onto wwrt later; nothing in them needs it.
 
 ## 8. Building the study
