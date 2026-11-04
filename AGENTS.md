@@ -1013,7 +1013,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the
 secondary tabs; the search field grows into the free width of the navigation row; the extensions
 `.wwprofile`, `.wwdiff`, `.wwcatalog`, `.wwmarks`, `.wwusers`, `.wwtheme`, `.wwmcp`; the runtime scripts are
-data (`data/templates/`); Windows 10 and 11 are supported, the systems the Rust toolchain supports (Windows 7
+data (`data/templates/`); wview and its plugins live in a workspace of their own next to the one of
+WinWeaver (04.11.2026, `docs/plugins.md` section 6.5); Windows 10 and 11 are supported, the systems the Rust toolchain supports (Windows 7
 and 8.1 are not).
 
 ## 8. How to update this file

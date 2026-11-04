@@ -246,12 +246,12 @@ the relocations, debug, TLS, load config, the certificates and the header of .NE
 
 - **Rule 4 gets its exception**: a program with plugins is an executable, `wwrt.dll`, `std-*.dll`
   and the folder `plugins`; WinWeaver, wedit and wwlite stay one executable each.
-- **A second workspace.** `-C prefer-dynamic` is a flag of a whole build and the release profile
-  of WinWeaver has LTO, so the family lives in a workspace of its own next to the one of WinWeaver
-  (the study is one), with the same versions of the shared crates (its `Cargo.lock` starts as a copy
-  and a check of CI compares them). One workspace would need `--config` with the flag and a profile
-  of its own for every build of the family, and `--exclude` of the family in every other, a trap for
-  each new command.
+- **A second workspace** (the decision of the customer of 04.11.2026). `-C prefer-dynamic` is a
+  flag of a whole build and the release profile of WinWeaver has LTO, so the family lives in a
+  workspace of its own next to the one of WinWeaver (the study is one), with the same versions of
+  the shared crates (its `Cargo.lock` starts as a copy and a check of CI compares them). One
+  workspace would need `--config` with the flag and a profile of its own for every build of the
+  family, and `--exclude` of the family in every other, a trap for each new command.
 - **CI and build-all.cmd**: a step that builds the family with msvc and packs
   `wview-<version>.zip` (wview.exe, wwrt.dll, std-*.dll, plugins, formats, lang, README).
 - **Tests.** wwrt and every plugin have their unit tests; the tests of the window need
