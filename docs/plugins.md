@@ -451,10 +451,13 @@ the centre, the zoom, the iterations and the time of the last picture.
 
 ## 7. Open questions
 
-- The size of `std-*.dll` of msvc and of `wwrt.dll` built with msvc, and the DLLs the `std-*.dll`
-  of msvc needs: it links the CRT dynamically (`wview/.cargo/config.toml` turns the static CRT of
-  WinWeaver off for the family to match), so `vcruntime140.dll` of the Visual C++ runtime may have
-  to ship next to it. CI shows the folder at the first build of phase 2.
+- Answered by CI on 04.11.2026 (the toolchain msvc): `wview.exe` 831 KB, `wwrt.dll` 23.1 MB,
+  `std-<hash>.dll` 864 KB, `wv_text.dll` 53 KB, `wv_image.dll` 93 KB; the template of the SDK built
+  in another folder loaded in 0.7 ms. The `std-<hash>.dll` of msvc imports no DLL of the CRT, but
+  with the dynamic CRT every module of the family imported `VCRUNTIME140.dll`, which a clean
+  Windows may lack; the family takes the CRT statically since then, as WinWeaver does
+  (`wview/.cargo/config.toml`), and the next run of CI shows the imports without it
+  (`wview/sdk/imports.py`).
 - The language of the example of the stable interface: C proves that every language with a C FFI
   can write a plugin; it needs a compiler of C, which CI has (Visual Studio on the runner) and the
   computer of the developer has not (a toolchain there only on the word of its owner, AGENTS.md

@@ -813,9 +813,13 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   absolute path, and W# is outside `wview/` in the repository, so only a build in the tree makes a
   `wwrt.dll` that a plugin built in a copy of it anywhere loads. CI and build-all.cmd build the
   release there (`wview/target/tree` locally: the dlltool of gnu stops past 260 characters); CI
-  builds the template `wv-hello` in another copy and loads it. For msvc the family turns the
-  static CRT of the root config off (`-C target-feature=-crt-static`), as its std-<hash>.dll links
-  the CRT dynamically. CI: the Linux job checks the format and clippy of `wview`, the Windows job
+  builds the template `wv-hello` in another copy and loads it. For msvc every module of the
+  family takes the CRT statically (`-C target-feature=+crt-static` in `wview/.cargo/config.toml`,
+  since the tree has no parent config): the std-<hash>.dll of msvc imports no DLL of the CRT, and
+  with the dynamic one every module imported `VCRUNTIME140.dll`. The package takes the
+  std-<hash>.dll `wview.exe` imports (`wview/sdk/imports.py --std`; the first of the sysroot was
+  another one and wview did not start), and a release build of wview attaches to the console of its
+  parent only when its output is not redirected. CI: the Linux job checks the format and clippy of `wview`, the Windows job
   its clippy and tests (the screenshots `v1-` to `v5-`), the release build and the artifacts
   `wview-<version>` and `wview-sdk-<version>`; a release of WinWeaver does not carry them. The family links std dynamically
   (`-C prefer-dynamic`, `std-<hash>.dll` ships), never takes LTO (a dylib refuses it, a plugin on
