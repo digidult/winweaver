@@ -33,14 +33,22 @@ const USAGE: &str = "wview, a viewer of files with plugins
 The plugins are the DLLs of the folder plugins next to wview.exe (or of the folder WVIEW_PLUGINS
 names); a build of the workspace keeps them next to the executable.";
 
-/// Attaches to the console of the parent process, so that a release build prints in it.
+/// Attaches to the console of the parent process, so that a release build prints in it; a process
+/// whose output goes to a file or a pipe (a script, CI) keeps it there.
 fn attach_console() {
     #[cfg(windows)]
     {
-        use wwrt::windows::Win32::System::Console::{ATTACH_PARENT_PROCESS, AttachConsole};
-        // SAFETY: the call only connects the process to an existing console, if there is one.
+        use wwrt::windows::Win32::System::Console::{
+            ATTACH_PARENT_PROCESS, AttachConsole, GetStdHandle, STD_OUTPUT_HANDLE,
+        };
+        // SAFETY: the calls only read the handle of the output and connect the process to an
+        // existing console, if there is one.
         unsafe {
-            let _ = AttachConsole(ATTACH_PARENT_PROCESS);
+            let redirected =
+                GetStdHandle(STD_OUTPUT_HANDLE).is_ok_and(|h| !h.is_invalid() && !h.0.is_null());
+            if !redirected {
+                let _ = AttachConsole(ATTACH_PARENT_PROCESS);
+            }
         }
     }
 }

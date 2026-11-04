@@ -252,11 +252,16 @@ jobs:
           New-Item -ItemType Directory -Force "$view/plugins" | Out-Null
           Copy-Item "$env:WVIEW_BIN/wview.exe", "$env:WVIEW_BIN/wwrt.dll" "$view/"
           Copy-Item "$env:WVIEW_BIN/wv_text.dll", "$env:WVIEW_BIN/wv_image.dll" "$view/plugins/"
-          $std = Get-ChildItem (rustc --print sysroot) -Recurse -Filter 'std-*.dll' | Select-Object -First 1
+          # The std-<hash>.dll wview.exe imports, from the sysroot of the toolchain.
+          $stdName = python wview/sdk/imports.py --std "$env:WVIEW_BIN/wview.exe"
+          $std = Get-ChildItem (rustc --print sysroot) -Recurse -Filter $stdName | Select-Object -First 1
+          if (-not $std) { throw "$stdName is not in the sysroot of rustc" }
           Copy-Item $std.FullName "$view/"
           Copy-Item wview/package/README.md "$view/README.md"
           python wview/sdk/pack.py . dist-wview-sdk/wview-sdk "$(rustc -V)"
           Get-ChildItem -Recurse dist-wview | Select-Object Length, FullName | Format-Table -AutoSize
+          # What every file of the archive imports: the DLLs of the system it takes.
+          python wview/sdk/imports.py (Get-ChildItem -Recurse $view -Include *.exe, *.dll).FullName
           "WVIEW_VERSION=$wv" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: wview, the template of the SDK built in another folder and loaded
         # The promise of the SDK: a plugin built of the SDK alone, in a folder of its own, loads
@@ -279,6 +284,7 @@ jobs:
           $text = Get-Content -Raw $list
           $text
           Get-Content "$list.err" -ErrorAction SilentlyContinue
+          "exit code: $($p.ExitCode) ($('{0:X8}' -f $p.ExitCode))"
           if ($p.ExitCode -ne 0 -or $text -notmatch 'Hello' -or $text -match 'not loaded') { throw 'the plugin of the SDK did not load' }
       - name: Presentation
         # The slides for a prospective user, made of the screenshots of this build

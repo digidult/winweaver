@@ -321,7 +321,11 @@ copy /y "%WBIN%\wwrt.dll" "%DIST%\wview\" >nul || goto failed
 copy /y "%WBIN%\wv_text.dll" "%DIST%\wview\plugins\" >nul || goto failed
 copy /y "%WBIN%\wv_image.dll" "%DIST%\wview\plugins\" >nul || goto failed
 copy /y wview\package\README.md "%DIST%\wview\README.md" >nul || goto failed
-call :sysroot_dll "std-*.dll" || goto failed
+rem The std-<hash>.dll wview.exe imports, from the sysroot of rustc.
+set "STD_NAME="
+for /f "delims=" %%n in ('call %PY% wview\sdk\imports.py --std "%WBIN%\wview.exe"') do set "STD_NAME=%%n"
+if not defined STD_NAME goto failed
+call :sysroot_dll "%STD_NAME%" || goto failed
 rem The toolchain gnu links the unwinder of MinGW: its two DLLs go along (docs/plugins.md).
 if "%RHOST:gnu=%"=="%RHOST%" goto wview_gnu_done
 call :sysroot_dll libgcc_s_seh-1.dll || goto failed
