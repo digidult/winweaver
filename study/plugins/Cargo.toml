@@ -1,0 +1,27 @@
+# The study of the plugins of a viewer (docs/plugins.md): a workspace of its own, apart from the one of
+# WinWeaver, since its runtime is a Rust dylib and the release profile of WinWeaver uses LTO, which rustc
+# runs for executables, cdylibs and static libraries alone.
+[workspace]
+resolver = "3"
+members = ["wwrt", "wview", "plugins/wv-text", "plugins/wv-image"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+publish = false
+
+[profile.release]
+lto = false
+codegen-units = 1
+strip = true
+
+# A debug build keeps the dependencies and the runtime optimized: at opt-level 2 a crate exports no
+# shared instances of generic functions, which put 128973 symbols into a debug wwrt.dll, twice the
+# 65535 a DLL holds (docs/plugins.md). The program and the plugins stay at opt-level 0.
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.dev.package.wwrt]
+opt-level = 2

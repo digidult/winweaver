@@ -1,6 +1,7 @@
 # Rust
 /target/
 /crates/*/target/
+/study/*/target/
 Cargo.lock.bak
 
 # Build output: build-all.cmd writes dist/, the steps of docs/wasm.md dist-web/
