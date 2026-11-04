@@ -176,9 +176,9 @@ errors.
   artifact, clippy of the whole workspace for `x86_64-pc-windows-gnu` and of wwlite for
   `wasm32-unknown-unknown`, the tests of the core), then a Windows job (clippy, `cargo test --workspace`
   with the screenshots of the window, the catalog check, the release build, the window smoke test, the
-  archives `WinWeaver-<version>.zip`, `wedit-<version>.zip` and `wwlite-<version>.zip`) and a job on
-  Ubuntu that builds the browser edition (`wwlite-web-<version>`); a tag `v<version>` publishes a release
-  with `docs/releases/v<version>.md`.
+  archives `WinWeaver-<version>.zip`, `wedit-<version>.zip` and `wwlite-<version>.zip`), a Windows job of
+  wview beside it (`docs/plugins.md`) and a job on Ubuntu that builds the browser edition
+  (`wwlite-web-<version>`); a tag `v<version>` publishes a release with `docs/releases/v<version>.md`.
 - The zip is the deliverable: unzip, run. Nothing is installed.
 
 ## 8. Testing

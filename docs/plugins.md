@@ -278,11 +278,14 @@ the relocations, debug, TLS, load config, the certificates and the header of .NE
   workspace would need `--config` with the flag and a profile of its own for every build of the
   family, and `--exclude` of the family in every other, a trap for each new command.
 - **CI and build-all.cmd** (phase 2): the Linux job checks the format of `wview` and its clippy for
-  Windows; the Windows job runs its clippy and tests (the window drawn into the screenshots `v1-` to
-  `v5-`), builds it in release in the tree of its release (section 6.7), packs `wview-<version>`
-  (wview.exe, wwrt.dll, the `std-<hash>.dll` of the toolchain, the plugins, README) and
-  `wview-sdk-<version>`, and builds the template of the SDK from a copy in another folder, which
-  wview must load. `build-all.cmd` makes the same two archives (`nowview` leaves them out).
+  Windows; a Windows job of its own, beside the one of WinWeaver, runs its clippy and tests (the
+  window drawn into the screenshots `v1-` to `v5-`), builds it in release in the tree of its release
+  (section 6.7), packs `wview-<version>` (wview.exe, wwrt.dll, the `std-<hash>.dll` of the
+  toolchain, the plugins, README) and `wview-sdk-<version>`, and builds the template of the SDK from
+  a copy in another folder, which wview must load. That build takes the target folder of the tree:
+  a crate of the registry has the same hash wherever its user is, so only the crates of the SDK,
+  cleaned first, are built from the copy. `build-all.cmd` makes the same two archives (`nowview`
+  leaves them out).
 - **Tests.** wwrt and every plugin have their unit tests; the tests of the window need
   `egui_kittest` inside wwrt (a feature for the tests), since a dev-dependency of its own on
   kittest would bring a second egui.

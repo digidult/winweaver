@@ -48,7 +48,8 @@ text editor wedit.
 │                          in dist/, on demand the checks, the screenshots, the slides (section 5)
 ├── .github/workflows/ci.yml  CI: fmt (a patch artifact), clippy (wwlite for wasm32 too) and tests of
 │                          winweaver-core on Linux; clippy, tests, the catalog check, the release build and
-│                          the zip on Windows; the job build-web (wwlite for the browser, the artifact
+│                          the zip on Windows; the job build-wview beside it (wview, its archive and its
+│                          SDK); the job build-web (wwlite for the browser, the artifact
 │                          wwlite-web-<version>); a tag v<version> publishes a release with
 │                          docs/releases/v<version>.md
 ├── crates/
@@ -335,12 +336,17 @@ CI builds only releases (item 11 of the list of 28.10.2026):
 1. A tag `v<version>` runs everything and publishes the release. A tag is pushed only when the
    customer asks for the release of that version in so many words; finished work alone never makes one.
 2. Any branch runs on demand: `gh workflow run ci.yml --ref <branch>` (or Actions, CI, Run workflow);
-   `-f windows=false` stops after the Linux job, `-f web=false` leaves out the browser edition;
+   `-f windows=false` stops after the Linux job, `-f web=false` leaves out the browser edition,
+   `-f winweaver=false` the Windows job of WinWeaver and the browser edition (a run of wview alone),
+   `-f wview=false` the Windows job of wview;
    `gh run list --branch <branch> --workflow ci.yml` finds the run. It is the place of the tests that
    change Windows, the screenshots of the window and the archives for an acceptance.
 3. Pushes, pull requests and merges run nothing. A newer run of the same branch cancels the older one.
-4. The Linux job comes first and the Windows job only after it; the job `build-web` (Ubuntu: wwlite for
-   the browser, the artifact `wwlite-web-<version>`) also follows the Linux job.
+4. The Linux job comes first and the other jobs only after it, side by side: the Windows job of
+   WinWeaver (`build-windows`), the Windows job of wview (`build-wview`: its clippy and tests, the
+   release in the tree of its release, the archives, the template of the SDK) and the job
+   `build-web` (Ubuntu: wwlite for the browser, the artifact `wwlite-web-<version>`). A release
+   waits for the first and the last.
 5. The mirror: when the Actions minutes of digidult/winweaver are used up, its run fails in a few
    seconds with the annotation "The job was not started because recent account payments have failed
    or your spending limit needs to be increased". Then the same commit runs in the private mirror
@@ -686,7 +692,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   import in `loaded_imports` of the settings file of the window, so a window open meanwhile overwrites it.
 - Screenshots: the Windows job sets `WINWEAVER_SCREENSHOTS`, and the test `screenshots_of_the_window` draws the
   main tabs with wgpu (no screen) into `target/screenshots`, uploaded as the artifact `screenshots`
-  (`gh run download <id> -n screenshots -D <folder>`); the way to see the window without starting it on the
+  (`gh run download <id> -n screenshots -D <folder>`; the ones of wview, `v1-` to `v5-`, as
+  `screenshots-wview` of its job); the way to see the window without starting it on the
   customer's PC. A renderer that cannot start writes `error.txt` there instead of failing the tests.
 - Window tests: `App::new` and `App::apply` test the logic without frames; `egui_kittest` (a dev-dependency
   with its eframe feature) draws whole frames without a screen and clicks by the labels of AccessKit, so no
@@ -819,9 +826,12 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   with the dynamic one every module imported `VCRUNTIME140.dll`. The package takes the
   std-<hash>.dll `wview.exe` imports (`wview/sdk/imports.py --std`; the first of the sysroot was
   another one and wview did not start), and a release build of wview attaches to the console of its
-  parent only when its output is not redirected. CI: the Linux job checks the format and clippy of `wview`, the Windows job
-  its clippy and tests (the screenshots `v1-` to `v5-`), the release build and the artifacts
-  `wview-<version>` and `wview-sdk-<version>`; a release of WinWeaver does not carry them. The family links std dynamically
+  parent only when its output is not redirected. CI: the Linux job checks the format and clippy of `wview`, the job
+  `build-wview` (Windows, beside the one of WinWeaver) its clippy and tests (the screenshots `v1-`
+  to `v5-`, the artifact `screenshots-wview`), the release build and the artifacts
+  `wview-<version>` and `wview-sdk-<version>`; a release of WinWeaver does not carry them. The
+  template of the SDK is built in its copy with the target folder of the tree (`CARGO_TARGET_DIR`):
+  the crates of the registry are not built again, the crates of the SDK are cleaned first. The family links std dynamically
   (`-C prefer-dynamic`, `std-<hash>.dll` ships), never takes LTO (a dylib refuses it, a plugin on
   one stops) and keeps its dependencies at opt-level 2 in debug builds, where shared generics put
   128973 exports into the DLL (a DLL holds 65535; a release one has about 15600). Every crate the
