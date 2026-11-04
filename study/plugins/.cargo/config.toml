@@ -1,9 +1,0 @@
-# Every crate of the study links std dynamically (std-<hash>.dll of the toolchain): wwrt.dll, the
-# program and its plugins share one std, since a crate may be in the process once (docs/plugins.md).
-# The rustflags of a target replace [build] ones, and the ones of the parent config (the static CRT
-# of WinWeaver for msvc) are joined to these.
-[target.x86_64-pc-windows-msvc]
-rustflags = ["-C", "prefer-dynamic"]
-
-[target.x86_64-pc-windows-gnu]
-rustflags = ["-C", "prefer-dynamic"]

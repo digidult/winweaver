@@ -1,0 +1,14 @@
+{
+  "100%": "%100",
+  "Fit": "Sığdır",
+  "Images (Windows Imaging Component)": "Görüntüler (Windows Imaging Component)",
+  "Largest side of a decoded image": "Çözülen görüntünün en uzun kenarı",
+  "Smooth the pixels of a zoom above 100%": "%100'ün üzerindeki yakınlaştırmada pikselleri yumuşat",
+  "The image is empty": "Görüntü boş",
+  "The settings apply to the images opened after a change.": "Ayarlar, değişiklikten sonra açılan görüntülere uygulanır.",
+  "Windows has no decoder for this file": "Windows'ta bu dosya için kod çözücü yok",
+  "Zoom in": "Yakınlaştır",
+  "Zoom out": "Uzaklaştır",
+  "decoded at {w} x {h}": "{w} x {h} olarak çözüldü",
+  "{w} x {h}, {format}, {zoom}%": "{w} x {h}, {format}, %{zoom}"
+}

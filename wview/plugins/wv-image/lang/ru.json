@@ -1,0 +1,14 @@
+{
+  "100%": "100%",
+  "Fit": "Вписать",
+  "Images (Windows Imaging Component)": "Изображения (Windows Imaging Component)",
+  "Largest side of a decoded image": "Наибольшая сторона декодированного изображения",
+  "Smooth the pixels of a zoom above 100%": "Сглаживать пиксели при увеличении больше 100%",
+  "The image is empty": "Изображение пустое",
+  "The settings apply to the images opened after a change.": "Настройки действуют для изображений, открытых после изменения.",
+  "Windows has no decoder for this file": "В Windows нет декодера для этого файла",
+  "Zoom in": "Увеличить",
+  "Zoom out": "Уменьшить",
+  "decoded at {w} x {h}": "декодировано в {w} x {h}",
+  "{w} x {h}, {format}, {zoom}%": "{w} x {h}, {format}, {zoom}%"
+}

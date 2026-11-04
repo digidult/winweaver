@@ -1,0 +1,14 @@
+{
+  "100%": "100%",
+  "Fit": "Einpassen",
+  "Images (Windows Imaging Component)": "Bilder (Windows Imaging Component)",
+  "Largest side of a decoded image": "Längste Seite eines dekodierten Bildes",
+  "Smooth the pixels of a zoom above 100%": "Pixel bei einem Zoom über 100% glätten",
+  "The image is empty": "Das Bild ist leer",
+  "The settings apply to the images opened after a change.": "Die Einstellungen gelten für die nach einer Änderung geöffneten Bilder.",
+  "Windows has no decoder for this file": "Windows hat keinen Decoder für diese Datei",
+  "Zoom in": "Vergrößern",
+  "Zoom out": "Verkleinern",
+  "decoded at {w} x {h}": "dekodiert in {w} x {h}",
+  "{w} x {h}, {format}, {zoom}%": "{w} x {h}, {format}, {zoom}%"
+}

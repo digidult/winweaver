@@ -1,10 +1,11 @@
 //! Translations of the interface: the English text is the key, a language is a file
 //! `lang/<code>/ui.json` with `_language` (the native name) and the translations. The program
-//! embeds its languages (`install`); a folder next to the executable adds a language or
-//! overrides an embedded one. A missing text falls back to English.
+//! embeds its languages (`install`), its plugins add the texts of their own (`add`); a folder
+//! next to the executable adds a language or overrides an embedded one. A missing text falls back
+//! to English.
 
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
 use ww_base::jsonfile;
@@ -23,6 +24,29 @@ pub fn install(list: &'static [(&'static str, &'static str)]) {
 
 fn embedded() -> &'static [(&'static str, &'static str)] {
     EMBEDDED.read().map(|e| *e).unwrap_or(&[])
+}
+
+/// The translations the plugins of the program added (`add`), each the codes and the files of one.
+static ADDED: RwLock<Vec<&'static [(&'static str, &'static str)]>> = RwLock::new(Vec::new());
+/// The folder of the last `set_language`, so that `add` can show the texts at once.
+static DIR: RwLock<Option<PathBuf>> = RwLock::new(None);
+
+/// Adds the translations of a plugin, on top of the ones the program embeds and under the files
+/// of the folder; the language shown takes them at once.
+pub fn add(list: &'static [(&'static str, &'static str)]) {
+    if list.is_empty() {
+        return;
+    }
+    if let Ok(mut added) = ADDED.write() {
+        added.push(list);
+    }
+    let code = CODE.read().map(|c| c.clone()).unwrap_or_default();
+    let dir = DIR.read().ok().and_then(|d| d.clone());
+    if let Some(dir) = dir
+        && !code.is_empty()
+    {
+        set_language(&code, &dir);
+    }
 }
 
 /// A language the interface can show.
@@ -118,19 +142,7 @@ pub fn languages(dir: &Path) -> Vec<Language> {
 /// Switches the interface to a language: the embedded file, then the file of the folder on
 /// top of it. English, or a language without any file, clears the translations.
 pub fn set_language(code: &str, dir: &Path) {
-    let mut table: HashMap<String, String> = HashMap::new();
-    if let Some((_, text)) = embedded().iter().find(|(c, _)| *c == code)
-        && let Ok((_, t)) = parse(text, &format!("{code}/ui.json"))
-    {
-        table.extend(t);
-    }
-    let file = dir.join(code).join("ui.json");
-    if code != "en"
-        && let Ok(text) = jsonfile::read_text(&file, MAX_BYTES)
-        && let Ok((_, t)) = parse(&text, &format!("{code}/ui.json"))
-    {
-        table.extend(t);
-    }
+    let table = table_for(code, dir);
     let leaked: Option<&'static Table> = if table.is_empty() {
         None
     } else {
@@ -150,6 +162,36 @@ pub fn set_language(code: &str, dir: &Path) {
     if let Ok(mut c) = CODE.write() {
         *c = code.to_owned();
     }
+    if let Ok(mut d) = DIR.write() {
+        *d = Some(dir.to_path_buf());
+    }
+}
+
+/// The texts of a language: the embedded file, the files the plugins added, then the file of the
+/// folder on top of them.
+fn table_for(code: &str, dir: &Path) -> HashMap<String, String> {
+    let mut table: HashMap<String, String> = HashMap::new();
+    if let Some((_, text)) = embedded().iter().find(|(c, _)| *c == code)
+        && let Ok((_, t)) = parse(text, &format!("{code}/ui.json"))
+    {
+        table.extend(t);
+    }
+    let added = ADDED.read().map(|a| a.clone()).unwrap_or_default();
+    for list in added {
+        if let Some((_, text)) = list.iter().find(|(c, _)| *c == code)
+            && let Ok((_, t)) = parse(text, &format!("{code}.json"))
+        {
+            table.extend(t);
+        }
+    }
+    let file = dir.join(code).join("ui.json");
+    if code != "en"
+        && let Ok(text) = jsonfile::read_text(&file, MAX_BYTES)
+        && let Ok((_, t)) = parse(&text, &format!("{code}/ui.json"))
+    {
+        table.extend(t);
+    }
+    table
 }
 
 #[cfg(test)]
@@ -175,5 +217,18 @@ mod tests {
         assert_eq!(name, "Test");
         assert_eq!(table["Save"], "Saved");
         assert!(parse("{\"Save\": 1}", "t/ui.json").is_err());
+    }
+
+    #[test]
+    fn the_texts_a_plugin_adds_show_at_once() {
+        // A language of no program and a text of no interface; the table is built, never shown,
+        // so the tests that show a language run beside it.
+        const TEXT: &str = "A text of a plugin of the test";
+        static LIST: [(&str, &str); 1] = [("zz", "{\"A text of a plugin of the test\": \"Done\"}")];
+        let dir = std::env::temp_dir().join("ww-i18n-add");
+        assert!(!table_for("zz", &dir).contains_key(TEXT));
+        add(&LIST);
+        assert_eq!(table_for("zz", &dir)[TEXT], "Done");
+        assert!(!table_for("uk", &dir).contains_key(TEXT));
     }
 }

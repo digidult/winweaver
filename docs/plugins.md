@@ -1,7 +1,8 @@
 # Plugins of W#: the study and wview
 
 The study of 04.11.2026 of plugins written in Rust for the programs on W#, and the plan of wview,
-the viewer of files built on them. The prototype is `study/plugins`, a workspace of its own.
+the viewer of files built on them. The prototype of the study grew into `wview/`, the workspace
+of wview (phase 2).
 
 ## 1. The question
 
@@ -33,7 +34,7 @@ of the program.
 
 ## 3. What was built
 
-`study/plugins`:
+The prototype of the study (now `wview/`):
 
 - `wwrt`, a Rust `dylib` (`wwrt.dll`): W# with egui, eframe, glow, wgpu, winit, serde, serde_json,
   the crate `windows` and libloading, all re-exported (`wwrt::ww`, `wwrt::egui`, `wwrt::serde`,
@@ -113,7 +114,7 @@ draws the same views with the same egui, without a screen.
 
 1. **One std for the family.** A `dylib` takes std into itself, and an executable that links it
    wants std of its own: rustc stops with `cannot satisfy dependencies so std only shows up once`.
-   Every crate of the family is built with `-C prefer-dynamic` (`study/plugins/.cargo/config.toml`),
+   Every crate of the family is built with `-C prefer-dynamic` (`wview/.cargo/config.toml`),
    std becomes `std-<hash>.dll` of the toolchain, and it ships next to the executable.
 2. **The 65535 exports of a DLL.** A `dylib` exports every public symbol of the crates it holds,
    and the export table of a PE file numbers its entries in 16 bits. A debug `wwrt.dll` wanted
@@ -136,12 +137,14 @@ draws the same views with the same egui, without a screen.
    wwrt holds (serde, egui, windows) would bring a second copy, which rustc refuses; it takes
    `wwrt::serde` and so on. A derive of serde names its crate: `#[serde(crate = "wwrt::serde")]`.
    A crate wwrt does not hold (a parser of a format) is the plugin's own.
-5. **One build, checked.** `plugin::ABI` is the build of wwrt: its version, the compiler, the
-   target, the profile and the FNV of the lock file (`wwrt/build.rs`). A plugin carries the one it
-   was made with, and the loader, which runs inside `wwrt.dll`, compares it with its own. A plugin
-   built against another `wwrt.dll` misses its imports and fails in `LoadLibrary`; the loader sets
-   the error mode of its thread (`SetThreadErrorMode`), so Windows shows no dialog and the list of
-   the plugins names the reason.
+5. **One build, checked.** `plugin::ABI` is the build of wwrt: its version, the version of the
+   interface, the compiler, the target and the profile (`wwrt/build.rs`). The study had the FNV of
+   the lock file in it too, which phase 2 left out: rustc names every symbol by a hash of its
+   crate, so other versions of the shared crates fail at the load anyway, and a plugin of the SDK
+   has a lock file of its own. A plugin carries the build it was made with, and the loader, which
+   runs inside `wwrt.dll`, compares it with its own. A plugin built against another `wwrt.dll`
+   misses its imports and fails in `LoadLibrary`; the loader sets the error mode of its thread
+   (`SetThreadErrorMode`), so Windows shows no dialog and the list of the plugins names the reason.
 6. **A plugin is never unloaded.** Its code and the tables of its traits live as long as the views
    it made; `Plugins::load_dir` forgets the `Library`.
 7. **COM belongs to the window.** winit takes the apartment of the main thread for drag and drop; a
@@ -167,11 +170,22 @@ draws the same views with the same egui, without a screen.
 
 ### 6.1 The interface
 
-Today: `Plugin` (`name`, `formats`, `open`) and `View` (`ui`, `tools`, `act`, `search`, `browses`,
-`status`). To come: the settings of a plugin (a JSON object a plugin in the settings of the host,
-drawn by the plugin in a section of Settings: the cache of wv-binary, the width of its rows); a
-format found by its first bytes besides its extension; a view that saves its own file (wwbin);
-the translations of a plugin (its `lang/<code>.json`, read by the `i18n` of W#).
+Version 1 (`wwrt::plugin::API`, phase 2):
+
+- `Plugin`: `name`, `formats`, `open` of a path with the settings of the plugin, `translations`
+  (the code and a file of each language, added to the window at the load by `ww::i18n::add`),
+  `has_settings` and `settings_ui` (its card in Settings, Plugins; the host keeps the JSON object
+  of each plugin in its settings by the name of the DLL; `plugin::setting` and `set_setting` read
+  and write a field).
+- `View`: `ui` with a `Host` (Wrap lines, the width of pages, the settings of the plugin, and the
+  requests of the view, `Request::Browse` of a step through the folder), `tools` and `act`,
+  `search`, `browses` (Previous and Next in the bar), `status`.
+- `wwrt::input`: `area` takes the rectangle of a view for its keys and its mouse by the rules of
+  section 6.8 and gives an `Input`; `cursor` sets the cursor.
+- `wwrt::testing`: the texts of the sources of a plugin and the ones its translations lack.
+
+To come: a format found by its first bytes besides its extension; a view that saves its own file
+(wwbin).
 
 ### 6.2 Images (wv-image)
 
@@ -268,7 +282,9 @@ the relocations, debug, TLS, load config, the certificates and the header of .NE
 2. wview as a program of the repository and the native SDK: its workspace, its archive in CI and
    build-all.cmd, the version of the native interface, the template workspace of a plugin, the
    settings of the plugins, the keys and the mouse of a view (section 6.8), the translations, the
-   guide, the tests of the window.
+   guide, the tests of the window. Part 1 done: the workspace `wview/`, the interface 1, the
+   settings, the translations in the eight languages of WinWeaver, the keys and the mouse of the
+   images, the guide. Part 2: the SDK, CI and build-all.cmd, the tests of the window.
 3. Images whole: tiles, the frames of a GIF, EXIF, the keys of the zoom.
 4. wv-binary 1: the engine with its language, the headers, sections, imports and exports of PE, the
    hexadecimal and the text views.
@@ -420,9 +436,9 @@ the centre, the zoom, the iterations and the time of the last picture.
   rule 6). Rust of another toolchain over the crate of `wview.h` needs no new tool but proves less.
 - WinWeaver and wedit could move onto wwrt later; nothing in them needs it.
 
-## 8. Building the study
+## 8. Building wview
 
-On a computer of Windows with Rust, in `study/plugins`:
+On a computer of Windows with Rust, in `wview`:
 
 ```bat
 cargo build --release --workspace

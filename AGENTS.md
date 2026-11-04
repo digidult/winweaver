@@ -29,7 +29,7 @@ text editor wedit.
 | Change what an AI agent or the archive gets | `agents/README.md`, `package/README.md` |
 | Write a program on W#, or change the shell of the window | `docs/ww.md`, then `crates/ww/src/shell/mod.rs` (the trait `App`), `crates/wedit` (the example) |
 | Change wedit | `crates/wedit/src/app.rs`, `package-wedit/README.md` |
-| Plugins of W#, wview | `docs/plugins.md` (the study, its measurements, the design of wview), then `study/plugins` (wwrt, wview, wv-text, wv-image) |
+| Plugins of W#, wview | `docs/plugins.md` (the study, its measurements, the design of wview), then `wview/README.md` and `wview/crates/wwrt/src/plugin.rs` (the interface of the plugins) |
 | Change wwlite, the light edition | `crates/wwlite`, the feature `full` of `crates/winweaver-ui` (`cfg(feature = "full")` marks what wwlite leaves out), `package-wwlite/README.md`; the browser edition: `docs/wasm.md`, `crates/wwlite/web`, `crates/ww/src/web.rs` and `store.rs` |
 
 ## 3. Folder structure
@@ -180,11 +180,13 @@ text editor wedit.
 │                          data/lang/de/ui.json copied by CI)
 ├── package-wedit/         what the archive of wedit adds: README.md for its user, lang/uk/ui.json (every
 │                          text of wedit and of WW in Ukrainian, the example of a language file)
-├── study/plugins/         the study of plugins (docs/plugins.md), a workspace of its own: wwrt (the
-│                          runtime, a Rust dylib: W# and egui re-exported, wwrt::plugin with the
-│                          loader and its check of the build, wwrt::blocks), wview (the viewer),
-│                          plugins/wv-text (Markdown and text), plugins/wv-image (WIC); .cargo/config.toml
-│                          links std dynamically
+├── wview/                 wview, a direction of its own (docs/plugins.md) and a workspace of its own:
+│                          crates/wwrt (the runtime, a Rust dylib: W# and egui re-exported; plugin:
+│                          the interface 1 with the loader and its check of the build; input: the
+│                          keys and the mouse of a view; blocks; testing), crates/wview (the viewer:
+│                          lang/<code>/ui.json and guide.md, docs/guide.md), plugins/wv-text
+│                          (Markdown and text), plugins/wv-image (WIC), each with lang/<code>.json;
+│                          .cargo/config.toml links std dynamically; README.md
 ├── package/               what the archive adds: README.md for the user (not this repository's), lang/be/ui.json
 │                          (Belarusian, every text: the example of a language, checked by a test of i18n.rs)
 └── docs/
@@ -221,7 +223,8 @@ of the older format; the id of an embedded theme replaces it).
    carries them.
 4. Dependencies: popular, well known, open source Rust crates that need no extra DLL next to the executable.
    The executable and its configuration stay portable: nothing is installed, nothing is written outside the
-   program folder and the system temp folder.
+   program folder and the system temp folder. The one exception is a program with plugins (wview): its
+   executable comes with `wwrt.dll`, `std-<hash>.dll` and the folder `plugins` (docs/plugins.md).
 5. No PowerShell inside the program: reading and applying on this PC use the Windows API (the native
    elevated apply); PowerShell appears only in the generated answer file and the stand-alone scripts. The
    program never runs a script itself.
@@ -295,6 +298,17 @@ build-all.cmd
 build-all.cmd check
 build-all.cmd all
 build-all.cmd noweb
+```
+
+The workspace of wview (`wview/`, docs/plugins.md) is checked and built in its folder, with the same
+rules before every commit that touches it or the crates of W# it uses:
+
+```bash
+cd wview
+cargo fmt --all
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+cargo build --release --workspace
 ```
 
 Before every commit, on the computer of the developer (items 12 and 13 of the list of 28.10.2026), the
@@ -771,9 +785,19 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   separator. The ids of imports made of a folder, an archive or an ADMX file hash the kept form too
   (`kept_name` of the window). A new file that keeps a path converts the same way.
 
-- Plugins (`docs/plugins.md`, `study/plugins`): a runtime as a Rust `dylib` (`wwrt.dll`, W# and egui
-  re-exported) and the plugins as `cdylib`s on it, one build of all (one compiler, one lock file,
-  one profile: `plugin::ABI` is checked at the load). The family links std dynamically
+- Plugins (`docs/plugins.md`, `wview/`): a runtime as a Rust `dylib` (`wwrt.dll`, W# and egui
+  re-exported) and the plugins as `cdylib`s on it, one build of all (one compiler, one profile, the
+  same versions of the shared crates: `plugin::ABI`, its version, the interface, rustc, the target
+  and the profile, is checked at the load, and another version of a shared crate fails the load
+  by its symbols). The interface 1 (`wwrt::plugin`): `open` with the settings of the plugin (a
+  JSON object a plugin in `Extra::plugins` of wview, by the name of its DLL, drawn by
+  `settings_ui` in Settings, Plugins), `translations` (added by `ww::i18n::add`, on top of the
+  embedded ones, under the files of `lang/`), a `Host` with the requests of a view
+  (`Request::Browse`), `wwrt::input::area` for the keys and the mouse (a click gives the focus,
+  the keys a view names are its own without Ctrl and Alt, Tab and Escape give them back), and
+  `wwrt::testing` for the tests of the translations of a plugin (`plugin_texts`: tr, trf,
+  `const NAME`, `name:`, `label:`). wview has the eight languages of WinWeaver: its `ui.json`
+  holds the texts of the shell of W# as WinWeaver translates them and its own. The family links std dynamically
   (`-C prefer-dynamic`, `std-<hash>.dll` ships), never takes LTO (a dylib refuses it, a plugin on
   one stops) and keeps its dependencies at opt-level 2 in debug builds, where shared generics put
   128973 exports into the DLL (a DLL holds 65535; a release one has about 15600). Every crate the
@@ -1007,7 +1031,8 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Done in pull request #66 (0.30.0) | The list of the customer of 30.10.2026: presets with the culture of the user, the form Profile, This PC in the main menu with its items on where they apply, a read of this PC without a profile, the stripes of the description inside their cards and optional, the window maximized without a blink |
 | Done in pull request #67 (0.30.1) | `build-all.cmd`: what CI makes (the four archives of a release, on demand the checks, the screenshots and the slides) built on a computer of Windows; the programs of 0.30.0 |
 | Done in pull request #68 (0.30.2) | The languages of Windows without a locale id of their own read without the transient id Windows lends them as input languages of the user (`ru-UA` as 2000) |
-| Done in pull request #69 (0.30.3) | The study of plugins (`docs/plugins.md`, `study/plugins`): the ways of Rust compared, the runtime wwrt with the loader and its check, wview with the plugins of text and images, the measurements, the design and the phases of wview; the programs of 0.30.2 |
+| Done in pull request #69 (0.30.3) | The study of plugins (`docs/plugins.md`, then `study/plugins`): the ways of Rust compared, the runtime wwrt with the loader and its check, wview with the plugins of text and images, the measurements, the design and the phases of wview; the programs of 0.30.2 |
+| In pull request #70 (0.31.0, wview 0.2.0) | Phase 2 of wview, part 1: the workspace `wview/`, the interface 1 (the settings and the translations of a plugin, the requests of a view, the keys and the mouse), Settings, Plugins, the image view with its mouse and keys, the eight languages, the guide; `ww::i18n::add`. Part 2 to come: the SDK, CI and build-all.cmd, the tests of the window |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the
