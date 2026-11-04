@@ -1014,8 +1014,9 @@ Decisions of the customer: the UI has the compact layout for narrow windows, its
 secondary tabs; the search field grows into the free width of the navigation row; the extensions
 `.wwprofile`, `.wwdiff`, `.wwcatalog`, `.wwmarks`, `.wwusers`, `.wwtheme`, `.wwmcp`; the runtime scripts are
 data (`data/templates/`); wview is a direction of its own, apart from WinWeaver, and lives with its
-plugins in a workspace of its own next to the one of WinWeaver, and plugins by other people stay
-possible (04.11.2026, `docs/plugins.md` sections 6.5 and 6.7); Windows 10 and 11 are supported, the systems the Rust toolchain supports (Windows 7
+plugins in a workspace of its own next to the one of WinWeaver; its plugins are native ones with the
+SDK of a release (every example) and, for other languages, a stable interface of C with one
+example, the Mandelbrot set (04.11.2026, `docs/plugins.md` sections 6.5 to 6.10); Windows 10 and 11 are supported, the systems the Rust toolchain supports (Windows 7
 and 8.1 are not).
 
 ## 8. How to update this file

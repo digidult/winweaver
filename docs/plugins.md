@@ -11,8 +11,9 @@ the exception such a program makes to the rule of one executable (AGENTS.md, rul
 stay as close to ordinary Rust as it can: traits, `egui::Ui`, the types of W#, no C layer in
 between.
 
-wview is a direction of its own, apart from WinWeaver, and plugins by other people stay possible
-(the decisions of the customer of 04.11.2026, sections 6.5 and 6.7).
+wview is a direction of its own, apart from WinWeaver, and its plugins come in two kinds: native
+ones with the SDK of a release, the main way of every example, and a stable interface of C for
+other languages (the decisions of the customer of 04.11.2026, sections 6.5 and 6.7).
 
 ## 2. The ways Rust has
 
@@ -264,48 +265,159 @@ the relocations, debug, TLS, load config, the certificates and the header of .NE
 ### 6.6 Phases
 
 1. The study: the runtime, the loader with its check, two plugins, the measurements. Done.
-2. wview as a program of the repository: its workspace, its archive in CI and build-all.cmd, the
-   settings of the plugins, the translations, the guide, the tests of the window.
+2. wview as a program of the repository and the native SDK: its workspace, its archive in CI and
+   build-all.cmd, the version of the native interface, the template workspace of a plugin, the
+   settings of the plugins, the keys and the mouse of a view (section 6.8), the translations, the
+   guide, the tests of the window.
 3. Images whole: tiles, the frames of a GIF, EXIF, the keys of the zoom.
 4. wv-binary 1: the engine with its language, the headers, sections, imports and exports of PE, the
    hexadecimal and the text views.
 5. wv-binary 2: the rest of PE, `.wwbin`.
 6. `.wwbindiff`: the tree of the differences, the comments and the bookmarks.
-7. Plugins of others: the SDK of a release and the stable interface for data (section 6.7).
+7. The stable interface for other languages (section 6.9) and its one example, the Mandelbrot set
+   (section 6.10).
 
-### 6.7 Plugins of others
+### 6.7 Plugins of others: the hybrid
 
-The customer keeps them possible (04.11.2026). The native interface of section 6.1 is no stable
-ABI: a plugin of it works with the one build of wview it was made with. Three ways stay open to
-other people, the lightest first:
+The decision of the customer of 04.11.2026: two kinds of plugins, one of them the main.
 
-1. **Descriptions, no code.** A `.wwformat` of wv-binary (section 6.4) is data: anyone adds a
-   binary format with a JSON file, read with the limits of every untrusted input (rule 8).
-2. **Native plugins with the SDK of a release.** Every release of wview publishes what its build
-   was: the version of wwrt, the compiler, its `Cargo.lock` and a template workspace of a plugin.
-   A plugin made with it draws with egui as the plugins of the repository do and is built again
-   for every release, since the loader refuses it otherwise (finding 5): a way for partners who
-   follow the releases.
-3. **A stable interface for data.** For a plugin that must outlive the releases or comes in
-   another language: a C ABI of versioned structures, with a Rust crate over it that keeps the
-   unsafe part out of the plugin. Such a plugin reads a file and hands the host a model the host
-   draws itself: an image (its pixels), a text, a tree of structures with their byte ranges (the
-   views of wv-binary). It carries its own std (some hundreds of KB) and no egui, and the version
-   of the interface is checked at the load instead of the build. A plugin nobody vouches for could
-   later run as WebAssembly in a sandbox, hosted by a native plugin (`wv-wasm`), so that wview
-   carries a runtime of WebAssembly only where that plugin is installed.
+1. **Native plugins with the SDK of a release, the main way.** Every example is one: text and
+   Markdown, images, binary structures. Every release of wview publishes what its build was: the
+   version of wwrt, the compiler, its `Cargo.lock` and a template workspace of a plugin. A plugin
+   made with it draws with egui as the plugins of the repository do and is built again for every
+   release, since the loader refuses it otherwise (finding 5).
+2. **A stable interface for data, for other languages.** A C ABI of versioned structures (section
+   6.9): a plugin in C, C++, Zig, Go, Delphi or Rust of any version gives the host a picture and the
+   controls around it, and the host draws them and hands the plugin the keys and the mouse. It
+   outlives the releases. One example shows it: the Mandelbrot set (section 6.10).
 
-A native plugin of others has the rights of the program (finding 9). The page of the plugins names
-where each one comes from, and a setting may allow only the plugins whose SHA-256 or signature
-(Authenticode, checked with `WinVerifyTrust`) it lists. For phase 2 this means a native interface
-kept small and with a version of its own beside the build, so that the stable one can mirror it.
+Besides them a `.wwformat` of wv-binary (section 6.4) adds a binary format without code: data,
+read with the limits of every untrusted input (rule 8). A plugin nobody vouches for could later run
+as WebAssembly in a sandbox, behind the same stable interface and hosted by a native plugin
+(`wv-wasm`), so that wview carries a runtime of WebAssembly only where that plugin is installed.
+
+A plugin of others, of either kind, has the rights of the program (finding 9), and one in C can
+crash it. The page of the plugins names where each one comes from, and a setting may allow only
+the plugins whose SHA-256 or signature (Authenticode, checked with `WinVerifyTrust`) it lists.
+
+### 6.8 The keys and the mouse of a view
+
+Both kinds of plugins need the same rules, so they are part of phase 2:
+
+- **Focus.** A click on a view gives it the focus of the keyboard; Tab and Escape give it back to
+  the window. A view in focus gets the keys it declares first (the arrows, the page keys, Home and
+  End, letters, everything); the others go to the window, so Ctrl+O, Ctrl+W, Ctrl+Tab and the menu
+  keep working.
+- **The mouse.** The position in the pixels of the view, the buttons, the wheel (with Ctrl, Shift
+  and Alt), the movement while a button is down, also outside the view until the button is up, the
+  double click, and the pointer leaving the view.
+- **The cursor.** A view names its cursor (the default, a cross, a hand, a closed hand while
+  dragging, a loupe), the window sets it.
+- **A frame on demand.** A view that is still at work (a picture drawn in steps) asks for another
+  frame; an idle one costs nothing.
+
+### 6.9 The stable interface
+
+`wview.h`, a header of C and its version, and a crate of Rust over it for authors who write Rust
+of another toolchain. A plugin exports one function, `wv_plugin_get`, which gives a table of
+functions and data; a native plugin exports `ww_plugin` instead, so the loader tells them apart. In
+short:
+
+```c
+#define WV_API_VERSION 1
+
+typedef struct wv_format {
+    const char *name;                 /* UTF-8, for the filters of Open */
+    const char *const *extensions;    /* without the dot, lower case */
+    uint32_t extension_count;
+} wv_format;
+
+typedef struct wv_key {
+    const char *name;                 /* the W3C name of the key: "ArrowLeft", "PageUp", "+" */
+    uint32_t pressed;                 /* 1 pressed, 0 released */
+    uint32_t modifiers;               /* WV_CTRL | WV_SHIFT | WV_ALT */
+} wv_key;
+
+typedef struct wv_input {
+    uint32_t size;                    /* sizeof(wv_input): newer hosts add fields at the end */
+    uint32_t width, height;           /* the area of the view, pixels */
+    float scale;                      /* pixels a point of the window */
+    uint32_t focused, hovered;
+    float mouse_x, mouse_y;           /* pixels of the view */
+    uint32_t buttons;                 /* WV_LEFT | WV_RIGHT | WV_MIDDLE, held now */
+    uint32_t clicks, double_clicks;   /* buttons clicked since the last frame */
+    float drag_x, drag_y;             /* movement while a button was down */
+    float wheel_x, wheel_y;           /* lines since the last frame */
+    uint32_t modifiers;
+    const wv_key *keys;               /* the keys of the view since the last frame */
+    uint32_t key_count;
+    const char *text;                 /* text typed since the last frame, UTF-8 */
+} wv_input;
+
+typedef struct wv_control {
+    uint32_t id;
+    uint32_t kind;                    /* WV_BUTTON, WV_TOGGLE, WV_SLIDER, WV_CHOICE, WV_LABEL */
+    const char *label;
+    double value, min, max, step;     /* a slider; a toggle 0 or 1; a choice its index */
+    const char *const *choices;
+    uint32_t choice_count;
+} wv_control;
+
+typedef struct wv_output {
+    uint32_t size;
+    uint32_t width, height, stride;   /* the picture, RGBA with 8 bits a channel */
+    const uint8_t *pixels;            /* the plugin's memory, valid until its next call */
+    uint32_t changed;                 /* the picture differs from the last one */
+    const wv_control *controls;       /* the controls of the bar of the tab */
+    uint32_t control_count;
+    uint32_t keys;                    /* WV_KEYS_ARROWS | WV_KEYS_PAGES | WV_KEYS_LETTERS | ... */
+    uint32_t cursor;                  /* WV_CURSOR_DEFAULT, _CROSS, _HAND, _GRAB, _ZOOM */
+    uint32_t again;                   /* draw another frame: the plugin is still at work */
+    const char *status;               /* a line of the status bar, UTF-8 */
+} wv_output;
+
+typedef struct wv_plugin {
+    uint32_t api_version;             /* WV_API_VERSION the plugin was written for */
+    const char *name;
+    const wv_format *formats;
+    uint32_t format_count;
+    void *(*open)(const char *path, char *error, uint32_t error_size);
+    void (*frame)(void *view, const wv_input *input, wv_output *output);
+    void (*control)(void *view, uint32_t id, double value);
+    void (*close)(void *view);
+} wv_plugin;
+
+__declspec(dllexport) const wv_plugin *wv_plugin_get(void);
+```
+
+The rules: every call comes from the thread of the window and every text is UTF-8; what the host
+gives lives for the call, what the plugin gives lives until its next call on that view; a plugin
+may run threads of its own; a host refuses an `api_version` it does not know and reads only the
+fields a `size` covers, so both sides grow at the end. In the host the loader of wwrt wraps such a
+DLL into an ordinary `Plugin` and `View` (`wwrt::stable`): the picture becomes a texture, the
+controls egui widgets in the bar, the input of egui becomes `wv_input`.
+
+### 6.10 The example of the stable interface: the Mandelbrot set
+
+One plugin in C, `wv-mandelbrot`, built by CI with the compiler of Visual Studio. It opens a
+`.mandel` file, a few lines of text with the centre, the zoom, the iterations and the palette of a
+view, and saves the view back. Its controls in the bar: Iterations (a slider), Palette (a choice:
+classic, fire, ice, grey), Smooth colours (a toggle), Zoom in, Zoom out, Reset. Its mouse: the wheel
+zooms at the pointer, a drag moves the picture with the closed hand, Shift and a drag draws a
+rectangle that a release zooms into, a double click centres and zooms in, the right button zooms
+out. Its keys: the arrows move, + and - zoom, Page Up and Page Down double or halve the iterations,
+P takes the next palette, Home resets, Escape drops a rectangle. It draws in steps: a coarse picture
+at once, then finer rows while it asks for frames, so the window never waits; the status bar names
+the centre, the zoom, the iterations and the time of the last picture.
 
 ## 7. Open questions
 
 - The size of `std-*.dll` of msvc and of `wwrt.dll` built with msvc: CI measures them at the
   first build of phase 2.
-- Which way of section 6.7 comes first for plugins of others, and when: it shapes how much of
-  the native interface phase 2 keeps fixed.
+- The language of the example of the stable interface: C proves that every language with a C FFI
+  can write a plugin; it needs a compiler of C, which CI has (Visual Studio on the runner) and the
+  computer of the developer has not (a toolchain there only on the word of its owner, AGENTS.md
+  rule 6). Rust of another toolchain over the crate of `wview.h` needs no new tool but proves less.
 - WinWeaver and wedit could move onto wwrt later; nothing in them needs it.
 
 ## 8. Building the study
