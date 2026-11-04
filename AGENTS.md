@@ -346,7 +346,8 @@ CI builds only releases (item 11 of the list of 28.10.2026):
    WinWeaver (`build-windows`), the Windows job of wview (`build-wview`: its clippy and tests, the
    release in the tree of its release, the archives, the template of the SDK) and the job
    `build-web` (Ubuntu: wwlite for the browser, the artifact `wwlite-web-<version>`). A release
-   waits for the first and the last.
+   waits for the first and the last. A whole run took 42 minutes on 04.11.2026 (WinWeaver 41,
+   wview 26), on the runner of 2 processors a private repository gets.
 5. The mirror: when the Actions minutes of digidult/winweaver are used up, its run fails in a few
    seconds with the annotation "The job was not started because recent account payments have failed
    or your spending limit needs to be increased". Then the same commit runs in the private mirror

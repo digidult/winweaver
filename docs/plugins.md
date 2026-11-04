@@ -284,7 +284,9 @@ the relocations, debug, TLS, load config, the certificates and the header of .NE
   toolchain, the plugins, README) and `wview-sdk-<version>`, and builds the template of the SDK from
   a copy in another folder, which wview must load. That build takes the target folder of the tree:
   a crate of the registry has the same hash wherever its user is, so only the crates of the SDK,
-  cleaned first, are built from the copy. `build-all.cmd` makes the same two archives (`nowview`
+  cleaned first, are built from the copy: 16 s instead of 7 minutes. With the two jobs side by
+  side a run took 42 minutes instead of 70 to 83 (04.11.2026: the job of WinWeaver 41, the one of
+  wview 26 without a cache of its own). `build-all.cmd` makes the same two archives (`nowview`
   leaves them out).
 - **Tests.** wwrt and every plugin have their unit tests; the tests of the window need
   `egui_kittest` inside wwrt (a feature for the tests), since a dev-dependency of its own on
@@ -459,8 +461,9 @@ the centre, the zoom, the iterations and the time of the last picture.
   in another folder loaded in 0.7 ms. The `std-<hash>.dll` of msvc imports no DLL of the CRT, but
   with the dynamic CRT every module of the family imported `VCRUNTIME140.dll`, which a clean
   Windows may lack; the family takes the CRT statically since then, as WinWeaver does
-  (`wview/.cargo/config.toml`), and the next run of CI shows the imports without it
-  (`wview/sdk/imports.py`).
+  (`wview/.cargo/config.toml`). The next run showed it (`wview/sdk/imports.py`): every module
+  imports `std-<hash>.dll`, `wwrt.dll` and DLLs of Windows alone, at the price of about 100 KB in
+  `wview.exe` (929 KB) and 200 KB in `wwrt.dll` (23.3 MB); the template of the SDK loaded in 0.9 ms.
 - The language of the example of the stable interface: C proves that every language with a C FFI
   can write a plugin; it needs a compiler of C, which CI has (Visual Studio on the runner) and the
   computer of the developer has not (a toolchain there only on the word of its owner, AGENTS.md
