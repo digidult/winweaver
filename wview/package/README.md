@@ -1,0 +1,32 @@
+# wview
+
+A viewer of files: Markdown pages and text files, and every image format the Windows it runs on
+decodes (BMP, PNG, JPEG, GIF, TIFF, ICO, and HEIF, AVIF, WebP or the RAW of cameras where their
+extensions are installed). Every format is a plugin, a DLL in the folder `plugins`.
+
+## Start
+
+Unpack the folder anywhere and start `wview.exe`; nothing is installed. Open a file with Open
+(Ctrl+O), drop it on the window or name it on the command line. The menu has the guide; the
+settings are kept in `wview.settings.json` next to the program.
+
+## The folder
+
+- `wview.exe`, the program.
+- `wwrt.dll`, the runtime the program and its plugins share, and `std-<hash>.dll`, the standard
+  library of Rust: they stay next to `wview.exe`.
+- `plugins\wv_text.dll` (Markdown and text) and `plugins\wv_image.dll` (images).
+
+A plugin of another release of wview is not loaded: the page of the plugins and `wview --plugins`
+name the reason.
+
+## Plugins of one's own
+
+The SDK of the same release (`wview-sdk-<version>.zip`) makes them: its README tells how.
+
+## Command line
+
+- `wview FILE...` opens the files in tabs.
+- `wview --plugins` lists the plugins and their formats.
+- `wview --probe FILE` opens a file and draws it without a window, with the times.
+- `wview --help` lists the options.

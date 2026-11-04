@@ -4,7 +4,7 @@
 # cdylibs and static libraries alone.
 [workspace]
 resolver = "3"
-members = ["crates/wwrt", "crates/wview", "plugins/wv-text", "plugins/wv-image"]
+members = ["crates/wwrt", "crates/wview", "plugins/wv-text", "plugins/wv-image", "plugins/wv-hello"]
 
 [workspace.package]
 version = "0.2.0"

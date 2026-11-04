@@ -165,6 +165,13 @@ draws the same views with the same egui, without a screen.
     `dlltool` and `as` for each one. The toolchain msvc should write them through LLVM itself; CI
     measures what a link of a plugin costs there. The links of WinWeaver on this PC likely pay the
     same.
+12. **A plugin of the SDK loads when the release and the SDK are one tree.** Phase 2 packed the
+    crates of the repository into an SDK at another place and built the template there: the
+    release refused it with the error 127 of a missing import, though egui had the same hash in
+    both builds. Cargo hashes a path dependency relative to the root of the workspace only when it
+    is inside it, and W# is outside `wview/`. Built in the tree of `wview/sdk/pack.py`, where every
+    crate is inside the root, the release (8 min on this PC) loaded the template built in a copy of
+    the tree in another folder, and refused the plugin of the first SDK with its reason.
 
 ## 6. The design of wview
 
@@ -270,8 +277,12 @@ the relocations, debug, TLS, load config, the certificates and the header of .NE
   the shared crates (its `Cargo.lock` starts as a copy and a check of CI compares them). One
   workspace would need `--config` with the flag and a profile of its own for every build of the
   family, and `--exclude` of the family in every other, a trap for each new command.
-- **CI and build-all.cmd**: a step that builds the family with msvc and packs
-  `wview-<version>.zip` (wview.exe, wwrt.dll, std-*.dll, plugins, formats, lang, README).
+- **CI and build-all.cmd** (phase 2): the Linux job checks the format of `wview` and its clippy for
+  Windows; the Windows job runs its clippy and tests (the window drawn into the screenshots `v1-` to
+  `v5-`), builds it in release in the tree of its release (section 6.7), packs `wview-<version>`
+  (wview.exe, wwrt.dll, the `std-<hash>.dll` of the toolchain, the plugins, README) and
+  `wview-sdk-<version>`, and builds the template of the SDK from a copy in another folder, which
+  wview must load. `build-all.cmd` makes the same two archives (`nowview` leaves them out).
 - **Tests.** wwrt and every plugin have their unit tests; the tests of the window need
   `egui_kittest` inside wwrt (a feature for the tests), since a dev-dependency of its own on
   kittest would bring a second egui.
@@ -282,9 +293,10 @@ the relocations, debug, TLS, load config, the certificates and the header of .NE
 2. wview as a program of the repository and the native SDK: its workspace, its archive in CI and
    build-all.cmd, the version of the native interface, the template workspace of a plugin, the
    settings of the plugins, the keys and the mouse of a view (section 6.8), the translations, the
-   guide, the tests of the window. Part 1 done: the workspace `wview/`, the interface 1, the
-   settings, the translations in the eight languages of WinWeaver, the keys and the mouse of the
-   images, the guide. Part 2: the SDK, CI and build-all.cmd, the tests of the window.
+   guide, the tests of the window. Done: the workspace `wview/`, the interface 1, the settings,
+   the translations in the eight languages of WinWeaver, the keys and the mouse of the images, the
+   guide, the page of the plugins as a tab, the SDK with its template (finding 12), wview and the
+   SDK in CI and build-all.cmd, the tests of the window with their screenshots.
 3. Images whole: tiles, the frames of a GIF, EXIF, the keys of the zoom.
 4. wv-binary 1: the engine with its language, the headers, sections, imports and exports of PE, the
    hexadecimal and the text views.
@@ -298,10 +310,21 @@ the relocations, debug, TLS, load config, the certificates and the header of .NE
 The decision of the customer of 04.11.2026: two kinds of plugins, one of them the main.
 
 1. **Native plugins with the SDK of a release, the main way.** Every example is one: text and
-   Markdown, images, binary structures. Every release of wview publishes what its build was: the
-   version of wwrt, the compiler, its `Cargo.lock` and a template workspace of a plugin. A plugin
+   Markdown, images, binary structures. Every release of wview publishes what its build was:
+   `wview-sdk-<version>.zip` (`wview/sdk/pack.py`, its README `wview/sdk/README.md`) is the tree
+   the release itself is built in: W# in `framework/` (with the fields it takes from the workspace
+   of WinWeaver written out), wwrt and wview in `crates/`, the plugins and the template `wv-hello`
+   in `plugins/`, `Cargo.lock`, the flags (`.cargo/config.toml`) and the compiler
+   (`rust-toolchain.toml` with the version of the release). rustc names the symbols of `wwrt.dll` by
+   the versions, the features and the flags of its crates and by their sources, and cargo hashes a
+   path dependency relative to the root of the workspace only when it is inside it, else by its
+   absolute path. In the repository W# is outside `wview/`, so a plugin built from a copy of the
+   repository layout in another folder missed the imports of `wwrt.dll` (the hash of `ww` was
+   `Csl8FSR6xLGnH` in one build and `CsluDd2lLouDL` in the other, the ones of egui alike); in the
+   tree every crate is inside its root, and a plugin built in a copy of it anywhere loads. A plugin
    made with it draws with egui as the plugins of the repository do and is built again for every
-   release, since the loader refuses it otherwise (finding 5).
+   release, since the loader refuses it otherwise (finding 5); CI builds the template of the SDK in
+   another folder and loads it into wview.
 2. **A stable interface for data, for other languages.** A C ABI of versioned structures (section
    6.9): a plugin in C, C++, Zig, Go, Delphi or Rust of any version gives the host a picture and the
    controls around it, and the host draws them and hands the plugin the keys and the mouse. It
@@ -428,8 +451,10 @@ the centre, the zoom, the iterations and the time of the last picture.
 
 ## 7. Open questions
 
-- The size of `std-*.dll` of msvc and of `wwrt.dll` built with msvc: CI measures them at the
-  first build of phase 2.
+- The size of `std-*.dll` of msvc and of `wwrt.dll` built with msvc, and the DLLs the `std-*.dll`
+  of msvc needs: it links the CRT dynamically (`wview/.cargo/config.toml` turns the static CRT of
+  WinWeaver off for the family to match), so `vcruntime140.dll` of the Visual C++ runtime may have
+  to ship next to it. CI shows the folder at the first build of phase 2.
 - The language of the example of the stable interface: C proves that every language with a C FFI
   can write a plugin; it needs a compiler of C, which CI has (Visual Studio on the runner) and the
   computer of the developer has not (a toolchain there only on the word of its owner, AGENTS.md

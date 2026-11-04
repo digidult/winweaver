@@ -66,6 +66,8 @@ pub struct FileDoc {
 /// A tab of wview.
 pub enum Doc {
     File(FileDoc),
+    /// The plugins and what they open: the tab of a start without a file.
+    Plugins,
     /// The guide.
     Page(MdDoc),
     /// The settings and the editor of a theme: documents of the window itself.
@@ -82,6 +84,7 @@ impl Document for Doc {
     fn title(&self) -> String {
         match self {
             Doc::File(d) => file_name(&d.path),
+            Doc::Plugins => tr("Plugins").to_owned(),
             Doc::Page(d) => d.title(),
             Doc::Shell(d) => d.title(),
         }
@@ -97,6 +100,7 @@ impl Document for Doc {
     fn path(&self) -> Option<&Path> {
         match self {
             Doc::File(d) => Some(&d.path),
+            Doc::Plugins => None,
             Doc::Page(d) => d.path(),
             Doc::Shell(d) => d.path(),
         }
@@ -106,7 +110,7 @@ impl Document for Doc {
         match self {
             Doc::File(d) => d.view.search(),
             Doc::Page(d) => d.search(),
-            Doc::Shell(_) => None,
+            Doc::Plugins | Doc::Shell(_) => None,
         }
     }
 
@@ -114,6 +118,7 @@ impl Document for Doc {
         match self {
             Doc::File(d) if d.view.browses() => "\u{1F5BC}",
             Doc::File(_) => icons::PAGE,
+            Doc::Plugins => icons::PACKAGE,
             Doc::Page(_) => icons::BOOK,
             Doc::Shell(d) => d.icon(),
         }
@@ -121,7 +126,7 @@ impl Document for Doc {
 
     fn search_hint(&self) -> &'static str {
         match self {
-            Doc::Shell(_) => "",
+            Doc::Shell(_) | Doc::Plugins => "",
             _ => "Search the text (Ctrl+F)",
         }
     }
@@ -172,6 +177,8 @@ pub enum Act {
     Browse(Step),
     /// The guide in a tab.
     Guide,
+    /// The page of the plugins in a tab.
+    Plugins,
 }
 
 impl From<ShellAct<Wview>> for Act {
@@ -285,6 +292,13 @@ impl Wview {
         )));
     }
 
+    /// The page of the plugins in front: its tab, or a new one.
+    fn plugins_tab(&self, shell: &mut Shell<Self>) {
+        if !shell.focus_tab(|d| matches!(d, Doc::Plugins)) {
+            shell.open_tab(Doc::Plugins);
+        }
+    }
+
     /// The plugins, what they open and the DLLs that did not load.
     fn plugins_list(&self, ui: &mut egui::Ui) {
         for loaded in &self.plugins.loaded {
@@ -312,7 +326,7 @@ impl Wview {
         ui.weak(plugin::runtime());
     }
 
-    /// The page without a file.
+    /// The page of the plugins.
     fn plugins_page(&self, ui: &mut egui::Ui) {
         egui::CentralPanel::default().show(ui, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
@@ -350,10 +364,13 @@ impl App for Wview {
         }
     }
 
-    /// The files of the command line, in tabs.
+    /// The files of the command line, in tabs; a window without a tab shows the plugins.
     fn restored(&mut self, shell: &mut Shell<Self>) {
         for path in std::mem::take(&mut self.files) {
             self.open_path(shell, path);
+        }
+        if shell.docs.is_empty() {
+            self.plugins_tab(shell);
         }
     }
 
@@ -435,8 +452,8 @@ impl App for Wview {
                 egui::CentralPanel::default()
                     .show(ui, |ui| mdview::md_view(ui, doc, wrap_lines, page_width));
             }
+            Some(Doc::Plugins) | None => self.plugins_page(ui),
             Some(Doc::Shell(_)) => {}
-            None => self.plugins_page(ui),
         }
     }
 
@@ -463,7 +480,7 @@ impl App for Wview {
                 }
                 items
             }
-            Some(Doc::Page(_)) | None => vec![open],
+            Some(Doc::Page(_) | Doc::Plugins) | None => vec![open],
             Some(Doc::Shell(_)) => Vec::new(),
         }
     }
@@ -486,6 +503,7 @@ impl App for Wview {
             acts,
         );
         ui.separator();
+        menu_item(ui, icons::PACKAGE, tr("Plugins"), "", Act::Plugins, acts);
         menu_item(ui, icons::BOOK, tr("Guide"), "", Act::Guide, acts);
         menu_item(
             ui,
@@ -586,6 +604,7 @@ impl App for Wview {
             }
             Act::Browse(step) => self.browse(shell, step),
             Act::Guide => self.guide(shell),
+            Act::Plugins => self.plugins_tab(shell),
             // The window runs its own acts (`shell_act`); one that comes here goes back to it.
             Act::Shell(a) => shell.pending.push(Act::Shell(a)),
         }

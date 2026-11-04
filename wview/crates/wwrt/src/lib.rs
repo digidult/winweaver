@@ -8,6 +8,8 @@
 //! of its own on one of them would be a second copy of that crate, which rustc refuses. A derive
 //! of serde names its crate: `#[serde(crate = "wwrt::serde")]`.
 
+#[cfg(feature = "kittest")]
+pub use egui_kittest;
 pub use serde;
 pub use serde_json;
 #[cfg(windows)]

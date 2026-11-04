@@ -8,6 +8,8 @@
 
 mod app;
 #[cfg(test)]
+mod shots;
+#[cfg(test)]
 mod tests;
 
 use std::path::{Path, PathBuf};

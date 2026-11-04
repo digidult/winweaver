@@ -11,8 +11,14 @@ publish.workspace = true
 # A Rust dylib: one copy of std, egui and W# for the executable and every plugin (docs/plugins.md).
 crate-type = ["dylib"]
 
+[features]
+# egui_kittest for the tests of a window (wview, a plugin): a dev-dependency of their own on it would
+# bring a second egui, so it comes through wwrt as `wwrt::egui_kittest`.
+kittest = ["dep:egui_kittest"]
+
 [dependencies]
 ww = { path = "../../../crates/ww" }
+egui_kittest = { version = "0.36", features = ["eframe", "wgpu", "snapshot"], optional = true }
 libloading = "0.8"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

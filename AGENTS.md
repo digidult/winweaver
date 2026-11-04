@@ -185,7 +185,9 @@ text editor wedit.
 │                          the interface 1 with the loader and its check of the build; input: the
 │                          keys and the mouse of a view; blocks; testing), crates/wview (the viewer:
 │                          lang/<code>/ui.json and guide.md, docs/guide.md), plugins/wv-text
-│                          (Markdown and text), plugins/wv-image (WIC), each with lang/<code>.json;
+│                          (Markdown and text), plugins/wv-image (WIC), each with lang/<code>.json,
+│                          plugins/wv-hello (the template of the SDK); sdk/ (README.md, pack.py: the
+│                          SDK of a release); package/README.md (for the user of the archive);
 │                          .cargo/config.toml links std dynamically; README.md
 ├── package/               what the archive adds: README.md for the user (not this repository's), lang/be/ui.json
 │                          (Belarusian, every text: the example of a language, checked by a test of i18n.rs)
@@ -291,7 +293,11 @@ found before the first long step. It never runs the tests that change Windows an
 program only for `--check-catalog`; the smoke tests of the window and of the command line stay in
 CI. A change of the steps Package or build-web of `ci.yml` changes `build-all.cmd` too. The file keeps
 CRLF (`.gitattributes`): cmd finds its labels by the offsets of the lines and reads a running script
-from the disk again, so it is never edited while it runs.
+from the disk again, so it is never edited while it runs. Then wview and its SDK, as CI makes them:
+`dist/wview` (wview.exe, wwrt.dll, the `std-<hash>.dll` of the sysroot of `WW_RUSTC`, with the
+toolchain gnu `libgcc_s_seh-1.dll` and `libwinpthread-1.dll` too, the plugins, README),
+`dist/wview-sdk` (`wview/sdk/pack.py`) and their archives with the version of wview; `check` and
+`screenshots` take the checks and the tests of wview along, `nowview` leaves wview out.
 
 ```bat
 build-all.cmd
@@ -797,7 +803,21 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   the keys a view names are its own without Ctrl and Alt, Tab and Escape give them back), and
   `wwrt::testing` for the tests of the translations of a plugin (`plugin_texts`: tr, trf,
   `const NAME`, `name:`, `label:`). wview has the eight languages of WinWeaver: its `ui.json`
-  holds the texts of the shell of W# as WinWeaver translates them and its own. The family links std dynamically
+  holds the texts of the shell of W# as WinWeaver translates them and its own. `plugin!` exports
+  nothing with the feature `library` of a plugin (each declares `library = []`): the tests of
+  wview take the plugins as libraries (`crate-type = ["cdylib", "rlib"]`) into one executable, and
+  egui_kittest comes through the feature `kittest` of wwrt. The release of wview is built in the
+  tree of `wview/sdk/pack.py` (W# in `framework/` with its inherited fields written out, wwrt and
+  wview in `crates/`, the plugins in `plugins/`), and that tree is its SDK: cargo hashes a path
+  dependency by its place relative to the root of the workspace only inside it, else by its
+  absolute path, and W# is outside `wview/` in the repository, so only a build in the tree makes a
+  `wwrt.dll` that a plugin built in a copy of it anywhere loads. CI and build-all.cmd build the
+  release there (`wview/target/tree` locally: the dlltool of gnu stops past 260 characters); CI
+  builds the template `wv-hello` in another copy and loads it. For msvc the family turns the
+  static CRT of the root config off (`-C target-feature=-crt-static`), as its std-<hash>.dll links
+  the CRT dynamically. CI: the Linux job checks the format and clippy of `wview`, the Windows job
+  its clippy and tests (the screenshots `v1-` to `v5-`), the release build and the artifacts
+  `wview-<version>` and `wview-sdk-<version>`; a release of WinWeaver does not carry them. The family links std dynamically
   (`-C prefer-dynamic`, `std-<hash>.dll` ships), never takes LTO (a dylib refuses it, a plugin on
   one stops) and keeps its dependencies at opt-level 2 in debug builds, where shared generics put
   128973 exports into the DLL (a DLL holds 65535; a release one has about 15600). Every crate the
@@ -1032,7 +1052,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Done in pull request #67 (0.30.1) | `build-all.cmd`: what CI makes (the four archives of a release, on demand the checks, the screenshots and the slides) built on a computer of Windows; the programs of 0.30.0 |
 | Done in pull request #68 (0.30.2) | The languages of Windows without a locale id of their own read without the transient id Windows lends them as input languages of the user (`ru-UA` as 2000) |
 | Done in pull request #69 (0.30.3) | The study of plugins (`docs/plugins.md`, then `study/plugins`): the ways of Rust compared, the runtime wwrt with the loader and its check, wview with the plugins of text and images, the measurements, the design and the phases of wview; the programs of 0.30.2 |
-| In pull request #70 (0.31.0, wview 0.2.0) | Phase 2 of wview, part 1: the workspace `wview/`, the interface 1 (the settings and the translations of a plugin, the requests of a view, the keys and the mouse), Settings, Plugins, the image view with its mouse and keys, the eight languages, the guide; `ww::i18n::add`. Part 2 to come: the SDK, CI and build-all.cmd, the tests of the window |
+| In pull request #70 (0.31.0, wview 0.2.0) | Phase 2 of wview, part 1: the workspace `wview/`, the interface 1 (the settings and the translations of a plugin, the requests of a view, the keys and the mouse), Settings, Plugins, the image view with its mouse and keys, the eight languages, the guide; `ww::i18n::add`. Part 2: the SDK of a release (`wview/sdk`, the template `wv-hello`, built and loaded by CI), wview and its SDK in CI and build-all.cmd, the tests of the window with the screenshots `v1-` to `v5-` |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the

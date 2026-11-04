@@ -141,17 +141,21 @@ pub fn set_setting(settings: &mut Value, name: &str, value: impl serde::Serializ
 }
 
 /// Names the plugin of a crate: `wwrt::plugin!(TextPlugin);` exports the build of wwrt it was made
-/// with and the function that makes the plugin.
+/// with and the function that makes the plugin. With the feature `library` of the plugin (which it
+/// declares, `library = []`) the crate exports neither: the tests of a program take several
+/// plugins as libraries into one executable, where the names of the exports would clash.
 #[macro_export]
 macro_rules! plugin {
     ($plugin:expr) => {
         /// The build of wwrt this plugin was made with (`wwrt::plugin::ABI`).
+        #[cfg(not(feature = "library"))]
         #[unsafe(no_mangle)]
         pub extern "C" fn ww_plugin_abi() -> *const u8 {
             $crate::plugin::ABI.as_ptr()
         }
 
         /// The plugin; the host calls it once, after `ww_plugin_abi` matched its own build.
+        #[cfg(not(feature = "library"))]
         #[unsafe(no_mangle)]
         pub fn ww_plugin() -> Box<dyn $crate::plugin::Plugin> {
             Box::new($plugin)
@@ -247,7 +251,10 @@ fn load(path: &Path) -> Result<Box<dyn Plugin>, String> {
     // SAFETY: loading a DLL runs its initialisation; the plugins come from the folder of the
     // program, which its user fills as he fills the folder of the program itself.
     let library = unsafe { libloading::Library::new(path) }.map_err(|e| {
-        let text = e.to_string();
+        let mut text = e.to_string();
+        if let Some(source) = std::error::Error::source(&e) {
+            text = format!("{text}: {source}");
+        }
         if text.contains("os error 127") {
             format!("built against another build of wwrt: its imports are not in this one ({text})")
         } else {

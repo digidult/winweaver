@@ -1,0 +1,8 @@
+{
+  "Draw the text in the accent colour": "Рисовать текст цветом акцента",
+  "Hello files": "Файлы приветствия",
+  "Hello, the template of a plugin": "Приветствие, шаблон плагина",
+  "Reset": "Сбросить",
+  "The file is too large for a hello": "Файл слишком велик для приветствия",
+  "{size} points, moved by {x}, {y}": "{size} пт, сдвиг {x}, {y}"
+}

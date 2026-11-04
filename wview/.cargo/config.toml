@@ -1,9 +1,10 @@
 # Every crate of wview links std dynamically (std-<hash>.dll of the toolchain): wwrt.dll, the
 # program and its plugins share one std, since a crate may be in the process once (docs/plugins.md).
-# The rustflags of a target replace [build] ones, and the ones of the parent config (the static CRT
-# of WinWeaver for msvc) are joined to these.
+# The rustflags of a target replace [build] ones, and the ones of the parent config are joined
+# before these. For msvc that is the static CRT of WinWeaver, which this config turns off again:
+# std-<hash>.dll of msvc links the CRT dynamically, so every module of the process takes the same.
 [target.x86_64-pc-windows-msvc]
-rustflags = ["-C", "prefer-dynamic"]
+rustflags = ["-C", "prefer-dynamic", "-C", "target-feature=-crt-static"]
 
 [target.x86_64-pc-windows-gnu]
 rustflags = ["-C", "prefer-dynamic"]
