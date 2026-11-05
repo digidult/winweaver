@@ -51,6 +51,12 @@ dan ukurannya.
   byte** kembali.
 - File tetap di disk: tampilan membaca blok yang ditampilkannya. Simpul yang tidak dimuat utuh
   oleh file (file pendek atau rusak) memiliki tanda peringatan dan menyebutkan alasannya.
+- Selain header: sumber daya (jenis, nama dan bahasanya, satu tingkat dibaca saat dibuka),
+  pengecualian x64, sertifikat, relokasi, direktori debug dengan jalur PDB, TLS, konfigurasi muat,
+  impor tertunda dan header .NET dengan aliran metadatanya.
+- **Simpan struktur** menulis pohon sebagai file `.wwbin`, secara bawaan di samping file: setiap
+  bidang dengan nilainya, setiap rentang byte mentah dengan SHA-256-nya, file dengan ukuran dan
+  SHA-256-nya, tanpa satu pun bytenya.
 - Format lain datang sebagai deskripsi, file `.wwformat` di folder `plugins\formats`; Pengaturan,
   Plugin menampilkan format yang terbaca dan file yang tidak terbaca.
 

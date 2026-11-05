@@ -51,6 +51,13 @@ importaciones y las exportaciones, cada campo con su valor, su desplazamiento y 
   **Árbol y bytes** vuelve atrás.
 - El archivo se queda en el disco: la vista lee los bloques que muestra. Un nodo que el archivo no
   contiene entero (un archivo corto o dañado) tiene un signo de aviso y dice por qué.
+- Además de los encabezados: los recursos (sus tipos, nombres e idiomas, un nivel se lee al
+  abrirlo), las excepciones de x64, los certificados, las reubicaciones, el directorio de
+  depuración con la ruta del PDB, TLS, la configuración de carga, las importaciones diferidas y el
+  encabezado de .NET con los flujos de sus metadatos.
+- **Guardar la estructura** escribe el árbol como un archivo `.wwbin`, junto al archivo por
+  defecto: cada campo con su valor, cada rango de bytes en bruto con su SHA-256, el archivo con su
+  tamaño y su SHA-256, y ninguno de sus bytes.
 - Más formatos llegan como descripciones, archivos `.wwformat` en la carpeta `plugins\formats`;
   Configuración, Complementos enumera los formatos leídos y los archivos que no se leyeron.
 

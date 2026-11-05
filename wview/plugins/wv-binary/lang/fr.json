@@ -3,6 +3,9 @@
   "Block of the file": "Bloc du fichier",
   "Bytes in a row": "Octets par ligne",
   "Cache of the blocks": "Cache des blocs",
+  "Save the structure": "Enregistrer la structure",
+  "Saved {path}": "Enregistré : {path}",
+  "Structure of a file": "Structure d'un fichier",
   "Text": "Texte",
   "The page shows the first {n} nodes.": "La page montre les {n} premiers nœuds.",
   "The settings apply to the files opened after a change.": "Les paramètres s'appliquent aux fichiers ouverts après un changement.",
@@ -24,6 +27,7 @@
   "not a file of the format {format}": "pas un fichier du format {format}",
   "past the end of the file at {at}": "au-delà de la fin du fichier à {at}",
   "raw bytes without a size": "des octets bruts sans taille",
+  "read when it opens": "lu à son ouverture",
   "the first {n} items": "les {n} premiers éléments",
   "the first {n} of {count} items": "les {n} premiers éléments sur {count}",
   "the rva {rva} has no bytes in the file": "la rva {rva} n'a pas d'octets dans le fichier",
@@ -41,5 +45,6 @@
   "{n} more items in the text view": "{n} éléments de plus dans la vue texte",
   "{n} nodes not read whole": "{n} nœuds non lus en entier",
   "{path} is not a number": "{path} n'est pas un nombre",
+  "{path} was not saved: {why}": "{path} n'a pas été enregistré : {why}",
   "{size} bytes at {at} past the end of the file": "{size} octets à {at} au-delà de la fin du fichier"
 }

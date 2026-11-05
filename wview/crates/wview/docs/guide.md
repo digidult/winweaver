@@ -48,6 +48,13 @@ exports, every field with its value, its offset and its size.
   bytes** goes back.
 - The file stays on the disk: the view reads the blocks it shows. A node the file does not hold
   whole (a short or damaged file) has a warning sign and says why.
+- Besides the headers: the resources (their types, names and languages, a level read when it
+  opens), the exceptions of x64, the certificates, the relocations, the debug directory with the
+  path of the PDB, TLS, the load configuration, the delay imports and the header of .NET with the
+  streams of its metadata.
+- **Save the structure** writes the tree as a `.wwbin` file, next to the file by default: every
+  field with its value, every range of raw bytes with its SHA-256, the file with its size and
+  SHA-256, and none of its bytes.
 - More formats come as descriptions, `.wwformat` files in the folder `plugins\formats`; Settings,
   Plugins lists the formats read and the files that did not read.
 

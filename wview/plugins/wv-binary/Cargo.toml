@@ -18,3 +18,5 @@ library = []
 
 [dependencies]
 wwrt = { path = "../../crates/wwrt" }
+# The SHA-256 of a .wwbin: a crate of the plugin's own, since wwrt holds none.
+sha2 = "0.10"

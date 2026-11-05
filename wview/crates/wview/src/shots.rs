@@ -2,7 +2,7 @@
 //! `WINWEAVER_SCREENSHOTS` names a folder (CI sets it on the Windows runner): the page of the
 //! plugins, a Markdown page, an image fitted, then zoomed and moved, Settings, Plugins, an
 //! animation, a large image fitted and at 100% in its tiles, a DLL of this Windows in its tree and
-//! its bytes and as text; drawn with wgpu without a screen and saved there as PNG files; a
+//! its bytes, as text and with its resources open; drawn with wgpu without a screen and saved there as PNG files; a
 //! renderer that cannot start writes `wview-error.txt`.
 
 use std::path::{Path, PathBuf};
@@ -129,4 +129,18 @@ fn screenshots_of_wview() {
     shot(&mut h, &dir, "v9-binary-tree-bytes");
     h.state_mut().apply(vec![Act::Tool("text")]);
     shot(&mut h, &dir, "v10-binary-text");
+    // The resources: their types, one of them open with the names it holds read when they open.
+    h.state_mut().apply(vec![Act::Tool("bytes")]);
+    h.run_steps(2);
+    click_tree(&h);
+    h.run_steps(2);
+    let mut keys = vec![Key::ArrowDown; 14];
+    keys.push(Key::ArrowRight);
+    keys.extend([Key::ArrowDown; 7]);
+    keys.extend([Key::ArrowRight, Key::ArrowDown, Key::ArrowRight]);
+    for key in keys {
+        h.key_press(key);
+        h.run_steps(1);
+    }
+    shot(&mut h, &dir, "v11-binary-resources");
 }

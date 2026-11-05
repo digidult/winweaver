@@ -301,8 +301,7 @@ Done in phase 4 (`wview/plugins/wv-binary`):
 - **The tree is read at the open**, within its limits (500000 nodes, 100000 items an array, 32
   structures deep, 4096 bytes a text), and the bytes stay in the file, read through `BlockFile`
   (the block and the cache are settings); a node that stops at a limit or past the end of the
-  file is kept with the reason. Children read when a node opens come with the resources (phase 5),
-  where the tree can be deep.
+  file is kept with the reason. A `lazy` field (phase 5) is read when its node opens.
 - **The views**: the tree on the left (`ww::tree`, its keys) and the bytes on the right (`hex.rs`:
   8, 16 or 32 a row, the rows in view alone read, the bytes of the node selected marked, a click on
   a byte selects the smallest node that holds it), or **Text**, the tree as a Markdown page of
@@ -314,6 +313,32 @@ Done in phase 4 (`wview/plugins/wv-binary`):
   read and the files that did not read with the reason. A file opens by the extension and the
   `magic` of a description; a file of the extension without its magic stays closed with the
   reason.
+
+Done in phase 5:
+
+- **The language** got `lazy` (a structure at an offset or an rva read when its node opens:
+  `engine::expand`, and `expand_all` before a save), `align` (a field or every item of an array
+  ends at a multiple of so many bytes of the file: the names of the streams of .NET, the
+  certificates) and `length` (the items of an array until they fill so many bytes: the
+  relocations, the certificates); a value with names (`enum`) names an item as its key (`ICON`).
+- **The rest of PE**: the resources in their three levels (types, names, languages: two levels
+  `lazy`, a name of UTF-16 or an id, the data entry with its bytes), the exceptions of x64
+  (`RUNTIME_FUNCTION`), the certificates (a file offset, items aligned to 8), the relocations (the
+  blocks of the directory with their entries), the debug directory (the CodeView `RSDS` with the
+  path of the PDB, the bytes of every entry), TLS of PE32 and PE32+ with its callbacks (a virtual
+  address less the image base), the load configuration of both (a field there when the size of
+  the structure reaches its end), the delay imports (their DLL and functions) and the header of
+  .NET (`IMAGE_COR20_HEADER`, the root of its metadata `BSJB` with its version and the headers of
+  its streams with their bytes). `kernel32.dll` of Windows 11 reads into 23090 nodes at the open,
+  and whole without an error; `System.dll` of .NET Framework shows its streams.
+- **`.wwbin`** (`wwbin.rs`, the tool Save the structure, next to the file by default through the
+  dialog of rfd): every node read first, then a document of JSON: `format` `wwbin`, `version` 1,
+  `by` (the plugin and its version), `file` (its name, size and SHA-256), `description` (its name,
+  version and the SHA-256 of its text) and `tree` (every node: `name`, `key`, `offset`, `size`,
+  and `type`, `items`, `value` (a number of JSON, 64 bits whole), `text` or `sha256` of raw bytes,
+  `names` of an enum or flags, `error` with the reason in the language of the window, and
+  `children`). SHA-256 is the crate `sha2`, the plugin's own: wwrt holds none. Opening a `.wwbin`
+  comes with its comparison (phase 6).
 
 - **Never the whole file in memory.** A node of the tree is its type and its offset; its children
   are read when it opens, through `BlockFile`; the size of the cache and of a block are settings of
@@ -344,7 +369,7 @@ Done in phase 4 (`wview/plugins/wv-binary`):
   family, and `--exclude` of the family in every other, a trap for each new command.
 - **CI and build-all.cmd** (phase 2): the Linux job checks the format of `wview` and its clippy for
   Windows; a Windows job of its own, beside the one of WinWeaver, runs its clippy and tests (the
-  window drawn into the screenshots `v1-` to `v10-`), builds it in release in the tree of its release
+  window drawn into the screenshots `v1-` to `v11-`), builds it in release in the tree of its release
   (section 6.7), packs `wview-<version>` (wview.exe, wwrt.dll, the `std-<hash>.dll` of the
   toolchain, the plugins, README) and `wview-sdk-<version>`, and builds the template of the SDK from
   a copy in another folder, which wview must load. That build takes the target folder of the tree:
@@ -375,7 +400,9 @@ Done in phase 4 (`wview/plugins/wv-binary`):
    hexadecimal and the text views. Done (section 6.4): the language, PE in its first parts, the
    tree, the bytes and the text, the descriptions of the folder `formats`, the settings, the
    eight languages and the guide, the screenshots `v9-` and `v10-`.
-5. wv-binary 2: the rest of PE, `.wwbin`.
+5. wv-binary 2: the rest of PE, `.wwbin`. Done (section 6.4): `lazy`, `align` and `length`, the
+   resources, the exceptions, the certificates, the relocations, debug, TLS, the load
+   configuration, the delay imports and .NET, Save the structure, the screenshot `v11-`.
 6. `.wwbindiff`: the tree of the differences, the comments and the bookmarks.
 7. The stable interface for other languages (section 6.9) and its one example, the Mandelbrot set
    (section 6.10).

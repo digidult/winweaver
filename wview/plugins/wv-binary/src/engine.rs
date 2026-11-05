@@ -100,6 +100,8 @@ pub struct Node {
     pub note: String,
     pub error: bool,
     pub show: Show,
+    /// A structure not read yet: its fields come when it opens (`expand`).
+    pub pending: bool,
 }
 
 /// A file read by a description.
@@ -169,6 +171,10 @@ impl Tree {
                 out.push(' ');
             }
             out.push_str(&n.note);
+        }
+        if n.pending {
+            out.push_str(", ");
+            out.push_str(tr("read when it opens"));
         }
         out
     }
@@ -277,6 +283,7 @@ impl Reader<'_> {
             note: String::new(),
             error: false,
             show: Show::Number,
+            pending: false,
         }
     }
 
@@ -470,6 +477,18 @@ impl Reader<'_> {
         text
     }
 
+    /// The names of a value by the enum or the flags of its field.
+    fn named(&self, field: &Field, v: i128) -> String {
+        let n = u64::try_from(v).unwrap_or(0);
+        if let Some(e) = &field.enumeration {
+            self.names(&self.format.enums[e], n, false)
+        } else if let Some(f) = &field.flags {
+            self.names(&self.format.flags[f], n, true)
+        } else {
+            String::new()
+        }
+    }
+
     /// One value of a kind at `at`: its node and the end of its bytes.
     fn item(
         &mut self,
@@ -486,12 +505,7 @@ impl Reader<'_> {
                     let mut node = Self::node(name, at, Data::Int(v), Some(parent));
                     node.size = u64::from(*width);
                     node.show = field.show;
-                    let n = u64::try_from(v).unwrap_or(0);
-                    if let Some(e) = &field.enumeration {
-                        node.note = self.names(&self.format.enums[e], n, false);
-                    } else if let Some(f) = &field.flags {
-                        node.note = self.names(&self.format.flags[f], n, true);
-                    }
+                    node.note = self.named(field, v);
                     (self.push(node), at + u64::from(*width))
                 }
                 Err(e) => (self.missing(parent, name, at, e), at),
@@ -557,9 +571,12 @@ impl Reader<'_> {
                 .copied()
                 .find(|c| self.nodes[*c].name == *name)?;
         }
-        match &self.nodes[at].data {
+        let node = &self.nodes[at];
+        match &node.data {
             Data::Text(t) => Some(t.clone()),
-            Data::Int(v) => Some(number(*v, self.nodes[at].show)),
+            // A value with a name is named by it (an ICON of the resources).
+            Data::Int(_) if !node.note.is_empty() => Some(node.note.clone()),
+            Data::Int(v) => Some(number(*v, node.show)),
             _ => None,
         }
     }
@@ -687,10 +704,30 @@ impl Reader<'_> {
         let mut node = Self::node(&field.name, at, Data::Array(0), Some(parent));
         node.show = field.show;
         let array = self.push(node);
+        let length = match field
+            .length
+            .as_ref()
+            .map(|l| self.eval(scope.0, scope.1, l))
+        {
+            Some(Ok(l)) => match u64::try_from(l) {
+                Ok(l) => Some(l),
+                Err(_) => {
+                    self.nodes[array].note = trf("a count of {n}", &[("n", &l)]);
+                    self.nodes[array].error = true;
+                    return (array, at);
+                }
+            },
+            Some(Err(e)) => {
+                self.nodes[array].note = e;
+                self.nodes[array].error = true;
+                return (array, at);
+            }
+            None => None,
+        };
         let mut here = at;
         let mut n: u64 = 0;
         loop {
-            if count.is_some_and(|c| n >= c) {
+            if count.is_some_and(|c| n >= c) || length.is_some_and(|l| here - at >= l) {
                 break;
             }
             if n >= self.limits.items || self.nodes.len() >= self.limits.nodes {
@@ -705,7 +742,7 @@ impl Reader<'_> {
                 break;
             }
             if here >= self.source.len() {
-                if count.is_some() {
+                if count.is_some() || length.is_some() {
                     self.nodes[array].note = trf("{n} items to the end of the file", &[("n", &n)]);
                     self.nodes[array].error = true;
                 }
@@ -723,7 +760,7 @@ impl Reader<'_> {
             if self.nodes[item].error || end == here {
                 break;
             }
-            here = end;
+            here = align(end, field.align);
             n += 1;
         }
         self.nodes[array].data = Data::Array(n);
@@ -739,14 +776,20 @@ impl Reader<'_> {
             Data::Struct(type_name.to_owned()),
             parent,
         ));
+        self.fill(me, type_name, at);
+        me
+    }
+
+    /// The fields of a structure read into its node.
+    fn fill(&mut self, me: usize, type_name: &str, at: u64) {
         if self.depth >= self.limits.depth {
             self.nodes[me].note = trf("deeper than {n} structures", &[("n", &self.limits.depth)]);
             self.nodes[me].error = true;
-            return me;
+            return;
         }
         let format = self.format;
         let Some(fields) = format.types.get(type_name) else {
-            return me;
+            return;
         };
         self.depth += 1;
         let mut here = at;
@@ -772,6 +815,7 @@ impl Reader<'_> {
                     Ok(v) => {
                         let mut node = Self::node(&field.name, here, Data::Int(v), Some(me));
                         node.show = field.show;
+                        node.note = self.named(field, v);
                         self.push(node);
                     }
                     Err(e) => {
@@ -793,18 +837,78 @@ impl Reader<'_> {
                     continue;
                 }
             };
-            let end = if field.count.is_some() || field.terminated {
+            if field.lazy {
+                if let Kind::Struct(t) = &kind {
+                    let mut node = Self::node(&field.name, from, Data::Struct(t.clone()), Some(me));
+                    node.pending = true;
+                    self.push(node);
+                }
+                continue;
+            }
+            let end = if field.count.is_some() || field.terminated || field.length.is_some() {
                 self.array(me, field, &kind, from, (me, here)).1
             } else {
                 self.item(me, &field.name, &kind, field, from, (me, here)).1
             };
             if field.place == Place::Next {
-                here = end.max(here);
+                here = align(end.max(here), field.align);
             }
         }
         self.depth -= 1;
         self.nodes[me].size = here - at;
-        me
+    }
+}
+
+/// An offset rounded up to a multiple of `to`.
+fn align(at: u64, to: u64) -> u64 {
+    if to <= 1 {
+        at
+    } else {
+        at.div_ceil(to).saturating_mul(to)
+    }
+}
+
+/// Reads the fields of a structure not read yet (a lazy field), when its node opens.
+pub fn expand(
+    tree: &mut Tree,
+    format: &Format,
+    source: &mut dyn Source,
+    node: usize,
+    limits: Limits,
+) {
+    let Some(n) = tree.nodes.get(node) else {
+        return;
+    };
+    let (Data::Struct(type_name), true) = (n.data.clone(), n.pending) else {
+        return;
+    };
+    let depth = tree.path(node).len() - 1;
+    let offset = n.offset;
+    let mut reader = Reader {
+        format,
+        source,
+        nodes: std::mem::take(&mut tree.nodes),
+        limits,
+        depth,
+        full: false,
+    };
+    reader.nodes[node].pending = false;
+    reader.fill(node, &type_name, offset);
+    tree.nodes = reader.nodes;
+    tree.errors = tree.nodes.iter().filter(|n| n.error).count();
+}
+
+/// Reads every structure not read yet, the ones they hold too, within the limits.
+pub fn expand_all(tree: &mut Tree, format: &Format, source: &mut dyn Source, limits: Limits) {
+    let mut i = 0;
+    while i < tree.nodes.len() {
+        if tree.nodes.len() >= limits.nodes {
+            break;
+        }
+        if tree.nodes[i].pending {
+            expand(tree, format, source, i, limits);
+        }
+        i += 1;
     }
 }
 
@@ -971,6 +1075,50 @@ mod tests {
         let t = read(&format, &mut vec![1u8; 1000], limits);
         assert_eq!(t.nodes[1].data, Data::Array(100));
         assert!(t.value(1).contains("the first 100"), "{}", t.value(1));
+    }
+
+    #[test]
+    fn a_lazy_field_opens_and_alignment_and_length_hold() {
+        let description = r#"{ "format": "wwformat", "version": 1, "name": "Later",
+            "extensions": [], "root": "file", "types": {
+                "file": { "fields": [
+                    { "name": "count", "type": "u8" },
+                    { "name": "word", "type": "text", "align": 4 },
+                    { "name": "tail", "type": "u8" },
+                    { "name": "later", "type": "pair", "lazy": true, "at": "4" },
+                    { "name": "list", "type": "u16", "length": "4", "at": "8" } ] },
+                "pair": { "fields": [
+                    { "name": "a", "type": "u8" }, { "name": "b", "type": "u8" } ] } } }"#;
+        let format = Format::parse(description).unwrap();
+        let mut bytes = vec![3u8, b'h', b'i', 0, 7, 8, 0, 0, 1, 0, 2, 0, 9, 0];
+        let mut t = read(&format, &mut bytes, Limits::default());
+        assert_eq!(
+            t.nodes[find(&t, &["word"])].data,
+            Data::Text("hi".to_owned())
+        );
+        let tail = find(&t, &["tail"]);
+        assert_eq!(
+            (t.nodes[tail].offset, t.nodes[tail].data.clone()),
+            (4, Data::Int(7)),
+            "after the padding"
+        );
+        let later = find(&t, &["later"]);
+        assert!(t.nodes[later].pending && t.nodes[later].children.is_empty());
+        assert!(
+            t.value(later).contains("read when it opens"),
+            "{}",
+            t.value(later)
+        );
+        let list = find(&t, &["list"]);
+        assert_eq!(t.nodes[list].data, Data::Array(2), "four bytes of items");
+        expand(&mut t, &format, &mut bytes, later, Limits::default());
+        assert!(!t.nodes[later].pending);
+        assert_eq!(t.nodes[find(&t, &["later", "b"])].data, Data::Int(8));
+        assert_eq!(t.nodes[later].size, 2);
+        // A tree of lazy fields is read whole on demand.
+        let mut t = read(&format, &mut bytes, Limits::default());
+        expand_all(&mut t, &format, &mut bytes, Limits::default());
+        assert!(t.nodes.iter().all(|n| !n.pending));
     }
 
     #[test]

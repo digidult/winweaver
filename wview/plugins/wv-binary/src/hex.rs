@@ -96,6 +96,8 @@ pub fn show(
         area = area.vertical_scroll_offset((row * row_height - view / 3.0).max(0.0));
     }
     let shown = rows.min(usize::MAX as u64 / 2) as usize;
+    // Rows one under the other: a row is `row_height` high, so the offset of a row is exact.
+    ui.spacing_mut().item_spacing.y = 0.0;
     area.show_rows(ui, row_height, shown, |ui, range| {
         let mut buffer = vec![0u8; per_row as usize];
         for row in range {

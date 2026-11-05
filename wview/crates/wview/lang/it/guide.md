@@ -52,6 +52,13 @@ importazioni e le esportazioni, ogni campo con il suo valore, il suo offset e la
   **Albero e byte** torna indietro.
 - Il file resta sul disco: la vista legge i blocchi che mostra. Un nodo che il file non contiene
   per intero (un file corto o danneggiato) ha un segno di avviso e dice perché.
+- Oltre alle intestazioni: le risorse (i loro tipi, nomi e lingue, un livello letto quando si
+  apre), le eccezioni di x64, i certificati, le rilocazioni, la directory di debug con il percorso
+  del PDB, TLS, la configurazione di caricamento, le importazioni ritardate e l'intestazione di
+  .NET con i flussi dei suoi metadati.
+- **Salva la struttura** scrive l'albero in un file `.wwbin`, accanto al file per impostazione
+  predefinita: ogni campo con il suo valore, ogni intervallo di byte grezzi con il suo SHA-256, il
+  file con la sua dimensione e il suo SHA-256, e nessuno dei suoi byte.
 - Altri formati arrivano come descrizioni, file `.wwformat` nella cartella `plugins\formats`;
   Impostazioni, Plugin elenca i formati letti e i file che non si sono letti.
 

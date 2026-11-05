@@ -54,6 +54,13 @@ die Exporte, jedes Feld mit seinem Wert, seinem Offset und seiner Größe.
 - Die Datei bleibt auf der Festplatte: die Ansicht liest die Blöcke, die sie zeigt. Ein Knoten,
   den die Datei nicht ganz hält (eine kurze oder beschädigte Datei), hat ein Warnzeichen und sagt
   warum.
+- Neben den Headern: die Ressourcen (ihre Typen, Namen und Sprachen, eine Ebene wird beim Öffnen
+  gelesen), die Ausnahmen von x64, die Zertifikate, die Relocations, das Debug-Verzeichnis mit dem
+  Pfad der PDB, TLS, die Ladekonfiguration, die verzögerten Importe und der Header von .NET mit
+  den Streams seiner Metadaten.
+- **Struktur speichern** schreibt den Baum als `.wwbin`-Datei, standardmäßig neben die Datei: jedes
+  Feld mit seinem Wert, jeder Bereich roher Bytes mit seinem SHA-256, die Datei mit ihrer Größe und
+  ihrem SHA-256, und keines ihrer Bytes.
 - Weitere Formate kommen als Beschreibungen, `.wwformat`-Dateien im Ordner `plugins\formats`;
   Einstellungen, Plugins zeigt die gelesenen Formate und die Dateien, die nicht gelesen wurden.
 

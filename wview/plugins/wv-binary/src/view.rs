@@ -1,20 +1,23 @@
 //! The view of a binary file: the tree of its description on the left and its bytes on the right
 //! (a node selected marks its bytes, a byte clicked selects the smallest node that holds it), or
-//! the tree as a Markdown page drawn by W#, with the search and the settings of any page.
+//! the tree as a Markdown page drawn by W#, with the search and the settings of any page. A node of
+//! a lazy field is read when it opens; Save the structure writes the tree as a `.wwbin`.
 
 use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 
 use wwrt::blocks::BlockFile;
 use wwrt::egui;
 use wwrt::plugin::{Host, Tool, View};
 use wwrt::ww::Search;
-use wwrt::ww::i18n::trf;
+use wwrt::ww::i18n::{tr, trf};
 use wwrt::ww::mdview::{self, MdDoc};
 use wwrt::ww::tree::{self, Check, Event, Row, Scroll};
 use wwrt::ww::widgets;
 
-use crate::engine::{Data, Tree};
-use crate::hex;
+use crate::engine::{self, Data, Limits, Tree};
+use crate::format::Format;
+use crate::{hex, wwbin};
 
 /// The items of a node the tree lists; the text view lists them all.
 const LISTED: usize = 10_000;
@@ -29,7 +32,11 @@ enum Mode {
 
 pub struct BinaryView {
     name: String,
-    format: String,
+    path: PathBuf,
+    format: &'static Format,
+    /// The SHA-256 of the text of the description.
+    description: String,
+    limits: Limits,
     tree: Tree,
     source: BlockFile,
     per_row: u64,
@@ -42,6 +49,15 @@ pub struct BinaryView {
     to_offset: Option<u64>,
     mode: Mode,
     page: Option<MdDoc>,
+    /// What the last save did.
+    saved: Option<String>,
+}
+
+/// The file a structure is saved to by default: the name of the file with `.wwbin` added.
+pub fn wwbin_path(path: &Path) -> PathBuf {
+    let mut name = path.file_name().unwrap_or_default().to_os_string();
+    name.push(".wwbin");
+    path.with_file_name(name)
 }
 
 /// A text of a page with the signs of Markdown escaped.
@@ -99,20 +115,28 @@ pub fn markdown(tree: &Tree, title: &str, format: &str) -> String {
 
 impl BinaryView {
     pub fn new(
-        name: String,
-        format: String,
+        path: &Path,
+        format: &'static Format,
+        description: String,
         mut tree: Tree,
         source: BlockFile,
         per_row: u64,
     ) -> Self {
+        let name = path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
         // The root is the file: its name, its format and all its bytes.
         let root = &mut tree.nodes[0];
         root.name = name.clone();
-        root.data = Data::Struct(format.clone());
+        root.data = Data::Struct(format.name.clone());
         root.size = source.len();
         BinaryView {
             name,
+            path: path.to_path_buf(),
             format,
+            description,
+            limits: Limits::default(),
             tree,
             source,
             per_row,
@@ -123,7 +147,60 @@ impl BinaryView {
             to_offset: None,
             mode: Mode::Bytes,
             page: None,
+            saved: None,
         }
+    }
+
+    /// Reads a node not read yet; the page is written again with it.
+    fn expand(&mut self, node: usize) {
+        if self.tree.nodes[node].pending {
+            engine::expand(
+                &mut self.tree,
+                self.format,
+                &mut self.source,
+                node,
+                self.limits,
+            );
+            self.tree.nodes[0].size = self.source.len();
+            self.page = None;
+        }
+    }
+
+    /// Writes the structure to a file, every node not read yet read first.
+    pub fn save_to(&mut self, path: &Path) -> Result<(), String> {
+        engine::expand_all(&mut self.tree, self.format, &mut self.source, self.limits);
+        self.tree.nodes[0].size = self.source.len();
+        self.page = None;
+        let doc = wwbin::document(
+            &self.tree,
+            &mut self.source,
+            &self.name,
+            &self.format.name,
+            &self.description,
+        );
+        let text = wwrt::serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())? + "\n";
+        wwrt::ww::dialogs::write_file(path, text.as_bytes())
+    }
+
+    /// Asks where to save the structure, next to the file by default, and saves it there.
+    fn save(&mut self) {
+        let default = wwbin_path(&self.path);
+        let mut dialog = wwrt::ww::rfd::FileDialog::new()
+            .add_filter(tr("Structure of a file"), &["wwbin"])
+            .set_file_name(default.file_name().unwrap_or_default().to_string_lossy());
+        if let Some(dir) = default.parent() {
+            dialog = dialog.set_directory(dir);
+        }
+        let Some(path) = dialog.save_file() else {
+            return;
+        };
+        self.saved = Some(match self.save_to(&path) {
+            Ok(()) => trf("Saved {path}", &[("path", &path.display())]),
+            Err(why) => trf(
+                "{path} was not saved: {why}",
+                &[("path", &path.display()), ("why", &why)],
+            ),
+        });
     }
 
     /// The rows of the open nodes, in the order of the tree, with a row for the items of an
@@ -154,7 +231,8 @@ impl BinaryView {
                 }
             };
             let node = &self.tree.nodes[n];
-            let open = (!node.children.is_empty()).then(|| self.open.contains(&n));
+            let opens = !node.children.is_empty() || node.pending;
+            let open = opens.then(|| self.open.contains(&n));
             let value = self.tree.value(n);
             let label = self.tree.label(n);
             out.push(Row {
@@ -196,7 +274,7 @@ impl BinaryView {
     }
 
     fn page(&mut self) -> &mut MdDoc {
-        let (tree, name, format) = (&self.tree, &self.name, &self.format);
+        let (tree, name, format) = (&self.tree, &self.name, &self.format.name);
         self.page
             .get_or_insert_with(|| MdDoc::new(name.clone(), None, markdown(tree, name, format)))
     }
@@ -218,6 +296,7 @@ impl BinaryView {
                 }
                 Event::Expand(n, open) => {
                     if open {
+                        self.expand(n);
                         self.open.insert(n);
                     } else {
                         self.open.remove(&n);
@@ -270,6 +349,11 @@ impl View for BinaryView {
                 icon: "\u{1F4C4}",
                 label: "Text",
             },
+            Tool {
+                id: "save",
+                icon: "\u{1F4BE}",
+                label: "Save the structure",
+            },
         ]
     }
 
@@ -280,6 +364,7 @@ impl View for BinaryView {
                 self.page();
                 self.mode = Mode::Text;
             }
+            "save" => self.save(),
             _ => {}
         }
     }
@@ -295,7 +380,7 @@ impl View for BinaryView {
         let mut line = trf(
             "{format}, {nodes} nodes, {size} bytes",
             &[
-                ("format", &self.format),
+                ("format", &self.format.name),
                 ("nodes", &self.tree.nodes.len()),
                 ("size", &self.source.len()),
             ],
@@ -306,6 +391,10 @@ impl View for BinaryView {
                 "{n} nodes not read whole",
                 &[("n", &self.tree.errors)],
             ));
+        }
+        if let Some(saved) = &self.saved {
+            line.push_str("; ");
+            line.push_str(saved);
         }
         let node = &self.tree.nodes[self.selected];
         line.push_str("; ");

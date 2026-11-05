@@ -120,6 +120,12 @@ struct FieldText {
     key: Option<Keys>,
     #[serde(default)]
     show: Show,
+    #[serde(default)]
+    lazy: bool,
+    #[serde(default)]
+    align: Option<u64>,
+    #[serde(default)]
+    length: Option<String>,
 }
 
 /// What a field holds.
@@ -171,6 +177,12 @@ pub struct Field {
     /// The paths whose value names an item of an array, the first one an item has.
     pub key: Vec<Vec<Part>>,
     pub show: Show,
+    /// A structure read when its node opens, not with the file.
+    pub lazy: bool,
+    /// The field (or each item of an array) ends at a multiple of so many bytes of the file.
+    pub align: u64,
+    /// The bytes of an array: its items until they fill them.
+    pub length: Option<Expr>,
 }
 
 pub struct Space {
@@ -305,6 +317,22 @@ fn field(f: FieldText, d: &Description) -> Result<Field, String> {
     }
     let count = parse(&f.count)?;
     let when = parse(&f.when)?;
+    let length = parse(&f.length)?;
+    if length.is_some() && count.is_some() {
+        return Err(at("an array has a count or a length".to_owned()));
+    }
+    let align = f.align.unwrap_or(1);
+    if !(1..=4096).contains(&align) {
+        return Err(at(format!("an alignment of {align}")));
+    }
+    if f.lazy {
+        let structures = kinds.iter().all(|k| matches!(k, Kind::Struct(_)));
+        if !structures || place == Place::Next || count.is_some() || f.terminated {
+            return Err(at(
+                "a lazy field is one structure at an offset or an rva".to_owned()
+            ));
+        }
+    }
     Ok(Field {
         name: f.name,
         kind,
@@ -320,6 +348,9 @@ fn field(f: FieldText, d: &Description) -> Result<Field, String> {
         flags: f.flags,
         key: paths,
         show: f.show,
+        lazy: f.lazy,
+        align,
+        length,
     })
 }
 
@@ -501,6 +532,9 @@ mod tests {
             (r#""bytes": "53 4D""#, r#""bytes": "5""#),
             (r#""type": "u8" }"#, r#""type": "raw" }"#),
             (r#""type": "u8" }"#, r#""type": "u8", "rva": "1" }"#),
+            (r#""type": "u8" }"#, r#""type": "u8", "lazy": true }"#),
+            (r#""count": "count""#, r#""count": "count", "length": "2""#),
+            (r#""show": "hex""#, r#""show": "hex", "align": 0"#),
         ];
         for (from, to) in wrong {
             let text = SMALL.replacen(from, to, 1);

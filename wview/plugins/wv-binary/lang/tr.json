@@ -3,6 +3,9 @@
   "Block of the file": "Dosya bloğu",
   "Bytes in a row": "Satır başına bayt",
   "Cache of the blocks": "Blok önbelleği",
+  "Save the structure": "Yapıyı kaydet",
+  "Saved {path}": "{path} kaydedildi",
+  "Structure of a file": "Bir dosyanın yapısı",
   "Text": "Metin",
   "The page shows the first {n} nodes.": "Sayfa ilk {n} düğümü gösterir.",
   "The settings apply to the files opened after a change.": "Ayarlar, değişiklikten sonra açılan dosyalara uygulanır.",
@@ -24,6 +27,7 @@
   "not a file of the format {format}": "{format} biçiminde bir dosya değil",
   "past the end of the file at {at}": "{at} konumunda dosyanın sonundan sonra",
   "raw bytes without a size": "boyutu olmayan ham baytlar",
+  "read when it opens": "açıldığında okunur",
   "the first {n} items": "ilk {n} öğe",
   "the first {n} of {count} items": "{count} öğenin ilk {n} tanesi",
   "the rva {rva} has no bytes in the file": "{rva} rva değerinin dosyada baytı yok",
@@ -41,5 +45,6 @@
   "{n} more items in the text view": "metin görünümünde {n} öğe daha",
   "{n} nodes not read whole": "{n} düğüm tamamen okunmadı",
   "{path} is not a number": "{path} bir sayı değil",
+  "{path} was not saved: {why}": "{path} kaydedilmedi: {why}",
   "{size} bytes at {at} past the end of the file": "{at} konumunda dosyanın sonundan sonra {size} bayt"
 }

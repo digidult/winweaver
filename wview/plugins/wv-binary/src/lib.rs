@@ -21,6 +21,7 @@ mod expr;
 mod format;
 mod hex;
 mod view;
+mod wwbin;
 
 use format::Format;
 
@@ -49,10 +50,16 @@ static TRANSLATIONS: [(&str, &str); 8] = [
     ("tr", include_str!("../lang/tr.json")),
 ];
 
-/// The descriptions read once: the formats, where each came from, and the files that did not
-/// read with the reason.
+/// A description read: the format, where it came from and the SHA-256 of its text.
+struct Described {
+    format: Format,
+    from: String,
+    sha256: String,
+}
+
+/// The descriptions read once: the formats and the files that did not read with the reason.
 struct Formats {
-    list: Vec<(Format, String)>,
+    list: Vec<Described>,
     problems: Vec<(String, String)>,
     shown: &'static [plugin::Format],
 }
@@ -91,8 +98,13 @@ fn module_dir() -> Option<PathBuf> {
 fn load() -> Formats {
     let mut list = Vec::new();
     let mut problems = Vec::new();
+    let sha = |text: &str| wwbin::hex(&<sha2::Sha256 as sha2::Digest>::digest(text.as_bytes()));
     match Format::parse(PE) {
-        Ok(f) => list.push((f, tr("built in").to_owned())),
+        Ok(format) => list.push(Described {
+            format,
+            from: tr("built in").to_owned(),
+            sha256: sha(PE),
+        }),
         Err(e) => problems.push(("pe.wwformat".to_owned(), e)),
     }
     if let Some(dir) = module_dir().map(|d| d.join("formats"))
@@ -118,10 +130,14 @@ fn load() -> Formats {
                 }
                 _ => std::fs::read_to_string(&file).map_err(|e| e.to_string()),
             };
-            match text.and_then(|t| Format::parse(&t)) {
-                Ok(f) => {
-                    list.retain(|(g, _)| g.name != f.name);
-                    list.push((f, shown));
+            match text.and_then(|t| Format::parse(&t).map(|f| (f, sha(&t)))) {
+                Ok((format, sha256)) => {
+                    list.retain(|d| d.format.name != format.name);
+                    list.push(Described {
+                        format,
+                        from: shown,
+                        sha256,
+                    });
                 }
                 Err(e) => problems.push((shown, e)),
             }
@@ -129,7 +145,7 @@ fn load() -> Formats {
     }
     let shown: Vec<plugin::Format> = list
         .iter()
-        .map(|(f, _)| plugin::Format {
+        .map(|Described { format: f, .. }| plugin::Format {
             name: Box::leak(f.name.clone().into_boxed_str()),
             extensions: Box::leak(
                 f.extensions
@@ -174,30 +190,26 @@ impl Plugin for BinaryPlugin {
             .extension()
             .map(|e| e.to_string_lossy().to_lowercase())
             .unwrap_or_default();
-        let candidates: Vec<&Format> = formats()
+        let candidates: Vec<&'static Described> = formats()
             .list
             .iter()
-            .map(|(f, _)| f)
-            .filter(|f| f.extensions.contains(&extension))
+            .filter(|d| d.format.extensions.contains(&extension))
             .collect();
-        let Some(found) = candidates
-            .iter()
-            .find(|f| f.knows(&mut |at, out| engine::Source::read(&mut file, at, out)))
-        else {
-            let name = candidates.first().map_or("?", |f| f.name.as_str());
+        let Some(found) = candidates.iter().find(|d| {
+            d.format
+                .knows(&mut |at, out| engine::Source::read(&mut file, at, out))
+        }) else {
+            let name = candidates.first().map_or("?", |d| d.format.name.as_str());
             return Err(trf(
                 "not a file of the format {format}",
                 &[("format", &name)],
             ));
         };
-        let tree = engine::read(found, &mut file, engine::Limits::default());
-        let name = path
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_default();
+        let tree = engine::read(&found.format, &mut file, engine::Limits::default());
         Ok(Box::new(view::BinaryView::new(
-            name,
-            found.name.clone(),
+            path,
+            &found.format,
+            found.sha256.clone(),
             tree,
             file,
             per_row,
@@ -258,13 +270,13 @@ impl Plugin for BinaryPlugin {
         );
         ui.weak(tr("The settings apply to the files opened after a change."));
         ui.add_space(4.0);
-        for (f, from) in &formats().list {
+        for d in &formats().list {
             ui.label(trf(
                 "{format} ({from}): {extensions}",
                 &[
-                    ("format", &f.name),
-                    ("from", from),
-                    ("extensions", &f.extensions.join(", ")),
+                    ("format", &d.format.name),
+                    ("from", &d.from),
+                    ("extensions", &d.format.extensions.join(", ")),
                 ],
             ));
         }
@@ -356,6 +368,147 @@ mod tests {
                 .filter(|n| n.error)
                 .map(|n| (&n.name, &n.note))
                 .collect::<Vec<_>>()
+        );
+    }
+
+    fn system(parts: &[&str]) -> PathBuf {
+        let root =
+            std::env::var_os("SystemRoot").map_or(PathBuf::from(r"C:\Windows"), PathBuf::from);
+        parts.iter().fold(root, |p, part| p.join(part))
+    }
+
+    /// The node of a path of names from the root, with the items of an array by their key.
+    fn find(tree: &engine::Tree, path: &[&str]) -> usize {
+        path.iter().fold(0, |at, name| {
+            tree.nodes[at]
+                .children
+                .iter()
+                .copied()
+                .find(|c| {
+                    let n = &tree.nodes[*c];
+                    n.name == *name || n.key.as_deref() == Some(*name)
+                })
+                .unwrap_or_else(|| panic!("no {name} in {}", tree.label(at)))
+        })
+    }
+
+    /// The rest of PE in a DLL of this Windows: its resources read when they open, its exceptions,
+    /// relocations, debug directory with the path of its PDB, and its load configuration.
+    #[test]
+    #[cfg(windows)]
+    fn the_rest_of_a_dll_of_windows_reads_whole() {
+        let path = system(&["System32", "kernel32.dll"]);
+        let format = Format::parse(PE).unwrap();
+        let mut file = BlockFile::open(&path, 64 << 10, 16 << 20).unwrap();
+        let mut tree = engine::read(&format, &mut file, engine::Limits::default());
+        let version = find(&tree, &["resources", "entries", "VERSION"]);
+        let names = find(&tree, &["resources", "entries", "VERSION", "names"]);
+        assert!(tree.nodes[names].pending, "{}", tree.label(version));
+        engine::expand(
+            &mut tree,
+            &format,
+            &mut file,
+            names,
+            engine::Limits::default(),
+        );
+        assert!(!tree.nodes[names].children.is_empty());
+        engine::expand_all(&mut tree, &format, &mut file, engine::Limits::default());
+        assert!(tree.nodes.iter().all(|n| !n.pending));
+        let pdb = find(&tree, &["debug", "CODEVIEW", "codeview", "pdb"]);
+        assert_eq!(
+            tree.nodes[pdb].data,
+            engine::Data::Text("kernel32.pdb".to_owned())
+        );
+        let relocations = find(&tree, &["relocations"]);
+        assert!(!tree.nodes[relocations].children.is_empty());
+        let exceptions = find(&tree, &["exceptions"]);
+        assert!(
+            tree.nodes[exceptions].children.len() > 100,
+            "{}",
+            tree.value(exceptions)
+        );
+        let size = find(&tree, &["load_config", "size"]);
+        assert!(matches!(tree.nodes[size].data, engine::Data::Int(s) if s >= 64));
+        assert_eq!(
+            tree.errors,
+            0,
+            "{:?}",
+            tree.nodes
+                .iter()
+                .filter(|n| n.error)
+                .map(|n| (&n.name, &n.note))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    /// The header of .NET and the streams of its metadata in an assembly of this Windows.
+    #[test]
+    #[cfg(windows)]
+    fn an_assembly_of_dotnet_shows_its_metadata() {
+        let path = system(&["Microsoft.NET", "Framework64", "v4.0.30319", "System.dll"]);
+        if !path.is_file() {
+            eprintln!("no {} on this Windows", path.display());
+            return;
+        }
+        let format = Format::parse(PE).unwrap();
+        let mut file = BlockFile::open(&path, 64 << 10, 16 << 20).unwrap();
+        let tree = engine::read(&format, &mut file, engine::Limits::default());
+        let signature = find(&tree, &["clr", "metadata_root", "signature"]);
+        assert_eq!(
+            tree.nodes[signature].data,
+            engine::Data::Int(0x424A_5342),
+            "BSJB"
+        );
+        let streams = find(&tree, &["clr", "metadata_root", "stream_headers"]);
+        let keys: Vec<String> = tree.nodes[streams]
+            .children
+            .iter()
+            .map(|s| tree.label(*s))
+            .collect();
+        assert!(keys.iter().any(|k| k.ends_with("#Strings")), "{keys:?}");
+        assert!(
+            tree.value(find(&tree, &["clr", "flags"]))
+                .contains("ILONLY")
+        );
+    }
+
+    /// The structure saved as a .wwbin: the file with its SHA-256, every node read.
+    #[test]
+    #[cfg(windows)]
+    fn a_structure_is_saved_and_reads_back() {
+        let path = system(&["System32", "kernel32.dll"]);
+        let described = &formats().list[0];
+        let mut file = BlockFile::open(&path, 64 << 10, 16 << 20).unwrap();
+        let tree = engine::read(&described.format, &mut file, engine::Limits::default());
+        let mut view = view::BinaryView::new(
+            &path,
+            &described.format,
+            described.sha256.clone(),
+            tree,
+            file,
+            16,
+        );
+        let dir = std::env::temp_dir().join(format!("wv-binary-save-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let out = dir.join("kernel32.dll.wwbin");
+        view.save_to(&out).unwrap();
+        let doc: Value =
+            wwrt::serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap();
+        let bytes = std::fs::read(&path).unwrap();
+        let sha = wwbin::hex(&<sha2::Sha256 as sha2::Digest>::digest(&bytes));
+        assert_eq!(doc["file"]["sha256"], sha);
+        assert_eq!(doc["file"]["size"], bytes.len() as u64);
+        assert_eq!(doc["description"]["sha256"], described.sha256);
+        assert_eq!(doc["tree"]["name"], "kernel32.dll");
+        let text = std::fs::read_to_string(&out).unwrap();
+        assert!(
+            text.contains("\"kernel32.pdb\""),
+            "the resources and the debug directory are in it"
+        );
+        assert!(!text.contains("read when it opens"));
+        assert_eq!(
+            view::wwbin_path(&path).file_name().unwrap(),
+            "kernel32.dll.wwbin"
         );
     }
 

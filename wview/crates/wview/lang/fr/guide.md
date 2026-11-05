@@ -53,6 +53,13 @@ importations et les exportations, chaque champ avec sa valeur, son décalage et 
 - Le fichier reste sur le disque : la vue lit les blocs qu'elle montre. Un nœud que le fichier ne
   contient pas en entier (un fichier court ou abîmé) porte un signe d'avertissement et dit
   pourquoi.
+- En plus des en-têtes : les ressources (leurs types, noms et langues, un niveau lu à son
+  ouverture), les exceptions de x64, les certificats, les relocalisations, le répertoire de
+  débogage avec le chemin du PDB, TLS, la configuration de chargement, les importations différées
+  et l'en-tête de .NET avec les flux de ses métadonnées.
+- **Enregistrer la structure** écrit l'arbre dans un fichier `.wwbin`, à côté du fichier par
+  défaut : chaque champ avec sa valeur, chaque plage d'octets bruts avec son SHA-256, le fichier
+  avec sa taille et son SHA-256, et aucun de ses octets.
 - D'autres formats viennent comme descriptions, des fichiers `.wwformat` dans le dossier
   `plugins\formats` ; Paramètres, Modules liste les formats lus et les fichiers qui ne se sont pas
   lus.

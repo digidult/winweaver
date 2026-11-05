@@ -50,6 +50,12 @@ değeri, uzaklığı ve boyutuyla.
   baytlar** geri döner.
 - Dosya diskte kalır: görünüm yalnızca gösterdiği blokları okur. Dosyanın tamamını tutmadığı bir
   düğüm (kısa veya bozuk bir dosya) bir uyarı işareti taşır ve nedenini söyler.
+- Başlıkların yanında: kaynaklar (türleri, adları ve dilleri, bir düzey açıldığında okunur), x64
+  istisnaları, sertifikalar, yer değiştirmeler, PDB yoluyla hata ayıklama dizini, TLS, yükleme
+  yapılandırması, gecikmeli içe aktarmalar ve meta verilerinin akışlarıyla .NET başlığı.
+- **Yapıyı kaydet** ağacı varsayılan olarak dosyanın yanına bir `.wwbin` dosyası olarak yazar: her
+  alan değeriyle, her ham bayt aralığı SHA-256'sıyla, dosya boyutu ve SHA-256'sıyla, baytlarından
+  hiçbiri olmadan.
 - Başka biçimler açıklama olarak gelir, `plugins\formats` klasöründeki `.wwformat` dosyaları;
   Ayarlar, Eklentiler okunan biçimleri ve okunamayan dosyaları listeler.
 
