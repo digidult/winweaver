@@ -37,12 +37,28 @@ kuruluysa HEIF, AVIF, WebP veya fotoğraf makinelerinin RAW dosyaları.
   açıkken çözülür ve yakınlaştırmanın gerektirdiği ayrıntıyla parça parça çizilir; ayarlardaki
   sınırın üzerindeki bir görüntü küçültülerek çözülür ve durum çubuğu bunu söyler.
 
+## İkili dosyalar
+
+Windows'un programları ve kitaplıkları (`.exe`, `.dll`, `.sys` ve Portable Executable'ın diğer
+dosyaları) yapılarının ağacı olarak açılır: başlıklar, bölümler, içe ve dışa aktarmalar, her alan
+değeri, uzaklığı ve boyutuyla.
+
+- Solda ağaç: bir tıklama veya oklar bir düğümü seçer, sağ ve sol onu açar ve kapatır. Sağda
+  dosyanın baytları, ASCII'leriyle satır başına 16: seçilen düğümün baytları işaretlidir ve bir
+  bayta tıklama onu tutan en küçük düğümü seçer.
+- Çubuktaki **Metin** ağacı sekmenin aramasıyla (Ctrl+F) bir sayfa olarak gösterir; **Ağaç ve
+  baytlar** geri döner.
+- Dosya diskte kalır: görünüm yalnızca gösterdiği blokları okur. Dosyanın tamamını tutmadığı bir
+  düğüm (kısa veya bozuk bir dosya) bir uyarı işareti taşır ve nedenini söyler.
+- Başka biçimler açıklama olarak gelir, `plugins\formats` klasöründeki `.wwformat` dosyaları;
+  Ayarlar, Eklentiler okunan biçimleri ve okunamayan dosyaları listeler.
+
 ## Ayarlar
 
 **Ayarlar**, **Eklentiler** eklentileri ayarlarıyla listeler: açılacak en büyük metin dosyası;
-%100'ün üzerinde yumuşatılmış pikseller, EXIF yönü, açıldığında oynatılan bir animasyon ve
-tamamen çözülen en büyük görüntü (64, 256 veya 1024 megapiksel). Ayarlar programın yanındaki
-`wview.settings.json` dosyasında tutulur.
+%100'ün üzerinde yumuşatılmış pikseller, EXIF yönü, açıldığında oynatılan bir animasyon ve tamamen
+çözülen en büyük görüntü (64, 256 veya 1024 megapiksel); satır başına bayt, bir ikili dosyanın bloğu
+ve bloklarının önbelleği. Ayarlar programın yanındaki `wview.settings.json` dosyasında tutulur.
 
 ## Komut satırı
 

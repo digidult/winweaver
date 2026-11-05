@@ -35,12 +35,28 @@ WebP or the RAW of cameras where their extensions are installed.
   decoded while its tab is open already and is drawn in parts at the detail the zoom needs; an
   image above the limit of the settings is decoded smaller, and the status bar says so.
 
+## Binary files
+
+Programs and libraries of Windows (`.exe`, `.dll`, `.sys` and the other files of the Portable
+Executable) open as the tree of their structure: the headers, the sections, the imports and the
+exports, every field with its value, its offset and its size.
+
+- On the left the tree: a click or the arrows select a node, Right and Left open and close it. On
+  the right the bytes of the file, 16 a row with their ASCII: the bytes of the node selected are
+  marked, and a click on a byte selects the smallest node that holds it.
+- **Text** in the bar shows the tree as a page, with the search of the tab (Ctrl+F); **Tree and
+  bytes** goes back.
+- The file stays on the disk: the view reads the blocks it shows. A node the file does not hold
+  whole (a short or damaged file) has a warning sign and says why.
+- More formats come as descriptions, `.wwformat` files in the folder `plugins\formats`; Settings,
+  Plugins lists the formats read and the files that did not read.
+
 ## Settings
 
 **Settings**, **Plugins** lists the plugins with their settings: the largest text file to open;
-smooth pixels above 100%, the orientation of EXIF, an animation played when it opens and the
-largest image decoded whole (64, 256 or 1024 megapixels). The settings are kept in
-`wview.settings.json` next to the program.
+smooth pixels above 100%, the orientation of EXIF, an animation played when it opens and the largest
+image decoded whole (64, 256 or 1024 megapixels); the bytes in a row, the block of a binary file and
+the cache of its blocks. The settings are kept in `wview.settings.json` next to the program.
 
 ## Command line
 

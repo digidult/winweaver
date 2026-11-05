@@ -25,13 +25,14 @@ serde_json = "1"
 
 [target.'cfg(windows)'.dependencies]
 # Re-exported for the plugins (wwrt::windows): WIC of the images with their metadata (a
-# PROPVARIANT), the console of the command line.
+# PROPVARIANT), the folder of a plugin's DLL, the console of the command line.
 windows = { version = "0.62.2", features = [
     "Win32_Foundation",
     "Win32_Graphics_Imaging",
     "Win32_System_Com",
     "Win32_System_Com_StructuredStorage",
     "Win32_System_Console",
+    "Win32_System_LibraryLoader",
     "Win32_System_Variant",
 ] }
 # The error mode of the thread while a plugin loads (no dialog of Windows for a missing import).

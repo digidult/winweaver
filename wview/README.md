@@ -9,6 +9,7 @@ a workspace of its own (docs/plugins.md, the study, the design and the phases).
 | `crates/wview` | the program: a tab a file, the page of the plugins, Settings, Plugins, the guide; `--plugins`, `--probe FILE` |
 | `plugins/wv-text` | Markdown pages and text files, two formats in one plugin |
 | `plugins/wv-image` | images through the Windows Imaging Component: decoded in a thread, kept with their levels and drawn in tiles of the level the zoom needs, the frames of a GIF played, the pages of a TIFF or an ICO, the orientation of EXIF; fit, zoom, the mouse, the keys and the steps through the folder; `sample`, the BMP and the GIF of the tests |
+| `plugins/wv-binary` | binary files read by a description of their format (`formats/pe.wwformat` built in, more in the folder `formats` next to the DLL): `expr` and `format` (the language), `engine` (the tree, the bytes left in the file), `hex` and `view` (the tree with the bytes, the tree as a page) |
 | `plugins/wv-hello` | the template of a plugin, the one the SDK carries |
 | `sdk/` | `README.md` of the SDK and `pack.py`, which makes the tree of a release: W# in `framework/`, wwrt and wview in `crates/`, the plugins, the lock file, the flags and the compiler; the release is built in it, and it is the SDK |
 | `package/README.md` | the README of the archive of wview, for its user |
@@ -26,7 +27,7 @@ opt-level 2, else `wwrt.dll` holds more than the 65535 exports of a DLL. The cra
 `../crates` by path, so `Cargo.lock` here keeps their versions with the ones of WinWeaver.
 
 `target\release` then holds `wview.exe`, `wwrt.dll` and the plugins `wv_text.dll`,
-`wv_image.dll` and `wv_hello.dll` (the template; the archive leaves it out). A folder to copy anywhere: `wview.exe`, `wwrt.dll`, `std-<hash>.dll` of the
+`wv_image.dll`, `wv_binary.dll` and `wv_hello.dll` (the template; the archive leaves it out). A folder to copy anywhere: `wview.exe`, `wwrt.dll`, `std-<hash>.dll` of the
 toolchain (`rustc --print sysroot`, then `bin`; with the toolchain gnu also `libgcc_s_seh-1.dll`
 and `libwinpthread-1.dll` of it), and the plugins in `plugins\`.
 
@@ -36,6 +37,6 @@ A plugin depends on `wwrt` alone and takes every shared crate through it (`wwrt:
 `wwrt::testing`. Each declares the feature `library = []`, with which `wwrt::plugin!` exports
 nothing: the tests of wview take the plugins as libraries into one executable. The tests of the
 window draw it with `wwrt::egui_kittest` (the feature `kittest` of wwrt), and with
-`WINWEAVER_SCREENSHOTS` they save the screenshots `v1-` to `v8-` there. CI and `build-all.cmd`
+`WINWEAVER_SCREENSHOTS` they save the screenshots `v1-` to `v10-` there. CI and `build-all.cmd`
 pack `wview-<version>` and `wview-sdk-<version>`; CI builds the template of the SDK in another
 folder and loads it into wview (AGENTS.md, section 6).

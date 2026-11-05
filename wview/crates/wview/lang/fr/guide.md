@@ -39,12 +39,31 @@ AVIF, WebP ou le RAW des appareils photo là où leurs extensions sont installé
   besoin ; une image au-delà de la limite des paramètres est décodée en plus petit, et la barre
   d'état le dit.
 
+## Fichiers binaires
+
+Les programmes et les bibliothèques de Windows (`.exe`, `.dll`, `.sys` et les autres fichiers du
+Portable Executable) s'ouvrent comme l'arbre de leur structure : les en-têtes, les sections, les
+importations et les exportations, chaque champ avec sa valeur, son décalage et sa taille.
+
+- À gauche l'arbre : un clic ou les flèches choisissent un nœud, droite et gauche l'ouvrent et le
+  ferment. À droite les octets du fichier, 16 par ligne avec leur ASCII : les octets du nœud choisi
+  sont marqués, et un clic sur un octet choisit le plus petit nœud qui le contient.
+- **Texte** dans la barre montre l'arbre comme une page, avec la recherche de l'onglet (Ctrl+F) ;
+  **Arbre et octets** revient.
+- Le fichier reste sur le disque : la vue lit les blocs qu'elle montre. Un nœud que le fichier ne
+  contient pas en entier (un fichier court ou abîmé) porte un signe d'avertissement et dit
+  pourquoi.
+- D'autres formats viennent comme descriptions, des fichiers `.wwformat` dans le dossier
+  `plugins\formats` ; Paramètres, Modules liste les formats lus et les fichiers qui ne se sont pas
+  lus.
+
 ## Paramètres
 
 **Paramètres**, **Modules** liste les modules avec leurs paramètres : le plus grand fichier texte à
-ouvrir ; des pixels lissés au-delà de 100%, l'orientation EXIF, une animation lue à son ouverture
-et la plus grande image décodée entière (64, 256 ou 1024 mégapixels). Les paramètres sont gardés
-dans `wview.settings.json` à côté du programme.
+ouvrir ; des pixels lissés au-delà de 100%, l'orientation EXIF, une animation lue à son ouverture et
+la plus grande image décodée entière (64, 256 ou 1024 mégapixels) ; les octets par ligne, le bloc
+d'un fichier binaire et le cache de ses blocs. Les paramètres sont gardés dans `wview.settings.json`
+à côté du programme.
 
 ## Ligne de commande
 

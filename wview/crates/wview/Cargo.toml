@@ -16,3 +16,4 @@ wwrt = { path = "../wwrt" }
 wwrt = { path = "../wwrt", features = ["kittest"] }
 wv-text = { path = "../../plugins/wv-text", features = ["library"] }
 wv-image = { path = "../../plugins/wv-image", features = ["library"] }
+wv-binary = { path = "../../plugins/wv-binary", features = ["library"] }

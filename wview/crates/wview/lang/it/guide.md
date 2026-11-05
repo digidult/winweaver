@@ -39,12 +39,29 @@ WebP o il RAW delle fotocamere dove le loro estensioni sono installate.
   serve allo zoom; un'immagine oltre il limite delle impostazioni viene decodificata più piccola, e
   la barra di stato lo dice.
 
+## File binari
+
+I programmi e le librerie di Windows (`.exe`, `.dll`, `.sys` e gli altri file del Portable
+Executable) si aprono come l'albero della loro struttura: le intestazioni, le sezioni, le
+importazioni e le esportazioni, ogni campo con il suo valore, il suo offset e la sua dimensione.
+
+- A sinistra l'albero: un clic o le frecce scelgono un nodo, destra e sinistra lo aprono e lo
+  chiudono. A destra i byte del file, 16 per riga con il loro ASCII: i byte del nodo scelto sono
+  segnati, e un clic su un byte sceglie il nodo più piccolo che lo contiene.
+- **Testo** nella barra mostra l'albero come una pagina, con la ricerca della scheda (Ctrl+F);
+  **Albero e byte** torna indietro.
+- Il file resta sul disco: la vista legge i blocchi che mostra. Un nodo che il file non contiene
+  per intero (un file corto o danneggiato) ha un segno di avviso e dice perché.
+- Altri formati arrivano come descrizioni, file `.wwformat` nella cartella `plugins\formats`;
+  Impostazioni, Plugin elenca i formati letti e i file che non si sono letti.
+
 ## Impostazioni
 
 **Impostazioni**, **Plugin** elenca i plugin con le loro impostazioni: il file di testo più grande
 da aprire; i pixel smussati oltre il 100%, l'orientamento EXIF, un'animazione riprodotta
-all'apertura e l'immagine più grande decodificata intera (64, 256 o 1024 megapixel). Le
-impostazioni stanno in `wview.settings.json` accanto al programma.
+all'apertura e l'immagine più grande decodificata intera (64, 256 o 1024 megapixel); i byte per
+riga, il blocco di un file binario e la cache dei suoi blocchi. Le impostazioni stanno in
+`wview.settings.json` accanto al programma.
 
 ## Riga di comando
 

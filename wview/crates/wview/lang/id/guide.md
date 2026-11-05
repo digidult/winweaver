@@ -38,12 +38,28 @@ AVIF, WebP atau RAW kamera bila ekstensinya terpasang.
   sudah terbuka dan digambar per bagian dengan detail yang dibutuhkan zoom; gambar di atas batas
   pengaturan didekode lebih kecil, dan bilah status menyebutkannya.
 
+## File biner
+
+Program dan pustaka Windows (`.exe`, `.dll`, `.sys` dan file Portable Executable lainnya) terbuka
+sebagai pohon strukturnya: header, bagian, impor dan ekspor, setiap bidang dengan nilai, offset
+dan ukurannya.
+
+- Di kiri pohon: klik atau panah memilih simpul, kanan dan kiri membuka dan menutupnya. Di kanan
+  byte file, 16 per baris dengan ASCII-nya: byte simpul yang dipilih ditandai, dan klik pada
+  sebuah byte memilih simpul terkecil yang memuatnya.
+- **Teks** di bilah menampilkan pohon sebagai halaman, dengan pencarian tab (Ctrl+F); **Pohon dan
+  byte** kembali.
+- File tetap di disk: tampilan membaca blok yang ditampilkannya. Simpul yang tidak dimuat utuh
+  oleh file (file pendek atau rusak) memiliki tanda peringatan dan menyebutkan alasannya.
+- Format lain datang sebagai deskripsi, file `.wwformat` di folder `plugins\formats`; Pengaturan,
+  Plugin menampilkan format yang terbaca dan file yang tidak terbaca.
+
 ## Pengaturan
 
-**Pengaturan**, **Plugin** menampilkan plugin dengan pengaturannya: file teks terbesar yang
-dibuka; piksel yang dihaluskan di atas 100%, orientasi EXIF, animasi yang diputar saat dibuka dan
-gambar terbesar yang didekode utuh (64, 256 atau 1024 megapiksel). Pengaturan disimpan di
-`wview.settings.json` di samping program.
+**Pengaturan**, **Plugin** menampilkan plugin dengan pengaturannya: file teks terbesar yang dibuka;
+piksel yang dihaluskan di atas 100%, orientasi EXIF, animasi yang diputar saat dibuka dan gambar
+terbesar yang didekode utuh (64, 256 atau 1024 megapiksel); byte per baris, blok file biner dan
+cache bloknya. Pengaturan disimpan di `wview.settings.json` di samping program.
 
 ## Baris perintah
 

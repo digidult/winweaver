@@ -38,12 +38,29 @@ AVIF, WebP o el RAW de las cámaras donde sus extensiones están instaladas.
   una imagen por encima del límite de la configuración se decodifica más pequeña, y la barra de
   estado lo dice.
 
+## Archivos binarios
+
+Los programas y bibliotecas de Windows (`.exe`, `.dll`, `.sys` y los demás archivos del Portable
+Executable) se abren como el árbol de su estructura: los encabezados, las secciones, las
+importaciones y las exportaciones, cada campo con su valor, su desplazamiento y su tamaño.
+
+- A la izquierda el árbol: un clic o las flechas seleccionan un nodo, derecha e izquierda lo abren
+  y lo cierran. A la derecha los bytes del archivo, 16 por fila con su ASCII: los bytes del nodo
+  seleccionado están marcados, y un clic en un byte selecciona el nodo más pequeño que lo contiene.
+- **Texto** en la barra muestra el árbol como una página, con la búsqueda de la pestaña (Ctrl+F);
+  **Árbol y bytes** vuelve atrás.
+- El archivo se queda en el disco: la vista lee los bloques que muestra. Un nodo que el archivo no
+  contiene entero (un archivo corto o dañado) tiene un signo de aviso y dice por qué.
+- Más formatos llegan como descripciones, archivos `.wwformat` en la carpeta `plugins\formats`;
+  Configuración, Complementos enumera los formatos leídos y los archivos que no se leyeron.
+
 ## Configuración
 
 **Configuración**, **Complementos** enumera los complementos con su configuración: el archivo de
 texto más grande que se abre; píxeles suavizados por encima del 100%, la orientación EXIF, una
 animación reproducida al abrirla y la imagen más grande decodificada entera (64, 256 o 1024
-megapíxeles). La configuración se guarda en `wview.settings.json` junto al programa.
+megapíxeles); los bytes por fila, el bloque de un archivo binario y la caché de sus bloques. La
+configuración se guarda en `wview.settings.json` junto al programa.
 
 ## Línea de comandos
 

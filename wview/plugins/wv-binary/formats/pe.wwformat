@@ -1,0 +1,267 @@
+{
+  "format": "wwformat",
+  "version": 1,
+  "name": "Portable Executable",
+  "extensions": ["exe", "dll", "sys", "ocx", "cpl", "efi", "mui", "scr", "drv"],
+  "endian": "little",
+  "magic": [{ "at": 0, "bytes": "4D5A" }],
+  "root": "file",
+  "spaces": {
+    "rva": {
+      "table": "sections",
+      "virtual": "virtual_address",
+      "size": "virtual_size",
+      "file": "pointer_to_raw_data",
+      "file_size": "size_of_raw_data"
+    }
+  },
+  "types": {
+    "file": { "fields": [
+      { "name": "dos_header", "type": "IMAGE_DOS_HEADER" },
+      { "name": "nt_headers", "type": "IMAGE_NT_HEADERS", "at": "dos_header.e_lfanew",
+        "when": "u32(dos_header.e_lfanew) == 0x4550" },
+      { "name": "sections", "type": "IMAGE_SECTION_HEADER", "key": "name",
+        "count": "nt_headers.file_header.number_of_sections",
+        "at": "nt_headers.optional_header.@offset + nt_headers.file_header.size_of_optional_header" },
+      { "name": "exports", "type": "IMAGE_EXPORT_DIRECTORY",
+        "rva": "nt_headers.optional_header.data_directories.export_table.virtual_address",
+        "when": "nt_headers.optional_header.data_directories.export_table.size != 0" },
+      { "name": "imports", "type": "IMAGE_IMPORT_DESCRIPTOR", "key": "dll", "terminated": true,
+        "rva": "nt_headers.optional_header.data_directories.import_table.virtual_address",
+        "when": "nt_headers.optional_header.data_directories.import_table.size != 0" }
+    ] },
+    "IMAGE_DOS_HEADER": { "fields": [
+      { "name": "e_magic", "type": "u16", "show": "hex" },
+      { "name": "e_cblp", "type": "u16" },
+      { "name": "e_cp", "type": "u16" },
+      { "name": "e_crlc", "type": "u16" },
+      { "name": "e_cparhdr", "type": "u16" },
+      { "name": "e_minalloc", "type": "u16" },
+      { "name": "e_maxalloc", "type": "u16" },
+      { "name": "e_ss", "type": "u16", "show": "hex" },
+      { "name": "e_sp", "type": "u16", "show": "hex" },
+      { "name": "e_csum", "type": "u16", "show": "hex" },
+      { "name": "e_ip", "type": "u16", "show": "hex" },
+      { "name": "e_cs", "type": "u16", "show": "hex" },
+      { "name": "e_lfarlc", "type": "u16", "show": "hex" },
+      { "name": "e_ovno", "type": "u16" },
+      { "name": "e_res", "type": "raw", "size": "8" },
+      { "name": "e_oemid", "type": "u16" },
+      { "name": "e_oeminfo", "type": "u16" },
+      { "name": "e_res2", "type": "raw", "size": "20" },
+      { "name": "e_lfanew", "type": "u32", "show": "hex" },
+      { "name": "dos_stub", "type": "raw", "at": "64", "size": "e_lfanew - 64",
+        "when": "e_lfanew > 64" }
+    ] },
+    "IMAGE_NT_HEADERS": { "fields": [
+      { "name": "signature", "type": "u32", "show": "hex" },
+      { "name": "file_header", "type": "IMAGE_FILE_HEADER" },
+      { "name": "optional_header", "switch": "u16(@here)",
+        "cases": { "0x10b": "IMAGE_OPTIONAL_HEADER32", "0x20b": "IMAGE_OPTIONAL_HEADER64" },
+        "when": "file_header.size_of_optional_header != 0" }
+    ] },
+    "IMAGE_FILE_HEADER": { "fields": [
+      { "name": "machine", "type": "u16", "show": "hex", "enum": "machine" },
+      { "name": "number_of_sections", "type": "u16" },
+      { "name": "time_date_stamp", "type": "u32", "show": "time" },
+      { "name": "pointer_to_symbol_table", "type": "u32", "show": "hex" },
+      { "name": "number_of_symbols", "type": "u32" },
+      { "name": "size_of_optional_header", "type": "u16", "show": "hex" },
+      { "name": "characteristics", "type": "u16", "show": "hex", "flags": "file_characteristics" }
+    ] },
+    "IMAGE_OPTIONAL_HEADER32": { "fields": [
+      { "name": "magic", "type": "u16", "show": "hex", "enum": "optional_magic" },
+      { "name": "major_linker_version", "type": "u8" },
+      { "name": "minor_linker_version", "type": "u8" },
+      { "name": "size_of_code", "type": "u32", "show": "hex" },
+      { "name": "size_of_initialized_data", "type": "u32", "show": "hex" },
+      { "name": "size_of_uninitialized_data", "type": "u32", "show": "hex" },
+      { "name": "address_of_entry_point", "type": "u32", "show": "hex" },
+      { "name": "base_of_code", "type": "u32", "show": "hex" },
+      { "name": "base_of_data", "type": "u32", "show": "hex" },
+      { "name": "image_base", "type": "u32", "show": "hex" },
+      { "name": "section_alignment", "type": "u32", "show": "hex" },
+      { "name": "file_alignment", "type": "u32", "show": "hex" },
+      { "name": "major_operating_system_version", "type": "u16" },
+      { "name": "minor_operating_system_version", "type": "u16" },
+      { "name": "major_image_version", "type": "u16" },
+      { "name": "minor_image_version", "type": "u16" },
+      { "name": "major_subsystem_version", "type": "u16" },
+      { "name": "minor_subsystem_version", "type": "u16" },
+      { "name": "win32_version_value", "type": "u32" },
+      { "name": "size_of_image", "type": "u32", "show": "hex" },
+      { "name": "size_of_headers", "type": "u32", "show": "hex" },
+      { "name": "checksum", "type": "u32", "show": "hex" },
+      { "name": "subsystem", "type": "u16", "enum": "subsystem" },
+      { "name": "dll_characteristics", "type": "u16", "show": "hex", "flags": "dll_characteristics" },
+      { "name": "size_of_stack_reserve", "type": "u32", "show": "hex" },
+      { "name": "size_of_stack_commit", "type": "u32", "show": "hex" },
+      { "name": "size_of_heap_reserve", "type": "u32", "show": "hex" },
+      { "name": "size_of_heap_commit", "type": "u32", "show": "hex" },
+      { "name": "loader_flags", "type": "u32", "show": "hex" },
+      { "name": "number_of_rva_and_sizes", "type": "u32" },
+      { "name": "data_directories", "type": "IMAGE_DATA_DIRECTORIES" }
+    ] },
+    "IMAGE_OPTIONAL_HEADER64": { "fields": [
+      { "name": "magic", "type": "u16", "show": "hex", "enum": "optional_magic" },
+      { "name": "major_linker_version", "type": "u8" },
+      { "name": "minor_linker_version", "type": "u8" },
+      { "name": "size_of_code", "type": "u32", "show": "hex" },
+      { "name": "size_of_initialized_data", "type": "u32", "show": "hex" },
+      { "name": "size_of_uninitialized_data", "type": "u32", "show": "hex" },
+      { "name": "address_of_entry_point", "type": "u32", "show": "hex" },
+      { "name": "base_of_code", "type": "u32", "show": "hex" },
+      { "name": "image_base", "type": "u64", "show": "hex" },
+      { "name": "section_alignment", "type": "u32", "show": "hex" },
+      { "name": "file_alignment", "type": "u32", "show": "hex" },
+      { "name": "major_operating_system_version", "type": "u16" },
+      { "name": "minor_operating_system_version", "type": "u16" },
+      { "name": "major_image_version", "type": "u16" },
+      { "name": "minor_image_version", "type": "u16" },
+      { "name": "major_subsystem_version", "type": "u16" },
+      { "name": "minor_subsystem_version", "type": "u16" },
+      { "name": "win32_version_value", "type": "u32" },
+      { "name": "size_of_image", "type": "u32", "show": "hex" },
+      { "name": "size_of_headers", "type": "u32", "show": "hex" },
+      { "name": "checksum", "type": "u32", "show": "hex" },
+      { "name": "subsystem", "type": "u16", "enum": "subsystem" },
+      { "name": "dll_characteristics", "type": "u16", "show": "hex", "flags": "dll_characteristics" },
+      { "name": "size_of_stack_reserve", "type": "u64", "show": "hex" },
+      { "name": "size_of_stack_commit", "type": "u64", "show": "hex" },
+      { "name": "size_of_heap_reserve", "type": "u64", "show": "hex" },
+      { "name": "size_of_heap_commit", "type": "u64", "show": "hex" },
+      { "name": "loader_flags", "type": "u32", "show": "hex" },
+      { "name": "number_of_rva_and_sizes", "type": "u32" },
+      { "name": "data_directories", "type": "IMAGE_DATA_DIRECTORIES" }
+    ] },
+    "IMAGE_DATA_DIRECTORIES": { "fields": [
+      { "name": "export_table", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 0" },
+      { "name": "import_table", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 1" },
+      { "name": "resource_table", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 2" },
+      { "name": "exception_table", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 3" },
+      { "name": "certificate_table", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 4" },
+      { "name": "base_relocation_table", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 5" },
+      { "name": "debug", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 6" },
+      { "name": "architecture", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 7" },
+      { "name": "global_ptr", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 8" },
+      { "name": "tls_table", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 9" },
+      { "name": "load_config_table", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 10" },
+      { "name": "bound_import", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 11" },
+      { "name": "iat", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 12" },
+      { "name": "delay_import_descriptor", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 13" },
+      { "name": "clr_runtime_header", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 14" },
+      { "name": "reserved", "type": "IMAGE_DATA_DIRECTORY", "when": "number_of_rva_and_sizes > 15" }
+    ] },
+    "IMAGE_DATA_DIRECTORY": { "fields": [
+      { "name": "virtual_address", "type": "u32", "show": "hex" },
+      { "name": "size", "type": "u32", "show": "hex" }
+    ] },
+    "IMAGE_SECTION_HEADER": { "fields": [
+      { "name": "name", "type": "text", "size": "8" },
+      { "name": "virtual_size", "type": "u32", "show": "hex" },
+      { "name": "virtual_address", "type": "u32", "show": "hex" },
+      { "name": "size_of_raw_data", "type": "u32", "show": "hex" },
+      { "name": "pointer_to_raw_data", "type": "u32", "show": "hex" },
+      { "name": "pointer_to_relocations", "type": "u32", "show": "hex" },
+      { "name": "pointer_to_linenumbers", "type": "u32", "show": "hex" },
+      { "name": "number_of_relocations", "type": "u16" },
+      { "name": "number_of_linenumbers", "type": "u16" },
+      { "name": "characteristics", "type": "u32", "show": "hex", "flags": "section_characteristics" },
+      { "name": "data", "type": "raw", "at": "pointer_to_raw_data", "size": "size_of_raw_data",
+        "when": "size_of_raw_data != 0 && pointer_to_raw_data != 0" }
+    ] },
+    "IMAGE_EXPORT_DIRECTORY": { "fields": [
+      { "name": "characteristics", "type": "u32", "show": "hex" },
+      { "name": "time_date_stamp", "type": "u32", "show": "time" },
+      { "name": "major_version", "type": "u16" },
+      { "name": "minor_version", "type": "u16" },
+      { "name": "name", "type": "u32", "show": "hex" },
+      { "name": "base", "type": "u32" },
+      { "name": "number_of_functions", "type": "u32" },
+      { "name": "number_of_names", "type": "u32" },
+      { "name": "address_of_functions", "type": "u32", "show": "hex" },
+      { "name": "address_of_names", "type": "u32", "show": "hex" },
+      { "name": "address_of_name_ordinals", "type": "u32", "show": "hex" },
+      { "name": "dll", "type": "text", "rva": "name", "when": "name != 0" },
+      { "name": "names", "type": "EXPORT_NAME", "key": "name", "count": "number_of_names",
+        "rva": "address_of_names", "when": "number_of_names != 0" },
+      { "name": "name_ordinals", "type": "u16", "count": "number_of_names",
+        "rva": "address_of_name_ordinals", "when": "number_of_names != 0" },
+      { "name": "functions", "type": "u32", "show": "hex", "count": "number_of_functions",
+        "rva": "address_of_functions", "when": "number_of_functions != 0" }
+    ] },
+    "EXPORT_NAME": { "fields": [
+      { "name": "name_rva", "type": "u32", "show": "hex" },
+      { "name": "name", "type": "text", "rva": "name_rva" }
+    ] },
+    "IMAGE_IMPORT_DESCRIPTOR": { "fields": [
+      { "name": "original_first_thunk", "type": "u32", "show": "hex" },
+      { "name": "time_date_stamp", "type": "u32", "show": "hex" },
+      { "name": "forwarder_chain", "type": "u32", "show": "hex" },
+      { "name": "name", "type": "u32", "show": "hex" },
+      { "name": "first_thunk", "type": "u32", "show": "hex" },
+      { "name": "dll", "type": "text", "rva": "name", "when": "name != 0" },
+      { "name": "functions", "switch": "nt_headers.optional_header.magic",
+        "cases": { "0x10b": "IMAGE_THUNK_DATA32", "0x20b": "IMAGE_THUNK_DATA64" },
+        "terminated": true, "key": ["function.name", "ordinal"],
+        "rva": "original_first_thunk", "when": "original_first_thunk != 0" },
+      { "name": "functions", "switch": "nt_headers.optional_header.magic",
+        "cases": { "0x10b": "IMAGE_THUNK_DATA32", "0x20b": "IMAGE_THUNK_DATA64" },
+        "terminated": true, "key": ["function.name", "ordinal"],
+        "rva": "first_thunk", "when": "original_first_thunk == 0 && first_thunk != 0" }
+    ] },
+    "IMAGE_THUNK_DATA32": { "fields": [
+      { "name": "value", "type": "u32", "show": "hex" },
+      { "name": "function", "type": "IMAGE_IMPORT_BY_NAME", "rva": "value & 0x7FFFFFFF",
+        "when": "value != 0 && (value >> 31) == 0" },
+      { "name": "ordinal", "value": "value & 0xFFFF", "when": "(value >> 31) != 0" }
+    ] },
+    "IMAGE_THUNK_DATA64": { "fields": [
+      { "name": "value", "type": "u64", "show": "hex" },
+      { "name": "function", "type": "IMAGE_IMPORT_BY_NAME", "rva": "value & 0x7FFFFFFF",
+        "when": "value != 0 && (value >> 63) == 0" },
+      { "name": "ordinal", "value": "value & 0xFFFF", "when": "(value >> 63) != 0" }
+    ] },
+    "IMAGE_IMPORT_BY_NAME": { "fields": [
+      { "name": "hint", "type": "u16" },
+      { "name": "name", "type": "text" }
+    ] }
+  },
+  "enums": {
+    "machine": {
+      "0x0": "UNKNOWN", "0x14c": "I386", "0x166": "R4000", "0x1c0": "ARM", "0x1c4": "ARMNT",
+      "0x200": "IA64", "0x5064": "RISCV64", "0x6264": "LOONGARCH64", "0x8664": "AMD64",
+      "0xa641": "ARM64EC", "0xa64e": "ARM64X", "0xaa64": "ARM64", "0xebc": "EBC"
+    },
+    "optional_magic": { "0x107": "ROM", "0x10b": "PE32", "0x20b": "PE32+" },
+    "subsystem": {
+      "0": "UNKNOWN", "1": "NATIVE", "2": "WINDOWS_GUI", "3": "WINDOWS_CUI", "5": "OS2_CUI",
+      "7": "POSIX_CUI", "8": "NATIVE_WINDOWS", "9": "WINDOWS_CE_GUI", "10": "EFI_APPLICATION",
+      "11": "EFI_BOOT_SERVICE_DRIVER", "12": "EFI_RUNTIME_DRIVER", "13": "EFI_ROM", "14": "XBOX",
+      "16": "WINDOWS_BOOT_APPLICATION"
+    }
+  },
+  "flags": {
+    "file_characteristics": {
+      "0x1": "RELOCS_STRIPPED", "0x2": "EXECUTABLE_IMAGE", "0x4": "LINE_NUMS_STRIPPED",
+      "0x8": "LOCAL_SYMS_STRIPPED", "0x10": "AGGRESSIVE_WS_TRIM", "0x20": "LARGE_ADDRESS_AWARE",
+      "0x80": "BYTES_REVERSED_LO", "0x100": "32BIT_MACHINE", "0x200": "DEBUG_STRIPPED",
+      "0x400": "REMOVABLE_RUN_FROM_SWAP", "0x800": "NET_RUN_FROM_SWAP", "0x1000": "SYSTEM",
+      "0x2000": "DLL", "0x4000": "UP_SYSTEM_ONLY", "0x8000": "BYTES_REVERSED_HI"
+    },
+    "dll_characteristics": {
+      "0x20": "HIGH_ENTROPY_VA", "0x40": "DYNAMIC_BASE", "0x80": "FORCE_INTEGRITY",
+      "0x100": "NX_COMPAT", "0x200": "NO_ISOLATION", "0x400": "NO_SEH", "0x800": "NO_BIND",
+      "0x1000": "APPCONTAINER", "0x2000": "WDM_DRIVER", "0x4000": "GUARD_CF",
+      "0x8000": "TERMINAL_SERVER_AWARE"
+    },
+    "section_characteristics": {
+      "0x8": "TYPE_NO_PAD", "0x20": "CNT_CODE", "0x40": "CNT_INITIALIZED_DATA",
+      "0x80": "CNT_UNINITIALIZED_DATA", "0x200": "LNK_INFO", "0x800": "LNK_REMOVE",
+      "0x1000": "LNK_COMDAT", "0x8000": "GPREL", "0x1000000": "LNK_NRELOC_OVFL",
+      "0x2000000": "MEM_DISCARDABLE", "0x4000000": "MEM_NOT_CACHED",
+      "0x8000000": "MEM_NOT_PAGED", "0x10000000": "MEM_SHARED", "0x20000000": "MEM_EXECUTE",
+      "0x40000000": "MEM_READ", "0x80000000": "MEM_WRITE"
+    }
+  }
+}

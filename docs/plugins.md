@@ -279,6 +279,42 @@ small expressions over the fields (`+ - * / & | << >>`, comparisons, `@offset`, 
 PE comes in parts: the headers, the sections, the imports and the exports first; the resources,
 the relocations, debug, TLS, load config, the certificates and the header of .NET after.
 
+Done in phase 4 (`wview/plugins/wv-binary`):
+
+- **The language** of the description above, checked whole before a file is read by it (strict
+  JSON, an unknown field or type, a wrong expression, an enum or flags of no names, raw bytes
+  without a size are messages), with: integers of 1 to 8 bytes signed or not in either order
+  (`endian` of the description or of a field), `f32` and `f64`, `text` (one byte a character,
+  ASCII) and `utf16`, of a `size` or ending in a zero, `raw`, structures, arrays of a `count` or
+  `terminated` by an item of zeros, `at` and `rva`, `when`, `switch` with its `cases` (the
+  optional header of PE32 or PE32+ by `u16(@here)`), `value` (a number computed of the fields
+  before it, the ordinal of an import), `key` (one path or several, the first an item has:
+  `["function.name", "ordinal"]`), `enum`, `flags` (the names of the bits set, the rest in
+  hexadecimal) and `show` (`hex`, `time` for seconds since 1970). Expressions (`expr.rs`) have
+  the operators of Rust in its precedence, `@here`, `@offset`, `@size`, `@end`, `@count` and the
+  reads `u8()` to `u64()`; a path names a field read so far in the structure or the nearest one
+  above that has it.
+- **PE**: the DOS header with its stub, the NT headers, the optional header of PE32 and PE32+ with
+  its sixteen data directories, the sections with their bytes, the exports (the name of the DLL,
+  the names, their ordinals, the functions) and the imports (each DLL with its functions by name
+  or ordinal). `kernel32.dll` of Windows 11 reads into 15917 nodes without an error.
+- **The tree is read at the open**, within its limits (500000 nodes, 100000 items an array, 32
+  structures deep, 4096 bytes a text), and the bytes stay in the file, read through `BlockFile`
+  (the block and the cache are settings); a node that stops at a limit or past the end of the
+  file is kept with the reason. Children read when a node opens come with the resources (phase 5),
+  where the tree can be deep.
+- **The views**: the tree on the left (`ww::tree`, its keys) and the bytes on the right (`hex.rs`:
+  8, 16 or 32 a row, the rows in view alone read, the bytes of the node selected marked, a click on
+  a byte selects the smallest node that holds it), or **Text**, the tree as a Markdown page of
+  `ww::mdview` with its search (at most 20000 nodes). The root is the file: its name, its format
+  and all its bytes.
+- **Descriptions of others**: the `.wwformat` files of the folder `formats` next to the DLL of the
+  plugin (found by `GetModuleHandleExW` of an address of the plugin) add formats, at most 100 of
+  1 MB each; one of the name of the built-in one replaces it. Settings, Plugins lists the formats
+  read and the files that did not read with the reason. A file opens by the extension and the
+  `magic` of a description; a file of the extension without its magic stays closed with the
+  reason.
+
 - **Never the whole file in memory.** A node of the tree is its type and its offset; its children
   are read when it opens, through `BlockFile`; the size of the cache and of a block are settings of
   the plugin.
@@ -308,7 +344,7 @@ the relocations, debug, TLS, load config, the certificates and the header of .NE
   family, and `--exclude` of the family in every other, a trap for each new command.
 - **CI and build-all.cmd** (phase 2): the Linux job checks the format of `wview` and its clippy for
   Windows; a Windows job of its own, beside the one of WinWeaver, runs its clippy and tests (the
-  window drawn into the screenshots `v1-` to `v8-`), builds it in release in the tree of its release
+  window drawn into the screenshots `v1-` to `v10-`), builds it in release in the tree of its release
   (section 6.7), packs `wview-<version>` (wview.exe, wwrt.dll, the `std-<hash>.dll` of the
   toolchain, the plugins, README) and `wview-sdk-<version>`, and builds the template of the SDK from
   a copy in another folder, which wview must load. That build takes the target folder of the tree:
@@ -336,7 +372,9 @@ the relocations, debug, TLS, load config, the certificates and the header of .NE
    the orientation of EXIF, the steps of the zoom and the arrows that move an image, the tests of
    WIC on files the tests make, the screenshots `v6-` to `v8-` (section 6.2).
 4. wv-binary 1: the engine with its language, the headers, sections, imports and exports of PE, the
-   hexadecimal and the text views.
+   hexadecimal and the text views. Done (section 6.4): the language, PE in its first parts, the
+   tree, the bytes and the text, the descriptions of the folder `formats`, the settings, the
+   eight languages and the guide, the screenshots `v9-` and `v10-`.
 5. wv-binary 2: the rest of PE, `.wwbin`.
 6. `.wwbindiff`: the tree of the differences, the comments and the bookmarks.
 7. The stable interface for other languages (section 6.9) and its one example, the Mandelbrot set
@@ -510,7 +548,8 @@ On a computer of Windows with Rust, in `wview`:
 cargo build --release --workspace
 ```
 
-`target\release` then holds `wview.exe`, `wwrt.dll`, `wv_text.dll` and `wv_image.dll`. A folder to
+`target\release` then holds `wview.exe`, `wwrt.dll`, `wv_text.dll`, `wv_image.dll` and
+`wv_binary.dll`. A folder to
 copy anywhere: `wview.exe` and `wwrt.dll`, `std-<hash>.dll` of the toolchain
 (`rustc --print sysroot`, then `bin` for gnu or `lib\rustlib\<target>\lib`), with gnu also
 `libgcc_s_seh-1.dll` and `libwinpthread-1.dll` of its `bin`, and the plugins in `plugins\`. Then

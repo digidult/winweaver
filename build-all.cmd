@@ -320,6 +320,7 @@ copy /y "%WBIN%\wview.exe" "%DIST%\wview\" >nul || goto failed
 copy /y "%WBIN%\wwrt.dll" "%DIST%\wview\" >nul || goto failed
 copy /y "%WBIN%\wv_text.dll" "%DIST%\wview\plugins\" >nul || goto failed
 copy /y "%WBIN%\wv_image.dll" "%DIST%\wview\plugins\" >nul || goto failed
+copy /y "%WBIN%\wv_binary.dll" "%DIST%\wview\plugins\" >nul || goto failed
 copy /y wview\package\README.md "%DIST%\wview\README.md" >nul || goto failed
 rem The std-<hash>.dll wview.exe imports, from the sysroot of rustc.
 set "STD_NAME="

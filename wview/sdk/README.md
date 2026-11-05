@@ -14,7 +14,8 @@ The SDK is the tree the release itself was built in:
   (`Plugin`, `View`, `Host`, `plugin!`), `wwrt::input` (the keys and the mouse of a view),
   `wwrt::blocks` (a file read in blocks), `wwrt::testing` (the tests of translations).
 - `crates/wview`: the program.
-- `plugins/wv-text`, `plugins/wv-image`: the plugins of the release, examples of real ones;
+- `plugins/wv-text`, `plugins/wv-image`, `plugins/wv-binary`: the plugins of the release,
+  examples of real ones;
   `plugins/wv-hello`: the template of a plugin.
 - `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `.cargo/config.toml`: the workspace, the
   versions of its crates, the compiler and the flags of the release.

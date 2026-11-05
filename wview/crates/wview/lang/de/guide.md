@@ -39,12 +39,31 @@ AVIF, WebP oder das RAW von Kameras, wo ihre Erweiterungen installiert sind.
   die der Zoom braucht; ein Bild über der Grenze der Einstellungen wird verkleinert dekodiert, und
   die Statusleiste sagt es.
 
+## Binärdateien
+
+Programme und Bibliotheken von Windows (`.exe`, `.dll`, `.sys` und die anderen Dateien des
+Portable Executable) öffnen als Baum ihrer Struktur: die Header, die Abschnitte, die Importe und
+die Exporte, jedes Feld mit seinem Wert, seinem Offset und seiner Größe.
+
+- Links der Baum: ein Klick oder die Pfeile wählen einen Knoten, rechts und links öffnen und
+  schließen ihn. Rechts die Bytes der Datei, 16 in einer Zeile mit ihrem ASCII: die Bytes des
+  gewählten Knotens sind markiert, und ein Klick auf ein Byte wählt den kleinsten Knoten, der es
+  hält.
+- **Text** in der Leiste zeigt den Baum als Seite, mit der Suche des Tabs (Strg+F); **Baum und
+  Bytes** geht zurück.
+- Die Datei bleibt auf der Festplatte: die Ansicht liest die Blöcke, die sie zeigt. Ein Knoten,
+  den die Datei nicht ganz hält (eine kurze oder beschädigte Datei), hat ein Warnzeichen und sagt
+  warum.
+- Weitere Formate kommen als Beschreibungen, `.wwformat`-Dateien im Ordner `plugins\formats`;
+  Einstellungen, Plugins zeigt die gelesenen Formate und die Dateien, die nicht gelesen wurden.
+
 ## Einstellungen
 
 **Einstellungen**, **Plugins** zeigt die Plugins mit ihren Einstellungen: die größte zu öffnende
 Textdatei; geglättete Pixel über 100%, die EXIF-Ausrichtung, eine Animation, die beim Öffnen
-abspielt, und das größte vollständig dekodierte Bild (64, 256 oder 1024 Megapixel). Die
-Einstellungen liegen in `wview.settings.json` neben dem Programm.
+abspielt, und das größte vollständig dekodierte Bild (64, 256 oder 1024 Megapixel); die Bytes in
+einer Zeile, der Block einer Binärdatei und der Cache ihrer Blöcke. Die Einstellungen liegen in
+`wview.settings.json` neben dem Programm.
 
 ## Befehlszeile
 

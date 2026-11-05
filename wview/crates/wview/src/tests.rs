@@ -1,5 +1,6 @@
 //! The tests of wview: its translations and its guides, a file in the tab of its plugin, the keys
-//! and the mouse of an image, an animation and its frames, a large image in tiles.
+//! and the mouse of an image, an animation and its frames, a large image in tiles, a DLL of this
+//! Windows in its tree and its bytes.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -70,6 +71,10 @@ pub(crate) fn plugins() -> Arc<Plugins> {
         Box::new(wv_image::ImagePlugin),
     );
     plugins.add(PathBuf::from("wv_text.dll"), Box::new(wv_text::TextPlugin));
+    plugins.add(
+        PathBuf::from("wv_binary.dll"),
+        Box::new(wv_binary::BinaryPlugin),
+    );
     Arc::new(plugins)
 }
 
@@ -295,4 +300,46 @@ fn a_large_image_shows_in_tiles_and_the_arrows_move_it() {
         dir.join("b.bmp"),
         "Page Down takes the next image"
     );
+}
+
+/// A DLL of this Windows, read and never changed.
+pub(crate) fn system_dll() -> PathBuf {
+    let root = std::env::var_os("SystemRoot").map_or(PathBuf::from(r"C:\Windows"), PathBuf::from);
+    root.join("System32").join("kernel32.dll")
+}
+
+/// The tree of a binary view gets the keys: a click on its first row.
+pub(crate) fn click_tree(h: &Harness<'_, Window<Wview>>) {
+    use wwrt::egui_kittest::kittest::Queryable;
+    let tree = h.get_by_label("Tree").rect();
+    click(h, tree.left_top() + egui::vec2(60.0, 12.0));
+}
+
+#[test]
+fn a_dll_in_its_tree_and_its_bytes() {
+    let mut window = window(english(wwrt::serde_json::Value::Null));
+    open(&mut window, system_dll());
+    let status = front(&window).1;
+    assert!(status.contains("Portable Executable"), "{status}");
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(1000.0, 700.0))
+        .build_eframe(|_| window);
+    h.run_steps(3);
+    click_tree(&h);
+    h.run_steps(2);
+    for key in [Key::ArrowDown, Key::ArrowDown] {
+        h.key_press(key);
+        h.run_steps(2);
+    }
+    let status = front(h.state()).1;
+    assert!(
+        status.contains("nt_headers at"),
+        "the keys go down the tree: {status}"
+    );
+    h.state_mut().apply(vec![Act::Tool("text")]);
+    h.run_steps(3);
+    match h.state().shell.active_doc() {
+        Some(Doc::File(d)) => assert!(d.view.tools().iter().any(|t| t.label == "Text")),
+        _ => panic!("the tab of the DLL is in front"),
+    }
 }

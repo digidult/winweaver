@@ -308,7 +308,7 @@ jobs:
           $view = 'dist-wview/wview'
           New-Item -ItemType Directory -Force "$view/plugins" | Out-Null
           Copy-Item "$env:WVIEW_BIN/wview.exe", "$env:WVIEW_BIN/wwrt.dll" "$view/"
-          Copy-Item "$env:WVIEW_BIN/wv_text.dll", "$env:WVIEW_BIN/wv_image.dll" "$view/plugins/"
+          Copy-Item "$env:WVIEW_BIN/wv_text.dll", "$env:WVIEW_BIN/wv_image.dll", "$env:WVIEW_BIN/wv_binary.dll" "$view/plugins/"
           # The std-<hash>.dll wview.exe imports, from the sysroot of the toolchain.
           $stdName = python wview/sdk/imports.py --std "$env:WVIEW_BIN/wview.exe"
           $std = Get-ChildItem (rustc --print sysroot) -Recurse -Filter $stdName | Select-Object -First 1

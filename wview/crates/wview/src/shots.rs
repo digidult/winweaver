@@ -1,17 +1,18 @@
 //! Pictures of the window of wview for the review of its design. Only when
 //! `WINWEAVER_SCREENSHOTS` names a folder (CI sets it on the Windows runner): the page of the
 //! plugins, a Markdown page, an image fitted, then zoomed and moved, Settings, Plugins, an
-//! animation, a large image fitted and at 100% in its tiles; drawn with wgpu without a screen and
-//! saved there as PNG files; a renderer that cannot start writes `wview-error.txt`.
+//! animation, a large image fitted and at 100% in its tiles, a DLL of this Windows in its tree and
+//! its bytes and as text; drawn with wgpu without a screen and saved there as PNG files; a
+//! renderer that cannot start writes `wview-error.txt`.
 
 use std::path::{Path, PathBuf};
 
-use wwrt::egui::{self, Event, Modifiers, PointerButton, Pos2};
+use wwrt::egui::{self, Event, Key, Modifiers, PointerButton, Pos2};
 use wwrt::egui_kittest::Harness;
 use wwrt::ww::{App, ShellAct, Window};
 
 use crate::app::{Act, Wview};
-use crate::tests::{bmp, decoded, english, folder, three_frames, window};
+use crate::tests::{bmp, click_tree, decoded, english, folder, system_dll, three_frames, window};
 
 fn shot(h: &mut Harness<'_, Window<Wview>>, dir: &Path, name: &str) {
     for _ in 0..6 {
@@ -109,4 +110,23 @@ fn screenshots_of_wview() {
     shot(&mut h, &dir, "v7-large-image-fit");
     h.state_mut().apply(vec![Act::Tool("actual")]);
     shot(&mut h, &dir, "v8-large-image-tiles");
+    h.state_mut()
+        .apply(vec![Act::Shell(ShellAct::OpenPath(system_dll()))]);
+    h.run_steps(3);
+    // The sections opened and the first one selected: its header marked in the bytes.
+    click_tree(&h);
+    h.run_steps(2);
+    for key in [
+        Key::ArrowDown,
+        Key::ArrowDown,
+        Key::ArrowDown,
+        Key::ArrowRight,
+        Key::ArrowDown,
+    ] {
+        h.key_press(key);
+        h.run_steps(2);
+    }
+    shot(&mut h, &dir, "v9-binary-tree-bytes");
+    h.state_mut().apply(vec![Act::Tool("text")]);
+    shot(&mut h, &dir, "v10-binary-text");
 }
