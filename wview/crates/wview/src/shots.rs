@@ -1,17 +1,17 @@
 //! Pictures of the window of wview for the review of its design. Only when
 //! `WINWEAVER_SCREENSHOTS` names a folder (CI sets it on the Windows runner): the page of the
-//! plugins, a Markdown page, an image fitted, then zoomed and moved, Settings, Plugins; drawn with
-//! wgpu without a screen and saved there as PNG files; a renderer that cannot start writes
-//! `wview-error.txt`.
+//! plugins, a Markdown page, an image fitted, then zoomed and moved, Settings, Plugins, an
+//! animation, a large image fitted and at 100% in its tiles; drawn with wgpu without a screen and
+//! saved there as PNG files; a renderer that cannot start writes `wview-error.txt`.
 
 use std::path::{Path, PathBuf};
 
 use wwrt::egui::{self, Event, Modifiers, PointerButton, Pos2};
 use wwrt::egui_kittest::Harness;
-use wwrt::ww::{App, Settings, ShellAct, Window};
+use wwrt::ww::{App, ShellAct, Window};
 
 use crate::app::{Act, Wview};
-use crate::tests::{bmp, folder, window};
+use crate::tests::{bmp, decoded, english, folder, three_frames, window};
 
 fn shot(h: &mut Harness<'_, Window<Wview>>, dir: &Path, name: &str) {
     for _ in 0..6 {
@@ -51,11 +51,19 @@ fn screenshots_of_wview() {
         [(x * 255 / 639) as u8, (y * 255 / 399) as u8, 160]
     });
     std::fs::write(&image, gradient).unwrap();
-    let settings = Settings {
-        language: "en".to_owned(),
-        ..Settings::default()
-    };
-    let mut window = window(settings);
+    let animation = files.join("frames.gif");
+    std::fs::write(&animation, three_frames()).unwrap();
+    let large = files.join("large.bmp");
+    let picture = bmp(4000, 2500, |x, y| {
+        let ring = ((x as i64 - 2000).pow(2) + (y as i64 - 1250).pow(2)).isqrt() as u32;
+        [
+            (ring % 64 * 4) as u8,
+            (x * 255 / 3999) as u8,
+            (y * 255 / 2499) as u8,
+        ]
+    });
+    std::fs::write(&large, picture).unwrap();
+    let mut window = window(english(wwrt::serde_json::json!({ "animate": false })));
     // What `ww::run` does after the session: a window without a tab shows the plugins.
     window.app.restored(&mut window.shell);
     let mut h = Harness::builder()
@@ -92,4 +100,13 @@ fn screenshots_of_wview() {
     h.state_mut()
         .apply(vec![Act::Shell(ShellAct::OpenSection(1))]);
     shot(&mut h, &dir, "v5-settings-plugins");
+    h.state_mut()
+        .apply(vec![Act::Shell(ShellAct::OpenPath(animation))]);
+    shot(&mut h, &dir, "v6-animation");
+    h.state_mut()
+        .apply(vec![Act::Shell(ShellAct::OpenPath(large))]);
+    decoded(&mut h);
+    shot(&mut h, &dir, "v7-large-image-fit");
+    h.state_mut().apply(vec![Act::Tool("actual")]);
+    shot(&mut h, &dir, "v8-large-image-tiles");
 }

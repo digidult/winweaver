@@ -24,16 +24,26 @@ AVIF, WebP o el RAW de las cámaras donde sus extensiones están instaladas.
 - La rueda hace zoom en el puntero, arrastrar mueve la imagen, un doble clic alterna entre la
   imagen entera y el 100%.
 - La barra: **Ajustar**, **100%**, **Acercar**, **Alejar**, y **Anterior** y **Siguiente**, las
-  imágenes de la misma carpeta.
-- Un clic en la imagen le da las teclas: flecha izquierda y derecha o Re Pág y Av Pág toman la
-  imagen anterior o siguiente de la carpeta, Inicio y Fin la primera y la última, + y - hacen
-  zoom, 0 ajusta la imagen, 1 muestra el 100%. Tab o Escape devuelven las teclas a la ventana.
+  imágenes de la misma carpeta; para una animación **Reproducir** (o **Pausa**), **Fotograma
+  anterior** y **Fotograma siguiente**; para un archivo de varias páginas (TIFF, ICO) **Página
+  anterior** y **Página siguiente**.
+- Un clic en la imagen le da las teclas: las flechas mueven una imagen más grande que la ventana;
+  si no, flecha izquierda y derecha toman la imagen anterior o siguiente de la carpeta, como
+  siempre hacen Re Pág y Av Pág; Inicio y Fin la primera y la última; + y - hacen zoom por pasos,
+  0 ajusta la imagen, de 1 a 4 muestran del 100% al 400%; la barra espaciadora reproduce o pausa
+  una animación, la coma y el punto van al fotograma o la página anterior o siguiente. Tab o
+  Escape devuelven las teclas a la ventana.
+- Una foto se gira como se sostenía su cámara (la orientación EXIF). Una imagen grande se
+  decodifica con su pestaña ya abierta y se dibuja por partes con el detalle que el zoom necesita;
+  una imagen por encima del límite de la configuración se decodifica más pequeña, y la barra de
+  estado lo dice.
 
 ## Configuración
 
 **Configuración**, **Complementos** enumera los complementos con su configuración: el archivo de
-texto más grande que se abre; píxeles suavizados por encima del 100% y el lado mayor de una imagen
-decodificada. La configuración se guarda en `wview.settings.json` junto al programa.
+texto más grande que se abre; píxeles suavizados por encima del 100%, la orientación EXIF, una
+animación reproducida al abrirla y la imagen más grande decodificada entera (64, 256 o 1024
+megapíxeles). La configuración se guarda en `wview.settings.json` junto al programa.
 
 ## Línea de comandos
 

@@ -186,7 +186,9 @@ text editor wedit.
 │                          the interface 1 with the loader and its check of the build; input: the
 │                          keys and the mouse of a view; blocks; testing), crates/wview (the viewer:
 │                          lang/<code>/ui.json and guide.md, docs/guide.md), plugins/wv-text
-│                          (Markdown and text), plugins/wv-image (WIC), each with lang/<code>.json,
+│                          (Markdown and text), plugins/wv-image (WIC: wic, picture with the levels
+│                          and EXIF, compose for the frames of a GIF, view with the tiles, sample of
+│                          the tests), each with lang/<code>.json,
 │                          plugins/wv-hello (the template of the SDK); sdk/ (README.md, pack.py: the
 │                          SDK of a release); package/README.md (for the user of the archive);
 │                          .cargo/config.toml links std dynamically; README.md
@@ -693,7 +695,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   import in `loaded_imports` of the settings file of the window, so a window open meanwhile overwrites it.
 - Screenshots: the Windows job sets `WINWEAVER_SCREENSHOTS`, and the test `screenshots_of_the_window` draws the
   main tabs with wgpu (no screen) into `target/screenshots`, uploaded as the artifact `screenshots`
-  (`gh run download <id> -n screenshots -D <folder>`; the ones of wview, `v1-` to `v5-`, as
+  (`gh run download <id> -n screenshots -D <folder>`; the ones of wview, `v1-` to `v8-`, as
   `screenshots-wview` of its job); the way to see the window without starting it on the
   customer's PC. A renderer that cannot start writes `error.txt` there instead of failing the tests.
 - Window tests: `App::new` and `App::apply` test the logic without frames; `egui_kittest` (a dev-dependency
@@ -829,7 +831,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   another one and wview did not start), and a release build of wview attaches to the console of its
   parent only when its output is not redirected. CI: the Linux job checks the format and clippy of `wview`, the job
   `build-wview` (Windows, beside the one of WinWeaver) its clippy and tests (the screenshots `v1-`
-  to `v5-`, the artifact `screenshots-wview`), the release build and the artifacts
+  to `v8-`, the artifact `screenshots-wview`), the release build and the artifacts
   `wview-<version>` and `wview-sdk-<version>`; a release of WinWeaver does not carry them. The
   template of the SDK is built in its copy with the target folder of the tree (`CARGO_TARGET_DIR`):
   the crates of the registry are not built again, the crates of the SDK are cleaned first. The family links std dynamically
@@ -838,6 +840,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   128973 exports into the DLL (a DLL holds 65535; a release one has about 15600). Every crate the
   runtime holds is taken through it (`wwrt::serde`, `#[serde(crate = "wwrt::serde")]`). With the
   toolchain gnu a link writes 68 import libraries of Windows through dlltool, about 50 s a link.
+  wv-image decodes in a thread of its own (`view::start`) and the window waits 250 ms for it, so a
+  test of the window or a screenshot of a large image waits for the decoding (`tests::decoded`),
+  since a debug build takes longer; its files for tests come from `wv_image::sample` (the
+  feature `library`).
 - The structure of the code: a change of the window is an `Act`
   of one subsystem (`act.rs`), run by the `apply_<subsystem>` method in `app/<theme>.rs`; a question before
   a removal is `Act::Ask(Question)` built where the data is (`question.rs`, `remove_question` of a users
@@ -1068,6 +1074,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | Done in pull request #68 (0.30.2) | The languages of Windows without a locale id of their own read without the transient id Windows lends them as input languages of the user (`ru-UA` as 2000) |
 | Done in pull request #69 (0.30.3) | The study of plugins (`docs/plugins.md`, then `study/plugins`): the ways of Rust compared, the runtime wwrt with the loader and its check, wview with the plugins of text and images, the measurements, the design and the phases of wview; the programs of 0.30.2 |
 | In pull request #70 (0.31.0, wview 0.2.0) | Phase 2 of wview, part 1: the workspace `wview/`, the interface 1 (the settings and the translations of a plugin, the requests of a view, the keys and the mouse), Settings, Plugins, the image view with its mouse and keys, the eight languages, the guide; `ww::i18n::add`. Part 2: the SDK of a release (`wview/sdk`, the template `wv-hello`, built and loaded by CI), wview and its SDK in CI and build-all.cmd, the tests of the window with the screenshots `v1-` to `v5-` |
+| In pull request #71 (0.32.0, wview 0.3.0) | Phase 3 of wview: images whole. The decoding in a thread, an image decoded whole within a budget of the settings and kept with its levels, drawn in tiles of the level the zoom needs; the frames of a GIF drawn on its canvas and played, the pages of a TIFF or an ICO; the orientation of EXIF; the steps of the zoom, 1 to 4, the arrows that move an image; the settings, the eight languages and the guide; the tests of WIC on files the tests make, the screenshots `v6-` to `v8-` |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the

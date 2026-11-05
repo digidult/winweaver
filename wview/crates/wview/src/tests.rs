@@ -1,5 +1,5 @@
 //! The tests of wview: its translations and its guides, a file in the tab of its plugin, the keys
-//! and the mouse of an image.
+//! and the mouse of an image, an animation and its frames, a large image in tiles.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -11,6 +11,7 @@ use wwrt::testing;
 use wwrt::ww::{Settings, ShellAct, Window};
 
 use crate::app::{Act, Doc, Extra, GUIDE, GUIDES, LANGUAGES, Wview};
+pub(crate) use wv_image::sample::{GifFrame, bmp, gif};
 
 #[test]
 fn every_text_of_the_window_is_translated() {
@@ -61,33 +62,6 @@ pub(crate) fn folder(name: &str) -> PathBuf {
     dir
 }
 
-/// A BMP of 24 bits, the colour of each pixel by `pixel`.
-pub(crate) fn bmp(w: u32, h: u32, pixel: impl Fn(u32, u32) -> [u8; 3]) -> Vec<u8> {
-    let stride = (w * 3 + 3) & !3;
-    let size = stride * h;
-    let mut out = Vec::with_capacity(54 + size as usize);
-    out.extend_from_slice(b"BM");
-    for v in [54 + size, 0, 54, 40] {
-        out.extend_from_slice(&v.to_le_bytes());
-    }
-    out.extend_from_slice(&(w as i32).to_le_bytes());
-    out.extend_from_slice(&(h as i32).to_le_bytes());
-    out.extend_from_slice(&1u16.to_le_bytes());
-    out.extend_from_slice(&24u16.to_le_bytes());
-    for v in [0u32, size, 2835, 2835, 0, 0] {
-        out.extend_from_slice(&v.to_le_bytes());
-    }
-    for y in (0..h).rev() {
-        let start = out.len();
-        for x in 0..w {
-            let [r, g, b] = pixel(x, y);
-            out.extend_from_slice(&[b, g, r]);
-        }
-        out.resize(start + stride as usize, 0);
-    }
-    out
-}
-
 /// The plugins of the repository, taken as libraries.
 pub(crate) fn plugins() -> Arc<Plugins> {
     let mut plugins = Plugins::default();
@@ -108,7 +82,7 @@ fn open(w: &mut Window<Wview>, path: PathBuf) {
 }
 
 /// The file of the tab in front and the status line of its view.
-fn front(w: &Window<Wview>) -> (PathBuf, String) {
+pub(crate) fn front(w: &Window<Wview>) -> (PathBuf, String) {
     match w.shell.active_doc() {
         Some(Doc::File(d)) => (d.path.clone(), d.view.status()),
         _ => (PathBuf::new(), String::new()),
@@ -202,4 +176,123 @@ fn the_keys_and_the_wheel_of_an_image() {
     h.run_steps(12);
     let zoomed = front(h.state()).1;
     assert!(!zoomed.contains("100"), "the wheel zooms in: {zoomed}");
+}
+
+/// Settings in English, with the plugin of images as `image` says.
+pub(crate) fn english(image: wwrt::serde_json::Value) -> Settings<Extra> {
+    let mut settings: Settings<Extra> = Settings {
+        language: "en".to_owned(),
+        ..Settings::default()
+    };
+    settings.extra.plugins.insert("wv_image".to_owned(), image);
+    settings
+}
+
+/// A GIF of three frames of 320 x 200, stripes of red, green and blue a step further in each,
+/// every frame for a tenth of a second.
+pub(crate) fn three_frames() -> Vec<u8> {
+    let palette = [[0, 0, 0], [220, 60, 60], [60, 180, 90], [70, 110, 230]];
+    let frames: Vec<GifFrame> = (0..3u32)
+        .map(|i| {
+            let stripes = (0..200u32)
+                .flat_map(|y| (0..320u32).map(move |x| ((x + y + i * 20) / 20 % 3 + 1) as u8))
+                .collect();
+            GifFrame::new(0, 0, [320, 200], stripes, 10, 1, None)
+        })
+        .collect();
+    gif([320, 200], &palette, &frames)
+}
+
+/// Frames of the window until the image in front is decoded (a thread of its own decodes it).
+pub(crate) fn decoded(h: &mut Harness<'_, Window<Wview>>) {
+    for _ in 0..500 {
+        h.step();
+        if !front(h.state()).1.contains("Decoding") {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+}
+
+fn tool_labels(w: &Window<Wview>) -> Vec<&'static str> {
+    match w.shell.active_doc() {
+        Some(Doc::File(d)) => d.view.tools().iter().map(|t| t.label).collect(),
+        _ => Vec::new(),
+    }
+}
+
+#[test]
+fn an_animation_and_its_frames() {
+    let dir = folder("animation");
+    std::fs::write(dir.join("a.gif"), three_frames()).unwrap();
+    let mut window = window(english(wwrt::serde_json::json!({ "animate": false })));
+    open(&mut window, dir.join("a.gif"));
+    assert!(
+        front(&window).1.contains("frame 1 of 3"),
+        "{}",
+        front(&window).1
+    );
+    assert!(tool_labels(&window).contains(&"Play"));
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(800.0, 600.0))
+        .build_eframe(|_| window);
+    h.run_steps(3);
+    click(&h, Pos2::new(400.0, 320.0));
+    h.run_steps(2);
+    h.key_press(Key::Period);
+    h.run_steps(2);
+    assert!(
+        front(h.state()).1.contains("frame 2 of 3"),
+        "{}",
+        front(h.state()).1
+    );
+    h.key_press(Key::Comma);
+    h.key_press(Key::Comma);
+    h.run_steps(2);
+    assert!(
+        front(h.state()).1.contains("frame 3 of 3"),
+        "the frames go round: {}",
+        front(h.state()).1
+    );
+    h.key_press(Key::Space);
+    h.run_steps(2);
+    assert!(tool_labels(h.state()).contains(&"Pause"), "Space plays it");
+}
+
+#[test]
+fn a_large_image_shows_in_tiles_and_the_arrows_move_it() {
+    let dir = folder("large");
+    let wide = bmp(5000, 40, |x, _| [(x % 256) as u8, 0, 90]);
+    std::fs::write(dir.join("a-wide.bmp"), wide).unwrap();
+    std::fs::write(dir.join("b.bmp"), bmp(8, 8, |_, _| [0, 200, 0])).unwrap();
+    let mut window = window(english(wwrt::serde_json::Value::Null));
+    open(&mut window, dir.join("a-wide.bmp"));
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(800.0, 600.0))
+        .build_eframe(|_| window);
+    decoded(&mut h);
+    click(&h, Pos2::new(400.0, 320.0));
+    h.run_steps(2);
+    h.key_press(Key::Num1);
+    h.run_steps(4);
+    let status = front(h.state()).1;
+    assert!(
+        status.contains("5000 x 40") && status.contains("100%"),
+        "{status}"
+    );
+    assert!(!status.contains("decoded at"), "decoded whole: {status}");
+    h.key_press(Key::ArrowRight);
+    h.run_steps(2);
+    assert_eq!(
+        front(h.state()).0,
+        dir.join("a-wide.bmp"),
+        "an image wider than the view moves with the arrows"
+    );
+    h.key_press(Key::PageDown);
+    h.run_steps(2);
+    assert_eq!(
+        front(h.state()).0,
+        dir.join("b.bmp"),
+        "Page Down takes the next image"
+    );
 }

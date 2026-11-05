@@ -196,10 +196,39 @@ To come: a format found by its first bytes besides its extension; a view that sa
 
 ### 6.2 Images (wv-image)
 
-Done in the study: WIC, the formats of this Windows, fit, zoom, the folder. To come: tiles for an
-image above the size of a texture (a region decoded at 100% with `CopyPixels` of a rectangle), the
-frames of a GIF, the orientation of EXIF, the keys of the zoom, the crate `image` (in wwrt already
-for PNG) where WIC has no decoder.
+Done in the study: WIC, the formats of this Windows, fit, zoom, the folder. Done in phase 3:
+
+- **The decoding** runs in a thread of its own (`view::start`). The window waits 250 ms for it, so
+  a small image opens with its tab and one that does not decode stays closed with the reason; a
+  larger one opens with Decoding... and shows when it is there. An image is decoded whole up to
+  the budget of the settings (64, 256 or 1024 million pixels), a larger one smaller by one factor
+  (`picture::within`), and the status bar says so.
+- **The levels and the tiles.** The plugin keeps the image with its levels, each half of the one
+  before (the mean of two by two, weighted by alpha), down to one of 2048 pixels a side, the
+  smallest texture every renderer takes. The view draws the tiles of 1024 pixels of the smallest
+  level with a pixel for every pixel of the screen (`view::level`), each with a pixel of its
+  neighbours so that a smooth zoom shows no seam, and under a tile still to come the last level,
+  whose tiles are made first; at most 6 new tiles a frame, 64 kept, the ones drawn least lately
+  go first. A region decoded with `CopyPixels` of a rectangle, the plan of the study, would decode
+  a JPEG from its start for every tile; the image is decoded once instead.
+- **The frames of a GIF.** WIC gives the frames as the file holds them; the plugin draws each on
+  the canvas of the file (`compose`: its place, its disposal of 0 to 3 and its delay from the
+  metadata of WIC, a delay of 0 or 1 hundredth as 100 ms as browsers show it, the transparent
+  index from the palette of WIC), at most 512 MB of frames. The animation plays when it opens (a
+  setting), Space plays and pauses it, the comma and the full stop step through its frames. A GIF
+  above 2048 pixels a side shows its frames as pages.
+- **The pages** of a TIFF or an ICO of several turn with the same keys and the buttons of the bar,
+  each page decoded when it is asked for; an icon opens at its largest frame.
+- **The orientation of EXIF** (`System.Photo.Orientation` of the metadata of WIC, a setting) turns
+  the pixels in memory (`Picture::oriented`, the eight values).
+- **The keys of the zoom**: + and - by the steps of browsers (`view::LEVELS`), 0 fits, 1 to 4 show
+  100% to 400%, the arrows move an image larger than the view (else Left and Right step through
+  the folder, Page Up and Page Down always do).
+- **The tests** make their files: `sample` writes a BMP and a GIF (LZW of nine bits a code), the
+  tests of WIC a TIFF of two pages with an orientation through the encoder of WIC, and the tests
+  of wview take `sample` with the feature `library`.
+
+To come: the crate `image` (in wwrt already for PNG) where WIC has no decoder.
 
 ### 6.3 Text and Markdown (wv-text)
 
@@ -279,7 +308,7 @@ the relocations, debug, TLS, load config, the certificates and the header of .NE
   family, and `--exclude` of the family in every other, a trap for each new command.
 - **CI and build-all.cmd** (phase 2): the Linux job checks the format of `wview` and its clippy for
   Windows; a Windows job of its own, beside the one of WinWeaver, runs its clippy and tests (the
-  window drawn into the screenshots `v1-` to `v5-`), builds it in release in the tree of its release
+  window drawn into the screenshots `v1-` to `v8-`), builds it in release in the tree of its release
   (section 6.7), packs `wview-<version>` (wview.exe, wwrt.dll, the `std-<hash>.dll` of the
   toolchain, the plugins, README) and `wview-sdk-<version>`, and builds the template of the SDK from
   a copy in another folder, which wview must load. That build takes the target folder of the tree:
@@ -302,7 +331,10 @@ the relocations, debug, TLS, load config, the certificates and the header of .NE
    the translations in the eight languages of WinWeaver, the keys and the mouse of the images, the
    guide, the page of the plugins as a tab, the SDK with its template (finding 12), wview and the
    SDK in CI and build-all.cmd, the tests of the window with their screenshots.
-3. Images whole: tiles, the frames of a GIF, EXIF, the keys of the zoom.
+3. Images whole: tiles, the frames of a GIF, EXIF, the keys of the zoom. Done: the decoding in
+   a thread, the levels and their tiles, the frames of a GIF and the pages of a TIFF or an ICO,
+   the orientation of EXIF, the steps of the zoom and the arrows that move an image, the tests of
+   WIC on files the tests make, the screenshots `v6-` to `v8-` (section 6.2).
 4. wv-binary 1: the engine with its language, the headers, sections, imports and exports of PE, the
    hexadecimal and the text views.
 5. wv-binary 2: the rest of PE, `.wwbin`.

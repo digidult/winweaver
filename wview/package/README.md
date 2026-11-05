@@ -15,7 +15,8 @@ settings are kept in `wview.settings.json` next to the program.
 - `wview.exe`, the program.
 - `wwrt.dll`, the runtime the program and its plugins share, and `std-<hash>.dll`, the standard
   library of Rust: they stay next to `wview.exe`.
-- `plugins\wv_text.dll` (Markdown and text) and `plugins\wv_image.dll` (images).
+- `plugins\wv_text.dll` (Markdown and text) and `plugins\wv_image.dll` (images, the animations of
+  GIF, the pages of TIFF and ICO).
 
 A plugin of another release of wview is not loaded: the page of the plugins and `wview --plugins`
 name the reason.

@@ -25,17 +25,25 @@ AVIF, WebP atau RAW kamera bila ekstensinya terpasang.
 - Roda memperbesar di bawah penunjuk, menyeret menggeser gambar, klik ganda berpindah antara
   seluruh gambar dan 100%.
 - Bilah: **Sesuaikan**, **100%**, **Perbesar**, **Perkecil**, serta **Sebelumnya** dan
-  **Berikutnya**, gambar di folder yang sama.
-- Klik pada gambar memberinya tombol: panah kiri dan kanan atau Page Up dan Page Down mengambil
-  gambar sebelumnya atau berikutnya di folder, Home dan End yang pertama dan terakhir, + dan -
-  mengubah zoom, 0 menyesuaikan gambar, 1 menampilkan 100%. Tab atau Escape mengembalikan tombol
-  ke jendela.
+  **Berikutnya**, gambar di folder yang sama; untuk animasi **Putar** (atau **Jeda**), **Bingkai
+  sebelumnya** dan **Bingkai berikutnya**; untuk file dengan beberapa halaman (TIFF, ICO)
+  **Halaman sebelumnya** dan **Halaman berikutnya**.
+- Klik pada gambar memberinya tombol: panah menggeser gambar yang lebih besar dari jendela, jika
+  tidak panah kiri dan kanan mengambil gambar sebelumnya atau berikutnya di folder, seperti yang
+  selalu dilakukan Page Up dan Page Down; Home dan End yang pertama dan terakhir; + dan - mengubah
+  zoom bertahap, 0 menyesuaikan gambar, 1 sampai 4 menampilkan 100% sampai 400%; Spasi memutar
+  atau menjeda animasi, koma dan titik pindah ke bingkai atau halaman sebelum atau sesudahnya. Tab
+  atau Escape mengembalikan tombol ke jendela.
+- Foto diputar sesuai cara kameranya dipegang (orientasi EXIF). Gambar besar didekode saat tabnya
+  sudah terbuka dan digambar per bagian dengan detail yang dibutuhkan zoom; gambar di atas batas
+  pengaturan didekode lebih kecil, dan bilah status menyebutkannya.
 
 ## Pengaturan
 
 **Pengaturan**, **Plugin** menampilkan plugin dengan pengaturannya: file teks terbesar yang
-dibuka; piksel yang dihaluskan di atas 100% dan sisi terpanjang gambar yang didekode. Pengaturan
-disimpan di `wview.settings.json` di samping program.
+dibuka; piksel yang dihaluskan di atas 100%, orientasi EXIF, animasi yang diputar saat dibuka dan
+gambar terbesar yang didekode utuh (64, 256 atau 1024 megapiksel). Pengaturan disimpan di
+`wview.settings.json` di samping program.
 
 ## Baris perintah
 

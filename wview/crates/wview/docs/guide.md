@@ -24,15 +24,22 @@ WebP or the RAW of cameras where their extensions are installed.
 - The wheel zooms at the pointer, a drag moves the image, a double click goes between the whole
   image and 100%.
 - The bar: **Fit**, **100%**, **Zoom in**, **Zoom out**, and **Previous** and **Next**, the images
-  of the same folder.
-- A click on the image gives it the keys: Left and Right or Page Up and Page Down take the previous
-  or the next image of the folder, Home and End the first and the last, + and - zoom, 0 fits the
-  image, 1 shows 100%. Tab or Escape gives the keys back to the window.
+  of the same folder; for an animation **Play** (or **Pause**), **Previous frame** and **Next
+  frame**; for a file of several pages (TIFF, ICO) **Previous page** and **Next page**.
+- A click on the image gives it the keys: the arrows move an image larger than the window, else
+  Left and Right take the previous or the next image of the folder, as Page Up and Page Down always
+  do; Home and End the first and the last; + and - zoom by steps, 0 fits the image, 1 to 4 show
+  100% to 400%; Space plays or pauses an animation, the comma and the full stop go to the frame or
+  the page before or after. Tab or Escape gives the keys back to the window.
+- A photo is turned the way its camera was held (the orientation of EXIF). A large image is
+  decoded while its tab is open already and is drawn in parts at the detail the zoom needs; an
+  image above the limit of the settings is decoded smaller, and the status bar says so.
 
 ## Settings
 
 **Settings**, **Plugins** lists the plugins with their settings: the largest text file to open;
-smooth pixels above 100% and the largest side of a decoded image. The settings are kept in
+smooth pixels above 100%, the orientation of EXIF, an animation played when it opens and the
+largest image decoded whole (64, 256 or 1024 megapixels). The settings are kept in
 `wview.settings.json` next to the program.
 
 ## Command line

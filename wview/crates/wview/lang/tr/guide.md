@@ -24,16 +24,25 @@ kuruluysa HEIF, AVIF, WebP veya fotoğraf makinelerinin RAW dosyaları.
 - Tekerlek işaretçinin altında yakınlaştırır, sürükleme görüntüyü kaydırır, çift tıklama tüm
   görüntü ile %100 arasında geçiş yapar.
 - Çubuk: **Sığdır**, **%100**, **Yakınlaştır**, **Uzaklaştır** ve aynı klasörün görüntüleri için
-  **Önceki** ve **Sonraki**.
-- Görüntüye bir tıklama tuşları ona verir: sol ve sağ ok ya da Page Up ve Page Down klasörün önceki
-  veya sonraki görüntüsünü, Home ve End ilkini ve sonuncusunu alır, + ve - yakınlaştırır,
-  0 görüntüyü sığdırır, 1 %100 gösterir. Tab veya Escape tuşları pencereye geri verir.
+  **Önceki** ve **Sonraki**; bir animasyon için **Oynat** (veya **Duraklat**), **Önceki kare** ve
+  **Sonraki kare**; birkaç sayfalık bir dosya (TIFF, ICO) için **Önceki sayfa** ve **Sonraki
+  sayfa**.
+- Görüntüye bir tıklama tuşları ona verir: oklar pencereden büyük bir görüntüyü kaydırır, aksi
+  halde sol ve sağ ok, Page Up ve Page Down'ın her zaman yaptığı gibi klasörün önceki veya sonraki
+  görüntüsünü alır; Home ve End ilkini ve sonuncusunu; + ve - adım adım yakınlaştırır, 0 görüntüyü
+  sığdırır, 1 ile 4 arası %100 ile %400 arasını gösterir; Boşluk bir animasyonu oynatır veya
+  duraklatır, virgül ve nokta önceki veya sonraki kareye ya da sayfaya gider. Tab veya Escape
+  tuşları pencereye geri verir.
+- Bir fotoğraf, makinesinin tutulduğu gibi döndürülür (EXIF yönü). Büyük bir görüntü sekmesi zaten
+  açıkken çözülür ve yakınlaştırmanın gerektirdiği ayrıntıyla parça parça çizilir; ayarlardaki
+  sınırın üzerindeki bir görüntü küçültülerek çözülür ve durum çubuğu bunu söyler.
 
 ## Ayarlar
 
 **Ayarlar**, **Eklentiler** eklentileri ayarlarıyla listeler: açılacak en büyük metin dosyası;
-%100'ün üzerinde yumuşatılmış pikseller ve çözülen görüntünün en uzun kenarı. Ayarlar programın
-yanındaki `wview.settings.json` dosyasında tutulur.
+%100'ün üzerinde yumuşatılmış pikseller, EXIF yönü, açıldığında oynatılan bir animasyon ve
+tamamen çözülen en büyük görüntü (64, 256 veya 1024 megapiksel). Ayarlar programın yanındaki
+`wview.settings.json` dosyasında tutulur.
 
 ## Komut satırı
 
