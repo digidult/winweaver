@@ -389,7 +389,7 @@ Done in phase 6:
   family, and `--exclude` of the family in every other, a trap for each new command.
 - **CI and build-all.cmd** (phase 2): the Linux job checks the format of `wview` and its clippy for
   Windows; a Windows job of its own, beside the one of WinWeaver, runs its clippy and tests (the
-  window drawn into the screenshots `v1-` to `v12-`), builds it in release in the tree of its release
+  window drawn into the screenshots `v1-` to `v13-`), builds it in release in the tree of its release
   (section 6.7), packs `wview-<version>` (wview.exe, wwrt.dll, the `std-<hash>.dll` of the
   toolchain, the plugins, README) and `wview-sdk-<version>`, and builds the template of the SDK from
   a copy in another folder, which wview must load. That build takes the target folder of the tree:
@@ -427,7 +427,10 @@ Done in phase 6:
    the comparison of a file with its `.wwbin`, the notes in a `.wwbindiff` that opens in a tab, a
    `.wwbin` opened alone, the screenshot `v12-`.
 7. The stable interface for other languages (section 6.9) and its one example, the Mandelbrot set
-   (section 6.10).
+   (section 6.10). Done: `wview/stable/wview.h` (version 1), `wwrt::stable` (the host side, tested
+   with a plugin of the interface written in Rust in its tests), the loader telling the two kinds
+   apart, `wv-mandelbrot` in C built by CI with the compiler of Visual Studio, loaded and drawn by
+   the release (`--probe`), the screenshot `v13-`.
 
 ### 6.7 Plugins of others: the hybrid
 
@@ -573,6 +576,33 @@ P takes the next palette, Home resets, Escape drops a rectangle. It draws in ste
 at once, then finer rows while it asks for frames, so the window never waits; the status bar names
 the centre, the zoom, the iterations and the time of the last picture.
 
+Done in phase 7:
+
+- **`wview/stable/wview.h`**, version 1, as sketched in 6.9 with its constants: the modifiers,
+  the buttons, the groups of keys (`WV_KEYS_ARROWS`, `_PAGES`, `_LETTERS`, `_DIGITS`, `_SIGNS`,
+  `_SPACE`, `_ESCAPE`, `_ENTER`), the cursors and the kinds of controls. A view takes Escape only
+  when it names the group, so Escape gives the focus back otherwise (the Mandelbrot set takes it
+  while a rectangle is drawn).
+- **`wwrt::stable`**: the structures of the header as `#[repr(C)]` (their sizes checked by a
+  test: 24, 16, 88, 64, 64 and 64 bytes), `wrap` (a table of version 1 with its functions into a
+  `Plugin`), and its view: the controls copied out of the plugin's memory and drawn as egui widgets
+  in a strip over the view (a slider, a toggle, a choice, a button, a label), a change given back
+  to `control` before the next frame; the input of the view (`wwrt::input::area` with the keys of
+  the groups the plugin named in its last frame) as `wv_input` in pixels; the picture into a
+  texture when it changed; the cursor, `again` (another frame at once) and the status. The loader
+  takes a DLL that exports `wv_plugin_get` as such a plugin, else a native one; the version of an
+  unknown interface is its reason. A Rust crate over `wview.h` for authors of other toolchains
+  stays to come.
+- **`wview/stable/wv-mandelbrot/mandelbrot.c`**: the plugin of 6.10 in C11, the CRT linked in
+  (`/MT`), drawn in passes of blocks of 8, 4, 2 and 1 pixels within 12 ms a frame, the cardioid
+  and the bulb of period 2 skipped, smooth colours by the normalized count, four palettes; Save
+  writes the `.mandel` back. `seahorse.mandel` is its example, in the archive as
+  `examples\seahorse.mandel`.
+- **CI** builds it with the `cl` of the runner (vswhere, vcvars64), prints its imports, draws it in
+  the screenshot `v13-` (`WVIEW_STABLE`), puts it in the archive and checks that the release opens
+  the example and draws it without a window (`wview --probe`). `build-all.cmd` builds it where
+  vswhere finds Visual Studio and leaves it out with a word elsewhere. The SDK carries `stable/`.
+
 ## 7. Open questions
 
 - Answered by CI on 04.11.2026 (the toolchain msvc): `wview.exe` 831 KB, `wwrt.dll` 23.1 MB,
@@ -583,10 +613,10 @@ the centre, the zoom, the iterations and the time of the last picture.
   (`wview/.cargo/config.toml`). The next run showed it (`wview/sdk/imports.py`): every module
   imports `std-<hash>.dll`, `wwrt.dll` and DLLs of Windows alone, at the price of about 100 KB in
   `wview.exe` (929 KB) and 200 KB in `wwrt.dll` (23.3 MB); the template of the SDK loaded in 0.9 ms.
-- The language of the example of the stable interface: C proves that every language with a C FFI
-  can write a plugin; it needs a compiler of C, which CI has (Visual Studio on the runner) and the
-  computer of the developer has not (a toolchain there only on the word of its owner, AGENTS.md
-  rule 6). Rust of another toolchain over the crate of `wview.h` needs no new tool but proves less.
+- Answered on 05.11.2026: the example of the stable interface is in C, built by CI alone (the
+  computer of the developer has no compiler of C, and a toolchain there comes only on the word of
+  its owner, AGENTS.md rule 6); the host side is tested on that computer with a plugin of the
+  interface written in Rust.
 - WinWeaver and wedit could move onto wwrt later; nothing in them needs it.
 
 ## 8. Building wview

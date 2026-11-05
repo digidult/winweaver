@@ -66,6 +66,24 @@ dan ukurannya.
 - Format lain datang sebagai deskripsi, file `.wwformat` di folder `plugins\formats`; Pengaturan,
   Plugin menampilkan format yang terbaca dan file yang tidak terbaca.
 
+## Himpunan Mandelbrot
+
+Contoh plugin dalam bahasa lain selain Rust: C, melalui antarmuka stabil wview. File `.mandel`,
+beberapa baris dengan pusat, zoom, iterasi, palet dan warna yang dihaluskan, terbuka sebagai
+gambar himpunan; arsip memuat `examples\seahorse.mandel`.
+
+- Di atas gambar: **Iterations**, **Palette** (classic, fire, ice, grey), **Smooth colours**,
+  **Zoom in**, **Zoom out**, **Reset** dan **Save**, yang menulis tampilan kembali ke filenya (teks
+  plugin berbahasa Inggris).
+- Roda memperbesar di bawah penunjuk, menyeret menggeser gambar, Shift dan menyeret menggambar
+  persegi panjang yang diperbesar saat dilepas, klik ganda memusatkan dan memperbesar, tombol kanan
+  memperkecil.
+- Setelah klik pada gambar: panah menggesernya, + dan - mengubah zoom, Page Up dan Page Down
+  menggandakan atau membagi dua iterasi, P mengambil palet berikutnya, Home mengatur ulang, Escape
+  membatalkan persegi panjang.
+- Gambar datang bertahap, kasar seketika dan makin halus selama digambar; bilah status menyebut
+  pusat, zoom, iterasi dan waktu gambar terakhir.
+
 ## Pengaturan
 
 **Pengaturan**, **Plugin** menampilkan plugin dengan pengaturannya: file teks terbesar yang dibuka;

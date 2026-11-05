@@ -64,6 +64,21 @@ exports, every field with its value, its offset and its size.
 - More formats come as descriptions, `.wwformat` files in the folder `plugins\formats`; Settings,
   Plugins lists the formats read and the files that did not read.
 
+## The Mandelbrot set
+
+The example of a plugin in another language than Rust: C, through the stable interface of wview.
+A `.mandel` file, a few lines with the centre, the zoom, the iterations, the palette and the smooth
+colours, opens as the picture of the set; the archive holds `examples\seahorse.mandel`.
+
+- Over the picture: **Iterations**, **Palette** (classic, fire, ice, grey), **Smooth colours**,
+  **Zoom in**, **Zoom out**, **Reset**, and **Save**, which writes the view back to its file.
+- The wheel zooms at the pointer, a drag moves the picture, Shift and a drag draws a rectangle that
+  the release zooms into, a double click centres and zooms in, the right button zooms out.
+- After a click on the picture: the arrows move it, + and - zoom, Page Up and Page Down double or
+  halve the iterations, P takes the next palette, Home resets, Escape drops a rectangle.
+- The picture comes in steps, coarse at once and finer while it is drawn; the status bar names the
+  centre, the zoom, the iterations and the time of the last picture.
+
 ## Settings
 
 **Settings**, **Plugins** lists the plugins with their settings: the largest text file to open;

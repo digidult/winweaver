@@ -68,6 +68,24 @@ importaciones y las exportaciones, cada campo con su valor, su desplazamiento y 
 - Más formatos llegan como descripciones, archivos `.wwformat` en la carpeta `plugins\formats`;
   Configuración, Complementos enumera los formatos leídos y los archivos que no se leyeron.
 
+## El conjunto de Mandelbrot
+
+El ejemplo de un complemento en otro lenguaje que Rust: C, a través de la interfaz estable de
+wview. Un archivo `.mandel`, unas líneas con el centro, el zoom, las iteraciones, la paleta y los
+colores suavizados, se abre como la imagen del conjunto; el archivo comprimido trae
+`examples\seahorse.mandel`.
+
+- Sobre la imagen: **Iterations**, **Palette** (classic, fire, ice, grey), **Smooth colours**,
+  **Zoom in**, **Zoom out**, **Reset** y **Save**, que escribe la vista de vuelta en su archivo
+  (los textos del complemento están en inglés).
+- La rueda hace zoom en el puntero, arrastrar mueve la imagen, Mayús y arrastrar dibuja un
+  rectángulo al que soltar hace zoom, un doble clic centra y acerca, el botón derecho aleja.
+- Tras un clic en la imagen: las flechas la mueven, + y - hacen zoom, Re Pág y Av Pág duplican o
+  reducen a la mitad las iteraciones, P toma la paleta siguiente, Inicio restablece, Escape
+  descarta un rectángulo.
+- La imagen llega por pasos, gruesa al momento y más fina mientras se dibuja; la barra de estado
+  nombra el centro, el zoom, las iteraciones y el tiempo de la última imagen.
+
 ## Configuración
 
 **Configuración**, **Complementos** enumera los complementos con su configuración: el archivo de

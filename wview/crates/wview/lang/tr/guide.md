@@ -65,6 +65,24 @@ değeri, uzaklığı ve boyutuyla.
 - Başka biçimler açıklama olarak gelir, `plugins\formats` klasöründeki `.wwformat` dosyaları;
   Ayarlar, Eklentiler okunan biçimleri ve okunamayan dosyaları listeler.
 
+## Mandelbrot kümesi
+
+Rust dışında bir dildeki eklentinin örneği: C, wview'un kararlı arayüzü üzerinden. Merkez, yakınlık,
+yineleme, palet ve yumuşatılmış renkleri içeren birkaç satırlık bir `.mandel` dosyası kümenin
+görüntüsü olarak açılır; arşivde `examples\seahorse.mandel` vardır.
+
+- Görüntünün üstünde: **Iterations**, **Palette** (classic, fire, ice, grey), **Smooth colours**,
+  **Zoom in**, **Zoom out**, **Reset** ve görünümü dosyasına geri yazan **Save** (eklentinin
+  metinleri İngilizcedir).
+- Tekerlek işaretçinin altında yakınlaştırır, sürükleme görüntüyü kaydırır, Shift ve sürükleme bir
+  dikdörtgen çizer ve bırakınca ona yakınlaşır, çift tıklama ortalar ve yakınlaştırır, sağ düğme
+  uzaklaştırır.
+- Görüntüye bir tıklamadan sonra: oklar onu kaydırır, + ve - yakınlaştırır, Page Up ve Page Down
+  yinelemeleri ikiye katlar veya yarıya indirir, P sonraki paleti alır, Home sıfırlar, Escape bir
+  dikdörtgeni bırakır.
+- Görüntü adım adım gelir, hemen kaba ve çizildikçe daha ince; durum çubuğu merkezi, yakınlığı,
+  yinelemeleri ve son görüntünün süresini söyler.
+
 ## Ayarlar
 
 **Ayarlar**, **Eklentiler** eklentileri ayarlarıyla listeler: açılacak en büyük metin dosyası;

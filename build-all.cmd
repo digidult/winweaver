@@ -46,6 +46,7 @@ set "DO_SHOTS="
 set "DO_SLIDES="
 set "DO_WEB=1"
 set "DO_WVIEW=1"
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 :args
 if "%~1"=="" goto args_done
 if "%~1"=="/?" goto help
@@ -321,6 +322,22 @@ copy /y "%WBIN%\wwrt.dll" "%DIST%\wview\" >nul || goto failed
 copy /y "%WBIN%\wv_text.dll" "%DIST%\wview\plugins\" >nul || goto failed
 copy /y "%WBIN%\wv_image.dll" "%DIST%\wview\plugins\" >nul || goto failed
 copy /y "%WBIN%\wv_binary.dll" "%DIST%\wview\plugins\" >nul || goto failed
+rem The example of the stable interface, a plugin in C (docs/plugins.md 6.10), built with the
+rem compiler of Visual Studio where vswhere finds one; a computer without it leaves it out.
+set "VCVARS="
+if exist "%VSWHERE%" for /f "usebackq delims=" %%v in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VCVARS=%%v\VC\Auxiliary\Build\vcvars64.bat"
+if not defined VCVARS goto stable_none
+if not exist "%VCVARS%" goto stable_none
+set "STABLE_OBJ=%TEMP%\wv-mandelbrot-%RANDOM%"
+mkdir "%STABLE_OBJ%"
+cmd /c ""%VCVARS%" >nul && cl /nologo /LD /O2 /MT /W3 /std:c11 /I wview\stable wview\stable\wv-mandelbrot\mandelbrot.c /Fo"%STABLE_OBJ%\\" /Fe"%DIST%\wview\plugins\wv_mandelbrot.dll"" || goto failed
+rmdir /s /q "%STABLE_OBJ%"
+goto stable_done
+:stable_none
+echo The example of the stable interface is left out: no compiler of Visual Studio here.
+:stable_done
+mkdir "%DIST%\wview\examples"
+copy /y wview\stable\wv-mandelbrot\seahorse.mandel "%DIST%\wview\examples\" >nul || goto failed
 copy /y wview\package\README.md "%DIST%\wview\README.md" >nul || goto failed
 rem The std-<hash>.dll wview.exe imports, from the sysroot of rustc.
 set "STD_NAME="

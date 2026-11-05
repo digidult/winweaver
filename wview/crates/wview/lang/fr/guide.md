@@ -71,6 +71,25 @@ importations et les exportations, chaque champ avec sa valeur, son décalage et 
   `plugins\formats` ; Paramètres, Modules liste les formats lus et les fichiers qui ne se sont pas
   lus.
 
+## L'ensemble de Mandelbrot
+
+L'exemple d'un module dans un autre langage que Rust : C, par l'interface stable de wview. Un
+fichier `.mandel`, quelques lignes avec le centre, le zoom, les itérations, la palette et les
+couleurs lissées, s'ouvre comme l'image de l'ensemble ; l'archive contient
+`examples\seahorse.mandel`.
+
+- Au-dessus de l'image : **Iterations**, **Palette** (classic, fire, ice, grey), **Smooth
+  colours**, **Zoom in**, **Zoom out**, **Reset** et **Save**, qui réécrit la vue dans son fichier
+  (les textes du module sont en anglais).
+- La molette zoome sous le pointeur, un glisser déplace l'image, Maj et un glisser tracent un
+  rectangle dans lequel le relâchement zoome, un double clic centre et agrandit, le bouton droit
+  réduit.
+- Après un clic sur l'image : les flèches la déplacent, + et - zooment, Page précédente et Page
+  suivante doublent ou divisent par deux les itérations, P prend la palette suivante, Début
+  réinitialise, Échap abandonne un rectangle.
+- L'image vient par étapes, grossière tout de suite et plus fine pendant qu'elle se dessine ; la
+  barre d'état nomme le centre, le zoom, les itérations et la durée de la dernière image.
+
 ## Paramètres
 
 **Paramètres**, **Modules** liste les modules avec leurs paramètres : le plus grand fichier texte à

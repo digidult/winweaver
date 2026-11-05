@@ -27,7 +27,10 @@ name the reason.
 
 ## Plugins of one's own
 
-The SDK of the same release (`wview-sdk-<version>.zip`) makes them: its README tells how.
+The SDK of the same release (`wview-sdk-<version>.zip`) makes native ones: its README tells how.
+A plugin in another language (C, C++, Zig, Go, Delphi) is written to the stable interface,
+`stable\wview.h` of the SDK, and loads into every later release; `plugins\wv_mandelbrot.dll` is
+its example, in C: open `examples\seahorse.mandel`.
 
 ## Command line
 

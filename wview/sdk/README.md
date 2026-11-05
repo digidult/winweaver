@@ -39,6 +39,14 @@ the `wwrt.dll` of the release; change none of the files of the release, or the p
    is `target\release\<name>.dll` (a hyphen of the name becomes `_`).
 5. Copy the DLL into the folder `plugins` next to `wview.exe` of the same release.
 
+## A plugin in another language
+
+`stable/wview.h` is the stable interface of the plugins (version 1): a DLL of C, C++, Zig, Go,
+Delphi or Rust of any toolchain that exports `wv_plugin_get` loads into this release and every
+later one that knows the version, without being built again. It draws a picture and names its
+controls; wview draws them and gives it the keys and the mouse. `stable/README.md` tells the rules
+and how to build `stable/wv-mandelbrot`, its example in C.
+
 ## The rules
 
 - Every crate wview shares comes through wwrt: `wwrt::egui`, `wwrt::ww`, `wwrt::serde` (a derive

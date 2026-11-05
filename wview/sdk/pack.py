@@ -76,7 +76,7 @@ def main() -> int:
         manifest = (to / "Cargo.toml").read_text(encoding="utf-8")
         write(to / "Cargo.toml", standalone(manifest, package, dependencies))
     view = repo / "wview"
-    for part in ["crates", "plugins"]:
+    for part in ["crates", "plugins", "stable"]:
         shutil.copytree(view / part, out / part, ignore=SKIP)
     runtime = out / "crates" / "wwrt" / "Cargo.toml"
     text = runtime.read_text(encoding="utf-8")

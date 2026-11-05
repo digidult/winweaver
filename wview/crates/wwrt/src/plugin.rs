@@ -261,6 +261,24 @@ fn load(path: &Path) -> Result<Box<dyn Plugin>, String> {
             text
         }
     })?;
+    // A plugin of the stable interface (wview.h) exports `wv_plugin_get` and no `ww_plugin`.
+    // SAFETY: `wv_plugin_get` is declared by wview.h with this signature; the table it gives is
+    // the plugin's static data, which lives while the DLL does, and the DLL is never unloaded.
+    let stable = unsafe {
+        library
+            .get::<unsafe extern "C" fn() -> *const crate::stable::WvPlugin>(b"wv_plugin_get\0")
+            .ok()
+            .map(|get| get())
+    };
+    if let Some(table) = stable {
+        if table.is_null() {
+            return Err("wv_plugin_get gave no table".to_owned());
+        }
+        // SAFETY: see above; the table is checked by `wrap` before it is used.
+        let plugin = unsafe { crate::stable::wrap(&*table) }?;
+        std::mem::forget(library);
+        return Ok(Box::new(plugin));
+    }
     // SAFETY: `ww_plugin_abi` is the function `plugin!` exports, with this signature, and it gives
     // a nul-terminated text of the plugin's constant data.
     let built = unsafe {

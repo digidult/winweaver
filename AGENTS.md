@@ -193,6 +193,8 @@ text editor wedit.
 │                          the description formats/pe.wwformat built in), each with lang/<code>.json,
 │                          plugins/wv-hello (the template of the SDK); sdk/ (README.md, pack.py: the
 │                          SDK of a release); package/README.md (for the user of the archive);
+│                          stable/ (wview.h: the stable interface for other languages, README.md,
+│                          wv-mandelbrot/mandelbrot.c and seahorse.mandel: its example in C);
 │                          .cargo/config.toml links std dynamically; README.md
 ├── package/               what the archive adds: README.md for the user (not this repository's), lang/be/ui.json
 │                          (Belarusian, every text: the example of a language, checked by a test of i18n.rs)
@@ -697,7 +699,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   import in `loaded_imports` of the settings file of the window, so a window open meanwhile overwrites it.
 - Screenshots: the Windows job sets `WINWEAVER_SCREENSHOTS`, and the test `screenshots_of_the_window` draws the
   main tabs with wgpu (no screen) into `target/screenshots`, uploaded as the artifact `screenshots`
-  (`gh run download <id> -n screenshots -D <folder>`; the ones of wview, `v1-` to `v12-`, as
+  (`gh run download <id> -n screenshots -D <folder>`; the ones of wview, `v1-` to `v13-`, as
   `screenshots-wview` of its job); the way to see the window without starting it on the
   customer's PC. A renderer that cannot start writes `error.txt` there instead of failing the tests.
 - Window tests: `App::new` and `App::apply` test the logic without frames; `egui_kittest` (a dev-dependency
@@ -833,7 +835,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   another one and wview did not start), and a release build of wview attaches to the console of its
   parent only when its output is not redirected. CI: the Linux job checks the format and clippy of `wview`, the job
   `build-wview` (Windows, beside the one of WinWeaver) its clippy and tests (the screenshots `v1-`
-  to `v12-`, the artifact `screenshots-wview`), the release build and the artifacts
+  to `v13-`, the artifact `screenshots-wview`), the release build and the artifacts
   `wview-<version>` and `wview-sdk-<version>`; a release of WinWeaver does not carry them. The
   template of the SDK is built in its copy with the target folder of the tree (`CARGO_TARGET_DIR`):
   the crates of the registry are not built again, the crates of the SDK are cleaned first. The family links std dynamically
@@ -855,7 +857,13 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   A `.wwbin` reads back (`wwbin::read`) for its own tab and for Compare with a structure
   (`diff.rs`: lines matched by key or name, marks; `compareview.rs`: the view, the notes); a
   `.wwbindiff` keeps the two files and the notes by the path of a line. The tests of wview make
-  their files through `wv_binary::sample` (no dialog opens in a test).
+  their files through `wv_binary::sample` (no dialog opens in a test). The stable interface
+  (`wview/stable/wview.h`, version 1) is the way of plugins in other languages: `wwrt::stable` wraps
+  a DLL that exports `wv_plugin_get` into a `Plugin` (its structures `#[repr(C)]`, their sizes
+  tested); a change of the header changes `stable.rs` and its test of the layout together. Its
+  example `wview/stable/wv-mandelbrot/mandelbrot.c` is built by CI with `cl` alone (no compiler of
+  C on the computer of the developer): its screenshot `v13-` and the step that draws it with
+  `wview --probe` are where a mistake of it shows.
 - The structure of the code: a change of the window is an `Act`
   of one subsystem (`act.rs`), run by the `apply_<subsystem>` method in `app/<theme>.rs`; a question before
   a removal is `Act::Ask(Question)` built where the data is (`question.rs`, `remove_question` of a users
@@ -1090,6 +1098,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | In pull request #72 (0.33.0, wview 0.4.0) | Phase 4 of wview, wv-binary 1: the language of the descriptions (`.wwformat`) and its engine, PE in its first parts (the headers, the sections, the exports, the imports), the tree with the bytes of the file and the tree as a page, the descriptions of the folder `formats`, the settings, the eight languages and the guide, the screenshots `v9-` and `v10-` |
 | In pull request #73 (0.34.0, wview 0.5.0) | Phase 5 of wview, wv-binary 2: `lazy`, `align` and `length` in the language; the resources (read when they open), the exceptions, the certificates, the relocations, debug, TLS, the load configuration, the delay imports and the header of .NET; Save the structure as `.wwbin`; the bytes scroll exactly to the node selected; the screenshot `v11-` |
 | In pull request #74 (0.35.0, wview 0.6.0) | Phase 6 of wview, `.wwbindiff`: a `.wwbin` opened alone as its tree; Compare with a structure (the lines matched by key or name, the marks, Changed only, both values, a comment and a bookmark of a line, Show in the tree and bytes); Save the comparison as `.wwbindiff`, which opens the comparison in its tab; the screenshot `v12-` |
+| In pull request #75 (0.36.0, wview 0.7.0) | Phase 7 of wview: the stable interface for other languages (`wview/stable/wview.h`, version 1), its host side `wwrt::stable` and the loader of both kinds, the example `wv-mandelbrot` in C built by CI with the compiler of Visual Studio (its controls, mouse and keys, drawn in steps), in the archive with `examples\seahorse.mandel`, checked by `--probe`, the screenshot `v13-` |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the

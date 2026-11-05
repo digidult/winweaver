@@ -68,6 +68,25 @@ importazioni e le esportazioni, ogni campo con il suo valore, il suo offset e la
 - Altri formati arrivano come descrizioni, file `.wwformat` nella cartella `plugins\formats`;
   Impostazioni, Plugin elenca i formati letti e i file che non si sono letti.
 
+## L'insieme di Mandelbrot
+
+L'esempio di un plugin in un linguaggio diverso da Rust: C, attraverso l'interfaccia stabile di
+wview. Un file `.mandel`, poche righe con il centro, lo zoom, le iterazioni, la tavolozza e i
+colori sfumati, si apre come l'immagine dell'insieme; l'archivio contiene
+`examples\seahorse.mandel`.
+
+- Sopra l'immagine: **Iterations**, **Palette** (classic, fire, ice, grey), **Smooth colours**,
+  **Zoom in**, **Zoom out**, **Reset** e **Save**, che riscrive la vista nel suo file (i testi del
+  plugin sono in inglese).
+- La rotellina ingrandisce sotto il puntatore, un trascinamento sposta l'immagine, Maiusc e un
+  trascinamento disegnano un rettangolo in cui il rilascio ingrandisce, un doppio clic centra e
+  ingrandisce, il tasto destro riduce.
+- Dopo un clic sull'immagine: le frecce la spostano, + e - cambiano lo zoom, Pag su e Pag giù
+  raddoppiano o dimezzano le iterazioni, P prende la tavolozza successiva, Home ripristina, Esc
+  scarta un rettangolo.
+- L'immagine arriva per passi, grossolana subito e più fine mentre si disegna; la barra di stato
+  nomina il centro, lo zoom, le iterazioni e il tempo dell'ultima immagine.
+
 ## Impostazioni
 
 **Impostazioni**, **Plugin** elenca i plugin con le loro impostazioni: il file di testo più grande

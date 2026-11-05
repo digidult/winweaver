@@ -270,6 +270,21 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: wview -> target
+      - name: The example of the stable interface, built with the compiler of Visual Studio
+        # A plugin in C (docs/plugins.md, 6.10): no part of Rust, so any build of wview loads it.
+        # The CRT is linked in (/MT), so it needs no DLL of the Visual C++ runtime.
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          $vcvars = Join-Path $vs 'VC\Auxiliary\Build\vcvars64.bat'
+          $out = Join-Path $env:RUNNER_TEMP 'stable'
+          New-Item -ItemType Directory -Force $out | Out-Null
+          cmd /c "`"$vcvars`" >nul && cl /nologo /LD /O2 /MT /W3 /std:c11 /I wview\stable wview\stable\wv-mandelbrot\mandelbrot.c /Fo$out\ /Fe$out\wv_mandelbrot.dll"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python wview/sdk/imports.py "$out/wv_mandelbrot.dll"
+          Get-ChildItem $out | Select-Object Length, Name | Format-Table -AutoSize
+          "WVIEW_STABLE=$out" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Clippy and tests (the window drawn into the screenshots)
         working-directory: wview
         run: |
@@ -309,6 +324,10 @@ jobs:
           New-Item -ItemType Directory -Force "$view/plugins" | Out-Null
           Copy-Item "$env:WVIEW_BIN/wview.exe", "$env:WVIEW_BIN/wwrt.dll" "$view/"
           Copy-Item "$env:WVIEW_BIN/wv_text.dll", "$env:WVIEW_BIN/wv_image.dll", "$env:WVIEW_BIN/wv_binary.dll" "$view/plugins/"
+          # The example of the stable interface and a view of it to open.
+          Copy-Item "$env:WVIEW_STABLE/wv_mandelbrot.dll" "$view/plugins/"
+          New-Item -ItemType Directory -Force "$view/examples" | Out-Null
+          Copy-Item wview/stable/wv-mandelbrot/seahorse.mandel "$view/examples/"
           # The std-<hash>.dll wview.exe imports, from the sysroot of the toolchain.
           $stdName = python wview/sdk/imports.py --std "$env:WVIEW_BIN/wview.exe"
           $std = Get-ChildItem (rustc --print sysroot) -Recurse -Filter $stdName | Select-Object -First 1
@@ -352,6 +371,19 @@ jobs:
           Get-Content "$list.err" -ErrorAction SilentlyContinue
           "exit code: $($p.ExitCode) ($('{0:X8}' -f $p.ExitCode))"
           if ($p.ExitCode -ne 0 -or $text -notmatch 'Hello' -or $text -match 'not loaded') { throw 'the plugin of the SDK did not load' }
+      - name: The plugin of the stable interface loaded and drawn by the release
+        # The release built in Rust loads the plugin built in C, opens the example and draws its
+        # view without a window (--probe): the picture comes in frames, the status names the zoom.
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP 'probe.txt'
+          $probe = @('--probe', 'dist-wview/wview/examples/seahorse.mandel')
+          $p = Start-Process -FilePath dist-wview/wview/wview.exe -ArgumentList $probe -PassThru -Wait -RedirectStandardOutput $out -RedirectStandardError "$out.err"
+          $text = Get-Content -Raw $out
+          $text
+          Get-Content "$out.err" -ErrorAction SilentlyContinue
+          "exit code: $($p.ExitCode)"
+          if ($p.ExitCode -ne 0 -or $text -notmatch 'Mandelbrot' -or $text -notmatch 'zoom') { throw 'the plugin of the stable interface did not draw' }
       - uses: actions/upload-artifact@v4
         with:
           name: wview-${{ env.WVIEW_VERSION }}

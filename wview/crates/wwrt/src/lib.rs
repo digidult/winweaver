@@ -21,5 +21,6 @@ pub use ww::eframe::egui;
 pub mod blocks;
 pub mod input;
 pub mod plugin;
+pub mod stable;
 #[doc(hidden)]
 pub mod testing;

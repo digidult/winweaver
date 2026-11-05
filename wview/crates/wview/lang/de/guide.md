@@ -71,6 +71,25 @@ die Exporte, jedes Feld mit seinem Wert, seinem Offset und seiner Größe.
 - Weitere Formate kommen als Beschreibungen, `.wwformat`-Dateien im Ordner `plugins\formats`;
   Einstellungen, Plugins zeigt die gelesenen Formate und die Dateien, die nicht gelesen wurden.
 
+## Die Mandelbrot-Menge
+
+Das Beispiel eines Plugins in einer anderen Sprache als Rust: C, über die stabile Schnittstelle
+von wview. Eine `.mandel`-Datei, einige Zeilen mit dem Mittelpunkt, dem Zoom, den Iterationen, der
+Palette und den geglätteten Farben, öffnet als Bild der Menge; das Archiv enthält
+`examples\seahorse.mandel`.
+
+- Über dem Bild: **Iterations**, **Palette** (classic, fire, ice, grey), **Smooth colours**,
+  **Zoom in**, **Zoom out**, **Reset** und **Save**, das die Ansicht in ihre Datei zurückschreibt
+  (die Beschriftungen des Plugins sind englisch).
+- Das Mausrad zoomt am Zeiger, Ziehen verschiebt das Bild, Umschalt und Ziehen zeichnet ein
+  Rechteck, in das das Loslassen zoomt, ein Doppelklick zentriert und vergrößert, die rechte
+  Taste verkleinert.
+- Nach einem Klick auf das Bild: die Pfeile verschieben es, + und - zoomen, Bild auf und Bild ab
+  verdoppeln oder halbieren die Iterationen, P nimmt die nächste Palette, Pos1 setzt zurück,
+  Escape verwirft ein Rechteck.
+- Das Bild kommt in Stufen, grob sofort und feiner, während es gezeichnet wird; die Statusleiste
+  nennt den Mittelpunkt, den Zoom, die Iterationen und die Zeit des letzten Bildes.
+
 ## Einstellungen
 
 **Einstellungen**, **Plugins** zeigt die Plugins mit ihren Einstellungen: die größte zu öffnende
