@@ -2,6 +2,9 @@
 //! Windows names (BMP, PNG, JPEG, GIF, TIFF, ICO, JPEG XR, DDS, and WebP, HEIF or AVIF where their
 //! extensions are installed), read once at the load.
 //!
+//! A format names the MIME types its decoder gives, so that the plugin also opens an image of
+//! bytes in memory, a part of another file shown inside its view (an icon inside a program).
+//!
 //! An image is decoded in a thread of its own (`view::start`), turned by the orientation of its
 //! EXIF, and kept with its levels (each half of the one before, `picture`), so that the view draws
 //! the tiles of the level its zoom needs (`view`); a GIF plays its frames drawn on its canvas
@@ -11,8 +14,8 @@
 //! largest image decoded whole.
 
 use std::path::Path;
-use std::sync::OnceLock;
 use std::sync::mpsc::RecvTimeoutError;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use wwrt::egui;
@@ -28,7 +31,7 @@ mod view;
 mod wic;
 
 use view::ImageView;
-use wic::Options;
+use wic::{Options, Source};
 
 /// The largest image decoded whole, in millions of pixels, by default and as the settings offer
 /// it; a larger one is decoded smaller.
@@ -55,6 +58,33 @@ static TRANSLATIONS: [(&str, &str); 8] = [
     ("tr", include_str!("../lang/tr.json")),
 ];
 
+/// The view of an image with the settings of the plugin.
+fn view_of(source: Source, settings: &Value) -> Result<Box<dyn View>, String> {
+    let megapixels: u32 = setting(settings, "max_megapixels", MEGAPIXELS);
+    let options = Options {
+        budget: u64::from(megapixels.clamp(MEGAPIXEL_STEPS[0], MEGAPIXEL_STEPS[2])) * 1_000_000,
+        orient: setting(settings, "orientation", true),
+    };
+    let job = view::start(source.clone(), None, options);
+    // An image decoded at once opens with its tab, and one that does not decode stays closed
+    // with the reason; a larger one opens and shows when it is there.
+    let first = match job.recv_timeout(WAIT) {
+        Ok(Ok(image)) => Ok(image),
+        Ok(Err(e)) => return Err(e),
+        Err(RecvTimeoutError::Timeout) => Err(job),
+        Err(RecvTimeoutError::Disconnected) => {
+            return Err(tr("The decoding stopped").to_owned());
+        }
+    };
+    Ok(Box::new(ImageView::new(
+        source,
+        options,
+        setting(settings, "smooth", true),
+        setting(settings, "animate", true),
+        first,
+    )))
+}
+
 pub struct ImagePlugin;
 
 impl Plugin for ImagePlugin {
@@ -72,29 +102,17 @@ impl Plugin for ImagePlugin {
     }
 
     fn open(&self, path: &Path, settings: &Value) -> Result<Box<dyn View>, String> {
-        let megapixels: u32 = setting(settings, "max_megapixels", MEGAPIXELS);
-        let options = Options {
-            budget: u64::from(megapixels.clamp(MEGAPIXEL_STEPS[0], MEGAPIXEL_STEPS[2])) * 1_000_000,
-            orient: setting(settings, "orientation", true),
-        };
-        let job = view::start(path.to_path_buf(), None, options);
-        // An image decoded at once opens with its tab, and one that does not decode stays closed
-        // with the reason; a larger one opens and shows when it is there.
-        let first = match job.recv_timeout(WAIT) {
-            Ok(Ok(image)) => Ok(image),
-            Ok(Err(e)) => return Err(e),
-            Err(RecvTimeoutError::Timeout) => Err(job),
-            Err(RecvTimeoutError::Disconnected) => {
-                return Err(tr("The decoding stopped").to_owned());
-            }
-        };
-        Ok(Box::new(ImageView::new(
-            path.to_path_buf(),
-            options,
-            setting(settings, "smooth", true),
-            setting(settings, "animate", true),
-            first,
-        )))
+        view_of(Source::File(path.to_path_buf()), settings)
+    }
+
+    fn open_bytes(
+        &self,
+        _name: &str,
+        _mime: &str,
+        bytes: Vec<u8>,
+        settings: &Value,
+    ) -> Result<Box<dyn View>, String> {
+        view_of(Source::Bytes(Arc::from(bytes)), settings)
     }
 
     fn translations(&self) -> &'static [(&'static str, &'static str)] {

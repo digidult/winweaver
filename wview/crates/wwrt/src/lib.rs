@@ -19,7 +19,9 @@ pub use ww::eframe;
 pub use ww::eframe::egui;
 
 pub mod blocks;
+pub mod inner;
 pub mod input;
+pub mod mime;
 pub mod plugin;
 pub mod stable;
 #[doc(hidden)]

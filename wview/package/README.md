@@ -1,6 +1,6 @@
 # wview
 
-A viewer of files: Markdown pages and text files, programs and libraries of Windows, and every
+A viewer of files: Markdown pages, text and XML files, programs and libraries of Windows, and every
 image format the Windows it runs on
 decodes (BMP, PNG, JPEG, GIF, TIFF, ICO, and HEIF, AVIF, WebP or the RAW of cameras where their
 extensions are installed). Every format is a plugin, a DLL in the folder `plugins`.
@@ -19,8 +19,9 @@ settings are kept in `wview.settings.json` next to the program.
 - `plugins\wv_text.dll` (Markdown and text), `plugins\wv_image.dll` (images, the animations of
   GIF, the pages of TIFF and ICO) and `plugins\wv_binary.dll` (programs and libraries of Windows
   as the tree of their structure with their bytes, saved as `.wwbin` on demand and compared with
-  one, the notes of a comparison in a `.wwbindiff`; more formats as
-  `.wwformat` descriptions in `plugins\formats`).
+  one, the notes of a comparison in a `.wwbindiff`, the manifest, the icons and the bitmaps
+  inside a program shown by the plugins of texts and images; more formats as `.wwformat`
+  descriptions in `plugins\formats`).
 
 A plugin of another release of wview is not loaded: the page of the plugins and `wview --plugins`
 name the reason.

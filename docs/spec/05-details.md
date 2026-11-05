@@ -680,14 +680,22 @@ change, read the section of the part it touches.
   re-exported) and the plugins as `cdylib`s on it, one build of all (one compiler, one profile, the
   same versions of the shared crates: `plugin::ABI`, its version, the interface, rustc, the target
   and the profile, is checked at the load, and another version of a shared crate fails the load
-  by its symbols). The interface 1 (`wwrt::plugin`): `open` with the settings of the plugin (a
+  by its symbols). The interface 2 (`wwrt::plugin`): `open` with the settings of the plugin (a
   JSON object a plugin in `Extra::plugins` of wview, by the name of its DLL, drawn by
   `settings_ui` in Settings, Plugins), `translations` (added by `ww::i18n::add`, on top of the
   embedded ones, under the files of `lang/`), a `Host` with the requests of a view
   (`Request::Browse`), `wwrt::input::area` for the keys and the mouse (a click gives the focus,
   the keys a view names are its own without Ctrl and Alt, Tab and Escape give them back), and
   `wwrt::testing` for the tests of the translations of a plugin (`plugin_texts`: tr, trf,
-  `const NAME`, `name:`, `label:`). wview has the eight languages of WinWeaver: its `ui.json`
+  `const NAME`, `name:`, `label:`). The texts of the runtime (`wwrt::inner`) are translated by the
+  window: the test of wview scans `crates/wwrt/src` too, and `testing.rs` spells its patterns
+  `tr\u{28}` so that the scan finds none of its own. A view inside a view (`Host::open_inside`)
+  draws under `ui.push_id` of a serial number and at most 4 deep; a plugin takes the ids of its
+  panels and trees from the place of its view (`ui.make_persistent_id`, `ww::widgets::side_panel`
+  takes an `Id`), since a global id would clash with the same view inside itself. `View::act` and
+  `Plugin::act` get a `Host`, and its requests (`Status`, `Open`, `OpenBytes`) reach the window as
+  acts after the frame or the act (`shell.pending`); a tab of bytes has no path and steps through
+  no folder. The stable interface stays at version 1: its formats name no MIME type. wview has the eight languages of WinWeaver: its `ui.json`
   holds the texts of the shell of W# as WinWeaver translates them and its own. `plugin!` exports
   nothing with the feature `library` of a plugin (each declares `library = []`): the tests of
   wview take the plugins as libraries (`crate-type = ["cdylib", "rlib"]`) into one executable, and

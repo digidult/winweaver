@@ -11,13 +11,15 @@ use wwrt::plugin::Plugins;
 use wwrt::testing;
 use wwrt::ww::{Settings, ShellAct, Window};
 
-use crate::app::{Act, Doc, Extra, GUIDE, GUIDES, LANGUAGES, Wview};
+use crate::app::{Act, Doc, Extra, FileDoc, GUIDE, GUIDES, LANGUAGES, Wview};
 pub(crate) use wv_image::sample::{GifFrame, bmp, gif};
 
 #[test]
 fn every_text_of_the_window_is_translated() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut wanted = testing::texts(&root.join("src"));
+    // The runtime, whose views inside a view name their content in the window.
+    wanted.extend(testing::texts(&root.join("../wwrt/src")));
     // W# in the repository, or in the tree of a release (wview/sdk/pack.py).
     let framework = ["../../../crates/ww/src", "../../framework/ww/src"]
         .map(|p| root.join(p))
@@ -89,7 +91,7 @@ fn open(w: &mut Window<Wview>, path: PathBuf) {
 /// The file of the tab in front and the status line of its view.
 pub(crate) fn front(w: &Window<Wview>) -> (PathBuf, String) {
     match w.shell.active_doc() {
-        Some(Doc::File(d)) => (d.path.clone(), d.view.status()),
+        Some(Doc::File(d)) => (d.path.clone().unwrap_or_default(), d.view.status()),
         _ => (PathBuf::new(), String::new()),
     }
 }
@@ -342,6 +344,82 @@ fn a_dll_in_its_tree_and_its_bytes() {
         Some(Doc::File(d)) => assert!(d.view.tools().iter().any(|t| t.label == "Text")),
         _ => panic!("the tab of the DLL is in front"),
     }
+}
+
+/// A program of this Windows with a manifest and icons among its resources, read and never
+/// changed.
+pub(crate) fn notepad() -> PathBuf {
+    let root = std::env::var_os("SystemRoot").map_or(PathBuf::from(r"C:\Windows"), PathBuf::from);
+    root.join("System32").join("notepad.exe")
+}
+
+/// The path of the bytes of the first resource of a type.
+pub(crate) fn resource(kind: &'static str) -> [&'static str; 10] {
+    [
+        "resources",
+        "entries",
+        kind,
+        "names",
+        "entries",
+        "*",
+        "languages",
+        "entries",
+        "*",
+        "data",
+    ]
+}
+
+/// The program in a tab with the content of a node shown inside its view.
+pub(crate) fn content_tab(w: &mut Window<Wview>, path: &[&str]) {
+    let file = notepad();
+    let view = wv_binary::sample::content(&file, path).unwrap();
+    w.shell.open_tab(Doc::File(FileDoc {
+        path: Some(file),
+        name: "notepad.exe".to_owned(),
+        plugin: 2,
+        view,
+    }));
+}
+
+#[test]
+fn the_resources_of_a_program_show_inside_its_view() {
+    let mut window = window(english(wwrt::serde_json::Value::Null));
+    content_tab(&mut window, &resource("MANIFEST"));
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(1000.0, 700.0))
+        .build_eframe(|_| window);
+    h.run_steps(4);
+    let status = front(h.state()).1;
+    assert!(
+        status.ends_with(" lines"),
+        "the plugin of texts shows the manifest: {status}"
+    );
+    assert!(tool_labels(h.state()).contains(&"Content"));
+    let menu: Vec<&str> = match h.state().shell.active_doc() {
+        Some(Doc::File(d)) => d.view.menu().iter().map(|t| t.id).collect(),
+        _ => Vec::new(),
+    };
+    assert!(
+        menu.contains(&"content_tab") && menu.contains(&"read_all"),
+        "{menu:?}"
+    );
+    // The content in a tab of its own, by the menu of the view.
+    h.state_mut().apply(vec![Act::Tool("content_tab")]);
+    let pending = std::mem::take(&mut h.state_mut().shell.pending);
+    h.state_mut().apply(pending);
+    h.run_steps(2);
+    assert_eq!(h.state().shell.docs.len(), 2);
+    let (path, status) = front(h.state());
+    assert_eq!(path, PathBuf::new(), "bytes have no file");
+    assert!(status.ends_with(" lines"), "{status}");
+    // The first icon of the program, an image inside its view.
+    content_tab(h.state_mut(), &resource("ICON"));
+    decoded(&mut h);
+    let status = front(h.state()).1;
+    assert!(
+        status.contains(" x "),
+        "the plugin of images shows the icon: {status}"
+    );
 }
 
 /// A copy of a DLL of this Windows in `dir`, its structure saved, two of its fields changed (the

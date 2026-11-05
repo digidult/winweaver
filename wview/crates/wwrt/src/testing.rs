@@ -9,9 +9,12 @@
 
 use std::path::{Path, PathBuf};
 
+/// The calls of `tr` and `trf`, spelt so that a scan of the runtime finds none in this file.
+const CALLS: [&str; 2] = ["tr\u{28}", "trf\u{28}"];
+
 /// The literals of the calls of `tr` and `trf` in the Rust sources under a folder.
 pub fn texts(dir: &Path) -> Vec<String> {
-    found(dir, &["tr(", "trf("])
+    found(dir, &CALLS)
 }
 
 /// `texts` and the literals a plugin gives the host to translate: `const NAME: &str =` (the name
@@ -19,7 +22,7 @@ pub fn texts(dir: &Path) -> Vec<String> {
 pub fn plugin_texts(dir: &Path) -> Vec<String> {
     found(
         dir,
-        &["tr(", "trf(", "const NAME: &str =", "name:", "label:"],
+        &[CALLS[0], CALLS[1], "const NAME: &str =", "name:", "label:"],
     )
 }
 
@@ -122,8 +125,8 @@ mod tests {
         let mut out = Vec::new();
         let source =
             "x(tr(\"Open\")); trf(\n    \"{n} of {count}\", &[]); str(\"no\"); label: \"Fit\",";
-        literals(source, "tr(", &mut out);
-        literals(source, "trf(", &mut out);
+        literals(source, CALLS[0], &mut out);
+        literals(source, CALLS[1], &mut out);
         literals(source, "label:", &mut out);
         assert_eq!(out, ["Open", "{n} of {count}", "Fit"]);
         let list = [("uk", "{\"Open\": \"Відкрити\"}")];

@@ -81,10 +81,14 @@ fn list(plugins: &Plugins, dir: &Path, took: std::time::Duration) -> String {
         ));
         for format in loaded.plugin.formats() {
             out.push_str(&format!(
-                "  {}: {}\n",
+                "  {}: {}",
                 format.name,
                 format.extensions.join(", ")
             ));
+            if !format.mimes.is_empty() {
+                out.push_str(&format!(" ({})", format.mimes.join(", ")));
+            }
+            out.push('\n');
         }
     }
     for (file, why) in &plugins.failed {
@@ -103,12 +107,7 @@ fn probe(plugins: &Plugins, path: &Path) -> Result<String, String> {
     let mut view = loaded.plugin.open(path, &Value::Null)?;
     let opened = started.elapsed();
     let settings = Value::Null;
-    let mut host = Host {
-        wrap_lines: true,
-        page_width: PageWidth::View,
-        settings: &settings,
-        requests: Vec::new(),
-    };
+    let mut host = Host::new(true, PageWidth::View, &settings);
     let ctx = egui::Context::default();
     let started = Instant::now();
     let mut shapes = 0;

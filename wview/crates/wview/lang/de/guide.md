@@ -10,12 +10,17 @@ Ohne Datei zeigt das Fenster die Plugins und was jedes von ihnen öffnet.
 - Eine Datei eines Formats, das kein Plugin öffnet, bleibt geschlossen, und die Statusleiste
   sagt es.
 - Ctrl+W schließt einen Tab, Ctrl+Tab geht zum nächsten.
+- Das Menü enthält die Einträge des aktiven Tabs und ein Untermenü jedes Plugins mit eigenen
+  Einträgen.
 
 ## Text und Markdown
 
 Markdown-Seiten (`.md`) erscheinen als Seiten, Textdateien (`.txt`, `.log`, `.ini`, `.cfg`,
 `.csv`) so, wie sie sind. Ctrl+F durchsucht den Text. **Einstellungen**, **Allgemein**: *Zeilen
 auf die Breite der Ansicht umbrechen* und *Breite der Seiten* ändern die Anzeige eines Textes.
+
+XML-Dateien (`.xml`, `.manifest`) erscheinen ebenfalls als Text, und ein Text in UTF-16 mit seiner
+Markierung wird wie einer in UTF-8 gelesen.
 
 ## Bilder
 
@@ -68,8 +73,16 @@ die Exporte, jedes Feld mit seinem Wert, seinem Offset und seiner Größe.
   und ein Lesezeichen; **Vergleich speichern** schreibt sie mit beiden Dateien in eine
   `.wwbindiff`, die den Vergleich in einem eigenen Tab öffnet. Eine `.wwbin` öffnet auch allein,
   als ihr Baum.
+- **Inhalt** in der Leiste, wenn der gewählte Knoten eine Datei eines Typs enthält, den ein anderes
+  Plugin zeigt (das Manifest eines Programms, seine Symbole, Bitmaps und HTML-Seiten, ein Bild oder
+  ein Text in seinen Daten, ein anderes Programm darin): Die rechte Seite zeigt sie mit diesem
+  Plugin, mit dessen eigenen Schaltflächen darüber, und folgt der Auswahl; **Baum und Bytes** geht
+  zurück. Im Menü: **Inhalt in einem Tab öffnen**, **Knoten als Datei speichern** (ein Symbol als
+  ICO-Datei, sonst seine Bytes) und **Alle Knoten lesen**.
 - Weitere Formate kommen als Beschreibungen, `.wwformat`-Dateien im Ordner `plugins\formats`;
   Einstellungen, Plugins zeigt die gelesenen Formate und die Dateien, die nicht gelesen wurden.
+- **Binärstrukturen**, **Ordner der Beschreibungen** im Menü öffnet den Ordner `plugins\formats` im
+  Explorer und legt ihn an, wenn er fehlt.
 
 ## Die Mandelbrot-Menge
 

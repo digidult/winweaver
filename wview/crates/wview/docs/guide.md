@@ -9,12 +9,17 @@ Without a file the window lists the plugins and what each of them opens.
   opens files from the command line.
 - A file of a format no plugin opens stays closed, and the status bar says so.
 - Ctrl+W closes a tab, Ctrl+Tab goes to the next one.
+- The menu holds the items of the tab in front and a submenu of every plugin that has items of its
+  own.
 
 ## Text and Markdown
 
 Markdown pages (`.md`) show as pages, text files (`.txt`, `.log`, `.ini`, `.cfg`, `.csv`) as they
 are. Ctrl+F searches the text. **Settings**, **General**: *Wrap lines to the width of the view* and
 *Width of pages* change how a text shows.
+
+XML files (`.xml`, `.manifest`) show as texts too, and a text of UTF-16 with its mark reads as well
+as one of UTF-8.
 
 ## Images
 
@@ -61,8 +66,16 @@ exports, every field with its value, its offset and its size.
   only**. A node selected takes a comment and a bookmark; **Save the comparison** writes them with
   both files to a `.wwbindiff`, which opens the comparison in a tab of its own. A `.wwbin` opens
   alone as its tree.
+- **Content** in the bar, when the node selected holds a file of a type another plugin shows (the
+  manifest of a program, its icons, bitmaps and HTML pages, a picture or a text among its data,
+  another program inside it): the right side shows it with that plugin, with its own buttons over
+  it, and follows the selection; **Tree and bytes** goes back. In the menu:
+  **Open the content in a tab**, **Save the node as a file** (an icon as an ICO file, else its
+  bytes) and **Read every node**.
 - More formats come as descriptions, `.wwformat` files in the folder `plugins\formats`; Settings,
   Plugins lists the formats read and the files that did not read.
+- **Binary structures**, **Folder of the descriptions** in the menu opens the folder
+  `plugins\formats` in Explorer, made when it is not there.
 
 ## The Mandelbrot set
 

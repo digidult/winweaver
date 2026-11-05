@@ -200,6 +200,7 @@ fn read_node(
         error: error.is_some(),
         show: Show::Number,
         pending: false,
+        content: None,
     });
     if let Some(children) = v.get("children").and_then(Value::as_array) {
         for c in children {

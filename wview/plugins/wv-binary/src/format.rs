@@ -42,6 +42,8 @@ struct Description {
     name: String,
     extensions: Vec<String>,
     #[serde(default)]
+    mimes: Vec<String>,
+    #[serde(default)]
     endian: Endian,
     #[serde(default)]
     magic: Vec<Magic>,
@@ -86,6 +88,17 @@ enum Keys {
     Several(Vec<String>),
 }
 
+/// The type of the bytes of a field: one MIME type, or one by the value of an expression.
+#[derive(Deserialize)]
+#[serde(crate = "wwrt::serde", untagged)]
+enum ContentText {
+    One(String),
+    Switch {
+        switch: String,
+        cases: BTreeMap<String, String>,
+    },
+}
+
 #[derive(Deserialize)]
 #[serde(crate = "wwrt::serde", deny_unknown_fields)]
 struct FieldText {
@@ -126,6 +139,8 @@ struct FieldText {
     align: Option<u64>,
     #[serde(default)]
     length: Option<String>,
+    #[serde(default)]
+    content: Option<ContentText>,
 }
 
 /// What a field holds.
@@ -145,6 +160,15 @@ pub enum Kind {
     /// Bytes shown as bytes alone.
     Raw,
     Struct(String),
+}
+
+/// The MIME type of the bytes of a field and of the fields of bytes under it, which the view
+/// shows with the plugin of the type (`crate::content`).
+#[derive(Clone, Debug, PartialEq)]
+pub enum Content {
+    Mime(String),
+    /// The type of the case of the value of an expression; no case, no type.
+    Switch(Expr, Vec<(i128, String)>),
 }
 
 /// Where a field is.
@@ -183,6 +207,7 @@ pub struct Field {
     pub align: u64,
     /// The bytes of an array: its items until they fill them.
     pub length: Option<Expr>,
+    pub content: Option<Content>,
 }
 
 pub struct Space {
@@ -198,6 +223,8 @@ pub struct Format {
     pub name: String,
     pub endian: Endian,
     pub extensions: Vec<String>,
+    /// The MIME types of the files of the format.
+    pub mimes: Vec<String>,
     pub magic: Vec<(u64, Vec<u8>)>,
     pub root: String,
     pub rva: Option<Space>,
@@ -237,6 +264,16 @@ fn kind_of(name: &str, types: &BTreeMap<String, TypeText>) -> Result<Kind, Strin
         other if types.contains_key(other) => Kind::Struct(other.to_owned()),
         other => return Err(format!("an unknown type {other}")),
     })
+}
+
+/// Whether a text is a MIME type: `type/subtype` of ASCII without white space, with parameters.
+fn is_mime(text: &str) -> bool {
+    let base = text.split(';').next().unwrap_or("");
+    let mut parts = base.split('/');
+    let part = |p: Option<&str>| {
+        p.is_some_and(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_graphic()))
+    };
+    text.len() <= 128 && part(parts.next()) && part(parts.next()) && parts.next().is_none()
 }
 
 fn names(table: BTreeMap<String, String>, what: &str) -> Result<Vec<(u64, String)>, String> {
@@ -321,6 +358,24 @@ fn field(f: FieldText, d: &Description) -> Result<Field, String> {
     if length.is_some() && count.is_some() {
         return Err(at("an array has a count or a length".to_owned()));
     }
+    let mime = |m: String| {
+        if is_mime(&m) {
+            Ok(m)
+        } else {
+            Err(at(format!("not a MIME type: {m:?}")))
+        }
+    };
+    let content = match f.content {
+        None => None,
+        Some(ContentText::One(m)) => Some(Content::Mime(mime(m)?)),
+        Some(ContentText::Switch { switch, cases }) => {
+            let mut list = Vec::new();
+            for (value, m) in cases {
+                list.push((i128::from(number(&value).map_err(at)?), mime(m)?));
+            }
+            Some(Content::Switch(expr::parse(&switch).map_err(at)?, list))
+        }
+    };
     let align = f.align.unwrap_or(1);
     if !(1..=4096).contains(&align) {
         return Err(at(format!("an alignment of {align}")));
@@ -351,6 +406,7 @@ fn field(f: FieldText, d: &Description) -> Result<Field, String> {
         lazy: f.lazy,
         align,
         length,
+        content,
     })
 }
 
@@ -372,6 +428,9 @@ impl Format {
         }
         if !d.types.contains_key(&d.root) {
             return Err(format!("no root type {}", d.root));
+        }
+        if let Some(m) = d.mimes.iter().find(|m| !is_mime(m)) {
+            return Err(format!("not a MIME type: {m:?}"));
         }
         let mut magic = Vec::new();
         for m in &d.magic {
@@ -399,6 +458,7 @@ impl Format {
             flags: std::mem::take(&mut d.flags),
             magic: Vec::new(),
             extensions: Vec::new(),
+            mimes: Vec::new(),
             format: String::new(),
             name: String::new(),
             root: String::new(),
@@ -451,6 +511,7 @@ impl Format {
                 .into_iter()
                 .map(|e| e.trim_start_matches('.').to_lowercase())
                 .collect(),
+            mimes: d.mimes,
             magic,
             root: d.root,
             rva,

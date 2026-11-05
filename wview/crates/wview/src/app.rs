@@ -1,5 +1,7 @@
-//! wview on the window of W#: a tab a file, drawn by the plugin that opens its format; without a
-//! file, the page of the plugins; the guide; the section Plugins of the settings.
+//! wview on the window of W#: a tab a file, drawn by the plugin that opens its format, or some
+//! bytes a view sent to a tab of their own, drawn by the plugin of their MIME type; without a
+//! file, the page of the plugins; the guide; the section Plugins of the settings. The menu holds
+//! the items of the view in front and a submenu of each plugin that has items.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -13,7 +15,7 @@ use wwrt::ww::commands::{Item, cmd, keyed};
 use wwrt::ww::i18n::{self, tr, trf};
 use wwrt::ww::keys;
 use wwrt::ww::mdview::{self, MdDoc};
-use wwrt::ww::shell::menu_item;
+use wwrt::ww::shell::{menu_item, sub_menu};
 use wwrt::ww::{App, Document, Draft, Search, Shell, ShellAct, ShellDoc, icons};
 
 /// The version of the program, for About and the log.
@@ -56,9 +58,11 @@ impl wwrt::ww::Extra for Extra {
     const FORMAT: &'static str = "wview-settings";
 }
 
-/// A file in a tab: its plugin and the view the plugin made of it.
+/// A file in a tab, or some bytes a view sent to a tab of their own (no path): its name, its
+/// plugin and the view the plugin made of it.
 pub struct FileDoc {
-    pub path: PathBuf,
+    pub path: Option<PathBuf>,
+    pub name: String,
     pub plugin: usize,
     pub view: Box<dyn View>,
 }
@@ -83,7 +87,7 @@ fn file_name(path: &Path) -> String {
 impl Document for Doc {
     fn title(&self) -> String {
         match self {
-            Doc::File(d) => file_name(&d.path),
+            Doc::File(d) => d.name.clone(),
             Doc::Plugins => tr("Plugins").to_owned(),
             Doc::Page(d) => d.title(),
             Doc::Shell(d) => d.title(),
@@ -99,7 +103,7 @@ impl Document for Doc {
 
     fn path(&self) -> Option<&Path> {
         match self {
-            Doc::File(d) => Some(&d.path),
+            Doc::File(d) => d.path.as_deref(),
             Doc::Plugins => None,
             Doc::Page(d) => d.path(),
             Doc::Shell(d) => d.path(),
@@ -171,8 +175,19 @@ impl Document for Doc {
 pub enum Act {
     /// An act of the window itself, run by the shell.
     Shell(ShellAct<Wview>),
-    /// A command of the bar of the view in front (`View::tools`).
+    /// A command of the bar or an item of the menu of the view in front (`View::tools`,
+    /// `View::menu`).
     Tool(&'static str),
+    /// An item of the menu of a plugin (`Plugin::menu`), by the index of the plugin.
+    PluginItem(usize, &'static str),
+    /// A line a view or a plugin asks for in the status bar.
+    Status(String),
+    /// Some bytes a view sent to a tab of their own, by the plugin of their MIME type.
+    OpenBytes {
+        name: String,
+        mime: String,
+        bytes: Vec<u8>,
+    },
     /// Another file of the folder of the one in front, of a format its plugin opens.
     Browse(Step),
     /// The guide in a tab.
@@ -217,9 +232,20 @@ fn open_view(
         .open(path, settings)
         .map_err(|e| format!("{}: {e}", file_name(path)))?;
     Ok(FileDoc {
-        path: path.to_path_buf(),
+        path: Some(path.to_path_buf()),
+        name: file_name(path),
         plugin,
         view,
+    })
+}
+
+/// The acts of the requests of a view or a plugin.
+fn requested(requests: Vec<Request>) -> impl Iterator<Item = Act> {
+    requests.into_iter().map(|r| match r {
+        Request::Browse(step) => Act::Browse(step),
+        Request::Status(line) => Act::Status(line),
+        Request::Open(path) => Act::Shell(ShellAct::OpenPath(path)),
+        Request::OpenBytes { name, mime, bytes } => Act::OpenBytes { name, mime, bytes },
     })
 }
 
@@ -231,10 +257,15 @@ impl Wview {
     /// The file a step leads to from the one in front, among the files of its folder its plugin
     /// opens, by their names; it takes the place of that file in its tab.
     fn browse(&mut self, shell: &mut Shell<Self>, step: Step) {
-        let Some(Doc::File(doc)) = shell.active_doc() else {
+        let Some(Doc::File(FileDoc {
+            path: Some(path),
+            plugin,
+            ..
+        })) = shell.active_doc()
+        else {
             return;
         };
-        let (path, plugin) = (doc.path.clone(), doc.plugin);
+        let (path, plugin) = (path.clone(), *plugin);
         let Some(dir) = path.parent() else {
             return;
         };
@@ -305,11 +336,11 @@ impl Wview {
             ui.strong(tr(loaded.plugin.name()));
             ui.weak(loaded.file.display().to_string());
             for format in loaded.plugin.formats() {
-                ui.label(format!(
-                    "{}: {}",
-                    tr(format.name),
-                    format.extensions.join(", ")
-                ));
+                let mut line = format!("{}: {}", tr(format.name), format.extensions.join(", "));
+                if !format.mimes.is_empty() {
+                    line.push_str(&format!(" ({})", format.mimes.join(", ")));
+                }
+                ui.label(line);
             }
             ui.add_space(6.0);
         }
@@ -388,7 +419,7 @@ impl App for Wview {
         let settings = plugin_settings(shell, &plugins, plugin);
         shell.open_file(
             &path,
-            |d| matches!(d, Doc::File(f) if f.path == path),
+            |d| matches!(d, Doc::File(f) if f.path.as_deref() == Some(path.as_path())),
             |p| open_view(&plugins, &settings, plugin, p),
             |doc, _| Doc::File(doc),
         );
@@ -426,27 +457,18 @@ impl App for Wview {
 
     fn draw(&mut self, shell: &mut Shell<Self>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         let (wrap_lines, page_width) = (shell.settings.wrap_lines, shell.settings.page_width);
-        let plugin = match shell.active_doc() {
-            Some(Doc::File(doc)) => Some(doc.plugin),
-            _ => None,
-        };
-        let settings = plugin
-            .map(|p| plugin_settings(shell, &self.plugins, p))
-            .unwrap_or(Value::Null);
+        let every = shell.settings.extra.plugins.clone();
+        let plugins = self.plugins.clone();
         match shell.active_doc_mut() {
             Some(Doc::File(doc)) => {
-                let mut host = Host {
-                    wrap_lines,
-                    page_width,
-                    settings: &settings,
-                    requests: Vec::new(),
-                };
+                let settings = every
+                    .get(&plugins.loaded[doc.plugin].id)
+                    .cloned()
+                    .unwrap_or(Value::Null);
+                let mut host =
+                    Host::new(wrap_lines, page_width, &settings).with_plugins(&plugins, &every);
                 doc.view.ui(ui, &mut host);
-                for request in host.requests {
-                    match request {
-                        Request::Browse(step) => acts.push(Act::Browse(step)),
-                    }
-                }
+                acts.extend(requested(host.requests));
             }
             Some(Doc::Page(doc)) => {
                 egui::CentralPanel::default()
@@ -502,7 +524,28 @@ impl App for Wview {
             Act::Shell(ShellAct::CloseTab(shell.active, false)),
             acts,
         );
+        if let Some(Doc::File(doc)) = shell.active_doc() {
+            let items = doc.view.menu();
+            if !items.is_empty() {
+                ui.separator();
+            }
+            for item in items {
+                menu_item(ui, item.icon, tr(item.label), "", Act::Tool(item.id), acts);
+            }
+        }
         ui.separator();
+        for (i, loaded) in self.plugins.loaded.iter().enumerate() {
+            let items = loaded.plugin.menu();
+            if items.is_empty() {
+                continue;
+            }
+            sub_menu(ui, icons::PACKAGE, tr(loaded.plugin.name()), |ui| {
+                for item in items {
+                    let act = Act::PluginItem(i, item.id);
+                    menu_item(ui, item.icon, tr(item.label), "", act, acts);
+                }
+            });
+        }
         menu_item(ui, icons::PACKAGE, tr("Plugins"), "", Act::Plugins, acts);
         menu_item(ui, icons::BOOK, tr("Guide"), "", Act::Guide, acts);
         menu_item(
@@ -596,10 +639,45 @@ impl App for Wview {
     }
 
     fn apply(&mut self, shell: &mut Shell<Self>, act: Act) {
+        let (wrap_lines, page_width) = (shell.settings.wrap_lines, shell.settings.page_width);
+        let every = shell.settings.extra.plugins.clone();
+        let plugins = self.plugins.clone();
+        let settings_of = |plugin: usize| {
+            every
+                .get(&plugins.loaded[plugin].id)
+                .cloned()
+                .unwrap_or(Value::Null)
+        };
         match act {
             Act::Tool(id) => {
                 if let Some(Doc::File(doc)) = shell.active_doc_mut() {
-                    doc.view.act(id);
+                    let settings = settings_of(doc.plugin);
+                    let mut host =
+                        Host::new(wrap_lines, page_width, &settings).with_plugins(&plugins, &every);
+                    doc.view.act(id, &mut host);
+                    shell.pending.extend(requested(host.requests));
+                }
+            }
+            Act::PluginItem(plugin, id) => {
+                let settings = settings_of(plugin);
+                let mut host =
+                    Host::new(wrap_lines, page_width, &settings).with_plugins(&plugins, &every);
+                plugins.loaded[plugin].plugin.act(id, &mut host);
+                shell.pending.extend(requested(host.requests));
+            }
+            Act::Status(line) => shell.status = line,
+            Act::OpenBytes { name, mime, bytes } => {
+                let settings = |id: &str| every.get(id).cloned().unwrap_or(Value::Null);
+                match plugins.open_bytes(&name, &mime, bytes, &settings) {
+                    Ok((plugin, view)) => shell.open_tab(Doc::File(FileDoc {
+                        path: None,
+                        name,
+                        plugin,
+                        view,
+                    })),
+                    Err(why) => {
+                        shell.status = trf("{name}: {why}", &[("name", &name), ("why", &why)]);
+                    }
                 }
             }
             Act::Browse(step) => self.browse(shell, step),

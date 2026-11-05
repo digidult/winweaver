@@ -9,6 +9,7 @@ wview mostra i file. Ogni formato è un plugin: una DLL nella cartella `plugins`
   `wview FILE...` apre file dalla riga di comando.
 - Un file di un formato che nessun plugin apre resta chiuso, e la barra di stato lo dice.
 - Ctrl+W chiude una scheda, Ctrl+Tab passa alla successiva.
+- Il menu contiene le voci della scheda attiva e un sottomenu per ogni plugin con voci proprie.
 
 ## Testo e Markdown
 
@@ -16,6 +17,9 @@ Le pagine Markdown (`.md`) si mostrano come pagine, i file di testo (`.txt`, `.l
 `.cfg`, `.csv`) così come sono. Ctrl+F cerca nel testo. **Impostazioni**, **Generale**: *Manda a
 capo le righe alla larghezza della vista* e *Larghezza delle pagine* cambiano l'aspetto di un
 testo.
+
+I file XML (`.xml`, `.manifest`) si mostrano anch'essi come testi, e un testo UTF-16 con il suo
+segno si legge come uno UTF-8.
 
 ## Immagini
 
@@ -65,8 +69,16 @@ importazioni e le esportazioni, ogni campo con il suo valore, il suo offset e la
   i nodi** o **Solo le modifiche**. Un nodo scelto riceve un commento e un segnalibro; **Salva il
   confronto** li scrive con i due file in un `.wwbindiff`, che apre il confronto in una scheda
   propria. Un `.wwbin` si apre anche da solo, come il suo albero.
+- **Contenuto** nella barra, quando il nodo selezionato contiene un file di un tipo che un altro
+  plugin mostra (il manifesto di un programma, le sue icone, bitmap e pagine HTML, un'immagine o un
+  testo fra i suoi dati, un altro programma al suo interno): la parte destra lo mostra con quel
+  plugin, con i suoi pulsanti sopra, e segue la selezione; **Albero e byte** torna indietro. Nel
+  menu: **Apri il contenuto in una scheda**, **Salva il nodo come file** (un'icona come file ICO,
+  altrimenti i suoi byte) e **Leggi tutti i nodi**.
 - Altri formati arrivano come descrizioni, file `.wwformat` nella cartella `plugins\formats`;
   Impostazioni, Plugin elenca i formati letti e i file che non si sono letti.
+- **Strutture binarie**, **Cartella delle descrizioni** nel menu apre la cartella `plugins\formats`
+  in Esplora file e la crea se manca.
 
 ## L'insieme di Mandelbrot
 

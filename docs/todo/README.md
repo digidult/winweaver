@@ -10,4 +10,3 @@ in it goes.
 |---|---|
 | [acceptance.md](acceptance.md) | The parts of the acceptance in a VM the customer has not marked yet |
 | [wview.md](wview.md) | wview and its plugins: what stays to come |
-| [plugins-inside.md](plugins-inside.md) | Plugins with MIME types, menu items and other plugins inside their view: the design to approve |

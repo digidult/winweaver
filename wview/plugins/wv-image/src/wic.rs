@@ -1,7 +1,8 @@
-//! The calls of WIC: the decoders of this Windows, and an image decoded into pictures in memory.
-//! Each runs in the thread that calls it, with COM joined there.
+//! The calls of WIC: the decoders of this Windows, and an image of a file or of bytes in memory
+//! decoded into pictures in memory. Each runs in the thread that calls it, with COM joined there.
 
-use std::path::Path;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use wwrt::plugin::Format;
 use wwrt::windows::Win32::Foundation::GENERIC_READ;
@@ -25,6 +26,13 @@ use crate::picture::{Picture, TOP, within};
 
 /// The memory the frames of one animation take at most; the frames past it are left out.
 const ANIMATION_BYTES: usize = 512 << 20;
+
+/// Where an image is: a file, or bytes in memory (a part of another file).
+#[derive(Clone, Debug)]
+pub enum Source {
+    File(PathBuf),
+    Bytes(Arc<[u8]>),
+}
 
 /// How an image is decoded.
 #[derive(Clone, Copy, Debug)]
@@ -115,7 +123,8 @@ fn number(reader: &IWICMetadataQueryReader, name: &str) -> Option<u32> {
     }
 }
 
-/// The decoders of this Windows with their extensions (".bmp,.dib,.rle").
+/// The decoders of this Windows with their extensions (".bmp,.dib,.rle") and their MIME types
+/// ("image/bmp").
 pub fn decoders() -> Vec<Format> {
     let Ok(factory) = factory() else {
         return Vec::new();
@@ -138,16 +147,20 @@ pub fn decoders() -> Vec<Format> {
                 continue;
             };
             let name = text(|b, l| info.GetFriendlyName(b, l));
-            let extensions: Vec<&'static str> = text(|b, l| info.GetFileExtensions(b, l))
-                .split(',')
-                .map(|e| e.trim().trim_start_matches('.').to_lowercase())
-                .filter(|e| !e.is_empty())
-                .map(|e| &*Box::leak(e.into_boxed_str()))
-                .collect();
+            let list = |text: String| -> Vec<&'static str> {
+                text.split(',')
+                    .map(|e| e.trim().trim_start_matches('.').to_lowercase())
+                    .filter(|e| !e.is_empty())
+                    .map(|e| &*Box::leak(e.into_boxed_str()))
+                    .collect()
+            };
+            let extensions = list(text(|b, l| info.GetFileExtensions(b, l)));
+            let mimes = list(text(|b, l| info.GetMimeTypes(b, l)));
             if !extensions.is_empty() {
                 out.push(Format {
                     name: Box::leak(name.into_boxed_str()),
                     extensions: Box::leak(extensions.into_boxed_slice()),
+                    mimes: Box::leak(mimes.into_boxed_slice()),
                 });
             }
         }
@@ -195,20 +208,30 @@ unsafe fn rgba(
     }
 }
 
-/// The image of a file: a page of it (`None`: the first, or for an icon its largest), or every
-/// frame of an animation.
-pub fn decode(path: &Path, page: Option<u32>, options: Options) -> Result<Decoded, String> {
+/// The image of a file or of bytes: a page of it (`None`: the first, or for an icon its
+/// largest), or every frame of an animation.
+pub fn decode(source: &Source, page: Option<u32>, options: Options) -> Result<Decoded, String> {
     let factory = factory()?;
-    // SAFETY: the decoder and its frames are COM objects of WIC used as documented.
+    // SAFETY: the decoder, its stream and its frames are COM objects of WIC used as documented;
+    // the stream reads the bytes of the source, which live until the decoder is gone at the end.
     unsafe {
-        let decoder = factory
-            .CreateDecoderFromFilename(
-                &HSTRING::from(path),
+        let decoder = match source {
+            Source::File(path) => factory.CreateDecoderFromFilename(
+                &HSTRING::from(path.as_path()),
                 None,
                 GENERIC_READ,
                 WICDecodeMetadataCacheOnDemand,
-            )
-            .map_err(|_| tr("Windows has no decoder for this file").to_owned())?;
+            ),
+            Source::Bytes(bytes) => factory.CreateStream().and_then(|stream| {
+                stream.InitializeFromMemory(bytes)?;
+                factory.CreateDecoderFromStream(
+                    &stream,
+                    std::ptr::null(),
+                    WICDecodeMetadataCacheOnDemand,
+                )
+            }),
+        }
+        .map_err(|_| tr("Windows has no decoder for this file").to_owned())?;
         let format = decoder
             .GetDecoderInfo()
             .map(|i| text(|b, l| i.GetFriendlyName(b, l)))
@@ -396,6 +419,11 @@ mod tests {
         orient: true,
     };
 
+    /// The source of a file.
+    fn file(path: &std::path::Path) -> Source {
+        Source::File(path.to_path_buf())
+    }
+
     fn folder(name: &str) -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!("wv-image-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
@@ -405,7 +433,7 @@ mod tests {
 
     /// A TIFF of the pages given (BGRA pixels with their size), the second turned by the
     /// orientation of EXIF `orientation`.
-    fn tiff(path: &Path, pages: &[([u32; 2], Vec<u8>)], orientation: u16) {
+    fn tiff(path: &std::path::Path, pages: &[([u32; 2], Vec<u8>)], orientation: u16) {
         let factory = factory().unwrap();
         // SAFETY: the encoder, the stream, the frames and the metadata writer are COM objects of
         // WIC used as documented.
@@ -466,9 +494,9 @@ mod tests {
         let first = ([3, 2], vec![90u8; 3 * 2 * 4]);
         let second = ([2, 1], vec![0, 0, 255, 255, 0, 255, 0, 255]);
         tiff(&path, &[first, second], 6);
-        let page = decode(&path, None, OPTIONS).unwrap();
+        let page = decode(&file(&path), None, OPTIONS).unwrap();
         assert_eq!((page.count, page.size, page.turned), (2, [3, 2], false));
-        let turned = decode(&path, Some(1), OPTIONS).unwrap();
+        let turned = decode(&file(&path), Some(1), OPTIONS).unwrap();
         assert_eq!(turned.size, [1, 2], "6 turns it a quarter clockwise");
         assert!(turned.turned);
         let Kind::Still { levels, page } = &turned.kind else {
@@ -480,7 +508,7 @@ mod tests {
             orient: false,
             ..OPTIONS
         };
-        assert_eq!(decode(&path, Some(1), off).unwrap().size, [2, 1]);
+        assert_eq!(decode(&file(&path), Some(1), off).unwrap().size, [2, 1]);
     }
 
     #[test]
@@ -494,7 +522,7 @@ mod tests {
             GifFrame::new(2, 0, [1, 1], vec![3], 10, 1, None),
         ];
         std::fs::write(&path, gif([3, 1], &palette, &frames)).unwrap();
-        let decoded = decode(&path, None, OPTIONS).unwrap();
+        let decoded = decode(&file(&path), None, OPTIONS).unwrap();
         assert_eq!((decoded.count, decoded.size), (3, [3, 1]));
         let Kind::Animation { frames } = &decoded.kind else {
             panic!("a GIF of three frames is an animation");
@@ -533,10 +561,16 @@ mod tests {
             budget: 2500,
             ..OPTIONS
         };
-        let decoded = decode(&path, None, options).unwrap();
+        let decoded = decode(&file(&path), None, options).unwrap();
+        let bytes = Source::Bytes(Arc::from(std::fs::read(&path).unwrap()));
+        assert_eq!(
+            decode(&bytes, None, options).unwrap().size,
+            decoded.size,
+            "the bytes of the file decode as the file"
+        );
         assert_eq!((decoded.size, decoded.shown()), ([100, 100], [50, 50]));
         let none = dir.join("none.xyz");
         std::fs::write(&none, b"not an image").unwrap();
-        assert!(decode(&none, None, OPTIONS).is_err());
+        assert!(decode(&file(&none), None, OPTIONS).is_err());
     }
 }

@@ -171,8 +171,8 @@ impl Comparison {
     pub fn ui(&mut self, ui: &mut egui::Ui, tree: &Tree) -> Option<usize> {
         let rows = self.rows(tree);
         let selected = rows.iter().position(|r| r.key == self.selected);
-        let id = egui::Id::new("wv-binary-compare");
-        let output = widgets::side_panel(ui, "wv-binary-compare", 520.0, |ui| {
+        let id = ui.make_persistent_id("wv-binary-compare");
+        let output = widgets::side_panel(ui, id, 520.0, |ui| {
             tree::show(ui, id, &rows, selected, Scroll::wanted(false, self.follow))
         });
         self.follow = output.moved;
@@ -327,7 +327,7 @@ impl View for SavedView {
         let rows = tree_rows(&self.saved.tree, &self.open);
         let selected = rows.iter().position(|r| r.key == self.selected && !r.muted);
         egui::CentralPanel::default().show(ui, |ui| {
-            let id = egui::Id::new("wv-binary-saved");
+            let id = ui.make_persistent_id("wv-binary-saved");
             let output = tree::show(ui, id, &rows, selected, Scroll::wanted(false, self.follow));
             self.follow = output.moved;
             for event in output.events {
@@ -360,7 +360,7 @@ impl View for SavedView {
         ]
     }
 
-    fn act(&mut self, id: &str) {
+    fn act(&mut self, id: &str, _host: &mut Host) {
         self.text = id == "text";
         if self.text && self.page.is_none() {
             let (tree, title) = (&self.saved.tree, &self.title);

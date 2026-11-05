@@ -3,6 +3,7 @@
   "version": 1,
   "name": "Portable Executable",
   "extensions": ["exe", "dll", "sys", "ocx", "cpl", "efi", "mui", "scr", "drv"],
+  "mimes": ["application/vnd.microsoft.portable-executable"],
   "endian": "little",
   "magic": [{ "at": 0, "bytes": "4D5A" }],
   "root": "file",
@@ -283,7 +284,10 @@
       { "name": "name_string", "type": "RESOURCE_STRING", "at": "resources.@offset + (name & 0x7FFFFFFF)",
         "when": "(name >> 31) != 0" },
       { "name": "names", "type": "RESOURCE_NAMES", "lazy": true,
-        "at": "resources.@offset + (offset_to_data & 0x7FFFFFFF)", "when": "(offset_to_data >> 31) != 0" }
+        "at": "resources.@offset + (offset_to_data & 0x7FFFFFFF)", "when": "(offset_to_data >> 31) != 0",
+        "content": { "switch": "id", "cases": { "1": "image/x-dib-cursor", "2": "image/x-dib",
+          "3": "image/x-dib-icon", "12": "application/octet-stream", "14": "application/octet-stream",
+          "23": "text/html", "24": "application/xml" } } }
     ] },
     "RESOURCE_NAME_ENTRY": { "fields": [
       { "name": "name", "type": "u32", "show": "hex" },

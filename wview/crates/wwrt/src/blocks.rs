@@ -1,15 +1,16 @@
 //! A file read in blocks with a cache of a fixed size (`BlockFile`): a view of a file larger than
 //! the memory it may take (a binary file, a long log) reads the blocks it shows, and the oldest
-//! block goes when the cache is full.
+//! block goes when the cache is full. The same reader serves bytes already in memory (a part of
+//! another file shown inside its view), read whole.
 
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom};
 use std::path::Path;
 
-/// A file and the blocks of it read last.
+/// A file and the blocks of it read last, or bytes in memory.
 pub struct BlockFile {
-    file: File,
+    backing: Backing,
     len: u64,
     block: usize,
     budget: usize,
@@ -17,6 +18,11 @@ pub struct BlockFile {
     tick: u64,
     /// The blocks read from the disk so far, for the tests and the status bar.
     pub reads: u64,
+}
+
+enum Backing {
+    File(File),
+    Memory(Vec<u8>),
 }
 
 struct Cached {
@@ -32,7 +38,7 @@ impl BlockFile {
         let len = file.metadata()?.len();
         let block = block.max(1);
         Ok(Self {
-            file,
+            backing: Backing::File(file),
             len,
             block,
             budget: (cache / block).max(1),
@@ -40,6 +46,19 @@ impl BlockFile {
             tick: 0,
             reads: 0,
         })
+    }
+
+    /// Bytes in memory, read like a file of them.
+    pub fn from_bytes(bytes: Vec<u8>) -> Self {
+        Self {
+            len: bytes.len() as u64,
+            backing: Backing::Memory(bytes),
+            block: 1,
+            budget: 1,
+            cache: HashMap::new(),
+            tick: 0,
+            reads: 0,
+        }
     }
 
     pub fn len(&self) -> u64 {
@@ -57,6 +76,12 @@ impl BlockFile {
 
     /// Copies the bytes from `offset` into `out`, as many as the file has there; gives the count.
     pub fn read_at(&mut self, offset: u64, out: &mut [u8]) -> io::Result<usize> {
+        if let Backing::Memory(bytes) = &self.backing {
+            let start = offset.min(self.len) as usize;
+            let n = (bytes.len() - start).min(out.len());
+            out[..n].copy_from_slice(&bytes[start..start + n]);
+            return Ok(n);
+        }
         let mut done = 0;
         while done < out.len() {
             let at = offset + done as u64;
@@ -89,8 +114,10 @@ impl BlockFile {
             let start = index * self.block as u64;
             let size = (self.len - start).min(self.block as u64) as usize;
             let mut bytes = vec![0u8; size];
-            self.file.seek(SeekFrom::Start(start))?;
-            self.file.read_exact(&mut bytes)?;
+            if let Backing::File(file) = &mut self.backing {
+                file.seek(SeekFrom::Start(start))?;
+                file.read_exact(&mut bytes)?;
+            }
             self.reads += 1;
             self.cache.insert(index, Cached { bytes, used: 0 });
         }
@@ -132,5 +159,16 @@ mod tests {
         assert_eq!(file.reads, 4, "block 0 left the cache");
         assert_eq!(file.read_at(400_000, &mut out).unwrap(), 0);
         std::fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
+    fn bytes_in_memory_read_like_a_file() {
+        let mut bytes = BlockFile::from_bytes((0..10u8).collect());
+        assert_eq!(bytes.len(), 10);
+        let mut out = [0u8; 4];
+        assert_eq!(bytes.read_at(8, &mut out).unwrap(), 2);
+        assert_eq!(out[..2], [8, 9]);
+        assert_eq!(bytes.read_at(20, &mut out).unwrap(), 0);
+        assert_eq!(bytes.reads, 0);
     }
 }

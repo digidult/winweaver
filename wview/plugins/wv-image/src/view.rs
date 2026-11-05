@@ -5,7 +5,6 @@
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
-use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver, TryRecvError};
 use std::time::Duration;
 
@@ -15,7 +14,7 @@ use wwrt::plugin::{Host, Request, Step, Tool, View};
 use wwrt::ww::i18n::{tr, trf};
 
 use crate::picture::Picture;
-use crate::wic::{self, Decoded, Kind, Options};
+use crate::wic::{self, Decoded, Kind, Options, Source};
 
 /// The keys of the view while it has the focus.
 const KEYS: [Key; 19] = [
@@ -168,7 +167,7 @@ fn tile_rect(size: [u32; 2], [c, r]: [u32; 2], image: Rect) -> Rect {
 
 /// Decodes a page of an image (`None`: the first) in a thread of its own.
 pub fn start(
-    path: PathBuf,
+    source: Source,
     page: Option<u32>,
     options: Options,
 ) -> Receiver<Result<Decoded, String>> {
@@ -177,7 +176,7 @@ pub fn start(
     let _ = std::thread::Builder::new()
         .name("wv-image".to_owned())
         .spawn(move || {
-            let _ = send.send(wic::decode(&path, page, options));
+            let _ = send.send(wic::decode(&source, page, options));
         });
     receive
 }
@@ -192,7 +191,7 @@ enum Zoom {
 }
 
 pub struct ImageView {
-    path: PathBuf,
+    source: Source,
     options: Options,
     smooth: bool,
     /// The image decoded, once it is there.
@@ -224,7 +223,7 @@ pub struct ImageView {
 
 impl ImageView {
     pub fn new(
-        path: PathBuf,
+        source: Source,
         options: Options,
         smooth: bool,
         playing: bool,
@@ -235,7 +234,7 @@ impl ImageView {
             Err(job) => (None, Some(job)),
         };
         ImageView {
-            path,
+            source,
             options,
             smooth,
             image,
@@ -352,7 +351,7 @@ impl ImageView {
             && self.job.is_none()
         {
             let next = (i64::from(page) + by).rem_euclid(i64::from(count)) as u32;
-            self.job = Some(start(self.path.clone(), Some(next), self.options));
+            self.job = Some(start(self.source.clone(), Some(next), self.options));
         }
     }
 
@@ -667,7 +666,7 @@ impl View for ImageView {
         tools
     }
 
-    fn act(&mut self, id: &str) {
+    fn act(&mut self, id: &str, _host: &mut Host) {
         let rect = self.rect;
         let scale = self.scale(rect);
         match id {
@@ -682,8 +681,9 @@ impl View for ImageView {
         }
     }
 
+    /// An image of a file steps through its folder; one of bytes has none.
     fn browses(&self) -> bool {
-        true
+        matches!(self.source, Source::File(_))
     }
 
     fn status(&self) -> String {

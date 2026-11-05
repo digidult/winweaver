@@ -8,7 +8,7 @@ use std::fmt::Write as _;
 use wwrt::blocks::BlockFile;
 
 use crate::expr::{self, Expr, Part, Scope};
-use crate::format::{Endian, Field, Format, Kind, Place, Show};
+use crate::format::{Content, Endian, Field, Format, Kind, Place, Show};
 
 use wwrt::ww::i18n::{tr, trf};
 
@@ -102,6 +102,8 @@ pub struct Node {
     pub show: Show,
     /// A structure not read yet: its fields come when it opens (`expand`).
     pub pending: bool,
+    /// The MIME type of its bytes and of the fields of bytes under it, by its description.
+    pub content: Option<String>,
 }
 
 /// A file read by a description.
@@ -284,6 +286,7 @@ impl Reader<'_> {
             error: false,
             show: Show::Number,
             pending: false,
+            content: None,
         }
     }
 
@@ -384,6 +387,17 @@ impl Reader<'_> {
         match self.nodes[at].data {
             Data::Int(v) => Ok(v),
             _ => Err(trf("{path} is not a number", &[("path", &shown())])),
+        }
+    }
+
+    /// The MIME type of the bytes of a field, by its description.
+    fn content(&mut self, field: &Field, node: usize, here: u64) -> Option<String> {
+        match field.content.as_ref()? {
+            Content::Mime(m) => Some(m.clone()),
+            Content::Switch(e, cases) => {
+                let v = self.eval(node, here, e).ok()?;
+                cases.iter().find(|(c, _)| *c == v).map(|(_, m)| m.clone())
+            }
         }
     }
 
@@ -837,19 +851,25 @@ impl Reader<'_> {
                     continue;
                 }
             };
+            let content = self.content(field, me, here);
             if field.lazy {
                 if let Kind::Struct(t) = &kind {
                     let mut node = Self::node(&field.name, from, Data::Struct(t.clone()), Some(me));
                     node.pending = true;
+                    node.content = content;
                     self.push(node);
                 }
                 continue;
             }
-            let end = if field.count.is_some() || field.terminated || field.length.is_some() {
-                self.array(me, field, &kind, from, (me, here)).1
-            } else {
-                self.item(me, &field.name, &kind, field, from, (me, here)).1
-            };
+            let (index, end) =
+                if field.count.is_some() || field.terminated || field.length.is_some() {
+                    self.array(me, field, &kind, from, (me, here))
+                } else {
+                    self.item(me, &field.name, &kind, field, from, (me, here))
+                };
+            if content.is_some() {
+                self.nodes[index].content = content;
+            }
             if field.place == Place::Next {
                 here = align(end.max(here), field.align);
             }

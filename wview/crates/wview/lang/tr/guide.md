@@ -9,12 +9,16 @@ DLL. Dosya yokken pencere eklentileri ve her birinin neyi açtığını listeler
   `wview DOSYA...` dosyaları komut satırından açar.
 - Hiçbir eklentinin açmadığı bir biçimdeki dosya kapalı kalır ve durum çubuğu bunu söyler.
 - Ctrl+W bir sekmeyi kapatır, Ctrl+Tab sonrakine geçer.
+- Menü, öndeki sekmenin öğelerini ve kendi öğeleri olan her eklentinin bir alt menüsünü içerir.
 
 ## Metin ve Markdown
 
 Markdown sayfaları (`.md`) sayfa olarak, metin dosyaları (`.txt`, `.log`, `.ini`, `.cfg`, `.csv`)
 oldukları gibi gösterilir. Ctrl+F metinde arar. **Ayarlar**, **Genel**: *Satırları görünüm
 genişliğine göre kaydır* ve *Sayfa genişliği* bir metnin görünümünü değiştirir.
+
+XML dosyaları (`.xml`, `.manifest`) da metin olarak görünür ve işaretli bir UTF-16 metni UTF-8 gibi
+okunur.
 
 ## Görüntüler
 
@@ -62,8 +66,16 @@ değeri, uzaklığı ve boyutuyla.
   **Tüm düğümler** veya **Yalnızca değişiklikler**. Seçilen bir düğüm bir yorum ve bir yer imi
   alır; **Karşılaştırmayı kaydet** bunları iki dosyayla birlikte bir `.wwbindiff` dosyasına yazar,
   o da karşılaştırmayı kendi sekmesinde açar. Bir `.wwbin` tek başına da ağacı olarak açılır.
+- Seçili düğüm başka bir eklentinin gösterdiği türden bir dosya içerdiğinde (bir programın
+  bildirimi, simgeleri, bit eşlemleri ve HTML sayfaları, verileri arasındaki bir resim veya metin,
+  içindeki başka bir program) çubukta **İçerik**: sağ taraf onu o eklentiyle, üstünde kendi
+  düğmeleriyle gösterir ve seçimi izler; **Ağaç ve baytlar** geri döner. Menüde:
+  **İçeriği bir sekmede aç**, **Düğümü dosya olarak kaydet** (bir simge ICO dosyası olarak, değilse
+  baytları) ve **Tüm düğümleri oku**.
 - Başka biçimler açıklama olarak gelir, `plugins\formats` klasöründeki `.wwformat` dosyaları;
   Ayarlar, Eklentiler okunan biçimleri ve okunamayan dosyaları listeler.
+- **İkili yapılar**, menüdeki **Açıklamalar klasörü** `plugins\formats` klasörünü Gezgin'de açar,
+  yoksa oluşturur.
 
 ## Mandelbrot kümesi
 

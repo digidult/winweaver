@@ -177,22 +177,52 @@ draws the same views with the same egui, without a screen.
 
 ### 6.1 The interface
 
-Version 1 (`wwrt::plugin::API`):
+Version 2 (`wwrt::plugin::API`; version 1 had no MIME types, no menus and no bytes in memory,
+and a plugin of version 1 is refused by its build, `ABI`):
 
-- `Plugin`: `name`, `formats`, `open` of a path with the settings of the plugin, `translations`
-  (the code and a file of each language, added to the window at the load by `ww::i18n::add`),
-  `has_settings` and `settings_ui` (its card in Settings, Plugins; the host keeps the JSON object
-  of each plugin in its settings by the name of the DLL; `plugin::setting` and `set_setting` read
-  and write a field).
-- `View`: `ui` with a `Host` (Wrap lines, the width of pages, the settings of the plugin, and the
-  requests of the view, `Request::Browse` of a step through the folder), `tools` and `act`,
-  `search`, `browses` (Previous and Next in the bar), `status`.
+- `Plugin`: `name`, `formats` (each its name, its extensions and its MIME types), `open` of a path
+  with the settings of the plugin, `open_bytes` of some bytes in memory under a name and a MIME
+  type with its parameters (`text/plain; charset=utf-16le`; a plugin of files alone keeps the
+  answer `plugin::NO_BYTES`), `menu` and `act` (items in a submenu of the plugin in the menu of the
+  window, answered with a `Host` for their requests), `translations` (the code and a file of each
+  language, added to the window at the load by `ww::i18n::add`), `has_settings` and `settings_ui`
+  (its card in Settings, Plugins; the host keeps the JSON object of each plugin in its settings by
+  the name of the DLL; `plugin::setting` and `set_setting` read and write a field).
+- `View`: `ui` with a `Host` (Wrap lines, the width of pages, the settings of the plugin, the
+  plugins of the window with the settings of each, the depth of the view, and the requests of the
+  view: `Browse` a step through the folder, `Status` a line of the status bar, `Open` a file in a
+  tab, `OpenBytes` some bytes in a tab of their own), `tools` (the bar of the tab) and `menu`
+  (items in the menu of the window while its tab is in front), both answered by `act` with the
+  host, `search`, `browses` (Previous and Next in the bar), `status`.
+- **Views inside a view** (`wwrt::inner`): `Host::opens` says whether a plugin of the window opens
+  bytes of a MIME type, and `Host::open_inside` gives an `Inner`, the view of the first plugin of
+  the type that opens them, which the view keeps and draws in a part of its area (`Inner::ui`): a
+  line on the colour of the cards with the tools of the inner view as buttons and the name, the
+  type, the size and the plugin of the bytes, then the inner view under an id of its own (a serial
+  number in `ui.push_id`), so two views of one kind keep apart. The inner view gets the keys and
+  the mouse of its part by the rules of section 6.8, the search of the tab through the view
+  outside (`Inner::search`), and its requests go to the host of the view outside, but a step
+  through a folder. A view inside a view inside a view stops at a depth of 4 (`inner::DEPTH`), so a
+  file that holds itself cannot loop. A plugin draws with the ids of the place of its view
+  (`ui.make_persistent_id`; `ww::widgets::side_panel` takes one), never with global ones.
+- **MIME types** (`wwrt::mime`): `sniff` names the type of the first 512 bytes (PNG, JPEG, GIF,
+  BMP, ICO, TIFF, WebP, a portable executable, ZIP, PDF, and texts of UTF-8 or UTF-16 with or
+  without a mark as XML, HTML or plain text, UTF-16 without a mark in its `charset`); `canonical`
+  makes the spellings of a type one (`image/ico`, `image/vnd.microsoft.icon` and `image/x-icon`,
+  `text/xml` and `application/xml`); `fallbacks` gives the types a textual one falls back to when
+  no plugin names it (a type of `+xml` to `application/xml`, then every text, JSON and script to
+  `text/plain`). `Plugins::for_mime` lists the plugins of a type in that order and
+  `Plugins::open_bytes` tries them in turn.
+- `wwrt::blocks::BlockFile::from_bytes`: bytes in memory read like a file.
 - `wwrt::input`: `area` takes the rectangle of a view for its keys and its mouse by the rules of
   section 6.8 and gives an `Input`; `cursor` sets the cursor.
 - `wwrt::testing`: the texts of the sources of a plugin and the ones its translations lack.
 
-The parts to come of the interface (a format found by its first bytes, MIME types, menu items,
-plugins inside a view) are in `todo/wview.md` and `todo/plugins-inside.md`.
+The window keeps a tab of bytes without a path under their name, lists the MIME types of every
+format on the page of the plugins, and holds in its menu the items of the view in front after
+Close tab and a submenu of each plugin that has items before Plugins. The template `wv-hello`
+has every part once: a MIME type, bytes in memory, an item of the plugin (Say hello, a line of
+the status bar) and two of its view (Bigger, Smaller).
 
 ### 6.2 Images (wv-image)
 
@@ -220,6 +250,10 @@ and:
   above 2048 pixels a side shows its frames as pages.
 - **The pages** of a TIFF or an ICO of several turn with the same keys and the buttons of the bar,
   each page decoded when it is asked for; an icon opens at its largest frame.
+- **MIME types and bytes.** A format names the MIME types of its decoder
+  (`IWICBitmapCodecInfo::GetMimeTypes`), and an image of bytes in memory (an icon inside a
+  program) decodes through a stream of WIC on them (`IWICStream::InitializeFromMemory`); such an
+  image steps through no folder.
 - **The orientation of EXIF** (`System.Photo.Orientation` of the metadata of WIC, a setting) turns
   the pixels in memory (`Picture::oriented`, the eight values).
 - **The keys of the zoom**: + and - by the steps of browsers (`view::LEVELS`), 0 fits, 1 to 4 show
@@ -232,7 +266,11 @@ and:
 
 ### 6.3 Text and Markdown (wv-text)
 
-Both formats, the page and the text of W#, the search, a setting of the largest file to open.
+Markdown pages (`text/markdown`), text files (`text/plain`, `text/csv`) and XML files (`.xml`,
+`.manifest`, `application/xml`), the page and the text of W#, the search, a setting of the largest
+file to open. A text is UTF-8, or UTF-16 by its mark or by the `charset` of its type; bytes in
+memory open the same way (a manifest inside a program), and every textual type no other plugin
+names falls back to this plugin (`mime::fallbacks`).
 
 ### 6.4 Binary structures (wv-binary)
 
@@ -306,6 +344,24 @@ The plugin (`wview/plugins/wv-binary`):
   a byte selects the smallest node that holds it), or **Text**, the tree as a Markdown page of
   `ww::mdview` with its search (at most 20000 nodes). The root is the file: its name, its format
   and all its bytes.
+- **The types of the bytes.** A description names the MIME types of its files (`mimes`: PE is
+  `application/vnd.microsoft.portable-executable`, so a program in memory, the resource of another,
+  opens by it) and of the bytes of a field (`content`, the type of its bytes and of the fields of
+  bytes under it: one type, or the case of the value of an expression, `{ "switch": "id", "cases":
+  { "24": "application/xml" } }`). Three forms of Windows lack the header of their file and become
+  a file of their type (`content.rs`): `image/x-dib` (a bitmap, the header of BMP before it),
+  `image/x-dib-icon` (an image of an icon: a bitmap of twice its height with its mask becomes an
+  ICO file of one image, a PNG stays as it is) and `image/x-dib-cursor` (four bytes of the hot spot
+  before an icon). PE names the content of its resources: CURSOR, BITMAP, ICON, HTML and MANIFEST,
+  and its directories of icons and cursors as `application/octet-stream`, no file of their own.
+- **Content** in the bar, when the node selected (or the first field of bytes of a structure
+  selected) holds a type a plugin of the window opens, by its description or by its first bytes:
+  the right part shows it with the plugin of its type in place of the bytes and follows the
+  selection; a node of no such type shows a line and its bytes, and Tree and bytes goes back. The
+  menu of the view: Open the content in a tab, Save the node as a file (its content as a file of
+  its type, an icon as an ICO file, else its bytes), Read every node. The menu of the plugin:
+  Folder of the descriptions (the folder `formats` next to the DLL in Explorer, made when it is
+  not there). `notepad.exe` of Windows 11 shows its manifest as a text and its icons as images.
 - **Descriptions of others**: the `.wwformat` files of the folder `formats` next to the DLL of the
   plugin (found by `GetModuleHandleExW` of an address of the plugin) add formats, at most 100 of
   1 MB each; one of the name of the built-in one replaces it. Settings, Plugins lists the formats

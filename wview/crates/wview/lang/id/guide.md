@@ -10,12 +10,16 @@ wview menampilkan file. Setiap format adalah plugin: DLL di folder `plugins` di 
 - File dengan format yang tidak dibuka plugin mana pun tetap tertutup, dan bilah status
   memberitahukannya.
 - Ctrl+W menutup tab, Ctrl+Tab pindah ke tab berikutnya.
+- Menu memuat item tab yang aktif dan submenu setiap plugin yang punya item sendiri.
 
 ## Teks dan Markdown
 
 Halaman Markdown (`.md`) tampil sebagai halaman, file teks (`.txt`, `.log`, `.ini`, `.cfg`,
 `.csv`) apa adanya. Ctrl+F mencari dalam teks. **Pengaturan**, **Umum**: *Lipat baris sesuai lebar
 tampilan* dan *Lebar halaman* mengubah tampilan teks.
+
+File XML (`.xml`, `.manifest`) juga tampil sebagai teks, dan teks UTF-16 dengan tandanya terbaca
+seperti teks UTF-8.
 
 ## Gambar
 
@@ -63,8 +67,16 @@ dan ukurannya.
   yang lain; **Semua simpul** atau **Hanya perubahan**. Simpul yang dipilih menerima komentar dan
   penanda; **Simpan perbandingan** menulisnya bersama kedua file ke `.wwbindiff`, yang membuka
   perbandingan di tab tersendiri. File `.wwbin` juga terbuka sendiri, sebagai pohonnya.
+- **Isi** di bilah, ketika simpul yang dipilih memuat file dengan tipe yang ditampilkan plugin lain
+  (manifest program, ikon, bitmap, dan halaman HTML-nya, gambar atau teks di antara datanya, program
+  lain di dalamnya): bagian kanan menampilkannya dengan plugin itu, dengan tombolnya sendiri di
+  atasnya, dan mengikuti pilihan; **Pohon dan byte** kembali. Di menu: **Buka isi di tab**,
+  **Simpan simpul sebagai file** (ikon sebagai file ICO, selain itu byte-nya) dan
+  **Baca semua simpul**.
 - Format lain datang sebagai deskripsi, file `.wwformat` di folder `plugins\formats`; Pengaturan,
   Plugin menampilkan format yang terbaca dan file yang tidak terbaca.
+- **Struktur biner**, **Folder deskripsi** di menu membuka folder `plugins\formats` di Explorer dan
+  membuatnya bila belum ada.
 
 ## Himpunan Mandelbrot
 

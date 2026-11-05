@@ -54,7 +54,7 @@ impl Modal {
 /// The left panel of a tab: resizable, on a card, with the tree or the outline of the tab.
 pub fn side_panel<R>(
     ui: &mut egui::Ui,
-    id: &'static str,
+    id: impl Into<egui::Id>,
     width: f32,
     add: impl FnOnce(&mut egui::Ui) -> R,
 ) -> R {

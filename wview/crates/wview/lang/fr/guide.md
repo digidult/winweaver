@@ -9,6 +9,8 @@ wview affiche des fichiers. Chaque format est un module : une DLL du dossier `pl
   `wview FICHIER...` ouvre des fichiers depuis la ligne de commande.
 - Un fichier d'un format qu'aucun module n'ouvre reste fermé, et la barre d'état le dit.
 - Ctrl+W ferme un onglet, Ctrl+Tab passe au suivant.
+- Le menu contient les éléments de l'onglet actif et un sous-menu de chaque module qui a ses propres
+  éléments.
 
 ## Texte et Markdown
 
@@ -16,6 +18,9 @@ Les pages Markdown (`.md`) s'affichent comme des pages, les fichiers texte (`.tx
 `.ini`, `.cfg`, `.csv`) tels quels. Ctrl+F cherche dans le texte. **Paramètres**, **Général** :
 *Renvoyer les lignes à la largeur de la vue* et *Largeur des pages* changent l'affichage d'un
 texte.
+
+Les fichiers XML (`.xml`, `.manifest`) s'affichent aussi comme textes, et un texte UTF-16 avec sa
+marque se lit comme un texte UTF-8.
 
 ## Images
 
@@ -67,9 +72,17 @@ importations et les exportations, chaque champ avec sa valeur, son décalage et 
   un commentaire et un signet ; **Enregistrer la comparaison** les écrit avec les deux fichiers
   dans un `.wwbindiff`, qui ouvre la comparaison dans un onglet à lui. Un `.wwbin` s'ouvre aussi
   seul, comme son arbre.
+- **Contenu** dans la barre, quand le nœud choisi contient un fichier d'un type qu'un autre module
+  affiche (le manifeste d'un programme, ses icônes, ses bitmaps et ses pages HTML, une image ou un
+  texte parmi ses données, un autre programme à l'intérieur) : la partie droite l'affiche avec ce
+  module, ses propres boutons au-dessus, et suit la sélection ; **Arbre et octets** revient. Dans le
+  menu : **Ouvrir le contenu dans un onglet**, **Enregistrer le nœud comme fichier** (une icône
+  comme fichier ICO, sinon ses octets) et **Lire tous les nœuds**.
 - D'autres formats viennent comme descriptions, des fichiers `.wwformat` dans le dossier
   `plugins\formats` ; Paramètres, Modules liste les formats lus et les fichiers qui ne se sont pas
   lus.
+- **Structures binaires**, **Dossier des descriptions** dans le menu ouvre le dossier
+  `plugins\formats` dans l'Explorateur et le crée s'il n'existe pas.
 
 ## L'ensemble de Mandelbrot
 

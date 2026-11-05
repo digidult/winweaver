@@ -10,9 +10,12 @@ the reason of one that did not load.
 The SDK is the tree the release itself was built in:
 
 - `framework/ww-base`, `framework/ww`: W#, the framework of the window.
-- `crates/wwrt`: the runtime of the plugins (`wwrt.dll`) and their interface: `wwrt::plugin`
-  (`Plugin`, `View`, `Host`, `plugin!`), `wwrt::input` (the keys and the mouse of a view),
-  `wwrt::blocks` (a file read in blocks), `wwrt::testing` (the tests of translations).
+- `crates/wwrt`: the runtime of the plugins (`wwrt.dll`) and their interface, version 2:
+  `wwrt::plugin` (`Plugin`, `View`, `Host`, `plugin!`; the formats with their MIME types, the
+  items of the menu, bytes in memory), `wwrt::inner` (a view inside a view by the plugin of the
+  type of some bytes), `wwrt::mime` (the type of some bytes by their first ones), `wwrt::input`
+  (the keys and the mouse of a view), `wwrt::blocks` (a file read in blocks, or bytes in memory),
+  `wwrt::testing` (the tests of translations).
 - `crates/wview`: the program.
 - `plugins/wv-text`, `plugins/wv-image`, `plugins/wv-binary`: the plugins of the release,
   examples of real ones;

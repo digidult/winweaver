@@ -1,5 +1,8 @@
 //! The native plugins of a program (docs/plugins.md): a DLL in the folder `plugins` next to the
-//! executable that opens files of some formats and shows each in a tab.
+//! executable that opens files of some formats and shows each in a tab. A format names its
+//! extensions and its MIME types; a plugin and its views add items to the menu of the window; a
+//! view can show some of its bytes with the plugin of their type inside itself
+//! (`Host::open_inside`, `crate::inner`).
 //!
 //! A plugin is a `cdylib` crate that depends on wwrt alone, implements `Plugin` and `View` and
 //! names its plugin with `wwrt::plugin!`. The host loads every DLL of the folder
@@ -7,6 +10,7 @@
 //! translations and keeps it for the whole run: a plugin is never unloaded, since its code and the
 //! tables of its traits live as long as the views it made.
 
+use std::collections::BTreeMap;
 use std::ffi::{CStr, c_char};
 use std::path::{Path, PathBuf};
 
@@ -14,9 +18,11 @@ use serde_json::Value;
 use ww::eframe::egui;
 use ww::{PageWidth, Search};
 
+use crate::mime;
+
 /// The version of this interface: the traits and the types of this module. A change of them
 /// that an older plugin cannot follow takes the next number (`ABI` names it too).
-pub const API: u32 = 1;
+pub const API: u32 = 2;
 
 /// The build of this runtime: its version, the interface, the compiler, the target and the
 /// profile (`build.rs`), nul-terminated. A plugin carries the one it was built against (`plugin!`),
@@ -24,7 +30,7 @@ pub const API: u32 = 1;
 pub const ABI: &str = concat!(
     "wwrt ",
     env!("CARGO_PKG_VERSION"),
-    "; interface 1; ",
+    "; interface 2; ",
     env!("WWRT_BUILD"),
     "\0"
 );
@@ -35,9 +41,13 @@ pub struct Format {
     pub name: &'static str,
     /// Its extensions without the dot, in lower case.
     pub extensions: &'static [&'static str],
+    /// Its MIME types (`text/plain`, `image/png`), in any spelling `mime::canonical` knows: the
+    /// host finds the plugin of some bytes by them (`Host::open_inside`).
+    pub mimes: &'static [&'static str],
 }
 
-/// A command of the bar a view offers (`View::tools`), answered by `View::act`; the host
+/// A command a view or a plugin offers: in the bar of the tab (`View::tools`) or in the menu of
+/// the window (`View::menu`, `Plugin::menu`), answered by `View::act` or `Plugin::act`; the host
 /// translates its label.
 pub struct Tool {
     pub id: &'static str,
@@ -60,16 +70,67 @@ pub enum Request {
     /// The file a step leads to in the folder of the view, among the files its plugin opens, in
     /// the place of the one shown.
     Browse(Step),
+    /// A line of the status bar of the window.
+    Status(String),
+    /// A file in a tab of its own, by the plugin of its format.
+    Open(PathBuf),
+    /// Bytes in a tab of their own under a name, by the plugin of their MIME type.
+    OpenBytes {
+        name: String,
+        mime: String,
+        bytes: Vec<u8>,
+    },
 }
 
 /// What the host lends a view to draw with: the settings of the window that concern a view, the
-/// settings of its plugin and the requests the view makes.
+/// settings of its plugin, the requests the view makes, and the plugins of the window for the
+/// views inside a view.
 pub struct Host<'a> {
     pub wrap_lines: bool,
     pub page_width: PageWidth,
     /// The settings of the plugin (`Plugin::settings_ui`), `Null` before the first change.
     pub settings: &'a Value,
     pub requests: Vec<Request>,
+    /// The plugins of the window, for `open_inside`; `None` where a view stands alone (a test).
+    pub plugins: Option<&'a Plugins>,
+    /// The settings of every plugin by its id (`Loaded::id`).
+    pub every_settings: Option<&'a BTreeMap<String, Value>>,
+    /// How deep the view is inside other views: 0 for the view of a tab.
+    pub depth: u32,
+}
+
+impl<'a> Host<'a> {
+    /// The host of the view of a tab, without the plugins of the window.
+    pub fn new(wrap_lines: bool, page_width: PageWidth, settings: &'a Value) -> Self {
+        Host {
+            wrap_lines,
+            page_width,
+            settings,
+            requests: Vec::new(),
+            plugins: None,
+            every_settings: None,
+            depth: 0,
+        }
+    }
+
+    /// The same host with the plugins of the window and the settings of each.
+    pub fn with_plugins(
+        mut self,
+        plugins: &'a Plugins,
+        settings: &'a BTreeMap<String, Value>,
+    ) -> Self {
+        self.plugins = Some(plugins);
+        self.every_settings = Some(settings);
+        self
+    }
+
+    /// The settings of a plugin by its id, `Null` before the first change.
+    pub fn settings_of(&self, id: &str) -> Value {
+        self.every_settings
+            .and_then(|s| s.get(id))
+            .cloned()
+            .unwrap_or(Value::Null)
+    }
 }
 
 /// A plugin: the formats it opens and the view of a file of one of them.
@@ -79,6 +140,24 @@ pub trait Plugin: Send + Sync {
     fn formats(&self) -> &'static [Format];
     /// A view of the file with the settings of the plugin, or the text of why it cannot be opened.
     fn open(&self, path: &Path, settings: &Value) -> Result<Box<dyn View>, String>;
+    /// A view of some bytes in memory under a name (a part of another file shown inside its
+    /// view, `Host::open_inside`), of a MIME type of the formats of the plugin with its
+    /// parameters (`text/plain; charset=utf-16le`); a plugin of files alone keeps this answer.
+    fn open_bytes(
+        &self,
+        _name: &str,
+        _mime: &str,
+        _bytes: Vec<u8>,
+        _settings: &Value,
+    ) -> Result<Box<dyn View>, String> {
+        Err(NO_BYTES.to_owned())
+    }
+    /// Items of the plugin in the menu of the window, in a submenu of its name.
+    fn menu(&self) -> Vec<Tool> {
+        Vec::new()
+    }
+    /// Answers an item of `menu`, with a host of the settings of the plugin for its requests.
+    fn act(&self, _id: &str, _host: &mut Host) {}
     /// The texts of the plugin in other languages: the code and a file in the form of `ui.json`
     /// for each, added to the translations of the window at the load.
     fn translations(&self) -> &'static [(&'static str, &'static str)] {
@@ -104,8 +183,12 @@ pub trait View {
     fn tools(&self) -> Vec<Tool> {
         Vec::new()
     }
-    /// Answers a command of `tools`.
-    fn act(&mut self, _id: &str) {}
+    /// Items of the view in the menu of the window while its tab is in front.
+    fn menu(&self) -> Vec<Tool> {
+        Vec::new()
+    }
+    /// Answers a command of `tools` or an item of `menu`, with the host for its requests.
+    fn act(&mut self, _id: &str, _host: &mut Host) {}
     /// The search of the tab, when the view has one (the field at the end of the command bar).
     fn search(&mut self) -> Option<&mut Search> {
         None
@@ -119,6 +202,9 @@ pub trait View {
         String::new()
     }
 }
+
+/// Why a plugin of files alone does not open bytes (`Plugin::open_bytes`).
+pub const NO_BYTES: &str = "the plugin opens files alone";
 
 /// A setting of a plugin: the field `name` of its settings as `T`, or `default` when it is not
 /// there or of another type.
@@ -182,6 +268,15 @@ impl Loaded {
             .iter()
             .any(|f| f.extensions.contains(&ext.as_str()))
     }
+
+    /// Whether a format of the plugin names the MIME type, in any of its spellings.
+    pub fn opens_mime(&self, mime: &str) -> bool {
+        let wanted = mime::canonical(mime);
+        self.plugin
+            .formats()
+            .iter()
+            .any(|f| f.mimes.iter().any(|m| mime::canonical(m) == wanted))
+    }
 }
 
 /// The plugins of a program, and the DLLs of its folder that did not load with the reason.
@@ -237,6 +332,52 @@ impl Plugins {
     /// The index of the first plugin that opens the file.
     pub fn for_path(&self, path: &Path) -> Option<usize> {
         self.loaded.iter().position(|l| l.opens(path))
+    }
+
+    /// The plugins that name a MIME type, in their order, then for a textual type the ones of
+    /// the types it falls back to (`mime::fallbacks`).
+    pub fn for_mime(&self, mime: &str) -> Vec<usize> {
+        let mut out: Vec<usize> = Vec::new();
+        let wanted = std::iter::once(mime.to_owned())
+            .chain(mime::fallbacks(mime).into_iter().map(str::to_owned));
+        for m in wanted {
+            for (i, l) in self.loaded.iter().enumerate() {
+                if l.opens_mime(&m) && !out.contains(&i) {
+                    out.push(i);
+                }
+            }
+        }
+        out
+    }
+
+    /// A view of some bytes by the first plugin of their MIME type that opens them, with its
+    /// index, or why none did; `settings` gives the settings of a plugin by its id.
+    pub fn open_bytes(
+        &self,
+        name: &str,
+        mime: &str,
+        bytes: Vec<u8>,
+        settings: &dyn Fn(&str) -> Value,
+    ) -> Result<(usize, Box<dyn View>), String> {
+        let found = self.for_mime(mime);
+        let Some(&last) = found.last() else {
+            return Err(format!("no plugin opens {}", mime::base(mime)));
+        };
+        let mut why = Vec::new();
+        let mut bytes = Some(bytes);
+        for &i in &found {
+            let l = &self.loaded[i];
+            let these = if i == last {
+                bytes.take().unwrap_or_default()
+            } else {
+                bytes.clone().unwrap_or_default()
+            };
+            match l.plugin.open_bytes(name, mime, these, &settings(&l.id)) {
+                Ok(view) => return Ok((i, view)),
+                Err(e) => why.push(format!("{}: {e}", l.plugin.name())),
+            }
+        }
+        Err(why.join("; "))
     }
 }
 
@@ -357,6 +498,48 @@ mod tests {
             runtime()
         );
         assert!(ABI.ends_with('\0') && !runtime().ends_with('\0'));
+    }
+
+    struct Named(&'static [Format]);
+
+    impl Plugin for Named {
+        fn name(&self) -> &'static str {
+            "test"
+        }
+        fn formats(&self) -> &'static [Format] {
+            self.0
+        }
+        fn open(&self, _: &Path, _: &Value) -> Result<Box<dyn View>, String> {
+            Err(String::new())
+        }
+    }
+
+    static TEXTS: [Format; 1] = [Format {
+        name: "Texts",
+        extensions: &["txt"],
+        mimes: &["text/plain"],
+    }];
+    static XML: [Format; 1] = [Format {
+        name: "XML",
+        extensions: &["xml"],
+        mimes: &["text/xml"],
+    }];
+
+    #[test]
+    fn a_plugin_is_found_by_a_mime_type_and_its_fallbacks() {
+        let mut plugins = Plugins::default();
+        plugins.add(PathBuf::from("text.dll"), Box::new(Named(&TEXTS)));
+        plugins.add(PathBuf::from("xml.dll"), Box::new(Named(&XML)));
+        assert_eq!(plugins.for_mime("text/plain; charset=utf-16le"), [0]);
+        assert_eq!(plugins.for_mime("application/xml"), [1, 0]);
+        assert_eq!(plugins.for_mime("image/svg+xml"), [1, 0]);
+        assert_eq!(plugins.for_mime("text/html"), [0]);
+        assert!(plugins.for_mime("image/png").is_empty());
+        let Err(why) = plugins.open_bytes("a.xml", "text/xml", b"<a/>".to_vec(), &|_| Value::Null)
+        else {
+            panic!("neither plugin opens bytes");
+        };
+        assert_eq!(why, format!("test: {NO_BYTES}; test: {NO_BYTES}"));
     }
 
     #[test]

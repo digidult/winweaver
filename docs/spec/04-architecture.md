@@ -370,12 +370,13 @@ The repository, folder by folder and module by module.
 │                          text of wedit and of WW in Ukrainian, the example of a language file)
 ├── wview/                 wview, a direction of its own (docs/plugins.md) and a workspace of its own:
 │                          crates/wwrt (the runtime, a Rust dylib: W# and egui re-exported; plugin:
-│                          the interface 1 with the loader and its check of the build; input: the
-│                          keys and the mouse of a view; blocks; testing), crates/wview (the viewer:
+│                          the interface 2 with the loader and its check of the build; inner: the
+│                          views inside a view; mime: the type of some bytes; input: the keys and
+│                          the mouse of a view; blocks; testing), crates/wview (the viewer:
 │                          lang/<code>/ui.json and guide.md, docs/guide.md), plugins/wv-text
 │                          (Markdown and text), plugins/wv-image (WIC: wic, picture with the levels
 │                          and EXIF, compose for the frames of a GIF, view with the tiles, sample of
-│                          the tests), plugins/wv-binary (expr, format, engine, hex, view, wwbin,
+│                          the tests), plugins/wv-binary (expr, format, engine, hex, content, view, wwbin,
 │                          diff, compareview, sample of the tests;
 │                          the description formats/pe.wwformat built in), each with lang/<code>.json,
 │                          plugins/wv-hello (the template of the SDK); sdk/ (README.md, pack.py: the

@@ -4,19 +4,27 @@
 //! Portable Executable (`formats/pe.wwformat`) is built in; the descriptions of the folder
 //! `formats` next to the DLL add formats, and one of the same name replaces the built-in one.
 //!
+//! A description names the MIME types of its files (a program inside the resources of another
+//! opens with it) and of the bytes of its fields (`content`): the view shows the content of a
+//! node with the plugin of its type inside itself.
+//!
 //! `expr`: the expressions of a description; `format`: the description checked and compiled;
-//! `engine`: the reader and the tree; `hex`: the bytes; `view`: the tree, the bytes and the text.
+//! `engine`: the reader and the tree; `hex`: the bytes; `content`: what a node holds; `view`: the
+//! tree, the bytes, the text and the content.
 
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use wwrt::blocks::BlockFile;
 use wwrt::egui;
-use wwrt::plugin::{self, Plugin, View, set_setting, setting};
+use wwrt::mime;
+use wwrt::plugin::{self, Host, Plugin, Request, Tool, View, set_setting, setting};
 use wwrt::serde_json::Value;
 use wwrt::ww::i18n::{tr, trf};
+use wwrt::ww::icons;
 
 mod compareview;
+mod content;
 mod diff;
 mod engine;
 mod expr;
@@ -43,10 +51,12 @@ const MOST_FILES: usize = 100;
 const SAVED: plugin::Format = plugin::Format {
     name: "Structure of a file",
     extensions: &["wwbin"],
+    mimes: &[],
 };
 const COMPARED: plugin::Format = plugin::Format {
     name: "Comparison of structures",
     extensions: &["wwbindiff"],
+    mimes: &[],
 };
 
 /// The texts of the plugin in the languages of the window.
@@ -156,15 +166,20 @@ fn load() -> Formats {
     }
     let shown: Vec<plugin::Format> = list
         .iter()
-        .map(|Described { format: f, .. }| plugin::Format {
-            name: Box::leak(f.name.clone().into_boxed_str()),
-            extensions: Box::leak(
-                f.extensions
-                    .iter()
-                    .map(|e| &*Box::leak(e.clone().into_boxed_str()))
-                    .collect::<Vec<&'static str>>()
-                    .into_boxed_slice(),
-            ),
+        .map(|Described { format: f, .. }| {
+            let leaked = |list: &[String]| -> &'static [&'static str] {
+                Box::leak(
+                    list.iter()
+                        .map(|e| &*Box::leak(e.clone().into_boxed_str()))
+                        .collect::<Vec<&'static str>>()
+                        .into_boxed_slice(),
+                )
+            };
+            plugin::Format {
+                name: Box::leak(f.name.clone().into_boxed_str()),
+                extensions: leaked(&f.extensions),
+                mimes: leaked(&f.mimes),
+            }
         })
         .collect();
     let mut shown = shown;
@@ -180,15 +195,22 @@ fn formats() -> &'static Formats {
     FORMATS.get_or_init(load)
 }
 
-/// The view of a binary file by the first description of its extension whose magic it has.
-fn open_binary(path: &Path, settings: &Value) -> Result<view::BinaryView, String> {
+/// The block, the cache and the bytes of a row of the settings.
+fn sizes(settings: &Value) -> (usize, usize, u64) {
     let block: usize = setting(settings, "block_kb", 64);
     let cache: usize = setting(settings, "cache_mb", 16);
     let per_row: u64 = setting(settings, "bytes_per_row", 16);
-    let block = block.clamp(BLOCK_STEPS[0], BLOCK_STEPS[2]) << 10;
-    let cache = cache.clamp(CACHE_STEPS[0], CACHE_STEPS[2]) << 20;
-    let per_row = per_row.clamp(ROW_STEPS[0], ROW_STEPS[2]);
-    let mut file = BlockFile::open(path, block, cache).map_err(|e| e.to_string())?;
+    (
+        block.clamp(BLOCK_STEPS[0], BLOCK_STEPS[2]) << 10,
+        cache.clamp(CACHE_STEPS[0], CACHE_STEPS[2]) << 20,
+        per_row.clamp(ROW_STEPS[0], ROW_STEPS[2]),
+    )
+}
+
+/// The view of a binary file by the first description of its extension whose magic it has.
+fn open_binary(path: &Path, settings: &Value) -> Result<view::BinaryView, String> {
+    let (block, cache, per_row) = sizes(settings);
+    let file = BlockFile::open(path, block, cache).map_err(|e| e.to_string())?;
     let extension = path
         .extension()
         .map(|e| e.to_string_lossy().to_lowercase())
@@ -198,6 +220,16 @@ fn open_binary(path: &Path, settings: &Value) -> Result<view::BinaryView, String
         .iter()
         .filter(|d| d.format.extensions.contains(&extension))
         .collect();
+    view_of(path, file, &candidates, per_row)
+}
+
+/// The view of a source by the first description of the candidates whose magic it has.
+fn view_of(
+    path: &Path,
+    mut file: BlockFile,
+    candidates: &[&'static Described],
+    per_row: u64,
+) -> Result<view::BinaryView, String> {
     let Some(found) = candidates.iter().find(|d| {
         d.format
             .knows(&mut |at, out| engine::Source::read(&mut file, at, out))
@@ -242,6 +274,14 @@ pub mod sample {
 
     use wwrt::serde_json::Value;
 
+    /// The view of a file with the content of the node a path of names or keys leads to (`*`
+    /// for the first child) shown inside it.
+    pub fn content(file: &Path, path: &[&str]) -> Result<Box<dyn wwrt::plugin::View>, String> {
+        let mut view = crate::open_binary(file, &Value::Null)?;
+        view.show_content(path)?;
+        Ok(Box::new(view))
+    }
+
     /// Saves the structure of a file as a `.wwbin`.
     pub fn save_structure(file: &Path, out: &Path) -> Result<(), String> {
         crate::open_binary(file, &Value::Null)?.save_to(out)
@@ -268,6 +308,27 @@ pub mod sample {
         view.set_notes(notes, out.to_path_buf());
         view.save_comparison_to(out)
     }
+}
+
+/// The view of some bytes by the first description of their MIME type whose magic they have.
+fn open_memory(
+    name: &str,
+    mime: &str,
+    bytes: Vec<u8>,
+    settings: &Value,
+) -> Result<view::BinaryView, String> {
+    let wanted = mime::canonical(mime);
+    let candidates: Vec<&'static Described> = formats()
+        .list
+        .iter()
+        .filter(|d| d.format.mimes.iter().any(|m| mime::canonical(m) == wanted))
+        .collect();
+    if candidates.is_empty() {
+        return Err(trf("no description of {mime}", &[("mime", &wanted)]));
+    }
+    let (_, _, per_row) = sizes(settings);
+    let file = BlockFile::from_bytes(bytes);
+    Ok(view_of(Path::new(""), file, &candidates, per_row)?.named(name))
 }
 
 pub struct BinaryPlugin;
@@ -297,6 +358,43 @@ impl Plugin for BinaryPlugin {
             }
             "wwbindiff" => open_comparison(path, settings).map(|v| Box::new(v) as Box<dyn View>),
             _ => open_binary(path, settings).map(|v| Box::new(v) as Box<dyn View>),
+        }
+    }
+
+    fn open_bytes(
+        &self,
+        name: &str,
+        mime: &str,
+        bytes: Vec<u8>,
+        settings: &Value,
+    ) -> Result<Box<dyn View>, String> {
+        open_memory(name, mime, bytes, settings).map(|v| Box::new(v) as Box<dyn View>)
+    }
+
+    fn menu(&self) -> Vec<Tool> {
+        vec![Tool {
+            id: "formats",
+            icon: icons::FOLDER,
+            label: "Folder of the descriptions",
+        }]
+    }
+
+    /// The folder `formats` next to the DLL in Explorer, made when it is not there.
+    fn act(&self, id: &str, host: &mut Host) {
+        if id != "formats" {
+            return;
+        }
+        let Some(dir) = module_dir().map(|d| d.join("formats")) else {
+            return;
+        };
+        let shown = std::fs::create_dir_all(&dir)
+            .map_err(|e| e.to_string())
+            .and_then(|()| wwrt::ww::folders::show_in_folder(&dir));
+        if let Err(why) = shown {
+            host.requests.push(Request::Status(trf(
+                "{path}: {why}",
+                &[("path", &dir.display()), ("why", &why)],
+            )));
         }
     }
 
@@ -649,6 +747,70 @@ mod tests {
                 .iter()
                 .any(|t| t.label == "Save the comparison")
         );
+    }
+
+    /// The path of the bytes of the first resource of a type.
+    fn resource(kind: &'static str) -> [&'static str; 10] {
+        [
+            "resources",
+            "entries",
+            kind,
+            "names",
+            "entries",
+            "*",
+            "languages",
+            "entries",
+            "*",
+            "data",
+        ]
+    }
+
+    /// The resources of a program of this Windows name the types of their bytes: its manifest
+    /// a text of XML, its first icon an image made an ICO file.
+    #[test]
+    #[cfg(windows)]
+    fn the_resources_of_a_program_name_their_content() {
+        let path = system(&["System32", "notepad.exe"]);
+        let mut view = open_binary(&path, &Value::Null).unwrap();
+        view.show_content(&resource("MANIFEST")).unwrap();
+        let (name, mime, bytes) = view.selected_content().unwrap();
+        assert!(name.starts_with("notepad.exe, MANIFEST/1/"), "{name}");
+        assert_eq!(mime, "application/xml");
+        assert!(
+            mime::sniff(&bytes).is_some_and(|m| mime::same(m, "application/xml")),
+            "{:?}",
+            &bytes[..bytes.len().min(16)]
+        );
+        view.show_content(&resource("ICON")).unwrap();
+        let (_, mime, bytes) = view.selected_content().unwrap();
+        assert!(
+            matches!(mime.as_str(), "image/x-icon" | "image/png"),
+            "{mime}"
+        );
+        assert_eq!(mime::sniff(&bytes), Some(mime.as_str()));
+        // An icon directory is no file of its own: bytes of no plugin, not an ICO by its start.
+        view.show_content(&resource("GROUP_ICON")).unwrap();
+        let (_, mime, _) = view.selected_content().unwrap();
+        assert_eq!(mime, "application/octet-stream");
+    }
+
+    /// A program in memory, a part of another file, opens by its MIME type.
+    #[test]
+    #[cfg(windows)]
+    fn a_program_in_memory_opens_by_its_type() {
+        let bytes = std::fs::read(system(&["System32", "kernel32.dll"])).unwrap();
+        let view = BinaryPlugin
+            .open_bytes("inside.dll", mime::PE, bytes, &Value::Null)
+            .unwrap();
+        assert!(
+            view.status().contains("Portable Executable"),
+            "{}",
+            view.status()
+        );
+        let Err(why) = BinaryPlugin.open_bytes("x", "image/png", vec![0; 8], &Value::Null) else {
+            panic!("no description of PNG");
+        };
+        assert!(why.contains("image/png"), "{why}");
     }
 
     #[test]

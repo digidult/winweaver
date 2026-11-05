@@ -246,6 +246,7 @@ pub unsafe fn wrap(table: &'static WvPlugin) -> Result<Stable, String> {
             formats.push(Format {
                 name: Box::leak(text(f.name).into_boxed_str()),
                 extensions: Box::leak(extensions.into_boxed_slice()),
+                mimes: &[],
             });
         }
         Ok(Stable {
@@ -729,12 +730,7 @@ mod tests {
 
     fn run(view: &mut Box<dyn View>, ctx: &egui::Context, events: Vec<egui::Event>) {
         let settings = serde_json::Value::Null;
-        let mut host = Host {
-            wrap_lines: true,
-            page_width: ww::PageWidth::View,
-            settings: &settings,
-            requests: Vec::new(),
-        };
+        let mut host = Host::new(true, ww::PageWidth::View, &settings);
         let input = egui::RawInput {
             screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(400.0, 300.0))),
             events,

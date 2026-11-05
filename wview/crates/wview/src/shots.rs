@@ -2,7 +2,8 @@
 //! `WINWEAVER_SCREENSHOTS` names a folder (CI sets it on the Windows runner): the page of the
 //! plugins, a Markdown page, an image fitted, then zoomed and moved, Settings, Plugins, an
 //! animation, a large image fitted and at 100% in its tiles, a DLL of this Windows in its tree and
-//! its bytes, as text and with its resources open, a comparison of a copy with its structure, and
+//! its bytes, as text and with its resources open, a comparison of a copy with its structure, the
+//! manifest and an icon of a program shown inside its view by the plugins of texts and images, and
 //! the Mandelbrot set of the stable interface where CI built it (`WVIEW_STABLE`); drawn with wgpu without a screen and saved there as PNG files; a
 //! renderer that cannot start writes `wview-error.txt`.
 
@@ -14,8 +15,8 @@ use wwrt::ww::{App, ShellAct, Window};
 
 use crate::app::{Act, Wview};
 use crate::tests::{
-    bmp, changed_copy, click_tree, decoded, english, folder, front, system_dll, three_frames,
-    window,
+    bmp, changed_copy, click_tree, content_tab, decoded, english, folder, front, resource,
+    system_dll, three_frames, window,
 };
 
 fn shot(h: &mut Harness<'_, Window<Wview>>, dir: &Path, name: &str) {
@@ -152,6 +153,12 @@ fn screenshots_of_wview() {
     h.state_mut()
         .apply(vec![Act::Shell(ShellAct::OpenPath(diff))]);
     shot(&mut h, &dir, "v12-binary-comparison");
+    // The manifest of a program as a text, then its first icon as an image, inside its view.
+    content_tab(h.state_mut(), &resource("MANIFEST"));
+    shot(&mut h, &dir, "v14-content-manifest");
+    content_tab(h.state_mut(), &resource("ICON"));
+    decoded(&mut h);
+    shot(&mut h, &dir, "v15-content-icon");
     if let Some(stable) = std::env::var_os("WVIEW_STABLE") {
         stable_plugin(&dir, Path::new(&stable));
     }

@@ -9,12 +9,17 @@ wview muestra archivos. Cada formato es un complemento: una DLL en la carpeta `p
   `wview ARCHIVO...` abre archivos desde la línea de comandos.
 - Un archivo de un formato que ningún complemento abre queda cerrado, y la barra de estado lo dice.
 - Ctrl+W cierra una pestaña, Ctrl+Tab pasa a la siguiente.
+- El menú contiene los elementos de la pestaña activa y un submenú de cada complemento que tiene
+  elementos propios.
 
 ## Texto y Markdown
 
 Las páginas Markdown (`.md`) se muestran como páginas, los archivos de texto (`.txt`, `.log`,
 `.ini`, `.cfg`, `.csv`) tal como son. Ctrl+F busca en el texto. **Configuración**, **General**:
 *Ajustar las líneas al ancho de la vista* y *Ancho de las páginas* cambian cómo se ve un texto.
+
+Los archivos XML (`.xml`, `.manifest`) también se muestran como textos, y un texto UTF-16 con su
+marca se lee igual que uno UTF-8.
 
 ## Imágenes
 
@@ -65,8 +70,16 @@ importaciones y las exportaciones, cada campo con su valor, su desplazamiento y 
   comentario y un marcador; **Guardar la comparación** los escribe con los dos archivos en un
   `.wwbindiff`, que abre la comparación en una pestaña propia. Un `.wwbin` se abre también solo,
   como su árbol.
+- **Contenido** en la barra, cuando el nodo seleccionado contiene un archivo de un tipo que muestra
+  otro complemento (el manifiesto de un programa, sus iconos, mapas de bits y páginas HTML, una
+  imagen o un texto entre sus datos, otro programa dentro): la parte derecha lo muestra con ese
+  complemento, con sus propios botones encima, y sigue la selección; **Árbol y bytes** vuelve. En el
+  menú: **Abrir el contenido en una pestaña**, **Guardar el nodo como archivo** (un icono como
+  archivo ICO, si no sus bytes) y **Leer todos los nodos**.
 - Más formatos llegan como descripciones, archivos `.wwformat` en la carpeta `plugins\formats`;
   Configuración, Complementos enumera los formatos leídos y los archivos que no se leyeron.
+- **Estructuras binarias**, **Carpeta de las descripciones** en el menú abre la carpeta
+  `plugins\formats` en el Explorador y la crea si no existe.
 
 ## El conjunto de Mandelbrot
 
