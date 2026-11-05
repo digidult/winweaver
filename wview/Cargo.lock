@@ -4226,7 +4226,7 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 
 [[package]]
 name = "wv-binary"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "sha2",
  "wwrt",
@@ -4234,28 +4234,28 @@ dependencies = [
 
 [[package]]
 name = "wv-hello"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "wwrt",
 ]
 
 [[package]]
 name = "wv-image"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "wwrt",
 ]
 
 [[package]]
 name = "wv-text"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "wwrt",
 ]
 
 [[package]]
 name = "wview"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "wv-binary",
  "wv-image",
@@ -4265,7 +4265,7 @@ dependencies = [
 
 [[package]]
 name = "ww"
-version = "0.34.0"
+version = "0.35.0"
 dependencies = [
  "eframe",
  "js-sys",
@@ -4286,7 +4286,7 @@ dependencies = [
 
 [[package]]
 name = "ww-base"
-version = "0.34.0"
+version = "0.35.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -4296,7 +4296,7 @@ dependencies = [
 
 [[package]]
 name = "wwrt"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "egui_kittest",
  "libloading",

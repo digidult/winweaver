@@ -343,3 +343,41 @@ fn a_dll_in_its_tree_and_its_bytes() {
         _ => panic!("the tab of the DLL is in front"),
     }
 }
+
+/// A copy of a DLL of this Windows in `dir`, its structure saved, two of its fields changed (the
+/// time stamp of the file header and the characteristics of its first section), and the
+/// comparison saved with a note; gives the `.wwbindiff`.
+pub(crate) fn changed_copy(dir: &Path) -> PathBuf {
+    let copy = dir.join("kernel32-copy.dll");
+    std::fs::copy(system_dll(), &copy).unwrap();
+    let structure = dir.join("kernel32-copy.dll.wwbin");
+    wv_binary::sample::save_structure(&copy, &structure).unwrap();
+    let mut bytes = std::fs::read(&copy).unwrap();
+    let header = u32::from_le_bytes(bytes[0x3C..0x40].try_into().unwrap()) as usize;
+    bytes[header + 8] ^= 0x5A;
+    let optional = u16::from_le_bytes([bytes[header + 20], bytes[header + 21]]) as usize;
+    let first_section = header + 24 + optional;
+    bytes[first_section + 36 + 3] ^= 0x80;
+    std::fs::write(&copy, &bytes).unwrap();
+    let diff = dir.join("kernel32-copy.dll.wwbindiff");
+    let key = "sections[.text].characteristics";
+    wv_binary::sample::save_comparison(
+        &copy,
+        &structure,
+        &diff,
+        &[(key, "Writable now: why?", true)],
+    )
+    .unwrap();
+    diff
+}
+
+#[test]
+fn a_comparison_opens_in_its_tab() {
+    let dir = folder("comparison");
+    let diff = changed_copy(&dir);
+    let mut window = window(english(wwrt::serde_json::Value::Null));
+    open(&mut window, diff.clone());
+    let (path, status) = front(&window);
+    assert_eq!(path, diff);
+    assert!(status.contains("2 changed, 0 added, 0 removed"), "{status}");
+}

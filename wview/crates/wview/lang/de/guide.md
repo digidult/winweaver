@@ -61,6 +61,13 @@ die Exporte, jedes Feld mit seinem Wert, seinem Offset und seiner Größe.
 - **Struktur speichern** schreibt den Baum als `.wwbin`-Datei, standardmäßig neben die Datei: jedes
   Feld mit seinem Wert, jeder Bereich roher Bytes mit seinem SHA-256, die Datei mit ihrer Größe und
   ihrem SHA-256, und keines ihrer Bytes.
+- **Mit einer Struktur vergleichen** vergleicht die Datei mit einer gespeicherten `.wwbin` (etwa
+  einer anderen Version der Datei): der Baum der Änderungen, jede mit ihrem Wert davor und danach,
+  die Knoten nach ihren Namen und Schlüsseln zugeordnet, sodass ein neuer Abschnitt keinen anderen
+  verschiebt; **Alle Knoten** oder **Nur Änderungen**. Ein gewählter Knoten nimmt einen Kommentar
+  und ein Lesezeichen; **Vergleich speichern** schreibt sie mit beiden Dateien in eine
+  `.wwbindiff`, die den Vergleich in einem eigenen Tab öffnet. Eine `.wwbin` öffnet auch allein,
+  als ihr Baum.
 - Weitere Formate kommen als Beschreibungen, `.wwformat`-Dateien im Ordner `plugins\formats`;
   Einstellungen, Plugins zeigt die gelesenen Formate und die Dateien, die nicht gelesen wurden.
 

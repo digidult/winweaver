@@ -60,6 +60,13 @@ importations et les exportations, chaque champ avec sa valeur, son décalage et 
 - **Enregistrer la structure** écrit l'arbre dans un fichier `.wwbin`, à côté du fichier par
   défaut : chaque champ avec sa valeur, chaque plage d'octets bruts avec son SHA-256, le fichier
   avec sa taille et son SHA-256, et aucun de ses octets.
+- **Comparer avec une structure** compare le fichier avec un `.wwbin` enregistré de lui (d'une
+  autre version du fichier, par exemple) : l'arbre des modifications, chacune avec sa valeur avant
+  et après, les nœuds appariés par leurs noms et leurs clés, si bien qu'une nouvelle section n'en
+  déplace aucune autre ; **Tous les nœuds** ou **Les modifications seules**. Un nœud choisi reçoit
+  un commentaire et un signet ; **Enregistrer la comparaison** les écrit avec les deux fichiers
+  dans un `.wwbindiff`, qui ouvre la comparaison dans un onglet à lui. Un `.wwbin` s'ouvre aussi
+  seul, comme son arbre.
 - D'autres formats viennent comme descriptions, des fichiers `.wwformat` dans le dossier
   `plugins\formats` ; Paramètres, Modules liste les formats lus et les fichiers qui ne se sont pas
   lus.

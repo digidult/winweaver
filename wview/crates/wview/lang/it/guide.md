@@ -59,6 +59,12 @@ importazioni e le esportazioni, ogni campo con il suo valore, il suo offset e la
 - **Salva la struttura** scrive l'albero in un file `.wwbin`, accanto al file per impostazione
   predefinita: ogni campo con il suo valore, ogni intervallo di byte grezzi con il suo SHA-256, il
   file con la sua dimensione e il suo SHA-256, e nessuno dei suoi byte.
+- **Confronta con una struttura** confronta il file con un `.wwbin` salvato da esso (di un'altra
+  versione del file, per esempio): l'albero delle modifiche, ognuna con il suo valore prima e
+  dopo, i nodi abbinati per nomi e chiavi, così che una nuova sezione non ne sposta altre; **Tutti
+  i nodi** o **Solo le modifiche**. Un nodo scelto riceve un commento e un segnalibro; **Salva il
+  confronto** li scrive con i due file in un `.wwbindiff`, che apre il confronto in una scheda
+  propria. Un `.wwbin` si apre anche da solo, come il suo albero.
 - Altri formati arrivano come descrizioni, file `.wwformat` nella cartella `plugins\formats`;
   Impostazioni, Plugin elenca i formati letti e i file che non si sono letti.
 

@@ -18,7 +18,8 @@ settings are kept in `wview.settings.json` next to the program.
   library of Rust: they stay next to `wview.exe`.
 - `plugins\wv_text.dll` (Markdown and text), `plugins\wv_image.dll` (images, the animations of
   GIF, the pages of TIFF and ICO) and `plugins\wv_binary.dll` (programs and libraries of Windows
-  as the tree of their structure with their bytes, saved as `.wwbin` on demand; more formats as
+  as the tree of their structure with their bytes, saved as `.wwbin` on demand and compared with
+  one, the notes of a comparison in a `.wwbindiff`; more formats as
   `.wwformat` descriptions in `plugins\formats`).
 
 A plugin of another release of wview is not loaded: the page of the plugins and `wview --plugins`

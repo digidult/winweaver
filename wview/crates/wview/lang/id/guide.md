@@ -57,6 +57,12 @@ dan ukurannya.
 - **Simpan struktur** menulis pohon sebagai file `.wwbin`, secara bawaan di samping file: setiap
   bidang dengan nilainya, setiap rentang byte mentah dengan SHA-256-nya, file dengan ukuran dan
   SHA-256-nya, tanpa satu pun bytenya.
+- **Bandingkan dengan struktur** membandingkan file dengan `.wwbin` yang disimpan darinya
+  (misalnya dari versi lain file itu): pohon perubahan, masing-masing dengan nilai sebelum dan
+  sesudahnya, simpul dicocokkan menurut nama dan kuncinya, sehingga bagian baru tidak menggeser
+  yang lain; **Semua simpul** atau **Hanya perubahan**. Simpul yang dipilih menerima komentar dan
+  penanda; **Simpan perbandingan** menulisnya bersama kedua file ke `.wwbindiff`, yang membuka
+  perbandingan di tab tersendiri. File `.wwbin` juga terbuka sendiri, sebagai pohonnya.
 - Format lain datang sebagai deskripsi, file `.wwformat` di folder `plugins\formats`; Pengaturan,
   Plugin menampilkan format yang terbaca dan file yang tidak terbaca.
 

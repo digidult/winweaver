@@ -56,6 +56,12 @@ değeri, uzaklığı ve boyutuyla.
 - **Yapıyı kaydet** ağacı varsayılan olarak dosyanın yanına bir `.wwbin` dosyası olarak yazar: her
   alan değeriyle, her ham bayt aralığı SHA-256'sıyla, dosya boyutu ve SHA-256'sıyla, baytlarından
   hiçbiri olmadan.
+- **Bir yapıyla karşılaştır** dosyayı ondan kaydedilmiş bir `.wwbin` ile (örneğin dosyanın başka
+  bir sürümününkiyle) karşılaştırır: değişikliklerin ağacı, her biri önceki ve sonraki değeriyle,
+  düğümler adlarına ve anahtarlarına göre eşleşir, böylece yeni bir bölüm başkalarını kaydırmaz;
+  **Tüm düğümler** veya **Yalnızca değişiklikler**. Seçilen bir düğüm bir yorum ve bir yer imi
+  alır; **Karşılaştırmayı kaydet** bunları iki dosyayla birlikte bir `.wwbindiff` dosyasına yazar,
+  o da karşılaştırmayı kendi sekmesinde açar. Bir `.wwbin` tek başına da ağacı olarak açılır.
 - Başka biçimler açıklama olarak gelir, `plugins\formats` klasöründeki `.wwformat` dosyaları;
   Ayarlar, Eklentiler okunan biçimleri ve okunamayan dosyaları listeler.
 

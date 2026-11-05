@@ -58,6 +58,13 @@ importaciones y las exportaciones, cada campo con su valor, su desplazamiento y 
 - **Guardar la estructura** escribe el árbol como un archivo `.wwbin`, junto al archivo por
   defecto: cada campo con su valor, cada rango de bytes en bruto con su SHA-256, el archivo con su
   tamaño y su SHA-256, y ninguno de sus bytes.
+- **Comparar con una estructura** compara el archivo con un `.wwbin` guardado de él (de otra
+  versión del archivo, por ejemplo): el árbol de los cambios, cada uno con su valor antes y
+  después, los nodos emparejados por sus nombres y claves, de modo que una sección nueva no mueve
+  ninguna otra; **Todos los nodos** o **Solo los cambios**. Un nodo seleccionado admite un
+  comentario y un marcador; **Guardar la comparación** los escribe con los dos archivos en un
+  `.wwbindiff`, que abre la comparación en una pestaña propia. Un `.wwbin` se abre también solo,
+  como su árbol.
 - Más formatos llegan como descripciones, archivos `.wwformat` en la carpeta `plugins\formats`;
   Configuración, Complementos enumera los formatos leídos y los archivos que no se leyeron.
 

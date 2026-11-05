@@ -188,7 +188,8 @@ text editor wedit.
 │                          lang/<code>/ui.json and guide.md, docs/guide.md), plugins/wv-text
 │                          (Markdown and text), plugins/wv-image (WIC: wic, picture with the levels
 │                          and EXIF, compose for the frames of a GIF, view with the tiles, sample of
-│                          the tests), plugins/wv-binary (expr, format, engine, hex, view, wwbin;
+│                          the tests), plugins/wv-binary (expr, format, engine, hex, view, wwbin,
+│                          diff, compareview, sample of the tests;
 │                          the description formats/pe.wwformat built in), each with lang/<code>.json,
 │                          plugins/wv-hello (the template of the SDK); sdk/ (README.md, pack.py: the
 │                          SDK of a release); package/README.md (for the user of the archive);
@@ -696,7 +697,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   import in `loaded_imports` of the settings file of the window, so a window open meanwhile overwrites it.
 - Screenshots: the Windows job sets `WINWEAVER_SCREENSHOTS`, and the test `screenshots_of_the_window` draws the
   main tabs with wgpu (no screen) into `target/screenshots`, uploaded as the artifact `screenshots`
-  (`gh run download <id> -n screenshots -D <folder>`; the ones of wview, `v1-` to `v11-`, as
+  (`gh run download <id> -n screenshots -D <folder>`; the ones of wview, `v1-` to `v12-`, as
   `screenshots-wview` of its job); the way to see the window without starting it on the
   customer's PC. A renderer that cannot start writes `error.txt` there instead of failing the tests.
 - Window tests: `App::new` and `App::apply` test the logic without frames; `egui_kittest` (a dev-dependency
@@ -832,7 +833,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   another one and wview did not start), and a release build of wview attaches to the console of its
   parent only when its output is not redirected. CI: the Linux job checks the format and clippy of `wview`, the job
   `build-wview` (Windows, beside the one of WinWeaver) its clippy and tests (the screenshots `v1-`
-  to `v11-`, the artifact `screenshots-wview`), the release build and the artifacts
+  to `v12-`, the artifact `screenshots-wview`), the release build and the artifacts
   `wview-<version>` and `wview-sdk-<version>`; a release of WinWeaver does not carry them. The
   template of the SDK is built in its copy with the target folder of the tree (`CARGO_TARGET_DIR`):
   the crates of the registry are not built again, the crates of the SDK are cleaned first. The family links std dynamically
@@ -851,6 +852,10 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
   of the Windows they run on (read only) and the screenshots `v9-` to `v11-` show it. A `lazy`
   field is read when its node opens (`engine::expand`); Save the structure reads every one first
   (`expand_all`) and writes `.wwbin` (`wwbin.rs`, SHA-256 of the crate `sha2`, the plugin's own).
+  A `.wwbin` reads back (`wwbin::read`) for its own tab and for Compare with a structure
+  (`diff.rs`: lines matched by key or name, marks; `compareview.rs`: the view, the notes); a
+  `.wwbindiff` keeps the two files and the notes by the path of a line. The tests of wview make
+  their files through `wv_binary::sample` (no dialog opens in a test).
 - The structure of the code: a change of the window is an `Act`
   of one subsystem (`act.rs`), run by the `apply_<subsystem>` method in `app/<theme>.rs`; a question before
   a removal is `Act::Ask(Question)` built where the data is (`question.rs`, `remove_question` of a users
@@ -1084,6 +1089,7 @@ reference, a placeholder outside the allowed fields or a rule under the wrong ro
 | In pull request #71 (0.32.0, wview 0.3.0) | Phase 3 of wview: images whole. The decoding in a thread, an image decoded whole within a budget of the settings and kept with its levels, drawn in tiles of the level the zoom needs; the frames of a GIF drawn on its canvas and played, the pages of a TIFF or an ICO; the orientation of EXIF; the steps of the zoom, 1 to 4, the arrows that move an image; the settings, the eight languages and the guide; the tests of WIC on files the tests make, the screenshots `v6-` to `v8-` |
 | In pull request #72 (0.33.0, wview 0.4.0) | Phase 4 of wview, wv-binary 1: the language of the descriptions (`.wwformat`) and its engine, PE in its first parts (the headers, the sections, the exports, the imports), the tree with the bytes of the file and the tree as a page, the descriptions of the folder `formats`, the settings, the eight languages and the guide, the screenshots `v9-` and `v10-` |
 | In pull request #73 (0.34.0, wview 0.5.0) | Phase 5 of wview, wv-binary 2: `lazy`, `align` and `length` in the language; the resources (read when they open), the exceptions, the certificates, the relocations, debug, TLS, the load configuration, the delay imports and the header of .NET; Save the structure as `.wwbin`; the bytes scroll exactly to the node selected; the screenshot `v11-` |
+| In pull request #74 (0.35.0, wview 0.6.0) | Phase 6 of wview, `.wwbindiff`: a `.wwbin` opened alone as its tree; Compare with a structure (the lines matched by key or name, the marks, Changed only, both values, a comment and a bookmark of a line, Show in the tree and bytes); Save the comparison as `.wwbindiff`, which opens the comparison in its tab; the screenshot `v12-` |
 | Acceptance | The acceptance page in a VM: every part up to Q of 0.22.1 accepted; parts R to V of 0.22.1 and W to Z of 0.24.0 wait |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the

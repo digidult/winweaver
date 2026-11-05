@@ -12,7 +12,9 @@ use wwrt::egui_kittest::Harness;
 use wwrt::ww::{App, ShellAct, Window};
 
 use crate::app::{Act, Wview};
-use crate::tests::{bmp, click_tree, decoded, english, folder, system_dll, three_frames, window};
+use crate::tests::{
+    bmp, changed_copy, click_tree, decoded, english, folder, system_dll, three_frames, window,
+};
 
 fn shot(h: &mut Harness<'_, Window<Wview>>, dir: &Path, name: &str) {
     for _ in 0..6 {
@@ -143,4 +145,9 @@ fn screenshots_of_wview() {
         h.run_steps(1);
     }
     shot(&mut h, &dir, "v11-binary-resources");
+    // A copy of the DLL with two fields changed, compared with its structure saved before.
+    let diff = changed_copy(&files);
+    h.state_mut()
+        .apply(vec![Act::Shell(ShellAct::OpenPath(diff))]);
+    shot(&mut h, &dir, "v12-binary-comparison");
 }

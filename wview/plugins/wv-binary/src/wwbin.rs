@@ -18,7 +18,8 @@
 use sha2::{Digest, Sha256};
 use wwrt::serde_json::{Map, Value, json};
 
-use crate::engine::{Data, Source, Tree};
+use crate::engine::{Data, Node, Source, Tree};
+use crate::format::Show;
 
 /// The bytes of a range read at once to hash them.
 const CHUNK: usize = 1 << 20;
@@ -117,6 +118,122 @@ pub fn document(
     })
 }
 
+/// The largest `.wwbin` read, in bytes.
+pub const LARGEST: u64 = 512 << 20;
+/// The nodes of a `.wwbin` read at most, and how deep.
+const MOST_NODES: usize = 2_000_000;
+const DEEPEST: usize = 200;
+
+/// A structure read back from its `.wwbin`.
+pub struct Saved {
+    /// The name, the size and the SHA-256 of the file it was saved of.
+    pub name: String,
+    pub size: u64,
+    pub sha256: String,
+    /// The name of its description.
+    pub format: String,
+    /// The tree: a raw range has its SHA-256 as its note.
+    pub tree: Tree,
+}
+
+fn text<'a>(v: &'a Value, name: &str) -> Result<&'a str, String> {
+    v.get(name)
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("no text {name}"))
+}
+
+fn whole(v: &Value, name: &str) -> Result<u64, String> {
+    v.get(name)
+        .and_then(Value::as_u64)
+        .ok_or_else(|| format!("no number {name}"))
+}
+
+/// The nodes of a node of a document, depth first, into `nodes`.
+fn read_node(
+    v: &Value,
+    parent: Option<usize>,
+    depth: usize,
+    nodes: &mut Vec<Node>,
+) -> Result<usize, String> {
+    if depth > DEEPEST || nodes.len() >= MOST_NODES {
+        return Err("a structure deeper or larger than a .wwbin may be".to_owned());
+    }
+    let data = if let Some(t) = v.get("type").and_then(Value::as_str) {
+        Data::Struct(t.to_owned())
+    } else if let Some(n) = v.get("items").and_then(Value::as_u64) {
+        Data::Array(n)
+    } else if let Some(n) = v.get("value") {
+        match (n.as_u64(), n.as_i64(), n.as_f64(), n.as_str()) {
+            (Some(u), _, _, _) => Data::Int(i128::from(u)),
+            (_, Some(i), _, _) => Data::Int(i128::from(i)),
+            (_, _, _, Some(s)) => Data::Int(s.parse().map_err(|_| format!("a value {s}"))?),
+            (_, _, Some(f), _) => Data::Float(f),
+            _ => return Err("a value of no kind".to_owned()),
+        }
+    } else if let Some(t) = v.get("text").and_then(Value::as_str) {
+        Data::Text(t.to_owned())
+    } else if v.get("sha256").is_some() {
+        Data::Raw
+    } else {
+        Data::Missing
+    };
+    let error = v.get("error").and_then(Value::as_str);
+    let note = match (&data, error) {
+        (_, Some(e)) => e.to_owned(),
+        (Data::Raw, None) => text(v, "sha256")?.to_owned(),
+        _ => v
+            .get("names")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_owned(),
+    };
+    let index = nodes.len();
+    nodes.push(Node {
+        name: text(v, "name")?.to_owned(),
+        key: v.get("key").and_then(Value::as_str).map(str::to_owned),
+        offset: whole(v, "offset")?,
+        size: whole(v, "size")?,
+        data,
+        parent,
+        children: Vec::new(),
+        note,
+        error: error.is_some(),
+        show: Show::Number,
+        pending: false,
+    });
+    if let Some(children) = v.get("children").and_then(Value::as_array) {
+        for c in children {
+            let child = read_node(c, Some(index), depth + 1, nodes)?;
+            nodes[index].children.push(child);
+        }
+    }
+    Ok(index)
+}
+
+/// A `.wwbin` read back: a file that is not one, or larger than `LARGEST`, is a message.
+pub fn read(path: &std::path::Path) -> Result<Saved, String> {
+    let size = std::fs::metadata(path).map_err(|e| e.to_string())?.len();
+    if size > LARGEST {
+        return Err(format!("larger than {LARGEST} bytes"));
+    }
+    let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+    let doc: Value = wwrt::serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    if text(&doc, "format")? != "wwbin" || whole(&doc, "version")? != 1 {
+        return Err("not a .wwbin of version 1".to_owned());
+    }
+    let file = doc.get("file").ok_or("no file")?;
+    let mut nodes = Vec::new();
+    read_node(doc.get("tree").ok_or("no tree")?, None, 0, &mut nodes)?;
+    let errors = nodes.iter().filter(|n| n.error).count();
+    Ok(Saved {
+        name: text(file, "name")?.to_owned(),
+        size: whole(file, "size")?,
+        sha256: text(file, "sha256")?.to_owned(),
+        format: text(doc.get("description").ok_or("no description")?, "name")?.to_owned(),
+        tree: Tree { nodes, errors },
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,5 +274,25 @@ mod tests {
         );
         assert_eq!(children[3]["value"], u64::MAX, "64 bits whole");
         assert!(children[4]["error"].as_str().is_some_and(|e| !e.is_empty()));
+        // The document reads back into the same tree.
+        let dir = std::env::temp_dir().join(format!("wv-binary-wwbin-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("pair.bin.wwbin");
+        std::fs::write(&path, wwrt::serde_json::to_string(&doc).unwrap()).unwrap();
+        let saved = super::read(&path).unwrap();
+        assert_eq!(
+            (saved.name.as_str(), saved.size, saved.format.as_str()),
+            ("pair.bin", 16, "Pair")
+        );
+        assert_eq!(saved.tree.nodes.len(), tree.nodes.len());
+        assert_eq!(saved.tree.nodes[4].data, Data::Int(i128::from(u64::MAX)));
+        assert_eq!(
+            saved.tree.nodes[3].note,
+            sha256(&mut bytes.clone(), 4, 4),
+            "raw bytes keep their hash"
+        );
+        assert!(saved.tree.nodes[5].error);
+        std::fs::write(&path, b"{\"format\": \"other\"}").unwrap();
+        assert!(super::read(&path).is_err());
     }
 }

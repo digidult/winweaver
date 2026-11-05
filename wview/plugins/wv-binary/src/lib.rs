@@ -16,6 +16,8 @@ use wwrt::plugin::{self, Plugin, View, set_setting, setting};
 use wwrt::serde_json::Value;
 use wwrt::ww::i18n::{tr, trf};
 
+mod compareview;
+mod diff;
 mod engine;
 mod expr;
 mod format;
@@ -37,6 +39,15 @@ const BLOCK_STEPS: [usize; 3] = [4, 64, 1024];
 const CACHE_STEPS: [usize; 3] = [1, 16, 64];
 /// The descriptions the folder `formats` may hold.
 const MOST_FILES: usize = 100;
+/// The files of the plugin itself: a structure saved and a comparison of structures.
+const SAVED: plugin::Format = plugin::Format {
+    name: "Structure of a file",
+    extensions: &["wwbin"],
+};
+const COMPARED: plugin::Format = plugin::Format {
+    name: "Comparison of structures",
+    extensions: &["wwbindiff"],
+};
 
 /// The texts of the plugin in the languages of the window.
 static TRANSLATIONS: [(&str, &str); 8] = [
@@ -156,6 +167,8 @@ fn load() -> Formats {
             ),
         })
         .collect();
+    let mut shown = shown;
+    shown.extend([SAVED, COMPARED]);
     Formats {
         list,
         problems,
@@ -165,6 +178,96 @@ fn load() -> Formats {
 
 fn formats() -> &'static Formats {
     FORMATS.get_or_init(load)
+}
+
+/// The view of a binary file by the first description of its extension whose magic it has.
+fn open_binary(path: &Path, settings: &Value) -> Result<view::BinaryView, String> {
+    let block: usize = setting(settings, "block_kb", 64);
+    let cache: usize = setting(settings, "cache_mb", 16);
+    let per_row: u64 = setting(settings, "bytes_per_row", 16);
+    let block = block.clamp(BLOCK_STEPS[0], BLOCK_STEPS[2]) << 10;
+    let cache = cache.clamp(CACHE_STEPS[0], CACHE_STEPS[2]) << 20;
+    let per_row = per_row.clamp(ROW_STEPS[0], ROW_STEPS[2]);
+    let mut file = BlockFile::open(path, block, cache).map_err(|e| e.to_string())?;
+    let extension = path
+        .extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+    let candidates: Vec<&'static Described> = formats()
+        .list
+        .iter()
+        .filter(|d| d.format.extensions.contains(&extension))
+        .collect();
+    let Some(found) = candidates.iter().find(|d| {
+        d.format
+            .knows(&mut |at, out| engine::Source::read(&mut file, at, out))
+    }) else {
+        let name = candidates.first().map_or("?", |d| d.format.name.as_str());
+        return Err(trf(
+            "not a file of the format {format}",
+            &[("format", &name)],
+        ));
+    };
+    let tree = engine::read(&found.format, &mut file, engine::Limits::default());
+    Ok(view::BinaryView::new(
+        path,
+        &found.format,
+        found.sha256.clone(),
+        tree,
+        file,
+        per_row,
+    ))
+}
+
+/// The comparison a `.wwbindiff` names: its file compared with its structure, with its notes.
+fn open_comparison(path: &Path, settings: &Value) -> Result<view::BinaryView, String> {
+    let file = diff::DiffFile::read(path)?;
+    let dir = path.parent().unwrap_or(Path::new(""));
+    let binary = diff::resolved(&file.file, dir);
+    let structure = diff::resolved(&file.structure, dir);
+    let named =
+        |p: &Path, why: String| trf("{path}: {why}", &[("path", &p.display()), ("why", &why)]);
+    let mut view = open_binary(&binary, settings).map_err(|e| named(&binary, e))?;
+    view.compare_with(&structure)
+        .map_err(|e| named(&structure, e))?;
+    view.set_notes(file.notes, path.to_path_buf());
+    Ok(view)
+}
+
+/// Structures and comparisons made for the tests of a program that takes the plugin as a
+/// library (the feature `library`), without its dialogs.
+#[cfg(any(test, feature = "library"))]
+pub mod sample {
+    use std::path::Path;
+
+    use wwrt::serde_json::Value;
+
+    /// Saves the structure of a file as a `.wwbin`.
+    pub fn save_structure(file: &Path, out: &Path) -> Result<(), String> {
+        crate::open_binary(file, &Value::Null)?.save_to(out)
+    }
+
+    /// Saves the comparison of a file with a structure as a `.wwbindiff`, with notes of a key, a
+    /// comment and a bookmark.
+    pub fn save_comparison(
+        file: &Path,
+        structure: &Path,
+        out: &Path,
+        notes: &[(&str, &str, bool)],
+    ) -> Result<(), String> {
+        let mut view = crate::open_binary(file, &Value::Null)?;
+        view.compare_with(structure)?;
+        let notes = notes
+            .iter()
+            .map(|(key, comment, bookmark)| crate::diff::Note {
+                key: (*key).to_owned(),
+                comment: (*comment).to_owned(),
+                bookmark: *bookmark,
+            })
+            .collect();
+        view.set_notes(notes, out.to_path_buf());
+        view.save_comparison_to(out)
+    }
 }
 
 pub struct BinaryPlugin;
@@ -179,41 +282,22 @@ impl Plugin for BinaryPlugin {
     }
 
     fn open(&self, path: &Path, settings: &Value) -> Result<Box<dyn View>, String> {
-        let block: usize = setting(settings, "block_kb", 64);
-        let cache: usize = setting(settings, "cache_mb", 16);
-        let per_row: u64 = setting(settings, "bytes_per_row", 16);
-        let block = block.clamp(BLOCK_STEPS[0], BLOCK_STEPS[2]) << 10;
-        let cache = cache.clamp(CACHE_STEPS[0], CACHE_STEPS[2]) << 20;
-        let per_row = per_row.clamp(ROW_STEPS[0], ROW_STEPS[2]);
-        let mut file = BlockFile::open(path, block, cache).map_err(|e| e.to_string())?;
         let extension = path
             .extension()
             .map(|e| e.to_string_lossy().to_lowercase())
             .unwrap_or_default();
-        let candidates: Vec<&'static Described> = formats()
-            .list
-            .iter()
-            .filter(|d| d.format.extensions.contains(&extension))
-            .collect();
-        let Some(found) = candidates.iter().find(|d| {
-            d.format
-                .knows(&mut |at, out| engine::Source::read(&mut file, at, out))
-        }) else {
-            let name = candidates.first().map_or("?", |d| d.format.name.as_str());
-            return Err(trf(
-                "not a file of the format {format}",
-                &[("format", &name)],
-            ));
-        };
-        let tree = engine::read(&found.format, &mut file, engine::Limits::default());
-        Ok(Box::new(view::BinaryView::new(
-            path,
-            &found.format,
-            found.sha256.clone(),
-            tree,
-            file,
-            per_row,
-        )))
+        match extension.as_str() {
+            "wwbin" => {
+                let saved = wwbin::read(path)?;
+                let name = path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                Ok(Box::new(compareview::SavedView::new(name, saved)))
+            }
+            "wwbindiff" => open_comparison(path, settings).map(|v| Box::new(v) as Box<dyn View>),
+            _ => open_binary(path, settings).map(|v| Box::new(v) as Box<dyn View>),
+        }
     }
 
     fn translations(&self) -> &'static [(&'static str, &'static str)] {
@@ -509,6 +593,61 @@ mod tests {
         assert_eq!(
             view::wwbin_path(&path).file_name().unwrap(),
             "kernel32.dll.wwbin"
+        );
+    }
+
+    /// A copy of a DLL saved as its structure, one field of the copy changed, then compared: the
+    /// one change found, the notes kept in a .wwbindiff and the comparison opened from it.
+    #[test]
+    #[cfg(windows)]
+    fn a_changed_copy_is_compared_with_its_structure() {
+        let dir = std::env::temp_dir().join(format!("wv-binary-compare-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let copy = dir.join("k.dll");
+        std::fs::copy(system(&["System32", "kernel32.dll"]), &copy).unwrap();
+        let structure = dir.join("k.dll.wwbin");
+        open_binary(&copy, &Value::Null)
+            .unwrap()
+            .save_to(&structure)
+            .unwrap();
+        // The time stamp of the file header, four bytes after the signature and the machine.
+        let mut bytes = std::fs::read(&copy).unwrap();
+        let header = u32::from_le_bytes(bytes[0x3C..0x40].try_into().unwrap()) as usize;
+        bytes[header + 8] ^= 0xFF;
+        std::fs::write(&copy, &bytes).unwrap();
+        let mut view = open_binary(&copy, &Value::Null).unwrap();
+        view.compare_with(&structure).unwrap();
+        let status = view.status();
+        assert!(status.contains("1 changed, 0 added, 0 removed"), "{status}");
+        let saved = BinaryPlugin.open(&structure, &Value::Null).unwrap();
+        assert!(saved.status().contains("k.dll"), "{}", saved.status());
+        // A note saved with the comparison comes back with it.
+        let diff_file = dir.join("k.dll.wwbindiff");
+        let note = diff::Note {
+            key: "nt_headers.file_header.time_date_stamp".to_owned(),
+            comment: "Built again".to_owned(),
+            bookmark: true,
+        };
+        view.set_notes(vec![note.clone()], diff_file.clone());
+        view.save_comparison_to(&diff_file).unwrap();
+        let written = diff::DiffFile::read(&diff_file).unwrap();
+        assert_eq!(
+            (written.file.as_str(), written.structure.as_str()),
+            ("k.dll", "k.dll.wwbin")
+        );
+        assert_eq!(written.notes, vec![note]);
+        let reopened = BinaryPlugin.open(&diff_file, &Value::Null).unwrap();
+        assert!(
+            reopened.status().contains("1 changed"),
+            "{}",
+            reopened.status()
+        );
+        assert!(
+            reopened
+                .tools()
+                .iter()
+                .any(|t| t.label == "Save the comparison")
         );
     }
 

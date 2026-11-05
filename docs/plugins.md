@@ -337,8 +337,28 @@ Done in phase 5:
   version and the SHA-256 of its text) and `tree` (every node: `name`, `key`, `offset`, `size`,
   and `type`, `items`, `value` (a number of JSON, 64 bits whole), `text` or `sha256` of raw bytes,
   `names` of an enum or flags, `error` with the reason in the language of the window, and
-  `children`). SHA-256 is the crate `sha2`, the plugin's own: wwrt holds none. Opening a `.wwbin`
-  comes with its comparison (phase 6).
+  `children`). SHA-256 is the crate `sha2`, the plugin's own: wwrt holds none.
+
+Done in phase 6:
+
+- **A `.wwbin` opens** alone as its tree or its page (`wwbin::read`, at most 512 MB and two
+  million nodes, back into an `engine::Tree`: a raw range keeps its SHA-256 as its note).
+- **Compare with a structure** (`diff.rs`, `compareview.rs`): the file read whole, the SHA-256 of
+  its raw ranges, and the two trees matched among siblings by the key of a node, else its name
+  (`[3]` of an item of no key), the second of one name `name#2`; a line a node of either tree with
+  its path (`sections[.text].characteristics`) and its mark: the same, changed (a value, a text,
+  the SHA-256 or the size of raw bytes, the count of an array; a structure with a change under it),
+  added in the file, removed from it; an offset alone is no change, and a number of the structure
+  shows the way the file shows it. The view opens at the changes (every structure with one open,
+  the first selected), with Changed only (or All nodes), the values before and after, the offsets
+  and the sizes of both, a comment and a bookmark of the line, and Show in the tree and bytes. The
+  status counts the values changed, added and removed.
+- **`.wwbindiff`** (Save the comparison; opening one reads its file and its structure and shows the
+  comparison in its tab): `format` `wwbindiff`, `version` 1, `file` and `structure` (relative to
+  its folder inside it, else absolute) and `notes`, each a `key` (the path of a line), a `comment`
+  and a `bookmark`; strict JSON of at most 16 MB.
+- `wv_binary::sample` (the feature `library`) saves a structure and a comparison for the tests of
+  wview without their dialogs.
 
 - **Never the whole file in memory.** A node of the tree is its type and its offset; its children
   are read when it opens, through `BlockFile`; the size of the cache and of a block are settings of
@@ -369,7 +389,7 @@ Done in phase 5:
   family, and `--exclude` of the family in every other, a trap for each new command.
 - **CI and build-all.cmd** (phase 2): the Linux job checks the format of `wview` and its clippy for
   Windows; a Windows job of its own, beside the one of WinWeaver, runs its clippy and tests (the
-  window drawn into the screenshots `v1-` to `v11-`), builds it in release in the tree of its release
+  window drawn into the screenshots `v1-` to `v12-`), builds it in release in the tree of its release
   (section 6.7), packs `wview-<version>` (wview.exe, wwrt.dll, the `std-<hash>.dll` of the
   toolchain, the plugins, README) and `wview-sdk-<version>`, and builds the template of the SDK from
   a copy in another folder, which wview must load. That build takes the target folder of the tree:
@@ -403,7 +423,9 @@ Done in phase 5:
 5. wv-binary 2: the rest of PE, `.wwbin`. Done (section 6.4): `lazy`, `align` and `length`, the
    resources, the exceptions, the certificates, the relocations, debug, TLS, the load
    configuration, the delay imports and .NET, Save the structure, the screenshot `v11-`.
-6. `.wwbindiff`: the tree of the differences, the comments and the bookmarks.
+6. `.wwbindiff`: the tree of the differences, the comments and the bookmarks. Done (section 6.4):
+   the comparison of a file with its `.wwbin`, the notes in a `.wwbindiff` that opens in a tab, a
+   `.wwbin` opened alone, the screenshot `v12-`.
 7. The stable interface for other languages (section 6.9) and its one example, the Mandelbrot set
    (section 6.10).
 

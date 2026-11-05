@@ -15,6 +15,8 @@ use wwrt::ww::mdview::{self, MdDoc};
 use wwrt::ww::tree::{self, Check, Event, Row, Scroll};
 use wwrt::ww::widgets;
 
+use crate::compareview::Comparison;
+use crate::diff::{self, DiffFile, Note};
 use crate::engine::{self, Data, Limits, Tree};
 use crate::format::Format;
 use crate::{hex, wwbin};
@@ -28,6 +30,7 @@ const WRITTEN: usize = 20_000;
 enum Mode {
     Bytes,
     Text,
+    Compare,
 }
 
 pub struct BinaryView {
@@ -51,6 +54,8 @@ pub struct BinaryView {
     page: Option<MdDoc>,
     /// What the last save did.
     saved: Option<String>,
+    /// The comparison with a structure saved, once there is one.
+    compare: Option<Comparison>,
 }
 
 /// The file a structure is saved to by default: the name of the file with `.wwbin` added.
@@ -113,6 +118,66 @@ pub fn markdown(tree: &Tree, title: &str, format: &str) -> String {
     out
 }
 
+/// The rows of the open nodes, in the order of the tree, with a row for the items of an
+/// array the tree leaves out after the ones it lists.
+pub fn tree_rows(tree: &Tree, open: &HashSet<usize>) -> Vec<Row<usize>> {
+    enum Next {
+        Node(usize, usize),
+        More(usize, usize, usize),
+    }
+    let mut out = Vec::new();
+    let mut stack = vec![Next::Node(0, 0)];
+    while let Some(next) = stack.pop() {
+        let (n, depth) = match next {
+            Next::Node(n, depth) => (n, depth),
+            Next::More(n, depth, left) => {
+                out.push(Row {
+                    key: n,
+                    depth,
+                    title: trf("{n} more items in the text view", &[("n", &left)]),
+                    right: String::new(),
+                    check: Check::None,
+                    open: None,
+                    muted: true,
+                    icon: None,
+                    switch: None,
+                });
+                continue;
+            }
+        };
+        let node = &tree.nodes[n];
+        let opens = !node.children.is_empty() || node.pending;
+        let open = opens.then(|| open.contains(&n));
+        let value = tree.value(n);
+        let label = tree.label(n);
+        out.push(Row {
+            key: n,
+            depth,
+            title: if value.is_empty() {
+                label
+            } else {
+                format!("{label}: {value}")
+            },
+            right: format!("0x{:X}", node.offset),
+            check: Check::None,
+            open,
+            muted: false,
+            icon: node.error.then_some("\u{26A0}"),
+            switch: None,
+        });
+        if open == Some(true) {
+            let listed = node.children.len().min(LISTED);
+            if node.children.len() > listed {
+                stack.push(Next::More(n, depth + 1, node.children.len() - listed));
+            }
+            for c in node.children[..listed].iter().rev() {
+                stack.push(Next::Node(*c, depth + 1));
+            }
+        }
+    }
+    out
+}
+
 impl BinaryView {
     pub fn new(
         path: &Path,
@@ -148,7 +213,90 @@ impl BinaryView {
             mode: Mode::Bytes,
             page: None,
             saved: None,
+            compare: None,
         }
+    }
+
+    /// Compares the file with a structure saved of it: every node of the file read first.
+    pub fn compare_with(&mut self, structure: &Path) -> Result<(), String> {
+        let saved = wwbin::read(structure)?;
+        engine::expand_all(&mut self.tree, self.format, &mut self.source, self.limits);
+        self.tree.nodes[0].size = self.source.len();
+        self.page = None;
+        let (tree, source) = (&self.tree, &mut self.source);
+        let mut sha =
+            |n: usize| wwbin::sha256(&mut *source, tree.nodes[n].offset, tree.nodes[n].size);
+        let lines = diff::compare(&saved.tree, tree, &mut sha);
+        self.compare = Some(Comparison::new(structure.to_path_buf(), saved, lines));
+        self.mode = Mode::Compare;
+        Ok(())
+    }
+
+    /// The notes of a comparison read from its `.wwbindiff`.
+    pub fn set_notes(&mut self, notes: Vec<Note>, file: PathBuf) {
+        if let Some(c) = &mut self.compare {
+            c.notes = notes.into_iter().map(|n| (n.key.clone(), n)).collect();
+            c.file = Some(file);
+            c.dirty = false;
+        }
+    }
+
+    /// Writes the comparison to a `.wwbindiff`: the file, the structure and the notes.
+    pub fn save_comparison_to(&mut self, path: &Path) -> Result<(), String> {
+        let Some(c) = &mut self.compare else {
+            return Err(tr("no comparison").to_owned());
+        };
+        DiffFile::new(&self.path, &c.structure, path, &c.notes).write(path)?;
+        c.file = Some(path.to_path_buf());
+        c.dirty = false;
+        Ok(())
+    }
+
+    /// Asks for the structure to compare the file with.
+    fn ask_compare(&mut self) {
+        let mut dialog =
+            wwrt::ww::rfd::FileDialog::new().add_filter(tr("Structure of a file"), &["wwbin"]);
+        if let Some(dir) = self.path.parent() {
+            dialog = dialog.set_directory(dir);
+        }
+        let Some(path) = dialog.pick_file() else {
+            return;
+        };
+        if let Err(why) = self.compare_with(&path) {
+            self.saved = Some(trf(
+                "{path} was not compared: {why}",
+                &[("path", &path.display()), ("why", &why)],
+            ));
+        }
+    }
+
+    /// Asks where to save the comparison, its own file or next to the file by default.
+    fn save_comparison(&mut self) {
+        let default = self
+            .compare
+            .as_ref()
+            .and_then(|c| c.file.clone())
+            .unwrap_or_else(|| {
+                let mut name = self.path.file_name().unwrap_or_default().to_os_string();
+                name.push(".wwbindiff");
+                self.path.with_file_name(name)
+            });
+        let mut dialog = wwrt::ww::rfd::FileDialog::new()
+            .add_filter(tr("Comparison of structures"), &["wwbindiff"])
+            .set_file_name(default.file_name().unwrap_or_default().to_string_lossy());
+        if let Some(dir) = default.parent() {
+            dialog = dialog.set_directory(dir);
+        }
+        let Some(path) = dialog.save_file() else {
+            return;
+        };
+        self.saved = Some(match self.save_comparison_to(&path) {
+            Ok(()) => trf("Saved {path}", &[("path", &path.display())]),
+            Err(why) => trf(
+                "{path} was not saved: {why}",
+                &[("path", &path.display()), ("why", &why)],
+            ),
+        });
     }
 
     /// Reads a node not read yet; the page is written again with it.
@@ -203,64 +351,8 @@ impl BinaryView {
         });
     }
 
-    /// The rows of the open nodes, in the order of the tree, with a row for the items of an
-    /// array the tree leaves out after the ones it lists.
     fn rows(&self) -> Vec<Row<usize>> {
-        enum Next {
-            Node(usize, usize),
-            More(usize, usize, usize),
-        }
-        let mut out = Vec::new();
-        let mut stack = vec![Next::Node(0, 0)];
-        while let Some(next) = stack.pop() {
-            let (n, depth) = match next {
-                Next::Node(n, depth) => (n, depth),
-                Next::More(n, depth, left) => {
-                    out.push(Row {
-                        key: n,
-                        depth,
-                        title: trf("{n} more items in the text view", &[("n", &left)]),
-                        right: String::new(),
-                        check: Check::None,
-                        open: None,
-                        muted: true,
-                        icon: None,
-                        switch: None,
-                    });
-                    continue;
-                }
-            };
-            let node = &self.tree.nodes[n];
-            let opens = !node.children.is_empty() || node.pending;
-            let open = opens.then(|| self.open.contains(&n));
-            let value = self.tree.value(n);
-            let label = self.tree.label(n);
-            out.push(Row {
-                key: n,
-                depth,
-                title: if value.is_empty() {
-                    label
-                } else {
-                    format!("{label}: {value}")
-                },
-                right: format!("0x{:X}", node.offset),
-                check: Check::None,
-                open,
-                muted: false,
-                icon: node.error.then_some("\u{26A0}"),
-                switch: None,
-            });
-            if open == Some(true) {
-                let listed = node.children.len().min(LISTED);
-                if node.children.len() > listed {
-                    stack.push(Next::More(n, depth + 1, node.children.len() - listed));
-                }
-                for c in node.children[..listed].iter().rev() {
-                    stack.push(Next::Node(*c, depth + 1));
-                }
-            }
-        }
-        out
+        tree_rows(&self.tree, &self.open)
     }
 
     /// Selects a node and opens the ones above it.
@@ -334,11 +426,23 @@ impl View for BinaryView {
                     mdview::md_view(ui, doc, wrap, width);
                 });
             }
+            Mode::Compare => {
+                let Some(c) = &mut self.compare else {
+                    self.mode = Mode::Bytes;
+                    return;
+                };
+                if let Some(node) = c.ui(ui, &self.tree) {
+                    self.select(node);
+                    self.reveal = true;
+                    self.to_offset = Some(self.tree.nodes[node].offset);
+                    self.mode = Mode::Bytes;
+                }
+            }
         }
     }
 
     fn tools(&self) -> Vec<Tool> {
-        vec![
+        let mut tools = vec![
             Tool {
                 id: "bytes",
                 icon: "\u{1F522}",
@@ -354,7 +458,38 @@ impl View for BinaryView {
                 icon: "\u{1F4BE}",
                 label: "Save the structure",
             },
-        ]
+            Tool {
+                id: "compare",
+                icon: "\u{2696}",
+                label: "Compare with a structure",
+            },
+        ];
+        if let Some(c) = &self.compare {
+            tools.push(Tool {
+                id: "comparison",
+                icon: "\u{1F50D}",
+                label: "Comparison",
+            });
+            tools.push(if c.changed_only() {
+                Tool {
+                    id: "changed",
+                    icon: "\u{1F441}",
+                    label: "All nodes",
+                }
+            } else {
+                Tool {
+                    id: "changed",
+                    icon: "\u{1F441}",
+                    label: "Changed only",
+                }
+            });
+            tools.push(Tool {
+                id: "save_comparison",
+                icon: "\u{1F4DD}",
+                label: "Save the comparison",
+            });
+        }
+        tools
     }
 
     fn act(&mut self, id: &str) {
@@ -365,6 +500,14 @@ impl View for BinaryView {
                 self.mode = Mode::Text;
             }
             "save" => self.save(),
+            "compare" => self.ask_compare(),
+            "comparison" if self.compare.is_some() => self.mode = Mode::Compare,
+            "changed" => {
+                if let Some(c) = &mut self.compare {
+                    c.toggle_changed_only();
+                }
+            }
+            "save_comparison" => self.save_comparison(),
             _ => {}
         }
     }
@@ -372,11 +515,21 @@ impl View for BinaryView {
     fn search(&mut self) -> Option<&mut Search> {
         match self.mode {
             Mode::Text => self.page.as_mut().map(|p| &mut p.search),
-            Mode::Bytes => None,
+            Mode::Bytes | Mode::Compare => None,
         }
     }
 
     fn status(&self) -> String {
+        if self.mode == Mode::Compare
+            && let Some(c) = &self.compare
+        {
+            let mut line = c.status();
+            if let Some(saved) = &self.saved {
+                line.push_str("; ");
+                line.push_str(saved);
+            }
+            return line;
+        }
         let mut line = trf(
             "{format}, {nodes} nodes, {size} bytes",
             &[

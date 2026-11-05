@@ -55,6 +55,12 @@ exports, every field with its value, its offset and its size.
 - **Save the structure** writes the tree as a `.wwbin` file, next to the file by default: every
   field with its value, every range of raw bytes with its SHA-256, the file with its size and
   SHA-256, and none of its bytes.
+- **Compare with a structure** compares the file with a `.wwbin` saved of it (of another version
+  of the file, say): the tree of the changes, every one with its value before and after, the nodes
+  matched by their names and keys, so a new section moves no other; **All nodes** or **Changed
+  only**. A node selected takes a comment and a bookmark; **Save the comparison** writes them with
+  both files to a `.wwbindiff`, which opens the comparison in a tab of its own. A `.wwbin` opens
+  alone as its tree.
 - More formats come as descriptions, `.wwformat` files in the folder `plugins\formats`; Settings,
   Plugins lists the formats read and the files that did not read.
 
