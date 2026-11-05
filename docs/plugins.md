@@ -1,8 +1,8 @@
 # Plugins of W#: the study and wview
 
-The study of 04.11.2026 of plugins written in Rust for the programs on W#, and the plan of wview,
-the viewer of files built on them. The prototype of the study grew into `wview/`, the workspace
-of wview (phase 2).
+Plugins written in Rust for the programs on W#, the study that chose their way, and wview, the
+viewer of files built on them (`wview/`, a workspace of its own). The document holds the current
+state; the history of each version is in `releases/`, the parts to come in `todo/wview.md`.
 
 ## 1. The question
 
@@ -177,7 +177,7 @@ draws the same views with the same egui, without a screen.
 
 ### 6.1 The interface
 
-Version 1 (`wwrt::plugin::API`, phase 2):
+Version 1 (`wwrt::plugin::API`):
 
 - `Plugin`: `name`, `formats`, `open` of a path with the settings of the plugin, `translations`
   (the code and a file of each language, added to the window at the load by `ww::i18n::add`),
@@ -191,12 +191,13 @@ Version 1 (`wwrt::plugin::API`, phase 2):
   section 6.8 and gives an `Input`; `cursor` sets the cursor.
 - `wwrt::testing`: the texts of the sources of a plugin and the ones its translations lack.
 
-To come: a format found by its first bytes besides its extension; a view that saves its own file
-(wwbin).
+The parts to come of the interface (a format found by its first bytes, MIME types, menu items,
+plugins inside a view) are in `todo/wview.md` and `todo/plugins-inside.md`.
 
 ### 6.2 Images (wv-image)
 
-Done in the study: WIC, the formats of this Windows, fit, zoom, the folder. Done in phase 3:
+WIC with the formats of the decoders of this Windows, fit, zoom and the steps through the folder,
+and:
 
 - **The decoding** runs in a thread of its own (`view::start`). The window waits 250 ms for it, so
   a small image opens with its tab and one that does not decode stays closed with the reason; a
@@ -228,12 +229,10 @@ Done in the study: WIC, the formats of this Windows, fit, zoom, the folder. Done
   tests of WIC a TIFF of two pages with an orientation through the encoder of WIC, and the tests
   of wview take `sample` with the feature `library`.
 
-To come: the crate `image` (in wwrt already for PNG) where WIC has no decoder.
 
 ### 6.3 Text and Markdown (wv-text)
 
-Done in the study: both formats, the page and the text of W#, the search. To come: a file above
-64 MB read by `BlockFile` with an index of its lines instead of whole.
+Both formats, the page and the text of W#, the search, a setting of the largest file to open.
 
 ### 6.4 Binary structures (wv-binary)
 
@@ -279,7 +278,7 @@ small expressions over the fields (`+ - * / & | << >>`, comparisons, `@offset`, 
 PE comes in parts: the headers, the sections, the imports and the exports first; the resources,
 the relocations, debug, TLS, load config, the certificates and the header of .NET after.
 
-Done in phase 4 (`wview/plugins/wv-binary`):
+The plugin (`wview/plugins/wv-binary`):
 
 - **The language** of the description above, checked whole before a file is read by it (strict
   JSON, an unknown field or type, a wrong expression, an enum or flags of no names, raw bytes
@@ -301,7 +300,7 @@ Done in phase 4 (`wview/plugins/wv-binary`):
 - **The tree is read at the open**, within its limits (500000 nodes, 100000 items an array, 32
   structures deep, 4096 bytes a text), and the bytes stay in the file, read through `BlockFile`
   (the block and the cache are settings); a node that stops at a limit or past the end of the
-  file is kept with the reason. A `lazy` field (phase 5) is read when its node opens.
+  file is kept with the reason. A `lazy` field is read when its node opens.
 - **The views**: the tree on the left (`ww::tree`, its keys) and the bytes on the right (`hex.rs`:
   8, 16 or 32 a row, the rows in view alone read, the bytes of the node selected marked, a click on
   a byte selects the smallest node that holds it), or **Text**, the tree as a Markdown page of
@@ -314,7 +313,7 @@ Done in phase 4 (`wview/plugins/wv-binary`):
   `magic` of a description; a file of the extension without its magic stays closed with the
   reason.
 
-Done in phase 5:
+The fields read when they open, the rest of PE and `.wwbin`:
 
 - **The language** got `lazy` (a structure at an offset or an rva read when its node opens:
   `engine::expand`, and `expand_all` before a save), `align` (a field or every item of an array
@@ -339,7 +338,7 @@ Done in phase 5:
   `names` of an enum or flags, `error` with the reason in the language of the window, and
   `children`). SHA-256 is the crate `sha2`, the plugin's own: wwrt holds none.
 
-Done in phase 6:
+The comparison with a structure saved:
 
 - **A `.wwbin` opens** alone as its tree or its page (`wwbin::read`, at most 512 MB and two
   million nodes, back into an `engine::Tree`: a raw range keeps its SHA-256 as its note).
@@ -387,7 +386,7 @@ Done in phase 6:
   the shared crates (its `Cargo.lock` starts as a copy and a check of CI compares them). One
   workspace would need `--config` with the flag and a profile of its own for every build of the
   family, and `--exclude` of the family in every other, a trap for each new command.
-- **CI and build-all.cmd** (phase 2): the Linux job checks the format of `wview` and its clippy for
+- **CI and build-all.cmd**: the Linux job checks the format of `wview` and its clippy for
   Windows; a Windows job of its own, beside the one of WinWeaver, runs its clippy and tests (the
   window drawn into the screenshots `v1-` to `v13-`), builds it in release in the tree of its release
   (section 6.7), packs `wview-<version>` (wview.exe, wwrt.dll, the `std-<hash>.dll` of the
@@ -401,36 +400,6 @@ Done in phase 6:
 - **Tests.** wwrt and every plugin have their unit tests; the tests of the window need
   `egui_kittest` inside wwrt (a feature for the tests), since a dev-dependency of its own on
   kittest would bring a second egui.
-
-### 6.6 Phases
-
-1. The study: the runtime, the loader with its check, two plugins, the measurements. Done.
-2. wview as a program of the repository and the native SDK: its workspace, its archive in CI and
-   build-all.cmd, the version of the native interface, the template workspace of a plugin, the
-   settings of the plugins, the keys and the mouse of a view (section 6.8), the translations, the
-   guide, the tests of the window. Done: the workspace `wview/`, the interface 1, the settings,
-   the translations in the eight languages of WinWeaver, the keys and the mouse of the images, the
-   guide, the page of the plugins as a tab, the SDK with its template (finding 12), wview and the
-   SDK in CI and build-all.cmd, the tests of the window with their screenshots.
-3. Images whole: tiles, the frames of a GIF, EXIF, the keys of the zoom. Done: the decoding in
-   a thread, the levels and their tiles, the frames of a GIF and the pages of a TIFF or an ICO,
-   the orientation of EXIF, the steps of the zoom and the arrows that move an image, the tests of
-   WIC on files the tests make, the screenshots `v6-` to `v8-` (section 6.2).
-4. wv-binary 1: the engine with its language, the headers, sections, imports and exports of PE, the
-   hexadecimal and the text views. Done (section 6.4): the language, PE in its first parts, the
-   tree, the bytes and the text, the descriptions of the folder `formats`, the settings, the
-   eight languages and the guide, the screenshots `v9-` and `v10-`.
-5. wv-binary 2: the rest of PE, `.wwbin`. Done (section 6.4): `lazy`, `align` and `length`, the
-   resources, the exceptions, the certificates, the relocations, debug, TLS, the load
-   configuration, the delay imports and .NET, Save the structure, the screenshot `v11-`.
-6. `.wwbindiff`: the tree of the differences, the comments and the bookmarks. Done (section 6.4):
-   the comparison of a file with its `.wwbin`, the notes in a `.wwbindiff` that opens in a tab, a
-   `.wwbin` opened alone, the screenshot `v12-`.
-7. The stable interface for other languages (section 6.9) and its one example, the Mandelbrot set
-   (section 6.10). Done: `wview/stable/wview.h` (version 1), `wwrt::stable` (the host side, tested
-   with a plugin of the interface written in Rust in its tests), the loader telling the two kinds
-   apart, `wv-mandelbrot` in C built by CI with the compiler of Visual Studio, loaded and drawn by
-   the release (`--probe`), the screenshot `v13-`.
 
 ### 6.7 Plugins of others: the hybrid
 
@@ -468,7 +437,7 @@ the plugins whose SHA-256 or signature (Authenticode, checked with `WinVerifyTru
 
 ### 6.8 The keys and the mouse of a view
 
-Both kinds of plugins need the same rules, so they are part of phase 2:
+Both kinds of plugins follow the same rules:
 
 - **Focus.** A click on a view gives it the focus of the keyboard; Tab and Escape give it back to
   the window. A view in focus gets the keys it declares first (the arrows, the page keys, Home and
@@ -576,7 +545,7 @@ P takes the next palette, Home resets, Escape drops a rectangle. It draws in ste
 at once, then finer rows while it asks for frames, so the window never waits; the status bar names
 the centre, the zoom, the iterations and the time of the last picture.
 
-Done in phase 7:
+As it is built:
 
 - **`wview/stable/wview.h`**, version 1, as sketched in 6.9 with its constants: the modifiers,
   the buttons, the groups of keys (`WV_KEYS_ARROWS`, `_PAGES`, `_LETTERS`, `_DIGITS`, `_SIGNS`,
@@ -591,8 +560,7 @@ Done in phase 7:
   the groups the plugin named in its last frame) as `wv_input` in pixels; the picture into a
   texture when it changed; the cursor, `again` (another frame at once) and the status. The loader
   takes a DLL that exports `wv_plugin_get` as such a plugin, else a native one; the version of an
-  unknown interface is its reason. A Rust crate over `wview.h` for authors of other toolchains
-  stays to come.
+  unknown interface is its reason. A crate of Rust over `wview.h` is planned (`todo/wview.md`).
 - **`wview/stable/wv-mandelbrot/mandelbrot.c`**: the plugin of 6.10 in C11, the CRT linked in
   (`/MT`), drawn in passes of blocks of 8, 4, 2 and 1 pixels within 12 ms a frame, the cardioid
   and the bulb of period 2 skipped, smooth colours by the normalized count, four palettes; Save
@@ -603,21 +571,20 @@ Done in phase 7:
   the example and draws it without a window (`wview --probe`). `build-all.cmd` builds it where
   vswhere finds Visual Studio and leaves it out with a word elsewhere. The SDK carries `stable/`.
 
-## 7. Open questions
+## 7. Measurements of a release and the choices they made
 
-- Answered by CI on 04.11.2026 (the toolchain msvc): `wview.exe` 831 KB, `wwrt.dll` 23.1 MB,
+- A release of the toolchain msvc: `wview.exe` 831 KB, `wwrt.dll` 23.1 MB,
   `std-<hash>.dll` 864 KB, `wv_text.dll` 53 KB, `wv_image.dll` 93 KB; the template of the SDK built
   in another folder loaded in 0.7 ms. The `std-<hash>.dll` of msvc imports no DLL of the CRT, but
   with the dynamic CRT every module of the family imported `VCRUNTIME140.dll`, which a clean
-  Windows may lack; the family takes the CRT statically since then, as WinWeaver does
-  (`wview/.cargo/config.toml`). The next run showed it (`wview/sdk/imports.py`): every module
+  Windows may lack, so the family takes the CRT statically, as WinWeaver does
+  (`wview/.cargo/config.toml`), and `wview/sdk/imports.py` shows it: every module
   imports `std-<hash>.dll`, `wwrt.dll` and DLLs of Windows alone, at the price of about 100 KB in
   `wview.exe` (929 KB) and 200 KB in `wwrt.dll` (23.3 MB); the template of the SDK loaded in 0.9 ms.
-- Answered on 05.11.2026: the example of the stable interface is in C, built by CI alone (the
+- The example of the stable interface is in C, built by CI alone (the
   computer of the developer has no compiler of C, and a toolchain there comes only on the word of
   its owner, AGENTS.md rule 6); the host side is tested on that computer with a plugin of the
   interface written in Rust.
-- WinWeaver and wedit could move onto wwrt later; nothing in them needs it.
 
 ## 8. Building wview
 

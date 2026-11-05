@@ -328,7 +328,7 @@ fn screenshots_of_the_window() {
             ))]);
     }
     shot(&mut harness, "22-registry");
-    // Pages: the sample at several widths and settings, and AGENTS.md at its status table.
+    // Pages: the sample at several widths and settings, and AGENTS.md at its table of the state.
     let sample = dir.join("sample.md");
     std::fs::write(&sample, ww::sample::PAGE).unwrap();
     harness
@@ -356,7 +356,7 @@ fn screenshots_of_the_window() {
         .state_mut()
         .apply(vec![Act::Shell(ShellAct::OpenPath(agents))]);
     if let Some(Doc::Markdown(m)) = harness.state_mut().shell.docs.last_mut() {
-        m.anchor = Some("7-work-status".to_owned());
+        m.anchor = Some("7-state-and-decisions".to_owned());
         m.jump = true;
     }
     shot(&mut harness, "18-agents-status");

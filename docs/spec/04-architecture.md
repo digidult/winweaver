@@ -215,3 +215,189 @@ errors.
   the installation passes, the first sign-in and the sign-in screen (`HKU:\.DEFAULT`), which the apply
   script also leaves out.
 - The features and capabilities are read only when the window runs as administrator.
+
+## 10. The folders and the modules
+
+The repository, folder by folder and module by module.
+
+```
+(repository root)
+├── AGENTS.md              this file
+├── README.md              purpose, status, links
+├── LICENSE                MIT
+├── Cargo.toml             the workspace (edition 2024, resolver 3, rust-version 1.88), shared dependencies
+├── rust-toolchain.toml    stable with rustfmt and clippy
+├── rustfmt.toml           max_width 100
+├── .cargo/config.toml     static CRT for the Windows target
+├── .gitattributes         LF for every text file (data/templates too), CRLF for .cmd, .bat, .ps1
+├── build-all.cmd          what CI makes, built on a computer of Windows: the archives of a release
+│                          in dist/, on demand the checks, the screenshots, the slides (section 5)
+├── .github/workflows/ci.yml  CI: fmt (a patch artifact), clippy (wwlite for wasm32 too) and tests of
+│                          winweaver-core on Linux; clippy, tests, the catalog check, the release build and
+│                          the zip on Windows; the job build-wview beside it (wview, its archive and its
+│                          SDK); the job build-web (wwlite for the browser, the artifact
+│                          wwlite-web-<version>); a tag v<version> publishes a release with
+│                          docs/releases/v<version>.md
+├── crates/
+│   ├── ww-base/           W# base, pure Rust: jsonfile (strict JSON, the trait Document, atomic saves),
+│   │                      paths (a file inside the program folder kept relative to it), clock; the core
+│   │                      re-exports them as `winweaver_core::{jsonfile, paths, clock}`
+│   ├── ww/                W# (the framework, `docs/ww.md`): shell/ (mod: the trait App, Shell, ShellAct,
+│   │                      ShellDoc, Nav, Messages; window: Window<A> as eframe::App, the acts of the window,
+│   │                      the keys, the question, the session restored; tabs, bar, nav, status, jobs: the chrome
+│   │                      drawn from what the program gives; settings: the settings tab with General;
+│   │                      theme: the theme shown, its editor, the title bar colours), run.rs (run::<A>,
+│   │                      smoke_window::<A>), doc.rs (Document, Search, Draft, Scrolled), settings.rs
+│   │                      (Settings<X: Extra>), session.rs (drafts, the log), store.rs (the files of the
+│   │                      window: next to the executable natively, the storage of the page in a browser,
+│   │                      downloads), web.rs (the start in a browser, wasm32), style.rs, themes.rs,
+│   │                      themeview.rs, i18n.rs, tree.rs, list.rs, widgets.rs, mdview.rs, renderer.rs,
+│   │                      commands.rs, keys.rs, icons.rs, coloricons.rs (the icons in colour through
+│   │                      DirectWrite), dialogs.rs, folders.rs; data/themes (Light, Dark)
+│   ├── wedit/             the editor on W#: main.rs (the command line, ww::run), app.rs (Wedit: Doc, Act,
+│   │                      Extra, impl ww::App), textdoc.rs (a text file in the editor of egui)
+│   ├── winweaver-core/    pure Rust, compiles everywhere: catalog/ (model, embedded data, checks, values: the
+│   │                      texts, numbers and items of the values of actions, read once), jsonfile (strict
+│   │                      reading, the trait Document: the parse with its format and version check, the load
+│   │                      and the atomic save of the four JSON documents, DocError), i18n (catalog
+│   │                      translations), paths (a file inside the program folder kept relative to it),
+│   │                      profile (.wwprofile, set_param and set_group of an edit), resolver, validate (the
+│   │                      check of a profile by what it checks), resources (time zones, editions with their
+│   │                      keys, the input languages and layouts Windows lists), regions (the regions of
+│   │                      Windows with their GeoIDs, read like the locales; re-exported by resources),
+│   │                      diff (.wwdiff, ItemKey: the
+│   │                      keys of its items), bookmarks (.wwmarks), clock, render/ (autounattend.xml from the
+│   │                      templates: text, params, ps, xml, languages, name, accounts, answer: one function a
+│   │                      pass), thispc/ (plan, report, evaluate, judge, capture, memory: the checks of a
+│   │                      running Windows, the judgement of the rules, the capture into a profile, the report
+│   │                      of the audit script, an in-memory machine), scripts (stand-alone Apply, Revert,
+│   │                      Audit and Undo scripts), import (an answer file or an old JSON profile as a
+│   │                      profile), apply (the plan of a native apply, return or undo, the backup format of
+│   │                      the scripts), admx/ (xml, templates, rules, file, compare, archive, merge: ADMX and
+│   │                      ADML to rules, catalog files .wwcatalog, their check, merge), registry/ (data: the
+│   │                      one type of a value in the types of regedit, search, memory: keys and values, paths
+│   │                      of regedit, the rules that write a key, a registry in memory), regfile (`.reg`
+│   │                      files: every line kept, the registry steps of a plan as a file), security (the
+│   │                      owner and the access list of a key in SDDL), users (.wwusers files: the accounts,
+│   │                      the checks, the plan of an operation, the script), userstore (their passwords
+│   │                      encrypted), export (the scripts and registry files of a profile, a selection
+│   │                      or a diff, for the window and the command line), pol (Group Policy files,
+│   │                      PReg); tests/ on the real data, src/<module>/tests.rs for the folders
+│   ├── winweaver-win/     the Windows API: ffi.rs (the wrappers once: wide strings, the NetApi buffer, a
+│   │                      SID, the accounts enumerated, the text of an error, a DACL set), native.rs
+│   │                      (thispc::Machine: the elevation, the locale names, the language of Windows, the
+│   │                      local accounts and their groups), registry.rs (NativeRegistry, the rights of a
+│   │                      key), accounts.rs (the flags of accounts), dism.rs (the features and capabilities
+│   │                      through dismapi.dll), apps.rs (the removal of apps through the package API of
+│   │                      Windows), execute/ (the executor of an apply plan with its backup, one function an
+│   │                      operation in ops.rs, the hive of the default user in hive.rs, the start of the
+│   │                      executable as administrator), locales.rs (the input languages and layouts of
+│   │                      Windows), regions.rs (the regions of Windows: EnumSystemGeoNames, GetGeoInfoEx),
+│   │                      users.rs (the accounts of this PC read, created and changed for a users file)
+│   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal with Outcome, token),
+│   │                      config.rs (the .wwmcp configuration files), log.rs (the JSON lines log, the crash
+│   │                      handlers), tools/ (mod.rs: the table TOOLS of the 36 tools, each with its name,
+│   │                      description, schema, what it needs and its handler; Args, ToolError with its Kind;
+│   │                      profiles, rules, bookmarks, catalogs, registry: the handlers by theme; the 4
+│   │                      resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and Origin checks);
+│   │                      tests/server.rs (both transports on a free loopback port)
+│   ├── winweaver-ui/      WinWeaver on the window of W#: lib.rs (the types: Sel, ProfileDoc, WinWeaver and
+│   │                      WinWeaver::new, run and smoke_window through ww, the helpers), app/ (the methods
+│   │                      of WinWeaver by theme, one file one impl block, each taking the shell: shell
+│   │                      (impl ww::App: the first tab, the files loaded at a start, open, save, draw by
+│   │                      kind, the command bar, the menus, the navigation row, the messages, the status
+│   │                      bar, the settings sections, the keys, apply: the dispatcher to the apply_* of
+│   │                      each subsystem, the dialogs, the polls after a frame), menu (the menu of the tab
+│   │                      row, the menus This PC, Compare and Catalogs), frame (the active tab drawn by
+│   │                      its kind), profile, files (open_any: a file of any kind), pc, users, diff,
+│   │                      imports, registry, marks, session (one tab of a kind, a draft restored), mcp,
+│   │                      pol (the Group Policy files in tabs),
+│   │                      settings (the lines of WinWeaver in General, the section Files, the rename of
+│   │                      an import)), act.rs (Act: Shell(ShellAct<WinWeaver>) for the acts of the window,
+│   │                      one variant a subsystem for the rest: ProfileAct, FileAct, SettingsAct, PcAct,
+│   │                      UsersAct, DiffAct, MarksAct, McpAct, CatalogAct, ImportAct, RegistryAct,
+│   │                      RegFileAct), question.rs (the questions of WinWeaver; From<Question> for Act),
+│   │                      doc.rs (Doc: every tab a boxed document and Shell(ShellDoc); impl ww::Document
+│   │                      with the icon, the search hint, the draft; DocKind; SettingsSection with its
+│   │                      index in the settings tab), commands.rs (the command bar of each tab as
+│   │                      ww::commands items; Menu with its button; the keys of WinWeaver), icons.rs
+│   │                      (the icons beyond WW's), widgets.rs, folders.rs, importlist.rs, dialogs.rs
+│   │                      (open_dialog: the filters of every file WinWeaver opens), views/ (mod: the
+│   │                      titles, the links; header and block from ww::style; profile_tree, detail,
+│   │                      rule), forms.rs, diffview.rs, marksview.rs, mcpview.rs, settings.rs (Extra:
+│   │                      the fields of WinWeaver in settings.json), pages.rs (the guide, the license,
+│   │                      the reference), catalogview.rs, catalogdiff.rs (two catalogs compared in a
+│   │                      tab), regview.rs, regedit.rs, cataledit.rs,
+│   │                      regfileview/, usersview.rs, polview.rs (the tab of a .pol file, the files of
+│   │                      this Windows read once, the links of the other tabs), tests/ (the window
+│   │                      tests: a Window of WinWeaver,
+│   │                      `w.shell` and `w.app`), translations.rs (the test of the texts of winweaver-ui
+│   │                      and ww)
+├── data/
+│   ├── reference/         the parameter reference of the catalog (00-20 and README, the root page of the
+│   │                      documentation in the executable); the `doc` field of a rule links into it with a
+│   │                      heading anchor
+│   ├── catalog/           groups.json, 00-17 rules files, lang/<code>.json for uk, ru, de, es, fr, id, it, tr
+│   │                      (catalog 0.11)
+│   ├── presets/           office, strict, laptop, home .wwprofile
+│   ├── resources/         timezones.json; locales.json (the input languages and keyboard layouts of a
+│   │                      Windows 11 with English names, read once through the Windows API) and
+│   │                      regions.json (its regions with their GeoIDs): embedded in a browser build
+│   │                      only, never in one for Windows, which asks the system
+│   ├── templates/         the runtime templates: the answer file skeleton and the scripts with {{slot}}s,
+│   │                      VERSION 0.11;
+│   │                      Create-Users.runtime.ps1, the stand-alone script of a users file
+│   ├── lang/<code>/       ui.json: the translations of the interface (uk, ru, de, es, fr, id, it, tr); guide.md: the guide translated
+│   ├── themes/            light, dark, latte, matrix .wwtheme: the embedded themes (a base, the colours it
+│   │                      changes, the fonts and the font of the icons)
+│   └── docs/              guide.md, the English guide shown at the first start; guide-lite.txt, the plain
+│                          guide of wwlite (its Ukrainian one in lang/uk/guide-lite.txt); guide-web.txt,
+│                          the guide of the browser edition for someone who sees only it (its
+│                          Ukrainian one in lang/uk/guide-web.txt, both embedded in that build alone)
+├── agents/                shipped in the archive: AGENTS.md (the assistant for any agent, short for small
+│                          contexts), README.md, skills/ (winweaver: the tools, served as winweaver://skill;
+│                          winweaver-review, -change, -this-pc), pi-agent/ (Dockerfile of the latest pi and
+│                          Node.js LTS, its AGENTS.md, README.md)
+├── crates/wwlite/         the light edition: main.rs (the command line, winweaver_ui::run without the
+│                          feature full; on wasm32 the start in the canvas of the page through
+│                          winweaver_ui::run_web), web/index.html (the page of the browser edition, with
+│                          the module and the glue wasm-bindgen writes next to it), web/single.py (the
+│                          same page as one file, wwlite.html: the edition by default), tests.rs (what it
+│                          leaves out, the screenshots l1- to l4-; run alone: cargo test -p wwlite)
+├── package-wwlite/        what the archive of wwlite adds: README.md, lang/de/guide-lite.txt (German, with
+│                          data/lang/de/ui.json copied by CI)
+├── package-wedit/         what the archive of wedit adds: README.md for its user, lang/uk/ui.json (every
+│                          text of wedit and of WW in Ukrainian, the example of a language file)
+├── wview/                 wview, a direction of its own (docs/plugins.md) and a workspace of its own:
+│                          crates/wwrt (the runtime, a Rust dylib: W# and egui re-exported; plugin:
+│                          the interface 1 with the loader and its check of the build; input: the
+│                          keys and the mouse of a view; blocks; testing), crates/wview (the viewer:
+│                          lang/<code>/ui.json and guide.md, docs/guide.md), plugins/wv-text
+│                          (Markdown and text), plugins/wv-image (WIC: wic, picture with the levels
+│                          and EXIF, compose for the frames of a GIF, view with the tiles, sample of
+│                          the tests), plugins/wv-binary (expr, format, engine, hex, view, wwbin,
+│                          diff, compareview, sample of the tests;
+│                          the description formats/pe.wwformat built in), each with lang/<code>.json,
+│                          plugins/wv-hello (the template of the SDK); sdk/ (README.md, pack.py: the
+│                          SDK of a release); package/README.md (for the user of the archive);
+│                          stable/ (wview.h: the stable interface for other languages, README.md,
+│                          wv-mandelbrot/mandelbrot.c and seahorse.mandel: its example in C);
+│                          .cargo/config.toml links std dynamically; README.md
+├── package/               what the archive adds: README.md for the user (not this repository's), lang/be/ui.json
+│                          (Belarusian, every text: the example of a language, checked by a test of i18n.rs)
+└── docs/
+    ├── releases/          release notes v<version>.md
+    ├── presentation/      make_presentation.py: the slides for a prospective user from the screenshots
+    │                      of CI (python-pptx), uploaded by the Windows job as presentation-<version>
+    ├── ww.md              the framework W# for the programs written on it
+    ├── wasm.md            wwlite in a browser (WebAssembly): what was built, what stays open, the study
+    ├── plugins.md         plugins of W# in Rust: the ways, the study, its measurements, the design of wview
+    └── spec/              the specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
+```
+
+Next to the executable at run time (never versioned): `settings.json`, `bookmarks.wwmarks`, `profiles/`,
+`output/` (the answer file, the scripts, plan and backup files of the native apply), `imports/` (catalog files of
+the imported policy templates), `drafts/` (unsaved profiles), `mcp/` (MCP configurations, `default.wwmcp` of the
+MCP tab), `logs/` (winweaver-<date>.log, mcp-<date>.jsonl),
+`lang/<code>/` (more or overriding translations), `themes/` (more themes, `<id>.wwtheme`, also `<id>.json`
+of the older format; the id of an embedded theme replaces it).

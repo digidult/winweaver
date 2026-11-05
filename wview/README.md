@@ -40,4 +40,4 @@ nothing: the tests of wview take the plugins as libraries into one executable. T
 window draw it with `wwrt::egui_kittest` (the feature `kittest` of wwrt), and with
 `WINWEAVER_SCREENSHOTS` they save the screenshots `v1-` to `v13-` there. CI and `build-all.cmd`
 pack `wview-<version>` and `wview-sdk-<version>`; CI builds the template of the SDK in another
-folder and loads it into wview (AGENTS.md, section 6).
+folder and loads it into wview (`docs/spec/05-details.md`, section 8).

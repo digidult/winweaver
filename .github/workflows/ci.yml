@@ -4,9 +4,12 @@ name: CI
 # runs everything and publishes the release; any branch runs on demand (Actions, CI, Run workflow, or gh
 # workflow run ci.yml --ref <branch>), for the tests that change Windows and the screenshots. Pushes and
 # pull requests run nothing: the format, clippy and the safe tests run on the computer of the developer
-# before every commit. A run on demand with windows=false stops after the Linux job, web=false leaves
-# out the browser edition, winweaver=false the Windows job of WinWeaver and the browser edition (a
-# run of wview alone), wview=false the Windows job of wview. The two Windows jobs run side by side.
+# before every commit. A run on demand needs the word of the user (AGENTS.md, section 5) and builds the
+# parts of its task alone: checks=false leaves out the Linux job (its checks ran on the computer of the
+# developer), package=false the release builds, the archives and their checks (tests and screenshots
+# alone), windows=false both Windows jobs, winweaver=false the one of WinWeaver and the browser
+# edition (a run of wview alone), wview=false the one of wview, web=false the browser edition. The
+# jobs after the Linux one run side by side.
 on:
   push:
     tags: ["v*"]
@@ -28,6 +31,14 @@ on:
         description: "Run the Windows job of wview (its tests, its archive, the SDK)"
         type: boolean
         default: true
+      checks:
+        description: "Run the Linux checks first (format, clippy, the tests of the core); off when they ran locally"
+        type: boolean
+        default: true
+      package:
+        description: "Build the releases, the archives and their checks; off for the tests and the screenshots alone"
+        type: boolean
+        default: true
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -41,6 +52,7 @@ env:
 jobs:
   check:
     name: Format, clippy, tests (Linux)
+    if: github.event_name != 'workflow_dispatch' || inputs.checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -103,7 +115,9 @@ jobs:
   build-windows:
     name: WinWeaver, build and tests (Windows)
     needs: check
-    if: github.event_name != 'workflow_dispatch' || (inputs.windows && inputs.winweaver)
+    if: ${{ !cancelled() && needs.check.result != 'failure' && (github.event_name != 'workflow_dispatch' || (inputs.windows && inputs.winweaver)) }}
+    env:
+      PACKAGE: ${{ github.event_name != 'workflow_dispatch' || inputs.package }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -137,11 +151,14 @@ jobs:
       - name: Catalog check
         run: cargo run -p winweaver -- --check-catalog
       - name: Release build
+        if: env.PACKAGE == 'true'
         run: cargo build --release --workspace
       - name: Release build of wwlite (alone, without the feature full)
+        if: env.PACKAGE == 'true'
         # After the workspace, so target/release/wwlite.exe is the light one.
         run: cargo build --release -p wwlite
       - name: Window smoke test
+        if: env.PACKAGE == 'true'
         # The runner has no driver of OpenGL 2.0: Automatic must fall back from OpenGL to DirectX 12,
         # which draws on the software rasterizer of Windows.
         shell: pwsh
@@ -155,6 +172,7 @@ jobs:
           Get-ChildItem target/release/logs -ErrorAction SilentlyContinue | Get-Content -ErrorAction SilentlyContinue
           if ($p.ExitCode -ne 0) { exit 1 }
       - name: Command line smoke test
+        if: env.PACKAGE == 'true'
         # The commands that write files, on the presets and the templates of the runner's Windows, into
         # a folder of the runner: each must end with the code 0 and write the files it names; a wrong use
         # ends with 2. The import and the read of this PC only read the system (the read takes DISM about
@@ -204,6 +222,7 @@ jobs:
           Invoke-Cli @('--diff', 'Office', '--out', $out) 2
           Get-ChildItem -Recurse $out | Select-Object Length, FullName | Format-Table -AutoSize
       - name: Package
+        if: env.PACKAGE == 'true'
         shell: pwsh
         run: |
           $v = (Select-String -Path Cargo.toml -Pattern '^version = "(.*)"').Matches[0].Groups[1].Value
@@ -232,6 +251,7 @@ jobs:
           Copy-Item package-wwlite/lang/de/guide-lite.txt "$lite/lang/de/guide-lite.txt"
           "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Presentation
+        if: env.PACKAGE == 'true'
         # The slides for a prospective user, made of the screenshots of this build
         # (docs/presentation/README.md).
         shell: pwsh
@@ -239,18 +259,22 @@ jobs:
           python -m pip install --quiet python-pptx pillow
           python docs/presentation/make_presentation.py target/screenshots dist-presentation/WinWeaver.pptx $env:VERSION
       - uses: actions/upload-artifact@v4
+        if: env.PACKAGE == 'true'
         with:
           name: presentation-${{ env.VERSION }}
           path: dist-presentation/
       - uses: actions/upload-artifact@v4
+        if: env.PACKAGE == 'true'
         with:
           name: WinWeaver-${{ env.VERSION }}
           path: dist/
       - uses: actions/upload-artifact@v4
+        if: env.PACKAGE == 'true'
         with:
           name: wedit-${{ env.VERSION }}
           path: dist-wedit/
       - uses: actions/upload-artifact@v4
+        if: env.PACKAGE == 'true'
         with:
           name: wwlite-${{ env.VERSION }}
           path: dist-wwlite/
@@ -260,7 +284,9 @@ jobs:
     # of WinWeaver does not wait for it and does not carry its archives.
     name: wview, build and tests (Windows)
     needs: check
-    if: github.event_name != 'workflow_dispatch' || (inputs.windows && inputs.wview)
+    if: ${{ !cancelled() && needs.check.result != 'failure' && (github.event_name != 'workflow_dispatch' || (inputs.windows && inputs.wview)) }}
+    env:
+      PACKAGE: ${{ github.event_name != 'workflow_dispatch' || inputs.package }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -300,6 +326,7 @@ jobs:
           path: target/screenshots
           if-no-files-found: ignore
       - name: Release build in the tree of its release
+        if: env.PACKAGE == 'true'
         # Built in the tree pack.py makes, where every crate is inside the root of the workspace, not
         # in the repository: a plugin built in a copy of that tree, the SDK, loads into it
         # (docs/plugins.md, 6.7).
@@ -315,6 +342,7 @@ jobs:
           "WVIEW_TREE=$tree" | Out-File -FilePath $env:GITHUB_ENV -Append
           "WVIEW_BIN=$tree/target/release" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: Package
+        if: env.PACKAGE == 'true'
         # The program, its runtime, the std of the toolchain and the plugins; then its SDK, the
         # sources a plugin of that build is made of.
         shell: pwsh
@@ -340,6 +368,7 @@ jobs:
           python wview/sdk/imports.py (Get-ChildItem -Recurse $view -Include *.exe, *.dll).FullName
           "WVIEW_VERSION=$wv" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: The template of the SDK built in another folder and loaded
+        if: env.PACKAGE == 'true'
         # The promise of the SDK: a plugin built of the SDK alone, in a folder of its own, loads
         # into wview of the same build. The build takes the target folder of the tree: the crates
         # of the registry do not depend on the place of their source and are not built again, while
@@ -372,6 +401,7 @@ jobs:
           "exit code: $($p.ExitCode) ($('{0:X8}' -f $p.ExitCode))"
           if ($p.ExitCode -ne 0 -or $text -notmatch 'Hello' -or $text -match 'not loaded') { throw 'the plugin of the SDK did not load' }
       - name: The plugin of the stable interface loaded and drawn by the release
+        if: env.PACKAGE == 'true'
         # The release built in Rust loads the plugin built in C, opens the example and draws its
         # view without a window (--probe): the picture comes in frames, the status names the zoom.
         shell: pwsh
@@ -385,10 +415,12 @@ jobs:
           "exit code: $($p.ExitCode)"
           if ($p.ExitCode -ne 0 -or $text -notmatch 'Mandelbrot' -or $text -notmatch 'zoom') { throw 'the plugin of the stable interface did not draw' }
       - uses: actions/upload-artifact@v4
+        if: env.PACKAGE == 'true'
         with:
           name: wview-${{ env.WVIEW_VERSION }}
           path: dist-wview/
       - uses: actions/upload-artifact@v4
+        if: env.PACKAGE == 'true'
         with:
           name: wview-sdk-${{ env.WVIEW_VERSION }}
           path: dist-wview-sdk/
@@ -396,7 +428,7 @@ jobs:
   build-web:
     name: Build wwlite for the browser
     needs: check
-    if: github.event_name != 'workflow_dispatch' || (inputs.web && inputs.winweaver)
+    if: ${{ !cancelled() && needs.check.result != 'failure' && (github.event_name != 'workflow_dispatch' || (inputs.web && inputs.winweaver && inputs.package)) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

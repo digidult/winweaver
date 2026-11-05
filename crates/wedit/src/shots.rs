@@ -70,7 +70,7 @@ fn screenshots_of_wedit() {
         .state_mut()
         .apply(vec![Act::Shell(ShellAct::OpenPath(agents))]);
     if let Some(Doc::Page(m)) = harness.state_mut().shell.docs.last_mut() {
-        m.anchor = Some("7-work-status".to_owned());
+        m.anchor = Some("7-state-and-decisions".to_owned());
         m.jump = true;
     }
     shot(&mut harness, &dir, "w6-agents-status");
