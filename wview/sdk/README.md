@@ -48,7 +48,8 @@ the `wwrt.dll` of the release; change none of the files of the release, or the p
 Delphi or Rust of any toolchain that exports `wv_plugin_get` loads into this release and every
 later one that knows the version, without being built again. It draws a picture and names its
 controls; wview draws them and gives it the keys and the mouse. `stable/README.md` tells the rules
-and how to build `stable/wv-mandelbrot`, its example in C.
+and how to build `stable/wv-mandelbrot`, its example in C; in Rust of another toolchain than this
+one, `stable/rust` (the crate `wview-stable`) writes the table, and the folder copies out whole.
 
 ## The rules
 

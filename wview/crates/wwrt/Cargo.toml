@@ -37,3 +37,7 @@ windows = { version = "0.62.2", features = [
 ] }
 # The error mode of the thread while a plugin loads (no dialog of Windows for a missing import).
 windows-sys = { version = "0.61", features = ["Win32_System_Diagnostics_Debug"] }
+
+[dev-dependencies]
+# A plugin of the stable interface written with the crate, wrapped by this host in the tests.
+wview-stable = { path = "../../stable/rust" }

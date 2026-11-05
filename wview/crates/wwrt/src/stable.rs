@@ -798,6 +798,123 @@ mod tests {
         );
     }
 
+    /// A plugin of the stable interface written with the crate `wview-stable`, as one of Rust of
+    /// another toolchain would be.
+    mod with_the_crate {
+        use wview_stable::{Control, Cursor, Format, Frame, Input, Picture, View, keys};
+
+        pub struct Grey {
+            level: f64,
+            pixels: Vec<u8>,
+        }
+
+        impl View for Grey {
+            fn frame(&mut self, input: &Input) -> Frame<'_> {
+                let v = (self.level * 25.0) as u8;
+                self.pixels = [v, v, v, 255].repeat(4);
+                let pressed: Vec<&str> = input.keys.iter().map(|k| k.name.as_str()).collect();
+                Frame {
+                    picture: Some(Picture::new(2, 2, &self.pixels)),
+                    changed: true,
+                    controls: vec![
+                        Control::slider(1, "Level", self.level, 0.0, 10.0, 1.0),
+                        Control::button(2, "Reset"),
+                    ],
+                    keys: keys::ARROWS,
+                    cursor: Cursor::Cross,
+                    again: false,
+                    status: format!(
+                        "{} x {}, level {}, keys {}",
+                        input.width,
+                        input.height,
+                        self.level,
+                        pressed.join(" ")
+                    ),
+                }
+            }
+
+            fn control(&mut self, id: u32, value: f64) {
+                self.level = if id == 1 { value } else { 5.0 };
+            }
+        }
+
+        wview_stable::plugin! {
+            name: "Grey of the crate",
+            formats: &[Format { name: "Grey files", extensions: &["grey"] }],
+            view: Grey,
+            open: |path: &str| {
+                if path.ends_with(".grey") {
+                    Ok(Grey { level: 5.0, pixels: Vec::new() })
+                } else {
+                    Err(format!("{path} is no grey file"))
+                }
+            },
+        }
+    }
+
+    /// The two sides of `wview.h` checked against each other: the table the crate makes, wrapped
+    /// by this host and drawn.
+    #[test]
+    fn a_plugin_written_with_the_crate_is_a_plugin() {
+        use wview_stable::ffi;
+        assert_eq!(
+            std::mem::size_of::<ffi::WvInput>(),
+            std::mem::size_of::<WvInput>()
+        );
+        assert_eq!(
+            std::mem::size_of::<ffi::WvOutput>(),
+            std::mem::size_of::<WvOutput>()
+        );
+        assert_eq!(
+            std::mem::size_of::<ffi::WvControl>(),
+            std::mem::size_of::<WvControl>()
+        );
+        assert_eq!(
+            std::mem::size_of::<ffi::WvPlugin>(),
+            std::mem::size_of::<WvPlugin>()
+        );
+        let table = with_the_crate::wv_plugin_get();
+        // SAFETY: the table of the crate has the layout of the header and lives for the run.
+        let plugin = unsafe { wrap(&*table.cast::<WvPlugin>()) }.unwrap();
+        assert_eq!(plugin.name(), "Grey of the crate");
+        assert_eq!(plugin.formats()[0].extensions, ["grey"]);
+        let Err(why) = plugin.open(Path::new("a.pic"), &serde_json::Value::Null) else {
+            panic!("the plugin refuses a file of another format");
+        };
+        assert_eq!(why, "a.pic is no grey file");
+        let mut view = plugin
+            .open(Path::new("a.grey"), &serde_json::Value::Null)
+            .unwrap();
+        let ctx = egui::Context::default();
+        run(&mut view, &ctx, Vec::new());
+        assert!(view.status().starts_with("400 x "), "{}", view.status());
+        let at = Pos2::new(200.0, 200.0);
+        let click = |pressed| egui::Event::PointerButton {
+            pos: at,
+            button: egui::PointerButton::Primary,
+            pressed,
+            modifiers: egui::Modifiers::NONE,
+        };
+        run(
+            &mut view,
+            &ctx,
+            vec![egui::Event::PointerMoved(at), click(true), click(false)],
+        );
+        let key = egui::Event::Key {
+            key: Key::ArrowRight,
+            physical_key: None,
+            pressed: true,
+            repeat: false,
+            modifiers: egui::Modifiers::NONE,
+        };
+        run(&mut view, &ctx, vec![key]);
+        assert!(
+            view.status().ends_with("level 5, keys ArrowRight"),
+            "{}",
+            view.status()
+        );
+    }
+
     #[test]
     fn a_table_of_another_version_is_refused() {
         static OLD: Table = Table(WvPlugin {

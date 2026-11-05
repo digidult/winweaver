@@ -47,3 +47,35 @@ gcc -shared -O2 -std=c11 -I . wv-mandelbrot/mandelbrot.c -o wv_mandelbrot.dll
 
 Copy the DLL into the folder `plugins` next to `wview.exe`; `wview --plugins` lists it, and
 `wview --probe seahorse.mandel` draws it without a window.
+
+## Rust of any toolchain: the crate `wview-stable`
+
+`rust/` is the crate `wview-stable` (edition 2021, Rust 1.77 or later, no dependency): a plugin
+of the stable interface in Rust without a line of C. Copy the folder next to the crate of the
+plugin, outside the tree of wview (whose `.cargo/config.toml` links std dynamically for the native
+plugins), and:
+
+```toml
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wview-stable = { path = "../wview-stable" }
+```
+
+A type of the plugin implements `wview_stable::View`: `frame` takes an `Input` (the size of the
+view, the focus, the mouse, the keys by their names) and gives a `Frame` (a `Picture` of RGBA
+pixels, the `Control`s of the bar, the groups of keys it takes, a `Cursor`, `again`, a line of the
+status bar); `control` takes a change of a control. `wview_stable::plugin!` names the plugin, its
+formats, the type of its view and the function that opens a file, and exports `wv_plugin_get`; the
+documentation of the crate holds a whole plugin. The crate keeps the texts and the controls of a
+frame until the next call on the view, reads the input and writes the output by the sizes the host
+gives, and turns a panic of the plugin into the line *the plugin stopped* of its view.
+
+```bash
+cargo build --release
+```
+
+`target/release/<name>.dll` goes into `plugins`. For the toolchain msvc the line
+`rustflags = ["-C", "target-feature=+crt-static"]` under `[target.x86_64-pc-windows-msvc]` of the
+`.cargo/config.toml` of the plugin links the C runtime in, as `/MT` does for C.

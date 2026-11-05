@@ -382,7 +382,8 @@ The repository, folder by folder and module by module.
 │                          plugins/wv-hello (the template of the SDK); sdk/ (README.md, pack.py: the
 │                          SDK of a release); package/README.md (for the user of the archive);
 │                          stable/ (wview.h: the stable interface for other languages, README.md,
-│                          wv-mandelbrot/mandelbrot.c and seahorse.mandel: its example in C);
+│                          wv-mandelbrot/mandelbrot.c and seahorse.mandel: its example in C,
+│                          rust/: the crate wview-stable of it for Rust of any toolchain);
 │                          .cargo/config.toml links std dynamically; README.md
 ├── package/               what the archive adds: README.md for the user (not this repository's), lang/be/ui.json
 │                          (Belarusian, every text: the example of a language, checked by a test of i18n.rs)

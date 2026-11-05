@@ -88,7 +88,7 @@ def main() -> int:
     manifest = (view / "Cargo.toml").read_text(encoding="utf-8")
     manifest, n = re.subn(
         r"(?m)^members = \[.*\]$",
-        'members = ["framework/ww-base", "framework/ww", "crates/*", "plugins/*"]',
+        'members = ["framework/ww-base", "framework/ww", "crates/*", "plugins/*", "stable/rust"]',
         manifest,
     )
     if n != 1:

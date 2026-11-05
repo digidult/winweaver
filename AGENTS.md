@@ -282,7 +282,7 @@ Before a change of a part, read its section of `docs/spec/05-details.md`:
 | MCP server | stdio and HTTP, 36 tools, 4 resources, modes, journal, token, configuration files; tests of both transports |
 | W# and wedit | The crates `ww-base` and `ww`, the editor `wedit` with its archive, `docs/ww.md` |
 | wwlite | The light edition for Windows with its archive, built without the feature `full` of winweaver-ui; the browser edition (wasm32, `docs/wasm.md`) built by CI as `wwlite-web-<version>`: files from the browser and downloads, the settings and drafts in the storage of the page, the embedded list of input languages |
-| wview | The viewer with plugins (`docs/plugins.md`): text and Markdown, images, binary structures by their descriptions (PE built in) with their structures saved and compared and the content of a node shown inside by the plugin of its type; the native interface 2 (MIME types, menu items, bytes in memory, views inside a view), the SDK of native plugins and the stable interface for other languages with its example in C |
+| wview | The viewer with plugins (`docs/plugins.md`): text and Markdown, images, binary structures by their descriptions (PE built in) with their structures saved and compared and the content of a node shown inside by the plugin of its type; the native interface 2 (MIME types, menu items, bytes in memory, views inside a view), the SDK of native plugins and the stable interface for other languages with its example in C and the crate `wview-stable` for Rust of any toolchain |
 | Plans | [docs/todo/](docs/todo/README.md); the history of every version: [docs/releases/](docs/releases/) |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the

@@ -616,7 +616,18 @@ As it is built:
   the groups the plugin named in its last frame) as `wv_input` in pixels; the picture into a
   texture when it changed; the cursor, `again` (another frame at once) and the status. The loader
   takes a DLL that exports `wv_plugin_get` as such a plugin, else a native one; the version of an
-  unknown interface is its reason. A crate of Rust over `wview.h` is planned (`todo/wview.md`).
+  unknown interface is its reason.
+- **`wview/stable/rust`**, the crate `wview-stable` for Rust of any toolchain (edition 2021, Rust
+  1.77, no dependency, its own fields so that it copies out whole; a member of the workspace and of
+  the tree of the SDK): `ffi` (the structures and the constants of `wview.h`), the trait `View`
+  (`frame` from an `Input` to a `Frame`, `control`), `Picture`, `Control` with its `Kind`,
+  `Cursor`, `keys`, and `plugin!`, which writes `wv_plugin_get` over a `Table` made once (its texts
+  and arrays in buffers of its own). The functions of the table (`glue`) keep the texts and the
+  controls of the last frame in the box of the view, copy the input and the output by the sizes the
+  host gives, and catch a panic: the view stops with the reason in its status and is called no
+  more. Its tests call the table as a host does (the layout, a frame, a control, the sizes, a
+  panic), the example of its documentation is a doctest, and a test of wwrt wraps a plugin of the
+  crate with `wrap` and draws it, so the two sides of the header are checked against each other.
 - **`wview/stable/wv-mandelbrot/mandelbrot.c`**: the plugin of 6.10 in C11, the CRT linked in
   (`/MT`), drawn in passes of blocks of 8, 4, 2 and 1 pixels within 12 ms a frame, the cardioid
   and the bulb of period 2 skipped, smooth colours by the normalized count, four palettes; Save

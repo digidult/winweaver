@@ -695,7 +695,12 @@ change, read the section of the part it touches.
   takes an `Id`), since a global id would clash with the same view inside itself. `View::act` and
   `Plugin::act` get a `Host`, and its requests (`Status`, `Open`, `OpenBytes`) reach the window as
   acts after the frame or the act (`shell.pending`); a tab of bytes has no path and steps through
-  no folder. The stable interface stays at version 1: its formats name no MIME type. wview has the eight languages of WinWeaver: its `ui.json`
+  no folder. The stable interface stays at version 1: its formats name no MIME type. The crate
+  `wview-stable` (`wview/stable/rust`) is edition 2021 with Rust 1.77: `plugin!` writes
+  `#[no_mangle]`, which its edition takes in the code of a crate of 2024 too (the test of wwrt is
+  one), and binds the function of the plugin outside its unsafe block (the lint
+  `macro_metavars_in_unsafe` of clippy); a plugin of it is built outside the tree of wview, whose
+  `.cargo/config.toml` links std dynamically. wview has the eight languages of WinWeaver: its `ui.json`
   holds the texts of the shell of W# as WinWeaver translates them and its own. `plugin!` exports
   nothing with the feature `library` of a plugin (each declares `library = []`): the tests of
   wview take the plugins as libraries (`crate-type = ["cdylib", "rlib"]`) into one executable, and
