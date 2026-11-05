@@ -215,11 +215,16 @@ fn open_binary(path: &Path, settings: &Value) -> Result<view::BinaryView, String
         .extension()
         .map(|e| e.to_string_lossy().to_lowercase())
         .unwrap_or_default();
-    let candidates: Vec<&'static Described> = formats()
+    let mut candidates: Vec<&'static Described> = formats()
         .list
         .iter()
         .filter(|d| d.format.extensions.contains(&extension))
         .collect();
+    // An extension no description names (a file the host opened by its first bytes): every
+    // description, its magic decides.
+    if candidates.is_empty() {
+        candidates = formats().list.iter().collect();
+    }
     view_of(path, file, &candidates, per_row)
 }
 
@@ -788,10 +793,15 @@ mod tests {
             "{mime}"
         );
         assert_eq!(mime::sniff(&bytes), Some(mime.as_str()));
-        // An icon directory is no file of its own: bytes of no plugin, not an ICO by its start.
+        // A group of icons is one ICO file of its images, each the ICON of the id it names.
         view.show_content(&resource("GROUP_ICON")).unwrap();
-        let (_, mime, _) = view.selected_content().unwrap();
-        assert_eq!(mime, "application/octet-stream");
+        let (_, mime, bytes) = view.selected_content().unwrap();
+        assert_eq!(mime, "image/x-icon");
+        assert_eq!(mime::sniff(&bytes), Some("image/x-icon"));
+        let images = u16::from_le_bytes([bytes[4], bytes[5]]);
+        assert!(images > 1, "{images} images");
+        // A cursor directory is still no file of its own.
+        assert!(PE.contains("\"12\": \"application/octet-stream\""));
     }
 
     /// A program in memory, a part of another file, opens by its MIME type.
@@ -811,6 +821,23 @@ mod tests {
             panic!("no description of PNG");
         };
         assert!(why.contains("image/png"), "{why}");
+    }
+
+    /// A program under another extension opens by its magic.
+    #[test]
+    #[cfg(windows)]
+    fn a_program_of_another_extension_opens_by_its_magic() {
+        let dir = std::env::temp_dir().join(format!("wv-binary-magic-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let copy = dir.join("kernel32.bin");
+        std::fs::copy(system(&["System32", "kernel32.dll"]), &copy).unwrap();
+        let view = BinaryPlugin.open(&copy, &Value::Null).unwrap();
+        assert!(
+            view.status().contains("Portable Executable"),
+            "{}",
+            view.status()
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

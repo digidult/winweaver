@@ -275,9 +275,7 @@ impl BinaryView {
     pub fn selected_content(&mut self) -> Result<(String, String, Vec<u8>), String> {
         let raw = self.raw_of(self.selected).ok_or("no bytes")?;
         let declared = self.declared(raw);
-        let bytes = self.node_bytes(raw)?;
-        let (mime, bytes) = content::prepared(declared.as_deref(), bytes)?;
-        Ok((self.content_name(raw), mime, bytes))
+        self.content_of(raw, declared)
     }
 
     /// Compares the file with a structure saved of it: every node of the file read first.
@@ -532,9 +530,66 @@ impl BinaryView {
 
     /// The content made a file of its type: its name, its type and its bytes.
     fn content_file(&mut self, found: &Found) -> Result<(String, String, Vec<u8>), String> {
-        let bytes = self.node_bytes(found.raw)?;
-        let (mime, bytes) = content::prepared(found.declared.as_deref(), bytes)?;
-        Ok((self.content_name(found.raw), mime, bytes))
+        self.content_of(found.raw, found.declared.clone())
+    }
+
+    /// The bytes of a node made a file of the type its description names or its first bytes
+    /// show, with the images of a group of icons found by `member`.
+    fn content_of(
+        &mut self,
+        raw: usize,
+        declared: Option<String>,
+    ) -> Result<(String, String, Vec<u8>), String> {
+        let bytes = self.node_bytes(raw)?;
+        let members = declared
+            .as_deref()
+            .and_then(|d| mime::parameter(d, "members"));
+        let mut member = |id: u16| self.member(raw, members.as_deref()?, id);
+        let (mime, bytes) = content::prepared(declared.as_deref(), bytes, &mut member)?;
+        Ok((self.content_name(raw), mime, bytes))
+    }
+
+    /// The bytes of an image of a group of icons: the node of the same path as the directory, its
+    /// first key made the type of the members (`ICON`), its second the id of the image, and the
+    /// ones after kept where the image has them (the language), else its first; the nodes not
+    /// read yet are read on the way.
+    fn member(&mut self, raw: usize, members: &str, id: u16) -> Option<Vec<u8>> {
+        let path = self.tree.path(raw);
+        let id = id.to_string();
+        let mut at = 0;
+        let mut keyed = 0;
+        for &n in path.iter().skip(1) {
+            let (name, key) = {
+                let node = &self.tree.nodes[n];
+                (node.name.clone(), node.key.clone())
+            };
+            self.expand(at);
+            let tree = &self.tree;
+            let children = &tree.nodes[at].children;
+            let with_key = |k: &str| {
+                children.iter().copied().find(|c| {
+                    tree.nodes[*c].key.as_deref().is_some_and(|key| {
+                        // A number of 10 and more shows with its hexadecimal: `13 (0xD)`.
+                        key == k || key.strip_prefix(k).is_some_and(|r| r.starts_with(" ("))
+                    })
+                })
+            };
+            at = match (key, keyed) {
+                (Some(_), 0) => with_key(members)?,
+                (Some(_), 1) => with_key(&id)?,
+                (Some(k), _) => with_key(&k).or_else(|| children.first().copied())?,
+                (None, _) => children
+                    .iter()
+                    .copied()
+                    .find(|c| tree.nodes[*c].name == name)?,
+            };
+            if tree.nodes[n].key.is_some() {
+                keyed += 1;
+            }
+        }
+        (self.tree.nodes[at].data == Data::Raw)
+            .then(|| self.node_bytes(at).ok())
+            .flatten()
     }
 
     /// Asks where to save the node as a file, its content made a file of its type when it has one

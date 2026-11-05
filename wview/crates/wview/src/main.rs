@@ -100,7 +100,7 @@ fn list(plugins: &Plugins, dir: &Path, took: std::time::Duration) -> String {
 /// Opens the file with its plugin and draws three frames of its view without a window.
 fn probe(plugins: &Plugins, path: &Path) -> Result<String, String> {
     let i = plugins
-        .for_path(path)
+        .for_file(path)
         .ok_or_else(|| format!("no plugin opens {}", path.display()))?;
     let loaded = &plugins.loaded[i];
     let started = Instant::now();

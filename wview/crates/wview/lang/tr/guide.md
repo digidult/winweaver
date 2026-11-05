@@ -7,6 +7,8 @@ DLL. Dosya yokken pencere eklentileri ve her birinin neyi açtığını listeler
 
 - **Aç** (Ctrl+O) ya da pencereye bırakılan bir dosya, dosyayı bir sekmede açar;
   `wview DOSYA...` dosyaları komut satırından açar.
+- Hiçbir eklentinin bilmediği bir uzantıya sahip ya da uzantısız bir dosya içeriğine göre açılır:
+  bir metin, bir resim, bir program.
 - Hiçbir eklentinin açmadığı bir biçimdeki dosya kapalı kalır ve durum çubuğu bunu söyler.
 - Ctrl+W bir sekmeyi kapatır, Ctrl+Tab sonrakine geçer.
 - Menü, öndeki sekmenin öğelerini ve kendi öğeleri olan her eklentinin bir alt menüsünü içerir.
@@ -72,6 +74,8 @@ değeri, uzaklığı ve boyutuyla.
   düğmeleriyle gösterir ve seçimi izler; **Ağaç ve baytlar** geri döner. Menüde:
   **İçeriği bir sekmede aç**, **Düğümü dosya olarak kaydet** (bir simge ICO dosyası olarak, değilse
   baytları) ve **Tüm düğümleri oku**.
+- Bir simge grubu (`GROUP_ICON`) her boyutuyla tek bir simge olarak görünür, boyutlar sayfa olarak,
+  ve tek bir ICO dosyası olarak kaydedilir.
 - Başka biçimler açıklama olarak gelir, `plugins\formats` klasöründeki `.wwformat` dosyaları;
   Ayarlar, Eklentiler okunan biçimleri ve okunamayan dosyaları listeler.
 - **İkili yapılar**, menüdeki **Açıklamalar klasörü** `plugins\formats` klasörünü Gezgin'de açar,

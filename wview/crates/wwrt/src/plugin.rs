@@ -329,9 +329,26 @@ impl Plugins {
         self.loaded.push(Loaded { id, file, plugin });
     }
 
-    /// The index of the first plugin that opens the file.
+    /// The index of the first plugin that opens the extension of the file.
     pub fn for_path(&self, path: &Path) -> Option<usize> {
         self.loaded.iter().position(|l| l.opens(path))
+    }
+
+    /// The plugin of a file: the first that opens its extension, else the first of the MIME type
+    /// of its first bytes (`mime::sniff`), so that a file of another extension or of none opens
+    /// by what it holds.
+    pub fn for_file(&self, path: &Path) -> Option<usize> {
+        if let Some(i) = self.for_path(path) {
+            return Some(i);
+        }
+        let mut first = Vec::new();
+        let file = std::fs::File::open(path).ok()?;
+        std::io::Read::read_to_end(
+            &mut std::io::Read::take(file, mime::SNIFFED as u64),
+            &mut first,
+        )
+        .ok()?;
+        self.for_mime(mime::sniff(&first)?).first().copied()
     }
 
     /// The plugins that name a MIME type, in their order, then for a textual type the ones of
@@ -540,6 +557,33 @@ mod tests {
             panic!("neither plugin opens bytes");
         };
         assert_eq!(why, format!("test: {NO_BYTES}; test: {NO_BYTES}"));
+    }
+
+    #[test]
+    fn a_file_of_no_extension_known_opens_by_its_first_bytes() {
+        let mut plugins = Plugins::default();
+        plugins.add(PathBuf::from("text.dll"), Box::new(Named(&TEXTS)));
+        plugins.add(PathBuf::from("xml.dll"), Box::new(Named(&XML)));
+        let dir = std::env::temp_dir().join(format!("wwrt-sniff-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = |name: &str, bytes: &[u8]| {
+            let path = dir.join(name);
+            std::fs::write(&path, bytes).unwrap();
+            path
+        };
+        assert_eq!(
+            plugins.for_file(&file("a.xml", b"plain")),
+            Some(1),
+            "the extension first"
+        );
+        assert_eq!(plugins.for_file(&file("README", b"Read me.\n")), Some(0));
+        assert_eq!(
+            plugins.for_file(&file("data.out", b"<?xml version=\"1.0\"?><a/>")),
+            Some(1)
+        );
+        assert_eq!(plugins.for_file(&file("blob", &[0, 1, 2, 0xFF])), None);
+        assert_eq!(plugins.for_file(&dir.join("none")), None, "no file");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

@@ -113,7 +113,7 @@ fn a_file_opens_in_the_tab_of_its_plugin() {
     let dir = folder("open");
     std::fs::write(dir.join("a.md"), "# A page\n\nSome text.\n").unwrap();
     std::fs::write(dir.join("b.cfg"), "x = 1\n").unwrap();
-    std::fs::write(dir.join("c.xyz"), "?").unwrap();
+    std::fs::write(dir.join("c.xyz"), [0u8, 1, 2, 0xFF]).unwrap();
     let mut w = window(Settings::default());
     open(&mut w, dir.join("a.md"));
     open(&mut w, dir.join("b.cfg"));
@@ -129,6 +129,10 @@ fn a_file_opens_in_the_tab_of_its_plugin() {
         "a file open already comes to the front"
     );
     assert_eq!(front(&w).0, dir.join("a.md"));
+    // A text of an extension no plugin names opens by its first bytes.
+    std::fs::write(dir.join("README"), "Read me first.").unwrap();
+    open(&mut w, dir.join("README"));
+    assert_eq!(w.shell.docs.len(), 3, "a text without an extension");
 }
 
 #[test]
@@ -419,6 +423,14 @@ fn the_resources_of_a_program_show_inside_its_view() {
     assert!(
         status.contains(" x "),
         "the plugin of images shows the icon: {status}"
+    );
+    // The group of the icons of the program, one ICO file of every size: pages of an image.
+    content_tab(h.state_mut(), &resource("GROUP_ICON"));
+    decoded(&mut h);
+    let status = front(h.state()).1;
+    assert!(
+        status.contains(" x ") && status.contains("page "),
+        "the group of icons shows its sizes as pages: {status}"
     );
 }
 

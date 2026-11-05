@@ -213,6 +213,9 @@ and a plugin of version 1 is refused by its build, `ABI`):
   no plugin names it (a type of `+xml` to `application/xml`, then every text, JSON and script to
   `text/plain`). `Plugins::for_mime` lists the plugins of a type in that order and
   `Plugins::open_bytes` tries them in turn.
+- **A file by what it holds** (`Plugins::for_file`): the plugin of its extension, else the first
+  of the MIME type of its first bytes, so that a file of another extension or of none opens (a
+  text, an image, a program); the window opens every file so, the command line `--probe` too.
 - `wwrt::blocks::BlockFile::from_bytes`: bytes in memory read like a file.
 - `wwrt::input`: `area` takes the rectangle of a view for its keys and its mouse by the rules of
   section 6.8 and gives an `Input`; `cursor` sets the cursor.
@@ -352,8 +355,14 @@ The plugin (`wview/plugins/wv-binary`):
   a file of their type (`content.rs`): `image/x-dib` (a bitmap, the header of BMP before it),
   `image/x-dib-icon` (an image of an icon: a bitmap of twice its height with its mask becomes an
   ICO file of one image, a PNG stays as it is) and `image/x-dib-cursor` (four bytes of the hot spot
-  before an icon). PE names the content of its resources: CURSOR, BITMAP, ICON, HTML and MANIFEST,
-  and its directories of icons and cursors as `application/octet-stream`, no file of their own.
+  before an icon). A fourth puts a group together: `image/x-group-icon; members=ICON`, the directory
+  of a group of icons whose entries name their images by an id, becomes one ICO file of every size;
+  an image is the node of the same path as the directory with its first key made `members`, its
+  second the id, and the ones after (the language) kept where the image has them, else its first
+  (`view::member`, the lazy nodes read on the way). PE names the content of its resources: CURSOR,
+  BITMAP, ICON, GROUP_ICON, HTML and MANIFEST, and its directories of cursors as
+  `application/octet-stream`, no file of their own. A file of an extension no description names
+  (the host opened it by its first bytes) is tried with every description, and its magic decides.
 - **Content** in the bar, when the node selected (or the first field of bytes of a structure
   selected) holds a type a plugin of the window opens, by its description or by its first bytes:
   the right part shows it with the plugin of its type in place of the bytes and follows the

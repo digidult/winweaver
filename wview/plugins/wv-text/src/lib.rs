@@ -75,7 +75,8 @@ pub fn decoded(bytes: &[u8], mime: &str) -> String {
     if let Some(rest) = bytes.strip_prefix(b"\xFE\xFF") {
         return wide(rest, true);
     }
-    match mime::parameter(mime, "charset").as_deref() {
+    let charset = mime::parameter(mime, "charset").map(|c| c.to_ascii_lowercase());
+    match charset.as_deref() {
         Some("utf-16le" | "utf-16") => wide(bytes, false),
         Some("utf-16be") => wide(bytes, true),
         _ => String::from_utf8_lossy(bytes).into_owned(),

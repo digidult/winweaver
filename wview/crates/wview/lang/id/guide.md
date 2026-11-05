@@ -7,6 +7,8 @@ wview menampilkan file. Setiap format adalah plugin: DLL di folder `plugins` di 
 
 - **Buka** (Ctrl+O), atau file yang diletakkan di jendela, membuka file di tab; `wview FILE...`
   membuka file dari baris perintah.
+- File dengan ekstensi yang tidak dikenal plugin mana pun, atau tanpa ekstensi, terbuka menurut
+  isinya: teks, gambar, program.
 - File dengan format yang tidak dibuka plugin mana pun tetap tertutup, dan bilah status
   memberitahukannya.
 - Ctrl+W menutup tab, Ctrl+Tab pindah ke tab berikutnya.
@@ -73,6 +75,8 @@ dan ukurannya.
   atasnya, dan mengikuti pilihan; **Pohon dan byte** kembali. Di menu: **Buka isi di tab**,
   **Simpan simpul sebagai file** (ikon sebagai file ICO, selain itu byte-nya) dan
   **Baca semua simpul**.
+- Grup ikon (`GROUP_ICON`) tampil sebagai satu ikon dengan semua ukurannya, ukuran sebagai halaman,
+  dan disimpan sebagai satu file ICO.
 - Format lain datang sebagai deskripsi, file `.wwformat` di folder `plugins\formats`; Pengaturan,
   Plugin menampilkan format yang terbaca dan file yang tidak terbaca.
 - **Struktur biner**, **Folder deskripsi** di menu membuka folder `plugins\formats` di Explorer dan

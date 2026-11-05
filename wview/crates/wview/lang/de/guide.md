@@ -7,6 +7,8 @@ Ohne Datei zeigt das Fenster die Plugins und was jedes von ihnen öffnet.
 
 - **Öffnen** (Ctrl+O) oder eine auf das Fenster gezogene Datei öffnet die Datei in einem Tab;
   `wview DATEI...` öffnet Dateien von der Befehlszeile.
+- Eine Datei mit einer Endung, die kein Plugin kennt, oder ohne Endung öffnet nach ihrem Inhalt: ein
+  Text, ein Bild, ein Programm.
 - Eine Datei eines Formats, das kein Plugin öffnet, bleibt geschlossen, und die Statusleiste
   sagt es.
 - Ctrl+W schließt einen Tab, Ctrl+Tab geht zum nächsten.
@@ -79,6 +81,8 @@ die Exporte, jedes Feld mit seinem Wert, seinem Offset und seiner Größe.
   Plugin, mit dessen eigenen Schaltflächen darüber, und folgt der Auswahl; **Baum und Bytes** geht
   zurück. Im Menü: **Inhalt in einem Tab öffnen**, **Knoten als Datei speichern** (ein Symbol als
   ICO-Datei, sonst seine Bytes) und **Alle Knoten lesen**.
+- Eine Gruppe von Symbolen (`GROUP_ICON`) erscheint als ein Symbol in jeder Größe, die Größen als
+  Seiten, und wird als eine ICO-Datei gespeichert.
 - Weitere Formate kommen als Beschreibungen, `.wwformat`-Dateien im Ordner `plugins\formats`;
   Einstellungen, Plugins zeigt die gelesenen Formate und die Dateien, die nicht gelesen wurden.
 - **Binärstrukturen**, **Ordner der Beschreibungen** im Menü öffnet den Ordner `plugins\formats` im

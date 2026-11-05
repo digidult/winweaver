@@ -34,13 +34,15 @@ pub fn base(mime: &str) -> String {
         .to_ascii_lowercase()
 }
 
-/// A parameter of a type: `charset` of `text/plain; charset=utf-16le` is `utf-16le`.
+/// A parameter of a type, its name in any case and its value as it is written: `charset` of
+/// `text/plain; charset=utf-16le` is `utf-16le`, `members` of `image/x-group-icon; members=ICON`
+/// is `ICON`.
 pub fn parameter(mime: &str, name: &str) -> Option<String> {
     mime.split(';').skip(1).find_map(|p| {
         let (key, value) = p.split_once('=')?;
         key.trim()
             .eq_ignore_ascii_case(name)
-            .then(|| value.trim().trim_matches('"').to_ascii_lowercase())
+            .then(|| value.trim().trim_matches('"').to_owned())
     })
 }
 
@@ -304,8 +306,8 @@ mod tests {
         assert!(!same("image/png", "image/jpeg"));
         assert_eq!(base("Text/Plain ; charset=UTF-16LE"), "text/plain");
         assert_eq!(
-            parameter("text/plain; charset=\"UTF-16LE\"", "charset").as_deref(),
-            Some("utf-16le")
+            parameter("text/plain; Charset=\"UTF-16LE\"", "charset").as_deref(),
+            Some("UTF-16LE")
         );
         assert_eq!(parameter("text/plain", "charset"), None);
         assert_eq!(

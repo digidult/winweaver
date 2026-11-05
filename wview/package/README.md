@@ -8,7 +8,8 @@ extensions are installed). Every format is a plugin, a DLL in the folder `plugin
 ## Start
 
 Unpack the folder anywhere and start `wview.exe`; nothing is installed. Open a file with Open
-(Ctrl+O), drop it on the window or name it on the command line. The menu has the guide; the
+(Ctrl+O), drop it on the window or name it on the command line; a file of an extension no
+plugin knows, or of none, opens by what it holds. The menu has the guide; the
 settings are kept in `wview.settings.json` next to the program.
 
 ## The folder

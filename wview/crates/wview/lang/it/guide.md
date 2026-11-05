@@ -7,6 +7,8 @@ wview mostra i file. Ogni formato è un plugin: una DLL nella cartella `plugins`
 
 - **Apri** (Ctrl+O), o un file trascinato sulla finestra, apre il file in una scheda;
   `wview FILE...` apre file dalla riga di comando.
+- Un file di un'estensione che nessun plugin conosce, o senza estensione, si apre per il suo
+  contenuto: un testo, un'immagine, un programma.
 - Un file di un formato che nessun plugin apre resta chiuso, e la barra di stato lo dice.
 - Ctrl+W chiude una scheda, Ctrl+Tab passa alla successiva.
 - Il menu contiene le voci della scheda attiva e un sottomenu per ogni plugin con voci proprie.
@@ -75,6 +77,8 @@ importazioni e le esportazioni, ogni campo con il suo valore, il suo offset e la
   plugin, con i suoi pulsanti sopra, e segue la selezione; **Albero e byte** torna indietro. Nel
   menu: **Apri il contenuto in una scheda**, **Salva il nodo come file** (un'icona come file ICO,
   altrimenti i suoi byte) e **Leggi tutti i nodi**.
+- Un gruppo di icone (`GROUP_ICON`) si mostra come un'icona di ogni dimensione, le dimensioni come
+  pagine, e si salva come un file ICO.
 - Altri formati arrivano come descrizioni, file `.wwformat` nella cartella `plugins\formats`;
   Impostazioni, Plugin elenca i formati letti e i file che non si sono letti.
 - **Strutture binarie**, **Cartella delle descrizioni** nel menu apre la cartella `plugins\formats`

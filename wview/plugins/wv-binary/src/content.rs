@@ -8,12 +8,19 @@
 //! - `image/x-dib-icon`: an image of an icon, a bitmap of twice its height with its mask, or a
 //!   PNG; the bitmap becomes an ICO file of one image, the PNG stays as it is.
 //! - `image/x-dib-cursor`: the image of a cursor, its hot spot (four bytes) before an icon.
+//! - `image/x-group-icon; members=ICON`: the directory of a group of icons (`GRPICONDIR`), whose
+//!   entries name their images by an id; with the images (`members`, found by the view) it becomes
+//!   one ICO file of every size.
 
 use wwrt::mime;
 
 pub const DIB: &str = "image/x-dib";
 pub const DIB_ICON: &str = "image/x-dib-icon";
 pub const DIB_CURSOR: &str = "image/x-dib-cursor";
+pub const GROUP_ICON: &str = "image/x-group-icon";
+
+/// The images of a group of icons, by the ids its entries name.
+pub type Members<'a> = dyn FnMut(u16) -> Option<Vec<u8>> + 'a;
 
 /// The most bytes of a node shown by the plugin of their type, in MB.
 pub const LARGEST_MB: u64 = 64;
@@ -27,6 +34,7 @@ pub fn shown_type(declared: Option<&str>, first: &[u8]) -> Option<String> {
         Some(DIB) => dib_header(first).map(|_| "image/bmp".to_owned()),
         Some(DIB_ICON) => icon_type(first),
         Some(DIB_CURSOR) => icon_type(first.get(4..)?),
+        Some(GROUP_ICON) => group_count(first).map(|_| "image/x-icon".to_owned()),
         Some(_) => declared.map(str::to_owned),
         None => mime::sniff(first).map(str::to_owned),
     }
@@ -40,8 +48,57 @@ fn icon_type(bytes: &[u8]) -> Option<String> {
     }
 }
 
-/// The bytes of a node made a file of the type they show as, with that type.
-pub fn prepared(declared: Option<&str>, bytes: Vec<u8>) -> Result<(String, Vec<u8>), String> {
+/// The count of the entries of the directory of a group of icons, by its header.
+fn group_count(bytes: &[u8]) -> Option<usize> {
+    let u16_at = |at: usize| Some(u16::from_le_bytes(bytes.get(at..at + 2)?.try_into().ok()?));
+    let count = u16_at(4)?;
+    (u16_at(0)? == 0 && u16_at(2)? == 1 && count > 0).then_some(usize::from(count))
+}
+
+/// One ICO file of the images of a group of icons: the directory gives the size, the colours, the
+/// planes and the bits of each and the id of its image; an image `members` does not give is left
+/// out.
+pub fn group_icon(dir: &[u8], members: &mut Members) -> Result<Vec<u8>, String> {
+    let count = group_count(dir).ok_or("not the directory of a group of icons")?;
+    if dir.len() < 6 + count * 14 {
+        return Err("the directory of the icons is cut short".to_owned());
+    }
+    let mut images = Vec::new();
+    for i in 0..count {
+        let entry = &dir[6 + i * 14..6 + (i + 1) * 14];
+        let id = u16::from_le_bytes([entry[12], entry[13]]);
+        if let Some(bytes) = members(id) {
+            images.push((&entry[..8], bytes));
+        }
+    }
+    if images.is_empty() {
+        return Err("no image of the icon".to_owned());
+    }
+    let n = u16::try_from(images.len()).map_err(|_| "too many images")?;
+    let mut out = vec![0, 0, 1, 0];
+    out.extend_from_slice(&n.to_le_bytes());
+    let mut offset = 6 + images.len() * 16;
+    for (head, bytes) in &images {
+        let size = u32::try_from(bytes.len()).map_err(|_| "an image too large")?;
+        let at = u32::try_from(offset).map_err(|_| "an icon too large")?;
+        out.extend_from_slice(head);
+        out.extend_from_slice(&size.to_le_bytes());
+        out.extend_from_slice(&at.to_le_bytes());
+        offset += bytes.len();
+    }
+    for (_, bytes) in images {
+        out.extend_from_slice(&bytes);
+    }
+    Ok(out)
+}
+
+/// The bytes of a node made a file of the type they show as, with that type; `members` gives the
+/// images of a group of icons.
+pub fn prepared(
+    declared: Option<&str>,
+    bytes: Vec<u8>,
+    members: &mut Members,
+) -> Result<(String, Vec<u8>), String> {
     let Some(shown) = shown_type(declared, &bytes) else {
         return Err("no type of a file".to_owned());
     };
@@ -51,6 +108,7 @@ pub fn prepared(declared: Option<&str>, bytes: Vec<u8>) -> Result<(String, Vec<u
         Some(DIB_ICON) if shown != "image/png" => ico_file(&bytes)?,
         Some(DIB_CURSOR) if shown != "image/png" => ico_file(&bytes[4..])?,
         Some(DIB_CURSOR) => bytes[4..].to_vec(),
+        Some(GROUP_ICON) => group_icon(&bytes, members)?,
         _ => bytes,
     };
     Ok((shown, bytes))
@@ -164,11 +222,65 @@ mod tests {
         out
     }
 
+    /// No images of a group: the forms that need none.
+    fn none(_: u16) -> Option<Vec<u8>> {
+        None
+    }
+
+    #[test]
+    fn a_group_of_icons_becomes_one_ico_file() {
+        let png = {
+            let mut p = PNG.to_vec();
+            p.extend([0; 8]);
+            p
+        };
+        // Three entries: a bitmap of 2 x 2 (id 1), a PNG of 256 (id 7), an id of no image (9).
+        let mut dir = vec![0, 0, 1, 0, 3, 0];
+        for (side, bits, id) in [(2u8, 8u16, 1u16), (0, 32, 7), (16, 32, 9)] {
+            dir.extend([side, side, 0, 0]);
+            dir.extend(1u16.to_le_bytes());
+            dir.extend(bits.to_le_bytes());
+            dir.extend(0u32.to_le_bytes());
+            dir.extend(id.to_le_bytes());
+        }
+        let declared = Some("image/x-group-icon; members=ICON");
+        assert_eq!(shown_type(declared, &dir).as_deref(), Some("image/x-icon"));
+        let mut members = |id: u16| match id {
+            1 => Some(dib(4)),
+            7 => Some(png.clone()),
+            _ => None,
+        };
+        let (mime, file) = prepared(declared, dir.clone(), &mut members).unwrap();
+        assert_eq!(mime, "image/x-icon");
+        assert_eq!(
+            &file[..6],
+            &[0, 0, 1, 0, 2, 0],
+            "the image of no member is left out"
+        );
+        let size = |at: usize| u32::from_le_bytes(file[at..at + 4].try_into().unwrap()) as usize;
+        let (first, second) = (6usize, 22usize);
+        assert_eq!(
+            (size(first + 8), size(first + 12)),
+            (dib(4).len(), 6 + 2 * 16)
+        );
+        assert_eq!(size(second + 12), 6 + 2 * 16 + dib(4).len());
+        assert_eq!(&file[size(second + 12)..], &png[..]);
+        assert_eq!(wwrt::mime::sniff(&file), Some("image/x-icon"));
+        assert!(
+            prepared(declared, dir, &mut none).is_err(),
+            "no image at all"
+        );
+        assert!(
+            group_icon(&[0, 0, 1, 0, 5, 0], &mut none).is_err(),
+            "cut short"
+        );
+    }
+
     #[test]
     fn a_bitmap_of_a_resource_becomes_a_bmp_file() {
         let bytes = dib(2);
         assert_eq!(shown_type(Some(DIB), &bytes).as_deref(), Some("image/bmp"));
-        let (mime, file) = prepared(Some(DIB), bytes.clone()).unwrap();
+        let (mime, file) = prepared(Some(DIB), bytes.clone(), &mut none).unwrap();
         assert_eq!(mime, "image/bmp");
         assert_eq!(&file[..2], b"BM");
         assert_eq!(
@@ -181,12 +293,12 @@ mod tests {
             14 + 40 + 16
         );
         assert_eq!(wwrt::mime::sniff(&file), Some("image/bmp"));
-        assert!(prepared(Some(DIB), b"not a bitmap".to_vec()).is_err());
+        assert!(prepared(Some(DIB), b"not a bitmap".to_vec(), &mut none).is_err());
     }
 
     #[test]
     fn an_image_of_an_icon_becomes_an_ico_file_or_stays_a_png() {
-        let (mime, file) = prepared(Some(DIB_ICON), dib(4)).unwrap();
+        let (mime, file) = prepared(Some(DIB_ICON), dib(4), &mut none).unwrap();
         assert_eq!(mime, "image/x-icon");
         assert_eq!(&file[..6], &[0, 0, 1, 0, 1, 0]);
         assert_eq!((file[6], file[7]), (2, 2), "the mask is half of the height");
@@ -194,11 +306,14 @@ mod tests {
         assert_eq!(wwrt::mime::sniff(&file), Some("image/x-icon"));
         let mut png = PNG.to_vec();
         png.extend([0; 8]);
-        let (mime, same) = prepared(Some(DIB_ICON), png.clone()).unwrap();
+        let (mime, same) = prepared(Some(DIB_ICON), png.clone(), &mut none).unwrap();
         assert_eq!((mime.as_str(), same), ("image/png", png.clone()));
         let mut cursor = vec![1, 0, 2, 0];
         cursor.extend(&png);
-        assert_eq!(prepared(Some(DIB_CURSOR), cursor).unwrap().1, png);
+        assert_eq!(
+            prepared(Some(DIB_CURSOR), cursor, &mut none).unwrap().1,
+            png
+        );
     }
 
     #[test]

@@ -7,6 +7,8 @@ wview affiche des fichiers. Chaque format est un module : une DLL du dossier `pl
 
 - **Ouvrir** (Ctrl+O), ou un fichier déposé sur la fenêtre, ouvre le fichier dans un onglet ;
   `wview FICHIER...` ouvre des fichiers depuis la ligne de commande.
+- Un fichier d'une extension qu'aucun module ne connaît, ou sans extension, s'ouvre selon son
+  contenu : un texte, une image, un programme.
 - Un fichier d'un format qu'aucun module n'ouvre reste fermé, et la barre d'état le dit.
 - Ctrl+W ferme un onglet, Ctrl+Tab passe au suivant.
 - Le menu contient les éléments de l'onglet actif et un sous-menu de chaque module qui a ses propres
@@ -78,6 +80,8 @@ importations et les exportations, chaque champ avec sa valeur, son décalage et 
   module, ses propres boutons au-dessus, et suit la sélection ; **Arbre et octets** revient. Dans le
   menu : **Ouvrir le contenu dans un onglet**, **Enregistrer le nœud comme fichier** (une icône
   comme fichier ICO, sinon ses octets) et **Lire tous les nœuds**.
+- Un groupe d'icônes (`GROUP_ICON`) s'affiche comme une icône de toutes les tailles, les tailles
+  comme des pages, et s'enregistre comme un fichier ICO.
 - D'autres formats viennent comme descriptions, des fichiers `.wwformat` dans le dossier
   `plugins\formats` ; Paramètres, Modules liste les formats lus et les fichiers qui ne se sont pas
   lus.

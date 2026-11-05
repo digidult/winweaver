@@ -7,6 +7,8 @@ wview muestra archivos. Cada formato es un complemento: una DLL en la carpeta `p
 
 - **Abrir** (Ctrl+O), o un archivo soltado en la ventana, abre el archivo en una pestaña;
   `wview ARCHIVO...` abre archivos desde la línea de comandos.
+- Un archivo de una extensión que ningún complemento conoce, o sin extensión, se abre por su
+  contenido: un texto, una imagen, un programa.
 - Un archivo de un formato que ningún complemento abre queda cerrado, y la barra de estado lo dice.
 - Ctrl+W cierra una pestaña, Ctrl+Tab pasa a la siguiente.
 - El menú contiene los elementos de la pestaña activa y un submenú de cada complemento que tiene
@@ -76,6 +78,8 @@ importaciones y las exportaciones, cada campo con su valor, su desplazamiento y 
   complemento, con sus propios botones encima, y sigue la selección; **Árbol y bytes** vuelve. En el
   menú: **Abrir el contenido en una pestaña**, **Guardar el nodo como archivo** (un icono como
   archivo ICO, si no sus bytes) y **Leer todos los nodos**.
+- Un grupo de iconos (`GROUP_ICON`) se muestra como un icono de todos los tamaños, los tamaños como
+  páginas, y se guarda como un archivo ICO.
 - Más formatos llegan como descripciones, archivos `.wwformat` en la carpeta `plugins\formats`;
   Configuración, Complementos enumera los formatos leídos y los archivos que no se leyeron.
 - **Estructuras binarias**, **Carpeta de las descripciones** en el menú abre la carpeta

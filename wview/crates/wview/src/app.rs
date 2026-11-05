@@ -410,8 +410,9 @@ impl App for Wview {
         shell.pending.push(Act::Shell(ShellAct::Open));
     }
 
+    /// A file in a tab by the plugin of its extension, else of its first bytes.
     fn open_path(&mut self, shell: &mut Shell<Self>, path: PathBuf) {
-        let Some(plugin) = self.plugins.for_path(&path) else {
+        let Some(plugin) = self.plugins.for_file(&path) else {
             shell.status = trf("No plugin opens {name}", &[("name", &file_name(&path))]);
             return;
         };
