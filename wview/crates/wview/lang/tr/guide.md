@@ -83,7 +83,8 @@ değeri, uzaklığı ve boyutuyla.
   **İçeriği bir sekmede aç**, **Düğümü dosya olarak kaydet** (bir simge ICO dosyası olarak, değilse
   baytları) ve **Tüm düğümleri oku**.
 - Bir simge grubu (`GROUP_ICON`) her boyutuyla tek bir simge olarak görünür, boyutlar sayfa olarak,
-  ve tek bir ICO dosyası olarak kaydedilir.
+  ve tek bir ICO dosyası olarak kaydedilir. Bir imleç grubu (`GROUP_CURSOR`) aynı şekilde, etkin
+  noktaları olmadan görünür.
 - Başka biçimler açıklama olarak gelir, `plugins\formats` klasöründeki `.wwformat` dosyaları;
   Ayarlar, Eklentiler okunan biçimleri ve okunamayan dosyaları listeler.
 - **İkili yapılar**, menüdeki **Açıklamalar klasörü** `plugins\formats` klasörünü Gezgin'de açar,

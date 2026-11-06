@@ -372,9 +372,10 @@ The plugin (`wview/plugins/wv-binary`):
   of a group of icons whose entries name their images by an id, becomes one ICO file of every size;
   an image is the node of the same path as the directory with its first key made `members`, its
   second the id, and the ones after (the language) kept where the image has them, else its first
-  (`view::member`, the lazy nodes read on the way). PE names the content of its resources: CURSOR,
-  BITMAP, ICON, GROUP_ICON, HTML and MANIFEST, and its directories of cursors as
-  `application/octet-stream`, no file of their own. A file of an extension no description names
+  (`view::member`, the lazy nodes read on the way); `image/x-group-cursor; members=CURSOR` puts a
+  group of cursors together the same way, one ICO file of their images without their hot spots,
+  since WIC decodes no cursor. PE names the content of its resources: CURSOR, BITMAP, ICON,
+  GROUP_CURSOR, GROUP_ICON, HTML and MANIFEST. A file of an extension no description names
   (the host opened it by its first bytes) is tried with every description, and its magic decides.
 - **Content** in the bar, when the node selected (or the first field of bytes of a structure
   selected) holds a type a plugin of the window opens, by its description or by its first bytes:

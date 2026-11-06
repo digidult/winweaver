@@ -91,7 +91,8 @@ die Exporte, jedes Feld mit seinem Wert, seinem Offset und seiner Größe.
   zurück. Im Menü: **Inhalt in einem Tab öffnen**, **Knoten als Datei speichern** (ein Symbol als
   ICO-Datei, sonst seine Bytes) und **Alle Knoten lesen**.
 - Eine Gruppe von Symbolen (`GROUP_ICON`) erscheint als ein Symbol in jeder Größe, die Größen als
-  Seiten, und wird als eine ICO-Datei gespeichert.
+  Seiten, und wird als eine ICO-Datei gespeichert. Eine Gruppe von Zeigern (`GROUP_CURSOR`)
+  erscheint ebenso, ohne ihre Hotspots.
 - Weitere Formate kommen als Beschreibungen, `.wwformat`-Dateien im Ordner `plugins\formats`;
   Einstellungen, Plugins zeigt die gelesenen Formate und die Dateien, die nicht gelesen wurden.
 - **Binärstrukturen**, **Ordner der Beschreibungen** im Menü öffnet den Ordner `plugins\formats` im

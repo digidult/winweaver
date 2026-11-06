@@ -800,8 +800,16 @@ mod tests {
         assert_eq!(mime::sniff(&bytes), Some("image/x-icon"));
         let images = u16::from_le_bytes([bytes[4], bytes[5]]);
         assert!(images > 1, "{images} images");
-        // A cursor directory is still no file of its own.
-        assert!(PE.contains("\"12\": \"application/octet-stream\""));
+        // A group of cursors of a library of this Windows, the same way.
+        let path = system(&["System32", "comctl32.dll"]);
+        let mut view = open_binary(&path, &Value::Null).unwrap();
+        if view.show_content(&resource("GROUP_CURSOR")).is_ok() {
+            let (_, mime, bytes) = view.selected_content().unwrap();
+            assert_eq!(mime, "image/x-icon");
+            assert_eq!(mime::sniff(&bytes), Some("image/x-icon"));
+        } else {
+            eprintln!("no group of cursors in {}", path.display());
+        }
     }
 
     /// A program in memory, a part of another file, opens by its MIME type.

@@ -286,7 +286,7 @@
       { "name": "names", "type": "RESOURCE_NAMES", "lazy": true,
         "at": "resources.@offset + (offset_to_data & 0x7FFFFFFF)", "when": "(offset_to_data >> 31) != 0",
         "content": { "switch": "id", "cases": { "1": "image/x-dib-cursor", "2": "image/x-dib",
-          "3": "image/x-dib-icon", "12": "application/octet-stream",
+          "3": "image/x-dib-icon", "12": "image/x-group-cursor; members=CURSOR",
           "14": "image/x-group-icon; members=ICON",
           "23": "text/html", "24": "application/xml" } } }
     ] },

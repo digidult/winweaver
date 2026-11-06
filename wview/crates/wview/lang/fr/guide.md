@@ -90,7 +90,8 @@ importations et les exportations, chaque champ avec sa valeur, son décalage et 
   menu : **Ouvrir le contenu dans un onglet**, **Enregistrer le nœud comme fichier** (une icône
   comme fichier ICO, sinon ses octets) et **Lire tous les nœuds**.
 - Un groupe d'icônes (`GROUP_ICON`) s'affiche comme une icône de toutes les tailles, les tailles
-  comme des pages, et s'enregistre comme un fichier ICO.
+  comme des pages, et s'enregistre comme un fichier ICO. Un groupe de curseurs (`GROUP_CURSOR`)
+  s'affiche de même, sans ses points chauds.
 - D'autres formats viennent comme descriptions, des fichiers `.wwformat` dans le dossier
   `plugins\formats` ; Paramètres, Modules liste les formats lus et les fichiers qui ne se sont pas
   lus.

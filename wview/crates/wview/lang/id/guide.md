@@ -84,7 +84,8 @@ dan ukurannya.
   **Simpan simpul sebagai file** (ikon sebagai file ICO, selain itu byte-nya) dan
   **Baca semua simpul**.
 - Grup ikon (`GROUP_ICON`) tampil sebagai satu ikon dengan semua ukurannya, ukuran sebagai halaman,
-  dan disimpan sebagai satu file ICO.
+  dan disimpan sebagai satu file ICO. Grup kursor (`GROUP_CURSOR`) tampil dengan cara yang sama,
+  tanpa titik panasnya.
 - Format lain datang sebagai deskripsi, file `.wwformat` di folder `plugins\formats`; Pengaturan,
   Plugin menampilkan format yang terbaca dan file yang tidak terbaca.
 - **Struktur biner**, **Folder deskripsi** di menu membuka folder `plugins\formats` di Explorer dan

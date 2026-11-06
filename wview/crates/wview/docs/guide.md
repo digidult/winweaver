@@ -83,7 +83,7 @@ exports, every field with its value, its offset and its size.
   **Open the content in a tab**, **Save the node as a file** (an icon as an ICO file, else its
   bytes) and **Read every node**.
 - A group of icons (`GROUP_ICON`) shows as one icon of every size, its sizes as pages, and saves as
-  one ICO file.
+  one ICO file. A group of cursors (`GROUP_CURSOR`) shows the same way, without its hot spots.
 - More formats come as descriptions, `.wwformat` files in the folder `plugins\formats`; Settings,
   Plugins lists the formats read and the files that did not read.
 - **Binary structures**, **Folder of the descriptions** in the menu opens the folder

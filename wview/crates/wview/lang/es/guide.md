@@ -88,7 +88,8 @@ importaciones y las exportaciones, cada campo con su valor, su desplazamiento y 
   menú: **Abrir el contenido en una pestaña**, **Guardar el nodo como archivo** (un icono como
   archivo ICO, si no sus bytes) y **Leer todos los nodos**.
 - Un grupo de iconos (`GROUP_ICON`) se muestra como un icono de todos los tamaños, los tamaños como
-  páginas, y se guarda como un archivo ICO.
+  páginas, y se guarda como un archivo ICO. Un grupo de cursores (`GROUP_CURSOR`) se muestra igual,
+  sin sus puntos activos.
 - Más formatos llegan como descripciones, archivos `.wwformat` en la carpeta `plugins\formats`;
   Configuración, Complementos enumera los formatos leídos y los archivos que no se leyeron.
 - **Estructuras binarias**, **Carpeta de las descripciones** en el menú abre la carpeta

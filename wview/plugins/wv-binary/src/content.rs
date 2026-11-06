@@ -11,6 +11,8 @@
 //! - `image/x-group-icon; members=ICON`: the directory of a group of icons (`GRPICONDIR`), whose
 //!   entries name their images by an id; with the images (`members`, found by the view) it becomes
 //!   one ICO file of every size.
+//! - `image/x-group-cursor; members=CURSOR`: the directory of a group of cursors, the same way: one
+//!   ICO file of the images of the cursors, their hot spots left out, since WIC decodes no cursor.
 
 use wwrt::mime;
 
@@ -18,6 +20,7 @@ pub const DIB: &str = "image/x-dib";
 pub const DIB_ICON: &str = "image/x-dib-icon";
 pub const DIB_CURSOR: &str = "image/x-dib-cursor";
 pub const GROUP_ICON: &str = "image/x-group-icon";
+pub const GROUP_CURSOR: &str = "image/x-group-cursor";
 
 /// The images of a group of icons, by the ids its entries name.
 pub type Members<'a> = dyn FnMut(u16) -> Option<Vec<u8>> + 'a;
@@ -34,7 +37,8 @@ pub fn shown_type(declared: Option<&str>, first: &[u8]) -> Option<String> {
         Some(DIB) => dib_header(first).map(|_| "image/bmp".to_owned()),
         Some(DIB_ICON) => icon_type(first),
         Some(DIB_CURSOR) => icon_type(first.get(4..)?),
-        Some(GROUP_ICON) => group_count(first).map(|_| "image/x-icon".to_owned()),
+        Some(GROUP_ICON) => group_count(first, 1).map(|_| "image/x-icon".to_owned()),
+        Some(GROUP_CURSOR) => group_count(first, 2).map(|_| "image/x-icon".to_owned()),
         Some(_) => declared.map(str::to_owned),
         None => mime::sniff(first).map(str::to_owned),
     }
@@ -48,28 +52,65 @@ fn icon_type(bytes: &[u8]) -> Option<String> {
     }
 }
 
-/// The count of the entries of the directory of a group of icons, by its header.
-fn group_count(bytes: &[u8]) -> Option<usize> {
+/// The count of the entries of the directory of a group, by its header: of icons (`kind` 1) or
+/// of cursors (2).
+fn group_count(bytes: &[u8], kind: u16) -> Option<usize> {
     let u16_at = |at: usize| Some(u16::from_le_bytes(bytes.get(at..at + 2)?.try_into().ok()?));
     let count = u16_at(4)?;
-    (u16_at(0)? == 0 && u16_at(2)? == 1 && count > 0).then_some(usize::from(count))
+    (u16_at(0)? == 0 && u16_at(2)? == kind && count > 0).then_some(usize::from(count))
 }
 
 /// One ICO file of the images of a group of icons: the directory gives the size, the colours, the
 /// planes and the bits of each and the id of its image; an image `members` does not give is left
 /// out.
 pub fn group_icon(dir: &[u8], members: &mut Members) -> Result<Vec<u8>, String> {
-    let count = group_count(dir).ok_or("not the directory of a group of icons")?;
+    group(dir, 1, members)
+}
+
+/// One ICO file of the images of a group of cursors: an entry of the directory gives the width,
+/// the height (of the bitmap and its mask), the planes and the bits of an image and its id; the
+/// image of a cursor has its hot spot (four bytes) before it, left out.
+pub fn group_cursor(dir: &[u8], members: &mut Members) -> Result<Vec<u8>, String> {
+    group(dir, 2, members)
+}
+
+/// One ICO file of a group of icons (`kind` 1) or of cursors (2).
+fn group(dir: &[u8], kind: u16, members: &mut Members) -> Result<Vec<u8>, String> {
+    let count = group_count(dir, kind).ok_or("not the directory of a group of images")?;
     if dir.len() < 6 + count * 14 {
-        return Err("the directory of the icons is cut short".to_owned());
+        return Err("the directory of the images is cut short".to_owned());
     }
+    let side = |v: u16| match v {
+        n @ 1..=255 => n as u8,
+        _ => 0,
+    };
     let mut images = Vec::new();
     for i in 0..count {
         let entry = &dir[6 + i * 14..6 + (i + 1) * 14];
         let id = u16::from_le_bytes([entry[12], entry[13]]);
-        if let Some(bytes) = members(id) {
-            images.push((&entry[..8], bytes));
+        let Some(bytes) = members(id) else {
+            continue;
+        };
+        if kind == 1 {
+            images.push((entry[..8].to_vec(), bytes));
+            continue;
         }
+        let Some(image) = bytes.get(4..).filter(|b| !b.is_empty()) else {
+            continue;
+        };
+        let (width, height) = (
+            u16::from_le_bytes([entry[0], entry[1]]),
+            u16::from_le_bytes([entry[2], entry[3]]),
+        );
+        // The height of a bitmap counts its mask too; a PNG is its own size.
+        let height = if image.starts_with(PNG) {
+            height
+        } else {
+            height / 2
+        };
+        let mut head = vec![side(width), side(height), 0, 0];
+        head.extend_from_slice(&entry[4..8]);
+        images.push((head, image.to_vec()));
     }
     if images.is_empty() {
         return Err("no image of the icon".to_owned());
@@ -109,6 +150,7 @@ pub fn prepared(
         Some(DIB_CURSOR) if shown != "image/png" => ico_file(&bytes[4..])?,
         Some(DIB_CURSOR) => bytes[4..].to_vec(),
         Some(GROUP_ICON) => group_icon(&bytes, members)?,
+        Some(GROUP_CURSOR) => group_cursor(&bytes, members)?,
         _ => bytes,
     };
     Ok((shown, bytes))
@@ -274,6 +316,32 @@ mod tests {
             group_icon(&[0, 0, 1, 0, 5, 0], &mut none).is_err(),
             "cut short"
         );
+    }
+
+    #[test]
+    fn a_group_of_cursors_becomes_one_ico_file_without_its_hot_spots() {
+        // One entry: a bitmap of 2 x 2 with its mask (a height of 4), 8 bits, the image id 3.
+        let mut dir = vec![0, 0, 2, 0, 1, 0];
+        dir.extend(2u16.to_le_bytes());
+        dir.extend(4u16.to_le_bytes());
+        dir.extend(1u16.to_le_bytes());
+        dir.extend(8u16.to_le_bytes());
+        dir.extend(0u32.to_le_bytes());
+        dir.extend(3u16.to_le_bytes());
+        let declared = Some("image/x-group-cursor; members=CURSOR");
+        assert_eq!(shown_type(declared, &dir).as_deref(), Some("image/x-icon"));
+        assert_eq!(
+            shown_type(Some("image/x-group-icon"), &dir),
+            None,
+            "no icons"
+        );
+        let mut image = vec![7, 0, 9, 0];
+        image.extend(dib(4));
+        let mut members = |id: u16| (id == 3).then(|| image.clone());
+        let (mime, file) = prepared(declared, dir, &mut members).unwrap();
+        assert_eq!(mime, "image/x-icon");
+        assert_eq!(&file[..10], &[0, 0, 1, 0, 1, 0, 2, 2, 0, 0]);
+        assert_eq!(&file[22..], &dib(4)[..], "the hot spot is left out");
     }
 
     #[test]

@@ -14,9 +14,7 @@ The current state of wview and its plugins is in `../plugins.md`; these are the 
 
 ## The plugins
 
-- Binary structures: more formats as descriptions; more views of the tree; the cursors of the
-  resources put together (a `GROUP_CURSOR` with its `CURSOR` entries as one CUR file, now each
-  image shows alone; the icons are put together already).
+- Binary structures: more formats as descriptions; more views of the tree.
 
 ## The family
 

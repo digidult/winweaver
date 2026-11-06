@@ -86,7 +86,8 @@ importazioni e le esportazioni, ogni campo con il suo valore, il suo offset e la
   menu: **Apri il contenuto in una scheda**, **Salva il nodo come file** (un'icona come file ICO,
   altrimenti i suoi byte) e **Leggi tutti i nodi**.
 - Un gruppo di icone (`GROUP_ICON`) si mostra come un'icona di ogni dimensione, le dimensioni come
-  pagine, e si salva come un file ICO.
+  pagine, e si salva come un file ICO. Un gruppo di cursori (`GROUP_CURSOR`) si mostra allo stesso
+  modo, senza i suoi punti attivi.
 - Altri formati arrivano come descrizioni, file `.wwformat` nella cartella `plugins\formats`;
   Impostazioni, Plugin elenca i formati letti e i file che non si sono letti.
 - **Strutture binarie**, **Cartella delle descrizioni** nel menu apre la cartella `plugins\formats`
