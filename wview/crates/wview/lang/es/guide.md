@@ -121,6 +121,12 @@ texto más grande leído entero (uno mayor se abre por partes); píxeles suaviza
 entera (64, 256 o 1024 megapíxeles); los bytes por fila, el bloque de un archivo binario y la caché
 de sus bloques. La configuración se guarda en `wview.settings.json` junto al programa.
 
+**Cargar solo los complementos de confianza** carga solo los complementos marcados **De confianza**
+(por el SHA-256 de su DLL) y, con
+**Confiar en un complemento cuya firma Windows considera de confianza**, también aquellos cuya firma
+Windows considera de confianza; cada tarjeta muestra el SHA-256 y la firma de su DLL, y un cambio se
+aplica en el próximo inicio.
+
 ## Línea de comandos
 
 - `wview ARCHIVO...` abre los archivos en pestañas.

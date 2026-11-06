@@ -15,8 +15,8 @@
 //! bytes; `names` the names of its enum or flags; `error` the reason a node stops, in the language
 //! of the window that saved it.
 
-use sha2::{Digest, Sha256};
 use wwrt::serde_json::{Map, Value, json};
+use wwrt::sha2::{Digest, Sha256};
 
 use crate::engine::{Data, Node, Source, Tree};
 use crate::format::Show;

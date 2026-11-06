@@ -125,6 +125,11 @@ eine Animation, die beim Öffnen abspielt, und das größte vollständig dekodie
 1024 Megapixel); die Bytes in einer Zeile, der Block einer Binärdatei und der Cache ihrer Blöcke.
 Die Einstellungen liegen in `wview.settings.json` neben dem Programm.
 
+**Nur vertrauenswürdige Plugins laden** lädt nur die als **Vertrauenswürdig** markierten Plugins (am
+SHA-256 ihrer DLL erkannt) und mit **Einem Plugin vertrauen, dessen Signatur Windows vertraut** auch
+die, deren Signatur Windows vertraut; jede Karte zeigt den SHA-256 und die Signatur ihrer DLL, und
+eine Änderung gilt ab dem nächsten Start.
+
 ## Befehlszeile
 
 - `wview DATEI...` öffnet die Dateien in Tabs.

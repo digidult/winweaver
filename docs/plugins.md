@@ -216,6 +216,15 @@ and a plugin of version 1 is refused by its build, `ABI`):
 - **A file by what it holds** (`Plugins::for_file`): the plugin of its extension, else the first
   of the MIME type of its first bytes, so that a file of another extension or of none opens (a
   text, an image, a program); the window opens every file so, the command line `--probe` too.
+- **Where a plugin comes from** (`wwrt::trust`): the SHA-256 of every DLL of the folder and its
+  Authenticode signature embedded in the file, judged by `WinVerifyTrust` without the network (no
+  revocation; a signature of a catalog of Windows is not looked at), with the name of its signer.
+  `Plugins::load_trusted` loads the DLLs a `Trust` admits: every one, or with `only_trusted` the
+  ones whose SHA-256 it lists and, with `signed`, the ones whose signature Windows trusts; the
+  others are not loaded, with their reason and their origin. wview keeps its `Trust` in its
+  settings, reads them before any plugin loads, and shows the SHA-256 and the signature on the
+  page of the plugins, in Settings, Plugins (with a box Trusted on every card, a DLL not loaded
+  too) and in `--plugins`.
 - `wwrt::blocks::BlockFile::from_bytes`: bytes in memory read like a file.
 - `wwrt::input`: `area` takes the rectangle of a view for its keys and its mouse by the rules of
   section 6.8 and gives an `Input`; `cursor` sets the cursor.

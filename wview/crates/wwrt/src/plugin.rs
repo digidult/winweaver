@@ -19,6 +19,7 @@ use ww::eframe::egui;
 use ww::{PageWidth, Search};
 
 use crate::mime;
+use crate::trust::{self, Origin, Trust};
 
 /// The version of this interface: the traits and the types of this module. A change of them
 /// that an older plugin cannot follow takes the next number (`ABI` names it too).
@@ -255,6 +256,15 @@ pub struct Loaded {
     pub id: String,
     pub file: PathBuf,
     pub plugin: Box<dyn Plugin>,
+    /// Where its DLL comes from; none for a plugin the program made itself.
+    pub origin: Option<Origin>,
+}
+
+/// A DLL of the folder that did not load: why, and where it comes from when that could be read.
+pub struct Failed {
+    pub file: PathBuf,
+    pub why: String,
+    pub origin: Option<Origin>,
 }
 
 impl Loaded {
@@ -283,13 +293,19 @@ impl Loaded {
 #[derive(Default)]
 pub struct Plugins {
     pub loaded: Vec<Loaded>,
-    pub failed: Vec<(PathBuf, String)>,
+    pub failed: Vec<Failed>,
 }
 
 impl Plugins {
     /// Every DLL of the folder, by its name, but the one of wwrt itself (a build of the workspace
     /// writes the runtime and the plugins into one folder).
     pub fn load_dir(dir: &Path) -> Self {
+        Self::load_trusted(dir, &Trust::default())
+    }
+
+    /// The DLLs of the folder the trust admits (`Trust::admits`), each with where it comes from;
+    /// the others are not loaded, with the reason.
+    pub fn load_trusted(dir: &Path, trust: &Trust) -> Self {
         let mut files: Vec<PathBuf> = std::fs::read_dir(dir)
             .map(|entries| {
                 entries
@@ -310,9 +326,37 @@ impl Plugins {
         files.sort_by_key(|p| p.to_string_lossy().to_lowercase());
         let mut out = Plugins::default();
         for file in files {
+            let origin = match trust::origin_of(&file) {
+                Ok(o) => o,
+                Err(why) => {
+                    out.failed.push(Failed {
+                        file,
+                        why,
+                        origin: None,
+                    });
+                    continue;
+                }
+            };
+            if let Err(why) = trust.admits(&origin) {
+                out.failed.push(Failed {
+                    file,
+                    why,
+                    origin: Some(origin),
+                });
+                continue;
+            }
             match load(&file) {
-                Ok(plugin) => out.add(file, plugin),
-                Err(e) => out.failed.push((file, e)),
+                Ok(plugin) => {
+                    out.add(file, plugin);
+                    if let Some(last) = out.loaded.last_mut() {
+                        last.origin = Some(origin);
+                    }
+                }
+                Err(why) => out.failed.push(Failed {
+                    file,
+                    why,
+                    origin: Some(origin),
+                }),
             }
         }
         out
@@ -326,7 +370,12 @@ impl Plugins {
             .file_stem()
             .map(|s| s.to_string_lossy().into_owned())
             .unwrap_or_default();
-        self.loaded.push(Loaded { id, file, plugin });
+        self.loaded.push(Loaded {
+            id,
+            file,
+            plugin,
+            origin: None,
+        });
     }
 
     /// The index of the first plugin that opens the extension of the file.
@@ -583,6 +632,38 @@ mod tests {
         );
         assert_eq!(plugins.for_file(&file("blob", &[0, 1, 2, 0xFF])), None);
         assert_eq!(plugins.for_file(&dir.join("none")), None, "no file");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_dll_not_trusted_stays_out_with_its_origin() {
+        let dir = std::env::temp_dir().join(format!("wwrt-trusted-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("other.dll"), b"no plugin").unwrap();
+        let every = Plugins::load_dir(&dir);
+        assert_eq!(every.failed.len(), 1);
+        assert!(
+            !every.failed[0].why.contains("not trusted"),
+            "{}",
+            every.failed[0].why
+        );
+        let sha = every.failed[0].origin.as_ref().unwrap().sha256.clone();
+        let mut trust = Trust {
+            only_trusted: true,
+            ..Trust::default()
+        };
+        let none = Plugins::load_trusted(&dir, &trust);
+        assert!(
+            none.failed[0].why.starts_with("not trusted"),
+            "{}",
+            none.failed[0].why
+        );
+        trust.set(&sha, true);
+        let listed = Plugins::load_trusted(&dir, &trust);
+        assert!(
+            !listed.failed[0].why.contains("not trusted"),
+            "a listed DLL is tried"
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 

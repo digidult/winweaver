@@ -25,13 +25,20 @@ serde_json = "1"
 # The decoders of the formats WIC may lack, for the plugin of images (wwrt::image), all of Rust;
 # eframe takes the crate already for PNG and BMP.
 image = { version = "0.25", default-features = false, features = ["webp", "tga", "pnm", "qoi", "hdr", "ff"] }
+# The SHA-256 of a plugin (wwrt::trust) and of what a plugin hashes (wwrt::sha2).
+sha2 = "0.10"
 
 [target.'cfg(windows)'.dependencies]
 # Re-exported for the plugins (wwrt::windows): WIC of the images with their metadata (a
-# PROPVARIANT), the folder of a plugin's DLL, the console of the command line.
+# PROPVARIANT), the folder of a plugin's DLL, the console of the command line; the Authenticode
+# signature of a plugin (WinVerifyTrust).
 windows = { version = "0.62.2", features = [
     "Win32_Foundation",
     "Win32_Graphics_Imaging",
+    "Win32_Security_Cryptography",
+    "Win32_Security_Cryptography_Catalog",
+    "Win32_Security_Cryptography_Sip",
+    "Win32_Security_WinTrust",
     "Win32_System_Com",
     "Win32_System_Com_StructuredStorage",
     "Win32_System_Console",

@@ -11,6 +11,7 @@ use wwrt::egui;
 use wwrt::plugin::{self, Host, Plugins, Request, Step, View};
 use wwrt::serde::{Deserialize, Serialize};
 use wwrt::serde_json::Value;
+use wwrt::trust::{Origin, Signature, Trust};
 use wwrt::ww::commands::{Item, cmd, keyed};
 use wwrt::ww::i18n::{self, tr, trf};
 use wwrt::ww::keys;
@@ -46,12 +47,36 @@ pub(crate) static GUIDES: [(&str, &str); 8] = [
     ("tr", include_str!("../lang/tr/guide.md")),
 ];
 
-/// The fields of wview in the settings file: the settings of every plugin, by the name of its DLL.
+/// The fields of wview in the settings file: the settings of every plugin, by the name of its DLL,
+/// and the plugins it trusts (read before the plugins load).
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(crate = "wwrt::serde")]
 pub struct Extra {
     #[serde(default)]
     pub plugins: BTreeMap<String, Value>,
+    #[serde(default)]
+    pub trust: Trust,
+}
+
+/// The lines of where a DLL comes from: its SHA-256 and its signature.
+fn origin_lines(ui: &mut egui::Ui, origin: &Origin) {
+    ui.weak(trf("SHA-256: {sha}", &[("sha", &origin.sha256)]));
+    let signature = match &origin.signature {
+        Signature::None => tr("Not signed").to_owned(),
+        Signature::Trusted(name) => trf("Signed by {name}", &[("name", name)]),
+        Signature::Untrusted(why) => trf("Its signature is not trusted: {why}", &[("why", why)]),
+    };
+    ui.weak(signature);
+}
+
+/// The box of a DLL trusted, in the settings; gives whether it changed.
+fn trusted_box(ui: &mut egui::Ui, trust: &mut Trust, origin: &Origin) -> bool {
+    let mut on = trust.listed(&origin.sha256);
+    let changed = ui.checkbox(&mut on, tr("Trusted")).changed();
+    if changed {
+        trust.set(&origin.sha256, on);
+    }
+    changed
 }
 
 impl wwrt::ww::Extra for Extra {
@@ -335,6 +360,9 @@ impl Wview {
         for loaded in &self.plugins.loaded {
             ui.strong(tr(loaded.plugin.name()));
             ui.weak(loaded.file.display().to_string());
+            if let Some(origin) = &loaded.origin {
+                origin_lines(ui, origin);
+            }
             for format in loaded.plugin.formats() {
                 let mut line = format!("{}: {}", tr(format.name), format.extensions.join(", "));
                 if !format.mimes.is_empty() {
@@ -344,14 +372,17 @@ impl Wview {
             }
             ui.add_space(6.0);
         }
-        for (file, why) in &self.plugins.failed {
+        for failed in &self.plugins.failed {
             ui.colored_label(
                 ui.visuals().error_fg_color,
                 trf(
                     "Not loaded: {file}: {why}",
-                    &[("file", &file.display()), ("why", why)],
+                    &[("file", &failed.file.display()), ("why", &failed.why)],
                 ),
             );
+            if let Some(origin) = &failed.origin {
+                origin_lines(ui, origin);
+            }
         }
         ui.add_space(6.0);
         ui.weak(plugin::runtime());
@@ -598,11 +629,29 @@ impl App for Wview {
         ui: &mut egui::Ui,
         _acts: &mut Vec<Act>,
     ) {
+        let trust = &mut shell.settings.extra.trust;
+        let mut changed = ui
+            .checkbox(&mut trust.only_trusted, tr("Load only the trusted plugins"))
+            .changed();
+        changed |= ui
+            .checkbox(
+                &mut trust.signed,
+                tr("Trust a plugin whose signature Windows trusts"),
+            )
+            .changed();
+        ui.weak(tr(
+            "A plugin is trusted by its SHA-256: a new build of it is a new plugin. A change takes effect at the next start.",
+        ));
+        ui.add_space(6.0);
         for loaded in &self.plugins.loaded {
             egui::Frame::group(ui.style()).show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.strong(tr(loaded.plugin.name()));
                 ui.weak(loaded.file.display().to_string());
+                if let Some(origin) = &loaded.origin {
+                    origin_lines(ui, origin);
+                    changed |= trusted_box(ui, &mut shell.settings.extra.trust, origin);
+                }
                 ui.add_space(4.0);
                 if loaded.plugin.has_settings() {
                     let mut settings = shell
@@ -626,14 +675,21 @@ impl App for Wview {
             });
             ui.add_space(6.0);
         }
-        for (file, why) in &self.plugins.failed {
+        for failed in &self.plugins.failed {
             ui.colored_label(
                 ui.visuals().error_fg_color,
                 trf(
                     "Not loaded: {file}: {why}",
-                    &[("file", &file.display()), ("why", why)],
+                    &[("file", &failed.file.display()), ("why", &failed.why)],
                 ),
             );
+            if let Some(origin) = &failed.origin {
+                origin_lines(ui, origin);
+                changed |= trusted_box(ui, &mut shell.settings.extra.trust, origin);
+            }
+        }
+        if changed {
+            shell.settings_dirty = true;
         }
         ui.add_space(6.0);
         ui.weak(plugin::runtime());

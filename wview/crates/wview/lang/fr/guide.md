@@ -125,6 +125,11 @@ EXIF, une animation lue à son ouverture et la plus grande image décodée enti�
 mégapixels) ; les octets par ligne, le bloc d'un fichier binaire et le cache de ses blocs. Les
 paramètres sont gardés dans `wview.settings.json` à côté du programme.
 
+**Ne charger que les modules approuvés** ne charge que les modules cochés **Approuvé** (par le
+SHA-256 de leur DLL) et, avec **Approuver un module dont Windows approuve la signature**, ceux dont
+Windows approuve la signature ; chaque carte montre le SHA-256 et la signature de sa DLL, et un
+changement prend effet au prochain démarrage.
+
 ## Ligne de commande
 
 - `wview FICHIER...` ouvre les fichiers dans des onglets.

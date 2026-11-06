@@ -119,7 +119,10 @@ fn module_dir() -> Option<PathBuf> {
 fn load() -> Formats {
     let mut list = Vec::new();
     let mut problems = Vec::new();
-    let sha = |text: &str| wwbin::hex(&<sha2::Sha256 as sha2::Digest>::digest(text.as_bytes()));
+    let sha = |text: &str| {
+        let digest = <wwrt::sha2::Sha256 as wwrt::sha2::Digest>::digest(text.as_bytes());
+        wwbin::hex(&digest)
+    };
     match Format::parse(PE) {
         Ok(format) => list.push(Described {
             format,
@@ -682,7 +685,7 @@ mod tests {
         let doc: Value =
             wwrt::serde_json::from_str(&std::fs::read_to_string(&out).unwrap()).unwrap();
         let bytes = std::fs::read(&path).unwrap();
-        let sha = wwbin::hex(&<sha2::Sha256 as sha2::Digest>::digest(&bytes));
+        let sha = wwbin::hex(&<wwrt::sha2::Sha256 as wwrt::sha2::Digest>::digest(&bytes));
         assert_eq!(doc["file"]["sha256"], sha);
         assert_eq!(doc["file"]["size"], bytes.len() as u64);
         assert_eq!(doc["description"]["sha256"], described.sha256);

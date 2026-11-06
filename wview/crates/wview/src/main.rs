@@ -79,6 +79,9 @@ fn list(plugins: &Plugins, dir: &Path, took: std::time::Duration) -> String {
             loaded.plugin.name(),
             loaded.file.display()
         ));
+        if let Some(origin) = &loaded.origin {
+            out.push_str(&origin_text(origin));
+        }
         for format in loaded.plugin.formats() {
             out.push_str(&format!(
                 "  {}: {}",
@@ -91,10 +94,27 @@ fn list(plugins: &Plugins, dir: &Path, took: std::time::Duration) -> String {
             out.push('\n');
         }
     }
-    for (file, why) in &plugins.failed {
-        out.push_str(&format!("\nnot loaded: {}: {why}\n", file.display()));
+    for failed in &plugins.failed {
+        out.push_str(&format!(
+            "\nnot loaded: {}: {}\n",
+            failed.file.display(),
+            failed.why
+        ));
+        if let Some(origin) = &failed.origin {
+            out.push_str(&origin_text(origin));
+        }
     }
     out
+}
+
+/// The SHA-256 and the signature of a DLL, two lines of the list of the plugins.
+fn origin_text(origin: &wwrt::trust::Origin) -> String {
+    let signature = match &origin.signature {
+        wwrt::trust::Signature::None => "not signed".to_owned(),
+        wwrt::trust::Signature::Trusted(name) => format!("signed by {name}"),
+        wwrt::trust::Signature::Untrusted(why) => format!("a signature not trusted: {why}"),
+    };
+    format!("  SHA-256 {}\n  {signature}\n", origin.sha256)
 }
 
 /// Opens the file with its plugin and draws three frames of its view without a window.
@@ -141,8 +161,11 @@ fn main() -> ExitCode {
         return ExitCode::SUCCESS;
     }
     let dir = plugins_dir();
+    // The plugins it trusts are in the settings, read before any plugin loads.
+    let (settings, _) = wwrt::ww::Settings::<app::Extra>::load(<app::Wview as wwrt::ww::App>::NAME);
+    let trust = settings.map(|s| s.extra.trust).unwrap_or_default();
     let started = Instant::now();
-    let plugins = Plugins::load_dir(&dir);
+    let plugins = Plugins::load_trusted(&dir, &trust);
     let took = started.elapsed();
     match args.first().map(String::as_str) {
         Some("--plugins") => {

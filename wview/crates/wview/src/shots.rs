@@ -182,10 +182,10 @@ fn screenshots_of_wview() {
 /// folder `WVIEW_STABLE`: the Mandelbrot set drawn in its steps until its picture is whole.
 fn stable_plugin(dir: &Path, folder: &Path) {
     let plugins = wwrt::plugin::Plugins::load_dir(folder);
-    if let Some((file, why)) = plugins.failed.first() {
+    if let Some(failed) = plugins.failed.first() {
         let _ = std::fs::write(
             dir.join("wview-error.txt"),
-            format!("{}: {why}", file.display()),
+            format!("{}: {}", failed.file.display(), failed.why),
         );
         return;
     }

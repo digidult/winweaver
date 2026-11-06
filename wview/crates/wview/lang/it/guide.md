@@ -120,6 +120,11 @@ EXIF, un'animazione riprodotta all'apertura e l'immagine più grande decodificat
 1024 megapixel); i byte per riga, il blocco di un file binario e la cache dei suoi blocchi. Le
 impostazioni stanno in `wview.settings.json` accanto al programma.
 
+**Carica solo i plugin attendibili** carica solo i plugin segnati **Attendibile** (per lo SHA-256
+della loro DLL) e, con **Considera attendibile un plugin la cui firma è attendibile per Windows**,
+anche quelli la cui firma è attendibile per Windows; ogni scheda mostra lo SHA-256 e la firma della
+sua DLL, e una modifica vale dal prossimo avvio.
+
 ## Riga di comando
 
 - `wview FILE...` apre i file in schede.

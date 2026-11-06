@@ -13,6 +13,7 @@ pub use egui_kittest;
 pub use image;
 pub use serde;
 pub use serde_json;
+pub use sha2;
 #[cfg(windows)]
 pub use windows;
 pub use ww;
@@ -27,3 +28,4 @@ pub mod plugin;
 pub mod stable;
 #[doc(hidden)]
 pub mod testing;
+pub mod trust;

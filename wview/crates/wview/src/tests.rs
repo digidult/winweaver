@@ -424,6 +424,23 @@ fn a_text_larger_than_the_setting_opens_in_parts() {
 }
 
 #[test]
+fn the_trust_of_the_plugins_is_kept_in_the_settings() {
+    let old: Extra = wwrt::serde_json::from_str(r#"{ "plugins": {} }"#).unwrap();
+    assert_eq!(
+        old.trust,
+        wwrt::trust::Trust::default(),
+        "settings of before"
+    );
+    let mut extra = Extra::default();
+    extra.trust.only_trusted = true;
+    extra.trust.set("AB12", true);
+    let text = wwrt::serde_json::to_string(&extra).unwrap();
+    let back: Extra = wwrt::serde_json::from_str(&text).unwrap();
+    assert_eq!(back, extra);
+    assert_eq!(back.trust.sha256, ["ab12"]);
+}
+
+#[test]
 fn an_image_windows_does_not_decode_opens_by_the_crate_image() {
     let dir = folder("tga");
     let picture = wwrt::image::RgbaImage::from_fn(40, 30, |x, y| {

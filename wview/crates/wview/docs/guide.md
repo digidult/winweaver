@@ -112,6 +112,11 @@ when it opens and the largest image decoded whole (64, 256 or 1024 megapixels); 
 the block of a binary file and the cache of its blocks. The settings are kept in
 `wview.settings.json` next to the program.
 
+**Load only the trusted plugins** loads only the plugins marked **Trusted**, known by the SHA-256 of
+their DLL, and with **Trust a plugin whose signature Windows trusts** the ones whose signature
+Windows trusts too; every card names the SHA-256 and the signature of its DLL, and a change takes
+effect at the next start.
+
 ## Command line
 
 - `wview FILE...` opens the files in tabs.

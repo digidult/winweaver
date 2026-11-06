@@ -116,6 +116,11 @@ oynatılan bir animasyon ve tamamen çözülen en büyük görüntü (64, 256 ve
 başına bayt, bir ikili dosyanın bloğu ve bloklarının önbelleği. Ayarlar programın yanındaki
 `wview.settings.json` dosyasında tutulur.
 
+**Yalnızca güvenilir eklentileri yükle**, yalnızca **Güvenilir** olarak işaretlenen eklentileri
+(DLL'lerinin SHA-256'sına göre) ve **İmzasına Windows'un güvendiği bir eklentiye güven** ile
+imzasına Windows'un güvendiklerini de yükler; her kart DLL'inin SHA-256'sını ve imzasını gösterir,
+değişiklik bir sonraki başlangıçta geçerli olur.
+
 ## Komut satırı
 
 - `wview DOSYA...` dosyaları sekmelerde açar.

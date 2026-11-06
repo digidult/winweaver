@@ -707,7 +707,9 @@ change, read the section of the part it touches.
   matches the number before ` (`. wwrt re-exports the crate `image` (`wwrt::image`) with the
   decoders of Rust of WebP, TGA, Netpbm, QOI, Radiance HDR and farbfeld (eframe takes it already
   for PNG and BMP, and the features join): a plugin takes it from there, never as a dependency of
-  its own. wview has the eight languages of WinWeaver: its `ui.json`
+  its own; the same for `sha2` (`wwrt::sha2`, the SHA-256 of `wwrt::trust` and of wv-binary).
+  wview reads its settings in `main` before the plugins load (`Plugins::load_trusted` with
+  `Extra::trust`), and `ww::run` reads them again for the window. wview has the eight languages of WinWeaver: its `ui.json`
   holds the texts of the shell of W# as WinWeaver translates them and its own. `plugin!` exports
   nothing with the feature `library` of a plugin (each declares `library = []`): the tests of
   wview take the plugins as libraries (`crate-type = ["cdylib", "rlib"]`) into one executable, and

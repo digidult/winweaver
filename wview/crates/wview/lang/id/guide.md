@@ -117,6 +117,11 @@ animasi yang diputar saat dibuka dan gambar terbesar yang didekode utuh (64, 256
 megapiksel); byte per baris, blok file biner dan cache bloknya. Pengaturan disimpan di
 `wview.settings.json` di samping program.
 
+**Muat hanya plugin yang dipercaya** hanya memuat plugin yang ditandai **Dipercaya** (menurut
+SHA-256 DLL-nya) dan, dengan **Percayai plugin yang tanda tangannya dipercaya Windows**, juga plugin
+yang tanda tangannya dipercaya Windows; setiap kartu menampilkan SHA-256 dan tanda tangan DLL-nya,
+dan perubahan berlaku pada awal berikutnya.
+
 ## Baris perintah
 
 - `wview FILE...` membuka file di tab.
