@@ -22,6 +22,11 @@ genişliğine göre kaydır* ve *Sayfa genişliği* bir metnin görünümünü d
 XML dosyaları (`.xml`, `.manifest`) da metin olarak görünür ve işaretli bir UTF-16 metni UTF-8 gibi
 okunur.
 
+Ayarlardaki **Tamamı okunan en büyük dosya** değerinden (başta 64 MB) büyük bir dosya parça parça
+açılır: satırları okunurken sayılır, numaraları solda görünür; tekerlek, oklar, Page Up ve Page
+Down, Home, End ve sağdaki çubuk metinde gezinir, Sol ve Sağ onu yana kaydırır. Arama tüm sözcükleri
+içeren satırları listeler ve birine tıklamak oraya gider.
+
 ## Görüntüler
 
 Bilgisayardaki Windows'un çözdüğü her biçim: BMP, PNG, JPEG, GIF, TIFF, ICO ve uzantıları
@@ -101,10 +106,11 @@ görüntüsü olarak açılır; arşivde `examples\seahorse.mandel` vardır.
 
 ## Ayarlar
 
-**Ayarlar**, **Eklentiler** eklentileri ayarlarıyla listeler: açılacak en büyük metin dosyası;
-%100'ün üzerinde yumuşatılmış pikseller, EXIF yönü, açıldığında oynatılan bir animasyon ve tamamen
-çözülen en büyük görüntü (64, 256 veya 1024 megapiksel); satır başına bayt, bir ikili dosyanın bloğu
-ve bloklarının önbelleği. Ayarlar programın yanındaki `wview.settings.json` dosyasında tutulur.
+**Ayarlar**, **Eklentiler** eklentileri ayarlarıyla listeler: tamamı okunan en büyük metin dosyası
+(daha büyüğü parça parça açılır); %100'ün üzerinde yumuşatılmış pikseller, EXIF yönü, açıldığında
+oynatılan bir animasyon ve tamamen çözülen en büyük görüntü (64, 256 veya 1024 megapiksel); satır
+başına bayt, bir ikili dosyanın bloğu ve bloklarının önbelleği. Ayarlar programın yanındaki
+`wview.settings.json` dosyasında tutulur.
 
 ## Komut satırı
 

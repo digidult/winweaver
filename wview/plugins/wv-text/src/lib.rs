@@ -3,7 +3,9 @@
 //! (Wrap lines, Width of pages). A text is UTF-8, or UTF-16 by its mark or by the `charset` of its
 //! MIME type. The plugin opens bytes in memory too (a manifest inside a program), and every
 //! textual type no other plugin names falls back to its `text/plain` (`wwrt::mime::fallbacks`).
-//! Its setting: the largest file it opens.
+//! Its setting: the largest file it reads whole; a larger one opens in parts (`large`).
+
+mod large;
 
 use std::path::Path;
 
@@ -113,10 +115,10 @@ impl Plugin for TextPlugin {
     }
 
     fn open(&self, path: &Path, settings: &Value) -> Result<Box<dyn View>, String> {
-        let (max_mb, max) = largest(settings);
+        let (_, max) = largest(settings);
         let size = std::fs::metadata(path).map_err(|e| e.to_string())?.len();
         if size > max {
-            return Err(trf("larger than {mb} MB", &[("mb", &max_mb)]));
+            return large::LargeText::open(path).map(|v| Box::new(v) as Box<dyn View>);
         }
         let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
         let title = path
@@ -158,7 +160,7 @@ impl Plugin for TextPlugin {
         let mut max_mb: u32 = setting(settings, "max_mb", MAX_MB);
         let changed = ui
             .horizontal(|ui| {
-                ui.label(tr("Largest file to open"));
+                ui.label(tr("Largest file read whole"));
                 let field = egui::DragValue::new(&mut max_mb)
                     .range(1..=1024)
                     .suffix(format!(" {}", tr("MB")));
@@ -168,6 +170,9 @@ impl Plugin for TextPlugin {
         if changed {
             set_setting(settings, "max_mb", max_mb);
         }
+        ui.weak(tr(
+            "A larger file opens in parts: its lines are counted while it is read, and the search lists the lines that hold it.",
+        ));
         changed
     }
 }

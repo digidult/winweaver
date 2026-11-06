@@ -24,6 +24,12 @@ texte.
 Les fichiers XML (`.xml`, `.manifest`) s'affichent aussi comme textes, et un texte UTF-16 avec sa
 marque se lit comme un texte UTF-8.
 
+Un fichier plus grand que **Plus grand fichier lu en entier** des paramètres (64 Mo au départ)
+s'ouvre par parties : ses lignes sont comptées pendant la lecture, avec leurs numéros à gauche ; la
+molette, les flèches, Page préc. et Page suiv., Début, Fin et la barre de droite le parcourent,
+Gauche et Droite le décalent de côté. La recherche liste les lignes qui contiennent tous les mots,
+et un clic sur l'une y mène.
+
 ## Images
 
 Tous les formats que décode le Windows de l'ordinateur : BMP, PNG, JPEG, GIF, TIFF, ICO, et HEIF,
@@ -109,11 +115,11 @@ couleurs lissées, s'ouvre comme l'image de l'ensemble ; l'archive contient
 
 ## Paramètres
 
-**Paramètres**, **Modules** liste les modules avec leurs paramètres : le plus grand fichier texte à
-ouvrir ; des pixels lissés au-delà de 100%, l'orientation EXIF, une animation lue à son ouverture et
-la plus grande image décodée entière (64, 256 ou 1024 mégapixels) ; les octets par ligne, le bloc
-d'un fichier binaire et le cache de ses blocs. Les paramètres sont gardés dans `wview.settings.json`
-à côté du programme.
+**Paramètres**, **Modules** liste les modules avec leurs paramètres : le plus grand fichier texte lu
+en entier (un plus grand s'ouvre par parties); des pixels lissés au-delà de 100%, l'orientation
+EXIF, une animation lue à son ouverture et la plus grande image décodée entière (64, 256 ou 1024
+mégapixels) ; les octets par ligne, le bloc d'un fichier binaire et le cache de ses blocs. Les
+paramètres sont gardés dans `wview.settings.json` à côté du programme.
 
 ## Ligne de commande
 

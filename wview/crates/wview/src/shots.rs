@@ -4,7 +4,7 @@
 //! animation, a large image fitted and at 100% in its tiles, a DLL of this Windows in its tree and
 //! its bytes, as text and with its resources open, a comparison of a copy with its structure, the
 //! manifest and the icon of a program (one ICO of every size) shown inside its view by the plugins
-//! of texts and images, and
+//! of texts and images, a log larger than a text read whole in parts and its search, and
 //! the Mandelbrot set of the stable interface where CI built it (`WVIEW_STABLE`); drawn with wgpu without a screen and saved there as PNG files; a
 //! renderer that cannot start writes `wview-error.txt`.
 
@@ -16,8 +16,8 @@ use wwrt::ww::{App, ShellAct, Window};
 
 use crate::app::{Act, Wview};
 use crate::tests::{
-    bmp, changed_copy, click_tree, content_tab, decoded, english, folder, front, resource,
-    system_dll, three_frames, window,
+    bmp, changed_copy, click_tree, content_tab, counted, decoded, english, folder, front,
+    large_log, resource, search_for, small_texts, system_dll, three_frames, window,
 };
 
 fn shot(h: &mut Harness<'_, Window<Wview>>, dir: &Path, name: &str) {
@@ -70,7 +70,7 @@ fn screenshots_of_wview() {
         ]
     });
     std::fs::write(&large, picture).unwrap();
-    let mut window = window(english(wwrt::serde_json::json!({ "animate": false })));
+    let mut window = window(small_texts(wwrt::serde_json::json!({ "animate": false })));
     // What `ww::run` does after the session: a window without a tab shows the plugins.
     window.app.restored(&mut window.shell);
     let mut h = Harness::builder()
@@ -160,6 +160,19 @@ fn screenshots_of_wview() {
     content_tab(h.state_mut(), &resource("GROUP_ICON"));
     decoded(&mut h);
     shot(&mut h, &dir, "v15-content-icon");
+    // A log larger than the text read whole: in parts, its lines counted, then a search of it.
+    h.state_mut()
+        .apply(vec![Act::Shell(ShellAct::OpenPath(large_log(&files)))]);
+    counted(&mut h);
+    shot(&mut h, &dir, "v16-large-text");
+    search_for(&mut h, "number 12");
+    for _ in 0..300 {
+        h.step();
+        if !front(h.state()).1.contains("0 lines hold") {
+            break;
+        }
+    }
+    shot(&mut h, &dir, "v17-large-text-search");
     if let Some(stable) = std::env::var_os("WVIEW_STABLE") {
         stable_plugin(&dir, Path::new(&stable));
     }

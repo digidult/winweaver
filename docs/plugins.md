@@ -273,7 +273,14 @@ Markdown pages (`text/markdown`), text files (`text/plain`, `text/csv`) and XML 
 `.manifest`, `application/xml`), the page and the text of W#, the search, a setting of the largest
 file to open. A text is UTF-8, or UTF-16 by its mark or by the `charset` of its type; bytes in
 memory open the same way (a manifest inside a program), and every textual type no other plugin
-names falls back to this plugin (`mime::fallbacks`).
+names falls back to this plugin (`mime::fallbacks`). A file larger than the setting (the largest
+file read whole, 64 MB by default) opens in parts (`large.rs`): a thread counts its lines and keeps
+the start of a line every 1024 lines and of the first one after every MB; the view reads the lines
+it shows through `BlockFile` from the nearest start, draws their numbers, scrolls by whole lines
+with the wheel, the arrows, the page keys, Home, End and a bar of its own (no scroll area of egui,
+whose floats lose a line past some millions of them), shows the first 4096 bytes of a line with
+Left and Right sideways, and reads it as UTF-8. Its search lists at most 10000 lines that hold
+every word, found by a thread of its own, and a click on one goes to it.
 
 ### 6.4 Binary structures (wv-binary)
 

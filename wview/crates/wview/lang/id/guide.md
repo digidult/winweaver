@@ -23,6 +23,11 @@ tampilan* dan *Lebar halaman* mengubah tampilan teks.
 File XML (`.xml`, `.manifest`) juga tampil sebagai teks, dan teks UTF-16 dengan tandanya terbaca
 seperti teks UTF-8.
 
+File yang lebih besar dari **File terbesar yang dibaca utuh** di pengaturan (awalnya 64 MB) dibuka
+per bagian: barisnya dihitung selama dibaca, dengan nomornya di kiri; roda, panah, Page Up dan Page
+Down, Home, End, dan bilah di kanan menelusurinya, Kiri dan Kanan menggesernya ke samping. Pencarian
+menampilkan baris yang memuat semua kata, dan klik pada salah satunya menuju ke sana.
+
 ## Gambar
 
 Semua format yang didekode Windows di komputer ini: BMP, PNG, JPEG, GIF, TIFF, ICO, serta HEIF,
@@ -102,10 +107,11 @@ gambar himpunan; arsip memuat `examples\seahorse.mandel`.
 
 ## Pengaturan
 
-**Pengaturan**, **Plugin** menampilkan plugin dengan pengaturannya: file teks terbesar yang dibuka;
-piksel yang dihaluskan di atas 100%, orientasi EXIF, animasi yang diputar saat dibuka dan gambar
-terbesar yang didekode utuh (64, 256 atau 1024 megapiksel); byte per baris, blok file biner dan
-cache bloknya. Pengaturan disimpan di `wview.settings.json` di samping program.
+**Pengaturan**, **Plugin** menampilkan plugin dengan pengaturannya: file teks terbesar yang dibaca
+utuh (yang lebih besar dibuka per bagian); piksel yang dihaluskan di atas 100%, orientasi EXIF,
+animasi yang diputar saat dibuka dan gambar terbesar yang didekode utuh (64, 256 atau 1024
+megapiksel); byte per baris, blok file biner dan cache bloknya. Pengaturan disimpan di
+`wview.settings.json` di samping program.
 
 ## Baris perintah
 

@@ -121,6 +121,10 @@ impl Inner {
         };
         let title = self.title();
         ui.push_id(self.id, |ui| {
+            // The whole part painted first: the space between the line and the view is no hole.
+            let fill = ui.visuals().panel_fill;
+            ui.painter()
+                .rect_filled(ui.available_rect_before_wrap(), 0.0, fill);
             let p = style::palette(ui);
             egui::Frame::new()
                 .fill(p.card)

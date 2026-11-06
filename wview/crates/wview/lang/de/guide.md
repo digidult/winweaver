@@ -24,6 +24,12 @@ auf die Breite der Ansicht umbrechen* und *Breite der Seiten* ändern die Anzeig
 XML-Dateien (`.xml`, `.manifest`) erscheinen ebenfalls als Text, und ein Text in UTF-16 mit seiner
 Markierung wird wie einer in UTF-8 gelesen.
 
+Eine Datei, größer als **Größte Datei, die ganz gelesen wird** in den Einstellungen (anfangs 64 MB),
+öffnet in Teilen: Ihre Zeilen werden beim Lesen gezählt, ihre Nummern links; das Mausrad, die
+Pfeile, Bild auf und Bild ab, Pos1, Ende und die Leiste rechts bewegen den Text, Links und Rechts
+verschieben ihn seitwärts. Die Suche zeigt die Zeilen mit allen Wörtern, und ein Klick auf eine geht
+zu ihr.
+
 ## Bilder
 
 Jedes Format, das das Windows des Computers dekodiert: BMP, PNG, JPEG, GIF, TIFF, ICO sowie HEIF,
@@ -109,11 +115,11 @@ Palette und den geglätteten Farben, öffnet als Bild der Menge; das Archiv enth
 
 ## Einstellungen
 
-**Einstellungen**, **Plugins** zeigt die Plugins mit ihren Einstellungen: die größte zu öffnende
-Textdatei; geglättete Pixel über 100%, die EXIF-Ausrichtung, eine Animation, die beim Öffnen
-abspielt, und das größte vollständig dekodierte Bild (64, 256 oder 1024 Megapixel); die Bytes in
-einer Zeile, der Block einer Binärdatei und der Cache ihrer Blöcke. Die Einstellungen liegen in
-`wview.settings.json` neben dem Programm.
+**Einstellungen**, **Plugins** zeigt die Plugins mit ihren Einstellungen: die größte Textdatei, die
+ganz gelesen wird (eine größere öffnet in Teilen); geglättete Pixel über 100%, die EXIF-Ausrichtung,
+eine Animation, die beim Öffnen abspielt, und das größte vollständig dekodierte Bild (64, 256 oder
+1024 Megapixel); die Bytes in einer Zeile, der Block einer Binärdatei und der Cache ihrer Blöcke.
+Die Einstellungen liegen in `wview.settings.json` neben dem Programm.
 
 ## Befehlszeile
 

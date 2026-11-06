@@ -23,6 +23,12 @@ Las páginas Markdown (`.md`) se muestran como páginas, los archivos de texto (
 Los archivos XML (`.xml`, `.manifest`) también se muestran como textos, y un texto UTF-16 con su
 marca se lee igual que uno UTF-8.
 
+Un archivo mayor que **Archivo más grande leído entero** de la configuración (64 MB al principio) se
+abre por partes: sus líneas se cuentan mientras se lee, con sus números a la izquierda; la rueda,
+las flechas, Re Pág y Av Pág, Inicio, Fin y la barra de la derecha lo recorren, Izquierda y Derecha
+lo mueven de lado. La búsqueda muestra las líneas con todas las palabras, y un clic en una lleva a
+ella.
+
 ## Imágenes
 
 Todos los formatos que decodifica el Windows del equipo: BMP, PNG, JPEG, GIF, TIFF, ICO, y HEIF,
@@ -106,10 +112,10 @@ colores suavizados, se abre como la imagen del conjunto; el archivo comprimido t
 ## Configuración
 
 **Configuración**, **Complementos** enumera los complementos con su configuración: el archivo de
-texto más grande que se abre; píxeles suavizados por encima del 100%, la orientación EXIF, una
-animación reproducida al abrirla y la imagen más grande decodificada entera (64, 256 o 1024
-megapíxeles); los bytes por fila, el bloque de un archivo binario y la caché de sus bloques. La
-configuración se guarda en `wview.settings.json` junto al programa.
+texto más grande leído entero (uno mayor se abre por partes); píxeles suavizados por encima del
+100%, la orientación EXIF, una animación reproducida al abrirla y la imagen más grande decodificada
+entera (64, 256 o 1024 megapíxeles); los bytes por fila, el bloque de un archivo binario y la caché
+de sus bloques. La configuración se guarda en `wview.settings.json` junto al programa.
 
 ## Línea de comandos
 

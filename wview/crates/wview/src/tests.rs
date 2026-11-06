@@ -350,6 +350,79 @@ fn a_dll_in_its_tree_and_its_bytes() {
     }
 }
 
+/// Settings in English with the plugin of texts reading at most 1 MB whole.
+pub(crate) fn small_texts(image: wwrt::serde_json::Value) -> Settings<Extra> {
+    let mut settings = english(image);
+    let texts = wwrt::serde_json::json!({ "max_mb": 1 });
+    settings.extra.plugins.insert("wv_text".to_owned(), texts);
+    settings
+}
+
+/// A log of 30000 lines, larger than 1 MB.
+pub(crate) fn large_log(dir: &Path) -> PathBuf {
+    let path = dir.join("large.log");
+    let text: String = (0..30_000)
+        .map(|i| format!("{i:05} an entry of the large log, the line number {i}\n"))
+        .collect();
+    std::fs::write(&path, text).unwrap();
+    path
+}
+
+/// Frames of the window until the text in front has counted its lines.
+pub(crate) fn counted(h: &mut Harness<'_, Window<Wview>>) {
+    for _ in 0..500 {
+        h.step();
+        if !front(h.state()).1.contains("counting") {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+}
+
+/// Sets the search of the tab in front.
+pub(crate) fn search_for(h: &mut Harness<'_, Window<Wview>>, text: &str) {
+    if let Some(Doc::File(d)) = h.state_mut().shell.active_doc_mut()
+        && let Some(search) = d.view.search()
+    {
+        text.clone_into(&mut search.text);
+    }
+}
+
+#[test]
+fn a_text_larger_than_the_setting_opens_in_parts() {
+    let dir = folder("large-text");
+    let log = large_log(&dir);
+    let mut window = window(small_texts(wwrt::serde_json::Value::Null));
+    open(&mut window, log);
+    assert_eq!(window.shell.docs.len(), 1, "a larger text opens, in parts");
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(1000.0, 700.0))
+        .build_eframe(|_| window);
+    counted(&mut h);
+    let status = front(h.state()).1;
+    assert!(status.starts_with("line 1 of 30000"), "{status}");
+    click(&h, Pos2::new(500.0, 300.0));
+    h.run_steps(2);
+    h.key_press(Key::End);
+    h.run_steps(2);
+    let status = front(h.state()).1;
+    assert!(
+        !status.starts_with("line 1 of") && status.contains("of 30000"),
+        "End goes to the last lines: {status}"
+    );
+    // The search of the tab lists the lines that hold every word of it.
+    search_for(&mut h, "number 12345");
+    for _ in 0..300 {
+        h.step();
+        if front(h.state()).1.contains("1 lines hold the search") {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
+    let status = front(h.state()).1;
+    assert!(status.contains("1 lines hold the search"), "{status}");
+}
+
 /// A program of this Windows with a manifest and icons among its resources, read and never
 /// changed.
 pub(crate) fn notepad() -> PathBuf {

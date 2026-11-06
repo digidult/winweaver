@@ -23,6 +23,11 @@ testo.
 I file XML (`.xml`, `.manifest`) si mostrano anch'essi come testi, e un testo UTF-16 con il suo
 segno si legge come uno UTF-8.
 
+Un file più grande di **File più grande letto per intero** delle impostazioni (64 MB all'inizio) si
+apre a parti: le sue righe sono contate durante la lettura, con i numeri a sinistra; la rotella, le
+frecce, Pag su e Pag giù, Home, Fine e la barra a destra lo percorrono, Sinistra e Destra lo
+spostano di lato. La ricerca elenca le righe con tutte le parole, e un clic su una porta lì.
+
 ## Immagini
 
 Ogni formato che il Windows del computer decodifica: BMP, PNG, JPEG, GIF, TIFF, ICO, e HEIF, AVIF,
@@ -106,10 +111,10 @@ colori sfumati, si apre come l'immagine dell'insieme; l'archivio contiene
 ## Impostazioni
 
 **Impostazioni**, **Plugin** elenca i plugin con le loro impostazioni: il file di testo più grande
-da aprire; i pixel smussati oltre il 100%, l'orientamento EXIF, un'animazione riprodotta
-all'apertura e l'immagine più grande decodificata intera (64, 256 o 1024 megapixel); i byte per
-riga, il blocco di un file binario e la cache dei suoi blocchi. Le impostazioni stanno in
-`wview.settings.json` accanto al programma.
+letto per intero (uno più grande si apre a parti); i pixel smussati oltre il 100%, l'orientamento
+EXIF, un'animazione riprodotta all'apertura e l'immagine più grande decodificata intera (64, 256 o
+1024 megapixel); i byte per riga, il blocco di un file binario e la cache dei suoi blocchi. Le
+impostazioni stanno in `wview.settings.json` accanto al programma.
 
 ## Riga di comando
 

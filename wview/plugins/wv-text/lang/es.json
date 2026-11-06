@@ -1,10 +1,16 @@
 {
-  "Largest file to open": "Archivo más grande que se abre",
+  "A click on a line goes to it in the text.": "Un clic en una línea lleva a ella en el texto.",
+  "A larger file opens in parts: its lines are counted while it is read, and the search lists the lines that hold it.": "Un archivo mayor se abre por partes: sus líneas se cuentan mientras se lee, y la búsqueda muestra las líneas que la contienen.",
+  "Largest file read whole": "Archivo más grande leído entero",
   "MB": "MB",
   "Markdown pages": "Páginas Markdown",
   "Text and Markdown": "Texto y Markdown",
   "Text files": "Archivos de texto",
+  "The search shows the first {n} lines that hold it.": "La búsqueda muestra las primeras {n} líneas que la contienen.",
   "XML files": "Archivos XML",
+  "counting the lines": "contando las líneas",
   "larger than {mb} MB": "mayor de {mb} MB",
-  "{n} lines": "{n} líneas"
+  "line {line} of {count}": "línea {line} de {count}",
+  "{n} lines": "{n} líneas",
+  "{n} lines hold the search": "{n} líneas contienen la búsqueda"
 }

@@ -23,6 +23,11 @@ are. Ctrl+F searches the text. **Settings**, **General**: *Wrap lines to the wid
 XML files (`.xml`, `.manifest`) show as texts too, and a text of UTF-16 with its mark reads as well
 as one of UTF-8.
 
+A file larger than **Largest file read whole** of the settings (64 MB at first) opens in parts: its
+lines are counted while it is read, with their numbers on the left; the wheel, the arrows, Page Up
+and Page Down, Home, End and the bar on the right move through it, Left and Right move sideways. The
+search lists the lines that hold every word, and a click on one goes to it.
+
 ## Images
 
 Every format the Windows of the computer decodes: BMP, PNG, JPEG, GIF, TIFF, ICO, and HEIF, AVIF,
@@ -98,10 +103,11 @@ colours, opens as the picture of the set; the archive holds `examples\seahorse.m
 
 ## Settings
 
-**Settings**, **Plugins** lists the plugins with their settings: the largest text file to open;
-smooth pixels above 100%, the orientation of EXIF, an animation played when it opens and the largest
-image decoded whole (64, 256 or 1024 megapixels); the bytes in a row, the block of a binary file and
-the cache of its blocks. The settings are kept in `wview.settings.json` next to the program.
+**Settings**, **Plugins** lists the plugins with their settings: the largest text file read whole, a
+larger one opening in parts; smooth pixels above 100%, the orientation of EXIF, an animation played
+when it opens and the largest image decoded whole (64, 256 or 1024 megapixels); the bytes in a row,
+the block of a binary file and the cache of its blocks. The settings are kept in
+`wview.settings.json` next to the program.
 
 ## Command line
 

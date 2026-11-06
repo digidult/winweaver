@@ -1,10 +1,16 @@
 {
-  "Largest file to open": "Açılacak en büyük dosya",
+  "A click on a line goes to it in the text.": "Bir satıra tıklamak metinde ona gider.",
+  "A larger file opens in parts: its lines are counted while it is read, and the search lists the lines that hold it.": "Daha büyük bir dosya parça parça açılır: satırları okunurken sayılır ve arama onu içeren satırları listeler.",
+  "Largest file read whole": "Tamamı okunan en büyük dosya",
   "MB": "MB",
   "Markdown pages": "Markdown sayfaları",
   "Text and Markdown": "Metin ve Markdown",
   "Text files": "Metin dosyaları",
+  "The search shows the first {n} lines that hold it.": "Arama, onu içeren ilk {n} satırı gösterir.",
   "XML files": "XML dosyaları",
+  "counting the lines": "satırlar sayılıyor",
   "larger than {mb} MB": "{mb} MB'tan büyük",
-  "{n} lines": "{n} satır"
+  "line {line} of {count}": "satır {line} / {count}",
+  "{n} lines": "{n} satır",
+  "{n} lines hold the search": "Aramayı içeren satır: {n}"
 }
