@@ -3,7 +3,8 @@
 A viewer of files: Markdown pages, text and XML files, programs and libraries of Windows, and every
 image format the Windows it runs on
 decodes (BMP, PNG, JPEG, GIF, TIFF, ICO, and HEIF, AVIF, WebP or the RAW of cameras where their
-extensions are installed). Every format is a plugin, a DLL in the folder `plugins`.
+extensions are installed), with WebP, TGA, Netpbm, QOI, Radiance HDR and farbfeld where it has no
+decoder. Every format is a plugin, a DLL in the folder `plugins`.
 
 ## Start
 

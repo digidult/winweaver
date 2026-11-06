@@ -84,7 +84,8 @@ pub fn fallbacks(mime: &str) -> Vec<&'static str> {
 }
 
 /// The type of common files by their first bytes (`SNIFFED` of them, or all a shorter part
-/// has): PNG, JPEG, GIF, BMP, ICO, TIFF, WebP, a portable executable, ZIP, PDF, and texts of
+/// has): PNG, JPEG, GIF, BMP, ICO, TIFF, WebP, QOI, farbfeld, Radiance HDR, Netpbm, a portable
+/// executable, ZIP, PDF, and texts of
 /// UTF-8 or UTF-16 (with or without a mark) as XML, HTML or plain text. A text of UTF-16 without
 /// its mark says so in its `charset`.
 pub fn sniff(bytes: &[u8]) -> Option<&'static str> {
@@ -131,6 +132,22 @@ pub fn sniff(bytes: &[u8]) -> Option<&'static str> {
             None if header >= bytes.len() && header < 1 << 20 => return Some(PE),
             _ => {}
         }
+    }
+    if starts(b"qoif") {
+        return Some("image/qoi");
+    }
+    if starts(b"farbfeld") {
+        return Some("image/x-farbfeld");
+    }
+    if starts(b"#?RADIANCE") || starts(b"#?RGBE") {
+        return Some("image/vnd.radiance");
+    }
+    // Netpbm: P1 to P7 and white space.
+    if let [b'P', kind @ b'1'..=b'7', next, ..] = bytes
+        && next.is_ascii_whitespace()
+    {
+        let _ = kind;
+        return Some("image/x-portable-anymap");
     }
     if starts(b"PK\x03\x04") || starts(b"PK\x05\x06") {
         return Some("application/zip");
@@ -257,6 +274,15 @@ mod tests {
         assert_eq!(sniff(b"II*\0\x08\0\0\0"), Some("image/tiff"));
         assert_eq!(sniff(b"RIFF\0\0\0\0WEBPVP8 "), Some("image/webp"));
         assert_eq!(sniff(b"PK\x03\x04\x14\0"), Some("application/zip"));
+        assert_eq!(sniff(b"qoif\0\0\0\x05"), Some("image/qoi"));
+        assert_eq!(sniff(b"farbfeld\0\0"), Some("image/x-farbfeld"));
+        assert_eq!(sniff(b"#?RADIANCE\nFORMAT"), Some("image/vnd.radiance"));
+        assert_eq!(sniff(b"P6\n5 3\n255\n"), Some("image/x-portable-anymap"));
+        assert_eq!(
+            sniff(b"Pa text"),
+            Some("text/plain"),
+            "P and a letter is a text"
+        );
         assert_eq!(sniff(b"%PDF-1.7\n"), Some("application/pdf"));
         let mut exe = vec![0u8; 0x48];
         exe[..2].copy_from_slice(b"MZ");

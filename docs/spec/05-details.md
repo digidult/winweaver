@@ -704,7 +704,10 @@ change, read the section of the part it touches.
   extension, else the type of the first bytes), so a plugin's `open` may get a file of an
   extension it does not name; wv-binary then tries every description. The key of an item with a
   number of 10 or more shows its hexadecimal (`13 (0xD)`): a lookup by the id of a resource
-  matches the number before ` (`. wview has the eight languages of WinWeaver: its `ui.json`
+  matches the number before ` (`. wwrt re-exports the crate `image` (`wwrt::image`) with the
+  decoders of Rust of WebP, TGA, Netpbm, QOI, Radiance HDR and farbfeld (eframe takes it already
+  for PNG and BMP, and the features join): a plugin takes it from there, never as a dependency of
+  its own. wview has the eight languages of WinWeaver: its `ui.json`
   holds the texts of the shell of W# as WinWeaver translates them and its own. `plugin!` exports
   nothing with the feature `library` of a plugin (each declares `library = []`): the tests of
   wview take the plugins as libraries (`crate-type = ["cdylib", "rlib"]`) into one executable, and

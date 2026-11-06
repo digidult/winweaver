@@ -14,7 +14,7 @@ use wwrt::plugin::{Host, Request, Step, Tool, View};
 use wwrt::ww::i18n::{tr, trf};
 
 use crate::picture::Picture;
-use crate::wic::{self, Decoded, Kind, Options, Source};
+use crate::wic::{Decoded, Kind, Options, Source};
 
 /// The keys of the view while it has the focus.
 const KEYS: [Key; 19] = [
@@ -176,7 +176,7 @@ pub fn start(
     let _ = std::thread::Builder::new()
         .name("wv-image".to_owned())
         .spawn(move || {
-            let _ = send.send(wic::decode(&source, page, options));
+            let _ = send.send(crate::decode(&source, page, options));
         });
     receive
 }

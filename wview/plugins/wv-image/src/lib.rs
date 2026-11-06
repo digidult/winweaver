@@ -24,6 +24,7 @@ use wwrt::serde_json::Value;
 use wwrt::ww::i18n::{tr, trf};
 
 mod compose;
+mod other;
 mod picture;
 #[cfg(any(test, feature = "library"))]
 pub mod sample;
@@ -31,7 +32,18 @@ mod view;
 mod wic;
 
 use view::ImageView;
-use wic::{Options, Source};
+use wic::{Decoded, Options, Source};
+
+/// An image by the decoders of WIC, else by the ones of the crate image (`other`); the reason of
+/// WIC when neither decodes it.
+pub(crate) fn decode(
+    source: &Source,
+    page: Option<u32>,
+    options: Options,
+) -> Result<Decoded, String> {
+    wic::decode(source, page, options)
+        .or_else(|why| other::decode(source, options).map_err(|_| why))
+}
 
 /// The largest image decoded whole, in millions of pixels, by default and as the settings offer
 /// it; a larger one is decoded smaller.
@@ -96,7 +108,16 @@ impl Plugin for ImagePlugin {
         FORMATS.get_or_init(|| {
             // A thread of its own for COM: the main thread of the window keeps the apartment
             // winit chooses for it, which the list must not choose first.
-            let list = std::thread::spawn(wic::decoders).join().unwrap_or_default();
+            let mut list = std::thread::spawn(wic::decoders).join().unwrap_or_default();
+            let more: Vec<Format> = other::missing(&list)
+                .into_iter()
+                .map(|f| Format {
+                    name: f.name,
+                    extensions: f.extensions,
+                    mimes: f.mimes,
+                })
+                .collect();
+            list.extend(more);
             Box::leak(list.into_boxed_slice())
         })
     }

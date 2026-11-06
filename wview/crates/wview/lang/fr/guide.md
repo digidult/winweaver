@@ -35,6 +35,9 @@ et un clic sur l'une y mène.
 Tous les formats que décode le Windows de l'ordinateur : BMP, PNG, JPEG, GIF, TIFF, ICO, et HEIF,
 AVIF, WebP ou le RAW des appareils photo là où leurs extensions sont installées.
 
+Là où Windows n'a pas de décodeur, le module décode lui-même WebP, TGA, Netpbm (PBM, PGM, PPM, PAM),
+QOI, Radiance HDR et farbfeld (d'un WebP animé, la première image).
+
 - La molette zoome sous le pointeur, un glisser déplace l'image, un double clic passe de l'image
   entière à 100% et retour.
 - La barre : **Ajuster**, **100%**, **Zoom avant**, **Zoom arrière**, et **Précédent** et

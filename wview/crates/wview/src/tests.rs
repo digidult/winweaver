@@ -423,6 +423,25 @@ fn a_text_larger_than_the_setting_opens_in_parts() {
     assert!(status.contains("1 lines hold the search"), "{status}");
 }
 
+#[test]
+fn an_image_windows_does_not_decode_opens_by_the_crate_image() {
+    let dir = folder("tga");
+    let picture = wwrt::image::RgbaImage::from_fn(40, 30, |x, y| {
+        wwrt::image::Rgba([(x * 6) as u8, (y * 8) as u8, 90, 255])
+    });
+    picture
+        .save_with_format(dir.join("a.tga"), wwrt::image::ImageFormat::Tga)
+        .unwrap();
+    let mut window = window(english(wwrt::serde_json::Value::Null));
+    open(&mut window, dir.join("a.tga"));
+    let mut h = Harness::builder()
+        .with_size(egui::vec2(800.0, 600.0))
+        .build_eframe(|_| window);
+    decoded(&mut h);
+    let status = front(h.state()).1;
+    assert!(status.contains("40 x 30, TGA (image)"), "{status}");
+}
+
 /// A program of this Windows with a manifest and icons among its resources, read and never
 /// changed.
 pub(crate) fn notepad() -> PathBuf {

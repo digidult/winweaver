@@ -35,6 +35,9 @@ zu ihr.
 Jedes Format, das das Windows des Computers dekodiert: BMP, PNG, JPEG, GIF, TIFF, ICO sowie HEIF,
 AVIF, WebP oder das RAW von Kameras, wo ihre Erweiterungen installiert sind.
 
+Wo Windows keinen Decoder hat, dekodiert das Plugin WebP, TGA, Netpbm (PBM, PGM, PPM, PAM), QOI,
+Radiance HDR und farbfeld selbst (bei einem animierten WebP das erste Bild).
+
 - Das Mausrad zoomt am Zeiger, Ziehen verschiebt das Bild, ein Doppelklick wechselt zwischen dem
   ganzen Bild und 100%.
 - Die Leiste: **Einpassen**, **100%**, **Vergrößern**, **Verkleinern** sowie **Zurück** und

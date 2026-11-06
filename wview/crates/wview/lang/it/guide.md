@@ -33,6 +33,9 @@ spostano di lato. La ricerca elenca le righe con tutte le parole, e un clic su u
 Ogni formato che il Windows del computer decodifica: BMP, PNG, JPEG, GIF, TIFF, ICO, e HEIF, AVIF,
 WebP o il RAW delle fotocamere dove le loro estensioni sono installate.
 
+Dove Windows non ha un decodificatore, il plugin decodifica da sé WebP, TGA, Netpbm (PBM, PGM, PPM,
+PAM), QOI, Radiance HDR e farbfeld (di un WebP animato, il primo fotogramma).
+
 - La rotellina ingrandisce sotto il puntatore, un trascinamento sposta l'immagine, un doppio clic
   passa dall'immagine intera al 100% e viceversa.
 - La barra: **Adatta**, **100%**, **Ingrandisci**, **Riduci**, e **Precedente** e **Successivo**,

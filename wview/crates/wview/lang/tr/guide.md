@@ -32,6 +32,9 @@ içeren satırları listeler ve birine tıklamak oraya gider.
 Bilgisayardaki Windows'un çözdüğü her biçim: BMP, PNG, JPEG, GIF, TIFF, ICO ve uzantıları
 kuruluysa HEIF, AVIF, WebP veya fotoğraf makinelerinin RAW dosyaları.
 
+Windows'ta kod çözücü olmayan yerde eklenti WebP, TGA, Netpbm (PBM, PGM, PPM, PAM), QOI, Radiance
+HDR ve farbfeld'i kendisi çözer (hareketli bir WebP'nin ilk karesi).
+
 - Tekerlek işaretçinin altında yakınlaştırır, sürükleme görüntüyü kaydırır, çift tıklama tüm
   görüntü ile %100 arasında geçiş yapar.
 - Çubuk: **Sığdır**, **%100**, **Yakınlaştır**, **Uzaklaştır** ve aynı klasörün görüntüleri için

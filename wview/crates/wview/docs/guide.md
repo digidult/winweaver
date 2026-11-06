@@ -33,6 +33,9 @@ search lists the lines that hold every word, and a click on one goes to it.
 Every format the Windows of the computer decodes: BMP, PNG, JPEG, GIF, TIFF, ICO, and HEIF, AVIF,
 WebP or the RAW of cameras where their extensions are installed.
 
+Where Windows has no decoder, the plugin decodes WebP, TGA, Netpbm (PBM, PGM, PPM, PAM), QOI,
+Radiance HDR and farbfeld itself (the first frame of an animated WebP).
+
 - The wheel zooms at the pointer, a drag moves the image, a double click goes between the whole
   image and 100%.
 - The bar: **Fit**, **100%**, **Zoom in**, **Zoom out**, and **Previous** and **Next**, the images

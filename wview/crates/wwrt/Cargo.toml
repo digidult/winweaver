@@ -22,6 +22,9 @@ egui_kittest = { version = "0.36", features = ["eframe", "wgpu", "snapshot"], op
 libloading = "0.8"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# The decoders of the formats WIC may lack, for the plugin of images (wwrt::image), all of Rust;
+# eframe takes the crate already for PNG and BMP.
+image = { version = "0.25", default-features = false, features = ["webp", "tga", "pnm", "qoi", "hdr", "ff"] }
 
 [target.'cfg(windows)'.dependencies]
 # Re-exported for the plugins (wwrt::windows): WIC of the images with their metadata (a

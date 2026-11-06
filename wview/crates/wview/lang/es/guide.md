@@ -34,6 +34,9 @@ ella.
 Todos los formatos que decodifica el Windows del equipo: BMP, PNG, JPEG, GIF, TIFF, ICO, y HEIF,
 AVIF, WebP o el RAW de las cámaras donde sus extensiones están instaladas.
 
+Donde Windows no tiene decodificador, el complemento decodifica él mismo WebP, TGA, Netpbm (PBM,
+PGM, PPM, PAM), QOI, Radiance HDR y farbfeld (de un WebP animado, el primer fotograma).
+
 - La rueda hace zoom en el puntero, arrastrar mueve la imagen, un doble clic alterna entre la
   imagen entera y el 100%.
 - La barra: **Ajustar**, **100%**, **Acercar**, **Alejar**, y **Anterior** y **Siguiente**, las

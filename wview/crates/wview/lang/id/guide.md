@@ -33,6 +33,9 @@ menampilkan baris yang memuat semua kata, dan klik pada salah satunya menuju ke 
 Semua format yang didekode Windows di komputer ini: BMP, PNG, JPEG, GIF, TIFF, ICO, serta HEIF,
 AVIF, WebP atau RAW kamera bila ekstensinya terpasang.
 
+Bila Windows tidak punya dekoder, plugin sendiri mendekode WebP, TGA, Netpbm (PBM, PGM, PPM, PAM),
+QOI, Radiance HDR, dan farbfeld (dari WebP animasi, bingkai pertamanya).
+
 - Roda memperbesar di bawah penunjuk, menyeret menggeser gambar, klik ganda berpindah antara
   seluruh gambar dan 100%.
 - Bilah: **Sesuaikan**, **100%**, **Perbesar**, **Perkecil**, serta **Sebelumnya** dan

@@ -4,12 +4,13 @@
 //! with the egui of the program. std is the `std-<hash>.dll` of the toolchain beside it.
 //!
 //! A program or a plugin depends on wwrt alone and takes every crate wwrt holds through it
-//! (`wwrt::ww`, `wwrt::egui`, `wwrt::serde`, `wwrt::serde_json`, `wwrt::windows`): a dependency
+//! (`wwrt::ww`, `wwrt::egui`, `wwrt::serde`, `wwrt::serde_json`, `wwrt::windows`, `wwrt::image`): a dependency
 //! of its own on one of them would be a second copy of that crate, which rustc refuses. A derive
 //! of serde names its crate: `#[serde(crate = "wwrt::serde")]`.
 
 #[cfg(feature = "kittest")]
 pub use egui_kittest;
+pub use image;
 pub use serde;
 pub use serde_json;
 #[cfg(windows)]

@@ -257,6 +257,12 @@ and:
   (`IWICBitmapCodecInfo::GetMimeTypes`), and an image of bytes in memory (an icon inside a
   program) decodes through a stream of WIC on them (`IWICStream::InitializeFromMemory`); such an
   image steps through no folder.
+- **The decoders of the crate `image`** (`other.rs`, through `wwrt::image`, of Rust alone: WebP,
+  TGA, Netpbm, QOI, Radiance HDR, farbfeld) take an image WIC does not decode: the formats whose
+  extensions no decoder of WIC names join the formats of the plugin, and a file or bytes WIC
+  refuses go to them by the extension, else by the first bytes. Such an image is read whole,
+  decoded within the limits of the crate (512 MB of pixels), made smaller to the budget and kept
+  with its levels; an animation of WebP shows its first frame.
 - **The orientation of EXIF** (`System.Photo.Orientation` of the metadata of WIC, a setting) turns
   the pixels in memory (`Picture::oriented`, the eight values).
 - **The keys of the zoom**: + and - by the steps of browsers (`view::LEVELS`), 0 fits, 1 to 4 show

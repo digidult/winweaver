@@ -1584,10 +1584,22 @@ checksum = "e6506c6c10786659413faa717ceebcb8f70731c0a60cbae39795fdf114519c1a"
 dependencies = [
  "bytemuck",
  "byteorder-lite",
+ "image-webp",
  "moxcms",
  "num-traits",
  "png",
+ "qoi",
  "tiff",
+]
+
+[[package]]
+name = "image-webp"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e031e8e3d94711a9ccb5d6ea357439ef3dcbed361798bd4071dc4d9793fbe22f"
+dependencies = [
+ "byteorder-lite",
+ "quick-error",
 ]
 
 [[package]]
@@ -2611,6 +2623,15 @@ name = "pxfm"
 version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d55d956fa96f5ec02be2e13af0e20391a5aa83d6a074e3ad368959d0fab299ea"
+
+[[package]]
+name = "qoi"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f6d64c71eb498fe9eae14ce4ec935c555749aef511cca85b5568910d6e48001"
+dependencies = [
+ "bytemuck",
+]
 
 [[package]]
 name = "quick-error"
@@ -4226,7 +4247,7 @@ checksum = "3ad82d2a33cdc9674dc7465672f271e096168fcdbe0f799d9e6db8c5892679dc"
 
 [[package]]
 name = "wv-binary"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "sha2",
  "wwrt",
@@ -4234,28 +4255,28 @@ dependencies = [
 
 [[package]]
 name = "wv-hello"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "wwrt",
 ]
 
 [[package]]
 name = "wv-image"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "wwrt",
 ]
 
 [[package]]
 name = "wv-text"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "wwrt",
 ]
 
 [[package]]
 name = "wview"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "wv-binary",
  "wv-image",
@@ -4269,7 +4290,7 @@ version = "1.0.0"
 
 [[package]]
 name = "ww"
-version = "0.40.0"
+version = "0.41.0"
 dependencies = [
  "eframe",
  "js-sys",
@@ -4290,7 +4311,7 @@ dependencies = [
 
 [[package]]
 name = "ww-base"
-version = "0.40.0"
+version = "0.41.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -4300,9 +4321,10 @@ dependencies = [
 
 [[package]]
 name = "wwrt"
-version = "0.11.0"
+version = "0.12.0"
 dependencies = [
  "egui_kittest",
+ "image",
  "libloading",
  "serde",
  "serde_json",
