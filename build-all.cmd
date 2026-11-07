@@ -1,13 +1,12 @@
 @echo off
 rem build-all.cmd: what CI makes, made on this computer (AGENTS.md, section 5).
 rem
-rem   build-all.cmd [check] [screenshots] [presentation] [all] [noweb] [nowview]
+rem   build-all.cmd [check] [screenshots] [presentation] [all] [noweb]
 rem
-rem Without options: the release builds of WinWeaver, wedit and wwlite, wwlite for the browser,
-rem and the four archives of a release in the folder dist, each with its folder inside as CI zips it:
-rem WinWeaver-<version>.zip, wedit-<version>.zip, wwlite-<version>.zip, wwlite-web-<version>.zip;
-rem then wview, the viewer with plugins (docs/plugins.md), and its SDK: wview-<its version>.zip and
-rem wview-sdk-<its version>.zip.
+rem Without options: W# of the branch main of supakov/ww (cargo update), the release builds of
+rem WinWeaver and wwlite, wwlite for the browser, and the three archives of a release in the folder
+rem dist, each with its folder inside as CI zips it: WinWeaver-<version>.zip, wwlite-<version>.zip,
+rem wwlite-web-<version>.zip. wview and wedit are built in supakov/wview.
 rem
 rem   check         first the checks of a commit: the format, the three clippy runs, the tests of
 rem                 the workspace and of wwlite alone, the check of the catalog
@@ -16,16 +15,13 @@ rem   presentation  the slides of the screenshots, dist\presentation\WinWeaver.p
 rem                 Python packages python-pptx and pillow); takes the screenshots too
 rem   all           check, screenshots and presentation
 rem   noweb         without the browser edition (no wasm32, no wasm-bindgen)
-rem   nowview       without wview and its SDK
 rem
 rem What stays with CI or a VM: the tests that change Windows (cargo test -p winweaver-win -- --ignored,
 rem as administrator), the smoke test of the window and of the command line, which start the program.
 rem
 rem The tools it takes, each from a variable or else from the PATH:
 rem   WW_CARGO         cargo, for example a script that runs it on half of the processor
-rem   WW_PYTHON        Python 3 (else py -3, else python); single.py makes the page of the browser,
-rem                    pack.py the SDK of wview
-rem   WW_RUSTC         rustc, which names the std-<hash>.dll wview takes along
+rem   WW_PYTHON        Python 3 (else py -3, else python); single.py makes the page of the browser
 rem   WW_WASM_BINDGEN  wasm-bindgen of the version Cargo.lock names; else target\tools keeps the
 rem                    binary of its release, downloaded once from GitHub as CI downloads it,
 rem                    its SHA-256 checked
@@ -45,13 +41,11 @@ set "DO_CHECK="
 set "DO_SHOTS="
 set "DO_SLIDES="
 set "DO_WEB=1"
-set "DO_WVIEW=1"
-set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 :args
 if "%~1"=="" goto args_done
 if "%~1"=="/?" goto help
 if /i "%~1"=="help" goto help
-if /i "%~1"=="check" (set "DO_CHECK=1") else if /i "%~1"=="screenshots" (set "DO_SHOTS=1") else if /i "%~1"=="presentation" (set "DO_SHOTS=1" & set "DO_SLIDES=1") else if /i "%~1"=="all" (set "DO_CHECK=1" & set "DO_SHOTS=1" & set "DO_SLIDES=1") else if /i "%~1"=="noweb" (set "DO_WEB=") else if /i "%~1"=="nowview" (set "DO_WVIEW=") else goto usage
+if /i "%~1"=="check" (set "DO_CHECK=1") else if /i "%~1"=="screenshots" (set "DO_SHOTS=1") else if /i "%~1"=="presentation" (set "DO_SHOTS=1" & set "DO_SLIDES=1") else if /i "%~1"=="all" (set "DO_CHECK=1" & set "DO_SHOTS=1" & set "DO_SLIDES=1") else if /i "%~1"=="noweb" (set "DO_WEB=") else goto usage
 shift
 goto args
 :args_done
@@ -90,7 +84,6 @@ if errorlevel 1 (
 
 set "PY="
 if defined DO_WEB set "PY=1"
-if defined DO_WVIEW set "PY=1"
 if defined DO_SLIDES set "PY=1"
 if not defined PY goto python_done
 set "PY=%WW_PYTHON%"
@@ -173,24 +166,13 @@ goto failed
 echo wasm-bindgen %WBG_V%: %WBG%
 :bindgen_done
 
-if not defined DO_WVIEW goto rustc_done
-rem rustc names the std of wview: its sysroot holds std-<hash>.dll, its host the kind of toolchain.
-set "RUSTC_CMD=rustc"
-if defined WW_RUSTC set "RUSTC_CMD=%WW_RUSTC%"
-set "RUSTC_VERSION="
-for /f "delims=" %%v in ('call "%RUSTC_CMD%" -V 2^>nul') do set "RUSTC_VERSION=%%v"
-if not defined RUSTC_VERSION (
-  echo rustc does not start: set WW_RUSTC, or leave wview out with nowview.
-  goto failed
-)
-set "SYSROOT="
-for /f "delims=" %%s in ('call "%RUSTC_CMD%" --print sysroot') do set "SYSROOT=%%s"
-set "RHOST="
-for /f "tokens=2" %%h in ('call "%RUSTC_CMD%" -vV ^| findstr /b "host:"') do set "RHOST=%%h"
-set "WVIEW_VERSION="
-for /f "tokens=3" %%a in ('findstr /b /c:"version = " wview\Cargo.toml') do if not defined WVIEW_VERSION set "WVIEW_VERSION=%%~a"
-echo %RUSTC_VERSION%, host %RHOST%; wview %WVIEW_VERSION%
-:rustc_done
+rem ---- W# of the branch main -------------------------------------------------------------------
+
+rem W# is a git dependency of the branch main of supakov/ww (private: cargo fetches it with git and
+rem its credentials); its last commit comes into Cargo.lock before every build.
+call :step "W# of the branch main"
+call "%CARGO_CMD%" update -p ww -p ww-base
+if errorlevel 1 goto failed
 
 rem ---- The checks of a commit ------------------------------------------------------------------
 
@@ -209,16 +191,6 @@ call :step "Clippy of wwlite for the browser"
 call "%CARGO_CMD%" clippy --locked -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown -- -D warnings
 if errorlevel 1 goto failed
 :check_done
-if not defined DO_CHECK goto wcheck_done
-if not defined DO_WVIEW goto wcheck_done
-call :step "Format and clippy of wview"
-pushd wview
-call "%CARGO_CMD%" fmt --all --check
-if errorlevel 1 (popd & goto failed)
-call "%CARGO_CMD%" clippy --locked --workspace --all-targets -- -D warnings
-if errorlevel 1 (popd & goto failed)
-popd
-:wcheck_done
 
 rem ---- The tests, with the screenshots when asked ----------------------------------------------
 
@@ -236,13 +208,6 @@ if errorlevel 1 goto failed
 call :step "Tests of wwlite alone"
 call "%CARGO_CMD%" test --locked -p wwlite
 if errorlevel 1 goto failed
-if not defined DO_WVIEW goto wtests_done
-call :step "Tests of wview"
-pushd wview
-call "%CARGO_CMD%" test --locked --workspace
-if errorlevel 1 (popd & goto failed)
-popd
-:wtests_done
 set "WINWEAVER_SCREENSHOTS="
 if not defined DO_CHECK goto tests_done
 call :step "The check of the catalog"
@@ -268,11 +233,6 @@ copy /y package\README.md "%DIST%\WinWeaver\README.md" >nul || goto failed
 xcopy /e /i /q /y data\presets "%DIST%\WinWeaver\profiles" >nul || goto failed
 xcopy /e /i /q /y package\lang "%DIST%\WinWeaver\lang" >nul || goto failed
 xcopy /e /i /q /y agents "%DIST%\WinWeaver\agents" >nul || goto failed
-
-call :fresh "%DIST%\wedit" || goto failed
-copy /y target\release\wedit.exe "%DIST%\wedit\" >nul || goto failed
-copy /y package-wedit\README.md "%DIST%\wedit\README.md" >nul || goto failed
-xcopy /e /i /q /y package-wedit\lang "%DIST%\wedit\lang" >nul || goto failed
 
 call :fresh "%DIST%\wwlite" || goto failed
 mkdir "%DIST%\wwlite\lang\de"
@@ -300,66 +260,10 @@ if errorlevel 1 goto failed
 copy /y package-wwlite\README.md "%DIST%\wwlite-web\README.md" >nul || goto failed
 :web_done
 
-if not defined DO_WVIEW goto wview_done
-rem wview is built in the tree of its release, where every crate is inside the root of the
-rem workspace: a plugin built in a copy of that tree, the SDK, loads into it (docs/plugins.md).
-rem The tree stays in wview\target, a short path, since dlltool of the toolchain gnu stops at a
-rem path of more than 260 characters.
-call :step "Release build of wview in the tree of its release"
-set "TREE=%CD%\wview\target\tree"
-call %PY% wview\sdk\pack.py . "%TREE%" "%RUSTC_VERSION%"
-if errorlevel 1 goto failed
-pushd "%TREE%"
-call "%CARGO_CMD%" build --release --workspace
-if errorlevel 1 (popd & goto failed)
-popd
-call :step "The folders of wview and of its SDK"
-set "WBIN=%TREE%\target\release"
-call :fresh "%DIST%\wview" || goto failed
-mkdir "%DIST%\wview\plugins"
-copy /y "%WBIN%\wview.exe" "%DIST%\wview\" >nul || goto failed
-copy /y "%WBIN%\wwrt.dll" "%DIST%\wview\" >nul || goto failed
-copy /y "%WBIN%\wv_text.dll" "%DIST%\wview\plugins\" >nul || goto failed
-copy /y "%WBIN%\wv_image.dll" "%DIST%\wview\plugins\" >nul || goto failed
-copy /y "%WBIN%\wv_binary.dll" "%DIST%\wview\plugins\" >nul || goto failed
-rem The example of the stable interface, a plugin in C (docs/plugins.md 6.10), built with the
-rem compiler of Visual Studio where vswhere finds one; a computer without it leaves it out.
-set "VCVARS="
-if exist "%VSWHERE%" for /f "usebackq delims=" %%v in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "VCVARS=%%v\VC\Auxiliary\Build\vcvars64.bat"
-if not defined VCVARS goto stable_none
-if not exist "%VCVARS%" goto stable_none
-set "STABLE_OBJ=%TEMP%\wv-mandelbrot-%RANDOM%"
-mkdir "%STABLE_OBJ%"
-cmd /c ""%VCVARS%" >nul && cl /nologo /LD /O2 /MT /W3 /std:c11 /I wview\stable wview\stable\wv-mandelbrot\mandelbrot.c /Fo"%STABLE_OBJ%\\" /Fe"%DIST%\wview\plugins\wv_mandelbrot.dll"" || goto failed
-rmdir /s /q "%STABLE_OBJ%"
-goto stable_done
-:stable_none
-echo The example of the stable interface is left out: no compiler of Visual Studio here.
-:stable_done
-mkdir "%DIST%\wview\examples"
-copy /y wview\stable\wv-mandelbrot\seahorse.mandel "%DIST%\wview\examples\" >nul || goto failed
-copy /y wview\package\README.md "%DIST%\wview\README.md" >nul || goto failed
-rem The std-<hash>.dll wview.exe imports, from the sysroot of rustc.
-set "STD_NAME="
-for /f "delims=" %%n in ('call %PY% wview\sdk\imports.py --std "%WBIN%\wview.exe"') do set "STD_NAME=%%n"
-if not defined STD_NAME goto failed
-call :sysroot_dll "%STD_NAME%" || goto failed
-rem The toolchain gnu links the unwinder of MinGW: its two DLLs go along (docs/plugins.md).
-if "%RHOST:gnu=%"=="%RHOST%" goto wview_gnu_done
-call :sysroot_dll libgcc_s_seh-1.dll || goto failed
-call :sysroot_dll libwinpthread-1.dll || goto failed
-:wview_gnu_done
-call %PY% wview\sdk\pack.py . "%DIST%\wview-sdk" "%RUSTC_VERSION%"
-if errorlevel 1 goto failed
-:wview_done
-
 call :step "The archives"
 call :zip WinWeaver || goto failed
-call :zip wedit || goto failed
 call :zip wwlite || goto failed
 if defined DO_WEB call :zip wwlite-web || goto failed
-if defined DO_WVIEW call :zipw wview || goto failed
-if defined DO_WVIEW call :zipw wview-sdk || goto failed
 
 if not defined DO_SLIDES goto slides_done
 call :step "The presentation"
@@ -371,7 +275,6 @@ if errorlevel 1 goto failed
 echo.
 echo Done at %TIME%: WinWeaver %VERSION%, commit %COMMIT%, in %DIST%
 for %%f in ("%DIST%\*-%VERSION%.zip") do echo   %%~nxf  %%~zf bytes
-if defined DO_WVIEW for %%f in ("%DIST%\wview-*%WVIEW_VERSION%.zip") do echo   %%~nxf  %%~zf bytes
 if defined DO_SHOTS echo   screenshots\
 if defined DO_SLIDES echo   presentation\WinWeaver.pptx
 if defined DIRTY echo The working tree has changes that are not committed: the programs name commit %COMMIT% all the same.
@@ -397,20 +300,19 @@ if defined WW_PAUSE pause
 exit /b 0
 
 :options
-echo build-all.cmd [check] [screenshots] [presentation] [all] [noweb] [nowview]
+echo build-all.cmd [check] [screenshots] [presentation] [all] [noweb]
 echo.
-echo Without options: the release builds of WinWeaver, wedit and wwlite, wwlite for the browser and
-echo the archives of a release in dist, the version in their names: WinWeaver, wedit, wwlite,
-echo wwlite-web; then wview and its SDK, wview and wview-sdk with the version of wview.
+echo Without options: W# of the branch main, the release builds of WinWeaver and wwlite, wwlite for
+echo the browser and the archives of a release in dist, the version in their names: WinWeaver,
+echo wwlite, wwlite-web. wview and wedit are built in supakov/wview.
 echo.
 echo   check         first the format, the three clippy runs, the tests and the check of the catalog
 echo   screenshots   the tests draw the window into dist\screenshots
 echo   presentation  dist\presentation\WinWeaver.pptx of the screenshots (python-pptx, pillow)
 echo   all           check, screenshots and presentation
 echo   noweb         without the browser edition
-echo   nowview       without wview and its SDK
 echo.
-echo WW_CARGO, WW_PYTHON, WW_RUSTC and WW_WASM_BINDGEN name the tools when the PATH has none of them.
+echo WW_CARGO, WW_PYTHON and WW_WASM_BINDGEN name the tools when the PATH has none of them.
 exit /b 0
 
 rem ---- Subroutines -----------------------------------------------------------------------------
@@ -424,23 +326,6 @@ rem An empty folder: the one of an earlier run removed first.
 :fresh
 if exist "%~1" rmdir /s /q "%~1"
 mkdir "%~1"
-exit /b %ERRORLEVEL%
-
-rem A file of the sysroot of rustc (a name or a pattern) into the folder of wview.
-:sysroot_dll
-set "FOUND="
-for /f "delims=" %%f in ('dir /s /b "%SYSROOT%\%~1" 2^>nul') do if not defined FOUND set "FOUND=%%f"
-if not defined FOUND (
-  echo %~1 is not in the sysroot of rustc.
-  exit /b 1
-)
-copy /y "%FOUND%" "%DIST%\wview\" >nul
-exit /b %ERRORLEVEL%
-
-rem dist\<name>-<version of wview>.zip of the folder dist\<name>.
-:zipw
-if exist "%DIST%\%~1-%WVIEW_VERSION%.zip" del /q "%DIST%\%~1-%WVIEW_VERSION%.zip"
-"%TAR%" -a -c -f "%DIST%\%~1-%WVIEW_VERSION%.zip" -C "%DIST%" "%~1"
 exit /b %ERRORLEVEL%
 
 rem dist\<name>-<version>.zip of the folder dist\<name>, the folder inside as the release has it.

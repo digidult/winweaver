@@ -4,7 +4,7 @@ screenshots CI draws (the artifact `screenshots` of the Windows job) and of thei
     python docs/presentation/make_presentation.py <screenshots folder> <output .pptx> [version]
 
 Needs python-pptx and Pillow (`pip install python-pptx pillow`). The screenshots are the PNG files
-of `screenshots_of_the_window` (winweaver-ui), of wedit and of wwlite, 1440 x 900 pixels at one
+of `screenshots_of_the_window` (winweaver-ui) and of wwlite, 1440 x 900 pixels at one
 pixel a point; a fragment is a box in those pixels. English only for now; another language is a
 copy of SLIDES with its texts.
 """

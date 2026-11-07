@@ -2,7 +2,7 @@
 
 For agents and developers: where things are, what to read first, which rules apply, where the
 information that changes is.
-Updated with every change of structure, commands or task status. Last update: 05.11.2026.
+Updated with every change of structure, commands or task status. Last update: 07.11.2026.
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -14,8 +14,8 @@ WinWeaver is a portable editor of Windows 11 installation profiles: it builds `a
 profiles, reads the settings of this PC natively, applies them natively or through generated stand-alone
 scripts, imports ADMX policy templates as catalogs, edits the registry, registry files and users files, and
 serves an MCP server. It is written in Rust with eframe (egui + glow and wgpu + winit) for Windows 10 and
-11, one executable with data folders next to it, on its own framework W# (`ww`), which also carries the
-text editor wedit.
+11, one executable with data folders next to it, on the framework W# (`ww`, supakov/ww), a git
+dependency of its branch `main`; W# also carries wview and the text editor wedit (supakov/wview).
 
 ## 2. What to read first
 
@@ -28,9 +28,8 @@ text editor wedit.
 | Crates, modules, threads, build | `docs/spec/04-architecture.md` |
 | Use or change the MCP server | `crates/winweaver-mcp/src/lib.rs`, `tools/mod.rs` (the table of the tools), then `agents/skills/winweaver/SKILL.md` |
 | Change what an AI agent or the archive gets | `agents/README.md`, `package/README.md` |
-| Write a program on W#, or change the shell of the window | `docs/ww.md`, then `crates/ww/src/shell/mod.rs` (the trait `App`), `crates/wedit` (the example) |
-| Change wedit | `crates/wedit/src/app.rs`, `package-wedit/README.md` |
-| Plugins of W#, wview | `docs/plugins.md` (the study, its measurements, the design of wview), then `wview/README.md` and `wview/crates/wwrt/src/plugin.rs` (the interface of the plugins) |
+| Change W#, the framework of the window, or its plugins | the repository supakov/ww (its AGENTS.md, `docs/ww.md`, `docs/plugins.md`); a change of W# is checked against WinWeaver before its pull request (section 5) |
+| Change wview or wedit | the repository supakov/wview (its AGENTS.md) |
 | Change wwlite, the light edition | `crates/wwlite`, the feature `full` of `crates/winweaver-ui` (`cfg(feature = "full")` marks what wwlite leaves out), `package-wwlite/README.md`; the browser edition: `docs/wasm.md`, `crates/wwlite/web`, `crates/ww/src/web.rs` and `store.rs` |
 
 The information that changes:
@@ -53,14 +52,13 @@ The information that changes:
 │                          .gitattributes (LF, CRLF for .cmd, .bat, .ps1)
 ├── build-all.cmd          what CI makes, on a computer of Windows (section 5)
 ├── .github/workflows/ci.yml  CI (section 5)
-├── crates/                ww-base and ww (W#), wedit, winweaver-core, winweaver-win, winweaver-mcp,
-│                          winweaver-ui, winweaver (the executable), wwlite
+├── crates/                winweaver-core, winweaver-win, winweaver-mcp, winweaver-ui, winweaver (the
+│                          executable), wwlite; W# comes from supakov/ww
 ├── data/                  catalog, presets, resources, templates, lang, themes, docs, reference
 ├── agents/                what an AI agent gets in the archive
-├── package/, package-wedit/, package-wwlite/   what the archives add
-├── wview/                 the viewer with plugins, a workspace of its own (docs/plugins.md)
+├── package/, package-wwlite/   what the archives add
 └── docs/                  spec/ (the specification), releases/ (the history), todo/ (the plans),
-                           ww.md, wasm.md, plugins.md, presentation/
+                           wasm.md, presentation/
 ```
 
 Every folder and module: `docs/spec/04-architecture.md`, section 10. Next to the executable at run time
@@ -84,8 +82,8 @@ Every folder and module: `docs/spec/04-architecture.md`, section 10. Next to the
    carries them.
 4. Dependencies: popular, well known, open source Rust crates that need no extra DLL next to the executable.
    The executable and its configuration stay portable: nothing is installed, nothing is written outside the
-   program folder and the system temp folder. The one exception is a program with plugins (wview): its
-   executable comes with `wwrt.dll`, `std-<hash>.dll` and the folder `plugins` (docs/plugins.md).
+   program folder and the system temp folder. W# is a git dependency of the branch `main` of
+   supakov/ww (`[workspace.dependencies]`), taken at its last commit before a build.
 5. No PowerShell inside the program: reading and applying on this PC use the Windows API (the native
    elevated apply); PowerShell appears only in the generated answer file and the stand-alone scripts. The
    program never runs a script itself.
@@ -114,7 +112,7 @@ Every folder and module: `docs/spec/04-architecture.md`, section 10. Next to the
 12. The documents hold the current state. The history of the changes is in `docs/releases/` (one file a
     version, written with it); what is planned is in `docs/todo/` (a file a subject), and a task done
     leaves `docs/todo/` for the lasting documentation: the specification (`docs/spec/`, with the facts
-    of `05-details.md`), `docs/ww.md`, `docs/plugins.md`, `docs/wasm.md`, the guides.
+    of `05-details.md`), `docs/wasm.md`, the guides.
 
 ## 5. Commands
 
@@ -144,7 +142,7 @@ wasm-bindgen --target web --no-typescript --out-dir dist-web/wwlite-web target/w
 On a computer of Windows, `build-all.cmd` of the root makes what CI makes:
 the release builds of the workspace and of wwlite alone, wwlite for the browser (wasm-bindgen of the
 version of `Cargo.lock`, `single.py`), the folders of the step Package and the four archives of a
-release, `dist/WinWeaver-<version>.zip`, `wedit-`, `wwlite-` and `wwlite-web-<version>.zip`, each
+release, `dist/WinWeaver-<version>.zip`, `wwlite-` and `wwlite-web-<version>.zip`, each
 with its folder inside as the job `release` zips it (`tar.exe` of Windows). `check` runs the checks of
 a commit first (the format, the three clippy runs, both test runs, `--check-catalog`), `screenshots`
 the tests with `WINWEAVER_SCREENSHOTS` set to `dist/screenshots`, `presentation` the slides into
@@ -156,28 +154,14 @@ found before the first long step. It never runs the tests that change Windows an
 program only for `--check-catalog`; the smoke tests of the window and of the command line stay in
 CI. A change of the steps Package or build-web of `ci.yml` changes `build-all.cmd` too. The file keeps
 CRLF (`.gitattributes`): cmd finds its labels by the offsets of the lines and reads a running script
-from the disk again, so it is never edited while it runs. Then wview and its SDK, as CI makes them:
-`dist/wview` (wview.exe, wwrt.dll, the `std-<hash>.dll` of the sysroot of `WW_RUSTC`, with the
-toolchain gnu `libgcc_s_seh-1.dll` and `libwinpthread-1.dll` too, the plugins, README),
-`dist/wview-sdk` (`wview/sdk/pack.py`) and their archives with the version of wview; `check` and
-`screenshots` take the checks and the tests of wview along, `nowview` leaves wview out.
+from the disk again, so it is never edited while it runs. It takes W# of the branch `main` first
+(`cargo update -p ww -p ww-base`).
 
 ```bat
 build-all.cmd
 build-all.cmd check
 build-all.cmd all
 build-all.cmd noweb
-```
-
-The workspace of wview (`wview/`, docs/plugins.md) is checked and built in its folder, with the same
-rules before every commit that touches it or the crates of W# it uses:
-
-```bash
-cd wview
-cargo fmt --all
-cargo clippy --workspace --all-targets -- -D warnings
-cargo test --workspace
-cargo build --release --workspace
 ```
 
 Before every commit, on the computer of the developer, the
@@ -202,18 +186,16 @@ CI builds only releases:
    builds the parts of its task alone. `gh workflow run ci.yml --ref <branch>` (or Actions, CI, Run
    workflow); `-f checks=false` leaves out the Linux job (its checks ran locally), `-f package=false`
    the release builds, the archives and their checks (a run for the tests and the screenshots);
-   `-f windows=false` stops after the Linux job, `-f web=false` leaves out the browser edition,
-   `-f winweaver=false` the Windows job of WinWeaver and the browser edition (a run of wview alone),
-   `-f wview=false` the Windows job of wview;
+   `-f windows=false` stops after the Linux job, `-f web=false` leaves out the browser edition;
    `gh run list --branch <branch> --workflow ci.yml` finds the run. It is the place of the tests that
    change Windows, the screenshots of the window and the archives for an acceptance.
 3. Pushes, pull requests and merges run nothing. A newer run of the same branch cancels the older one.
-4. The Linux job comes first and the other jobs only after it, side by side: the Windows job of
-   WinWeaver (`build-windows`), the Windows job of wview (`build-wview`: its clippy and tests, the
-   release in the tree of its release, the archives, the template of the SDK) and the job
-   `build-web` (Ubuntu: wwlite for the browser, the artifact `wwlite-web-<version>`). A release
-   waits for the first and the last. A whole run took 42 minutes on 04.11.2026 (WinWeaver 41,
-   wview 26), on the runner of 2 processors a private repository gets.
+4. The Linux job comes first and the other jobs only after it, side by side: the Windows job
+   (`build-windows`) and the job `build-web` (Ubuntu: wwlite for the browser, the artifact
+   `wwlite-web-<version>`). A release waits for both. A whole run took 41 minutes on 04.11.2026,
+   on the runner of 2 processors a private repository gets. Every job fetches W# (supakov/ww, a
+   private repository) with the token of the secret `WW_TOKEN` (a token that reads supakov/ww; the
+   mirror needs it too) and takes the last commit of `main`.
 5. The mirror: when the Actions minutes of digidult/winweaver are used up, its run fails in a few
    seconds with the annotation "The job was not started because recent account payments have failed
    or your spending limit needs to be increased". Then the same commit runs in the private mirror
@@ -268,7 +250,6 @@ Before a change of a part, read its section of `docs/spec/05-details.md`:
 | The MCP server and the logs | [5](docs/spec/05-details.md#5-the-mcp-server-and-the-logs) |
 | The window and W# | [6](docs/spec/05-details.md#6-the-window-and-w) |
 | wwlite and the browser edition | [7](docs/spec/05-details.md#7-wwlite-and-the-browser-edition) |
-| wview and the plugins | [8](docs/spec/05-details.md#8-wview-and-the-plugins) |
 | Tests, CI, builds, archives and the command line | [9](docs/spec/05-details.md#9-tests-ci-builds-archives-and-the-command-line) |
 
 ## 7. State and decisions
@@ -280,19 +261,17 @@ Before a change of a part, read its section of `docs/spec/05-details.md`:
 | Windows API | The registry with the permissions of keys, the elevation, the locales and layouts, the language of Windows, the local accounts, DISM, the package API, the native apply with its backup and undo, the default user profile, the users of a users file |
 | Window | WinWeaver on W#: tabs, menu, command bar of each tab, navigation, search per tab, the painted tree and lists, detail panel, forms, check, build, diff tab, bookmarks, Markdown pages, This PC, registry, registry files, catalogs and their editor, users files, MCP tab, settings, nine languages, drafts, restored tabs, log, themes with fonts and icons in colour |
 | MCP server | stdio and HTTP, 36 tools, 4 resources, modes, journal, token, configuration files; tests of both transports |
-| W# and wedit | The crates `ww-base` and `ww`, the editor `wedit` with its archive, `docs/ww.md` |
+| W#, wview, wedit | In their repositories since 07.11.2026: W# and the system of the plugins in supakov/ww, wview with its plugins and wedit in supakov/wview; this repository keeps their history until 0.43.0 |
 | wwlite | The light edition for Windows with its archive, built without the feature `full` of winweaver-ui; the browser edition (wasm32, `docs/wasm.md`) built by CI as `wwlite-web-<version>`: files from the browser and downloads, the settings and drafts in the storage of the page, the embedded list of input languages |
-| wview | The viewer with plugins (`docs/plugins.md`): text and Markdown, images, binary structures by their descriptions (PE built in) with their structures saved and compared and the content of a node shown inside by the plugin of its type; the native interface 2 (MIME types, menu items, bytes in memory, views inside a view), the SDK of native plugins and the stable interface for other languages with its example in C and the crate `wview-stable` for Rust of any toolchain |
 | Plans | [docs/todo/](docs/todo/README.md); the history of every version: [docs/releases/](docs/releases/) |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the
 secondary tabs; the search field grows into the free width of the navigation row; the extensions
 `.wwprofile`, `.wwdiff`, `.wwcatalog`, `.wwmarks`, `.wwusers`, `.wwtheme`, `.wwmcp`; the runtime scripts are
-data (`data/templates/`); wview is a direction of its own, apart from WinWeaver, and lives with its
-plugins in a workspace of its own next to the one of WinWeaver; its plugins are native ones with the
-SDK of a release (every example) and, for other languages, a stable interface of C with one
-example, the Mandelbrot set (04.11.2026, `docs/plugins.md` sections 6.5 to 6.10); Windows 10 and 11 are supported, the systems the Rust toolchain supports (Windows 7
-and 8.1 are not).
+data (`data/templates/`); the repository is split in three (07.11.2026): W# and the system of the
+plugins in supakov/ww, a git dependency of its branch `main` for every program, wview and wedit in
+supakov/wview, WinWeaver here; Windows 10 and 11 are supported, the systems the Rust toolchain
+supports (Windows 7 and 8.1 are not).
 
 ## 8. How to update this file
 

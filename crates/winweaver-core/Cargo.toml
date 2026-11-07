@@ -15,7 +15,7 @@ default = ["users"]
 users = ["dep:pbkdf2", "dep:hmac", "dep:aes", "dep:cbc", "dep:base64", "dep:zeroize", "dep:getrandom"]
 
 [dependencies]
-ww-base = { path = "../ww-base" }
+ww-base.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 indexmap.workspace = true

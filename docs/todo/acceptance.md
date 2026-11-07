@@ -15,5 +15,6 @@ Waiting for the marks of the customer:
 - AM to AR of 0.27.0 (the region of the default user, the widths of the editors, text sizes up to
   36, the menu Catalogs, wwlite in the browser, the presentation).
 
-The versions after 0.27.0 (WinWeaver 0.28.0 to 0.36.0, wview 0.2.0 to 0.7.0) have no part on the
+The parts of wedit (W to Z of 0.24.0) and the versions of wview now belong to supakov/wview. The
+versions after 0.27.0 (WinWeaver 0.28.0 to 0.36.0, wview 0.2.0 to 0.7.0) have no part on the
 page yet: a page for them comes when the customer asks for an acceptance of them.

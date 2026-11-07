@@ -33,4 +33,4 @@ wasm-bindgen-futures = "0.4"
 [dev-dependencies]
 # The tests and the screenshots of the window, drawn without a screen (src/tests.rs).
 egui_kittest = { version = "0.36", features = ["eframe", "wgpu", "snapshot"] }
-ww = { path = "../ww", default-features = false }
+ww.workspace = true

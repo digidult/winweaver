@@ -7,28 +7,20 @@ name: CI
 # before every commit. A run on demand needs the word of the user (AGENTS.md, section 5) and builds the
 # parts of its task alone: checks=false leaves out the Linux job (its checks ran on the computer of the
 # developer), package=false the release builds, the archives and their checks (tests and screenshots
-# alone), windows=false both Windows jobs, winweaver=false the one of WinWeaver and the browser
-# edition (a run of wview alone), wview=false the one of wview, web=false the browser edition. The
-# jobs after the Linux one run side by side.
+# alone), windows=false the Windows job, web=false the browser edition. The jobs after the Linux one
+# run side by side. W# comes from supakov/ww, a private git dependency of its branch main, read with
+# the token of the secret WW_TOKEN; wview and wedit are in supakov/wview.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
     inputs:
       windows:
-        description: "Run the Windows jobs (WinWeaver and wview: tests, builds, archives) after the Linux checks"
+        description: "Run the Windows job (tests, builds, archives) after the Linux checks"
         type: boolean
         default: true
       web:
         description: "Build wwlite for the browser (wasm32, the archive wwlite-web) after the Linux checks"
-        type: boolean
-        default: true
-      winweaver:
-        description: "Run the Windows job of WinWeaver (wedit, wwlite) and the browser edition"
-        type: boolean
-        default: true
-      wview:
-        description: "Run the Windows job of wview (its tests, its archive, the SDK)"
         type: boolean
         default: true
       checks:
@@ -46,6 +38,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
   # The commit the build names (--version, About, the logs).
   WINWEAVER_COMMIT: ${{ github.sha }}
 
@@ -61,10 +54,13 @@ jobs:
           components: rustfmt, clippy
           targets: x86_64-pc-windows-gnu, wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            . -> target
-            wview -> target
+      - name: W# of the branch main (supakov/ww, a private git dependency)
+        # The token of the secret WW_TOKEN reads supakov/ww (AGENTS.md, section 5); cargo fetches it
+        # with git, and takes the last commit of main.
+        shell: bash
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.WW_TOKEN }}@github.com/supakov/ww".insteadOf "https://github.com/supakov/ww"
+          cargo update -p ww -p ww-base
       - name: Format check
         id: fmt
         run: cargo fmt --all --check
@@ -89,13 +85,6 @@ jobs:
         run: cargo clippy -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown -- -D warnings
       - name: Tests (core)
         run: cargo test -p winweaver-core
-      - name: wview, format and clippy (checked for Windows)
-        # wview is a workspace of its own (docs/plugins.md): its folder, its config (std linked
-        # dynamically) and its lock file.
-        working-directory: wview
-        run: |
-          cargo fmt --all --check
-          cargo clippy --workspace --all-targets --target x86_64-pc-windows-gnu -- -D warnings
       - name: CI files (Cargo.lock, the format patch)
         if: always()
         uses: actions/upload-artifact@v4
@@ -115,7 +104,7 @@ jobs:
   build-windows:
     name: WinWeaver, build and tests (Windows)
     needs: check
-    if: ${{ !cancelled() && needs.check.result != 'failure' && (github.event_name != 'workflow_dispatch' || (inputs.windows && inputs.winweaver)) }}
+    if: ${{ !cancelled() && needs.check.result != 'failure' && (github.event_name != 'workflow_dispatch' || inputs.windows) }}
     env:
       PACKAGE: ${{ github.event_name != 'workflow_dispatch' || inputs.package }}
     runs-on: windows-latest
@@ -125,8 +114,13 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: . -> target
+      - name: W# of the branch main (supakov/ww, a private git dependency)
+        # The token of the secret WW_TOKEN reads supakov/ww (AGENTS.md, section 5); cargo fetches it
+        # with git, and takes the last commit of main.
+        shell: bash
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.WW_TOKEN }}@github.com/supakov/ww".insteadOf "https://github.com/supakov/ww"
+          cargo update -p ww -p ww-base
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Tests
@@ -235,12 +229,6 @@ jobs:
           Copy-Item -Recurse data/presets "$root/profiles"
           Copy-Item -Recurse package/lang "$root/lang"
           Copy-Item -Recurse agents "$root/agents"
-          # The editor wedit, built on WW, as an archive of its own.
-          $wedit = 'dist-wedit/wedit'
-          New-Item -ItemType Directory -Force $wedit | Out-Null
-          Copy-Item target/release/wedit.exe "$wedit/"
-          Copy-Item package-wedit/README.md "$wedit/README.md"
-          Copy-Item -Recurse package-wedit/lang "$wedit/lang"
           # The light edition wwlite: the profile editor and the build of the answer file.
           $lite = 'dist-wwlite/wwlite'
           New-Item -ItemType Directory -Force "$lite/lang/de" | Out-Null
@@ -271,164 +259,13 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: env.PACKAGE == 'true'
         with:
-          name: wedit-${{ env.VERSION }}
-          path: dist-wedit/
-      - uses: actions/upload-artifact@v4
-        if: env.PACKAGE == 'true'
-        with:
           name: wwlite-${{ env.VERSION }}
           path: dist-wwlite/
-
-  build-wview:
-    # wview, a direction of its own (docs/plugins.md), beside the Windows job of WinWeaver: a release
-    # of WinWeaver does not wait for it and does not carry its archives.
-    name: wview, build and tests (Windows)
-    needs: check
-    if: ${{ !cancelled() && needs.check.result != 'failure' && (github.event_name != 'workflow_dispatch' || (inputs.windows && inputs.wview)) }}
-    env:
-      PACKAGE: ${{ github.event_name != 'workflow_dispatch' || inputs.package }}
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: wview -> target
-      - name: The example of the stable interface, built with the compiler of Visual Studio
-        # A plugin in C (docs/plugins.md, 6.10): no part of Rust, so any build of wview loads it.
-        # The CRT is linked in (/MT), so it needs no DLL of the Visual C++ runtime.
-        shell: pwsh
-        run: |
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-          $vcvars = Join-Path $vs 'VC\Auxiliary\Build\vcvars64.bat'
-          $out = Join-Path $env:RUNNER_TEMP 'stable'
-          New-Item -ItemType Directory -Force $out | Out-Null
-          cmd /c "`"$vcvars`" >nul && cl /nologo /LD /O2 /MT /W3 /std:c11 /I wview\stable wview\stable\wv-mandelbrot\mandelbrot.c /Fo$out\ /Fe$out\wv_mandelbrot.dll"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          python wview/sdk/imports.py "$out/wv_mandelbrot.dll"
-          Get-ChildItem $out | Select-Object Length, Name | Format-Table -AutoSize
-          "WVIEW_STABLE=$out" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Clippy and tests (the window drawn into the screenshots)
-        working-directory: wview
-        run: |
-          cargo clippy --workspace --all-targets -- -D warnings
-          cargo test --workspace
-        env:
-          WINWEAVER_SCREENSHOTS: ${{ github.workspace }}/target/screenshots
-      - name: Screenshots of the window
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: screenshots-wview
-          path: target/screenshots
-          if-no-files-found: ignore
-      - name: Release build in the tree of its release
-        if: env.PACKAGE == 'true'
-        # Built in the tree pack.py makes, where every crate is inside the root of the workspace, not
-        # in the repository: a plugin built in a copy of that tree, the SDK, loads into it
-        # (docs/plugins.md, 6.7).
-        shell: pwsh
-        run: |
-          $tree = Join-Path $env:RUNNER_TEMP 'wview-tree'
-          python wview/sdk/pack.py . $tree "$(rustc -V)"
-          Push-Location $tree
-          cargo build --release --workspace
-          $code = $LASTEXITCODE
-          Pop-Location
-          if ($code -ne 0) { exit $code }
-          "WVIEW_TREE=$tree" | Out-File -FilePath $env:GITHUB_ENV -Append
-          "WVIEW_BIN=$tree/target/release" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: Package
-        if: env.PACKAGE == 'true'
-        # The program, its runtime, the std of the toolchain and the plugins; then its SDK, the
-        # sources a plugin of that build is made of.
-        shell: pwsh
-        run: |
-          $wv = (Select-String -Path wview/Cargo.toml -Pattern '^version = "(.*)"').Matches[0].Groups[1].Value
-          $view = 'dist-wview/wview'
-          New-Item -ItemType Directory -Force "$view/plugins" | Out-Null
-          Copy-Item "$env:WVIEW_BIN/wview.exe", "$env:WVIEW_BIN/wwrt.dll" "$view/"
-          Copy-Item "$env:WVIEW_BIN/wv_text.dll", "$env:WVIEW_BIN/wv_image.dll", "$env:WVIEW_BIN/wv_binary.dll" "$view/plugins/"
-          # The example of the stable interface and a view of it to open.
-          Copy-Item "$env:WVIEW_STABLE/wv_mandelbrot.dll" "$view/plugins/"
-          New-Item -ItemType Directory -Force "$view/examples" | Out-Null
-          Copy-Item wview/stable/wv-mandelbrot/seahorse.mandel "$view/examples/"
-          # The std-<hash>.dll wview.exe imports, from the sysroot of the toolchain.
-          $stdName = python wview/sdk/imports.py --std "$env:WVIEW_BIN/wview.exe"
-          $std = Get-ChildItem (rustc --print sysroot) -Recurse -Filter $stdName | Select-Object -First 1
-          if (-not $std) { throw "$stdName is not in the sysroot of rustc" }
-          Copy-Item $std.FullName "$view/"
-          Copy-Item wview/package/README.md "$view/README.md"
-          python wview/sdk/pack.py . dist-wview-sdk/wview-sdk "$(rustc -V)"
-          Get-ChildItem -Recurse dist-wview | Select-Object Length, FullName | Format-Table -AutoSize
-          # What every file of the archive imports: the DLLs of the system it takes.
-          python wview/sdk/imports.py (Get-ChildItem -Recurse $view -Include *.exe, *.dll).FullName
-          "WVIEW_VERSION=$wv" | Out-File -FilePath $env:GITHUB_ENV -Append
-      - name: The template of the SDK built in another folder and loaded
-        if: env.PACKAGE == 'true'
-        # The promise of the SDK: a plugin built of the SDK alone, in a folder of its own, loads
-        # into wview of the same build. The build takes the target folder of the tree: the crates
-        # of the registry do not depend on the place of their source and are not built again, while
-        # the crates of the SDK itself (W#, wwrt, the template) are cleaned first and built from the
-        # copy. A crate of the copy with another hash than in the tree gets files of its own, and its
-        # plugin does not load into the release, which the archive holds apart.
-        shell: pwsh
-        run: |
-          $sdk = Join-Path $env:RUNNER_TEMP 'wview-sdk'
-          Copy-Item -Recurse dist-wview-sdk/wview-sdk $sdk
-          $env:CARGO_TARGET_DIR = Join-Path $env:WVIEW_TREE 'target'
-          Push-Location $sdk
-          cargo clean --release -p ww-base -p ww -p wwrt -p wv-hello
-          $code = $LASTEXITCODE
-          if ($code -eq 0) {
-            cargo build --release -p wv-hello
-            $code = $LASTEXITCODE
-          }
-          Pop-Location
-          if ($code -ne 0) { exit $code }
-          $plugins = Join-Path $env:RUNNER_TEMP 'sdk-plugins'
-          New-Item -ItemType Directory -Force $plugins | Out-Null
-          Copy-Item "$env:CARGO_TARGET_DIR/release/wv_hello.dll" $plugins
-          $env:WVIEW_PLUGINS = $plugins
-          $list = Join-Path $env:RUNNER_TEMP 'plugins.txt'
-          $p = Start-Process -FilePath dist-wview/wview/wview.exe -ArgumentList '--plugins' -PassThru -Wait -RedirectStandardOutput $list -RedirectStandardError "$list.err"
-          $text = Get-Content -Raw $list
-          $text
-          Get-Content "$list.err" -ErrorAction SilentlyContinue
-          "exit code: $($p.ExitCode) ($('{0:X8}' -f $p.ExitCode))"
-          if ($p.ExitCode -ne 0 -or $text -notmatch 'Hello' -or $text -match 'not loaded') { throw 'the plugin of the SDK did not load' }
-      - name: The plugin of the stable interface loaded and drawn by the release
-        if: env.PACKAGE == 'true'
-        # The release built in Rust loads the plugin built in C, opens the example and draws its
-        # view without a window (--probe): the picture comes in frames, the status names the zoom.
-        shell: pwsh
-        run: |
-          $out = Join-Path $env:RUNNER_TEMP 'probe.txt'
-          $probe = @('--probe', 'dist-wview/wview/examples/seahorse.mandel')
-          $p = Start-Process -FilePath dist-wview/wview/wview.exe -ArgumentList $probe -PassThru -Wait -RedirectStandardOutput $out -RedirectStandardError "$out.err"
-          $text = Get-Content -Raw $out
-          $text
-          Get-Content "$out.err" -ErrorAction SilentlyContinue
-          "exit code: $($p.ExitCode)"
-          if ($p.ExitCode -ne 0 -or $text -notmatch 'Mandelbrot' -or $text -notmatch 'zoom') { throw 'the plugin of the stable interface did not draw' }
-      - uses: actions/upload-artifact@v4
-        if: env.PACKAGE == 'true'
-        with:
-          name: wview-${{ env.WVIEW_VERSION }}
-          path: dist-wview/
-      - uses: actions/upload-artifact@v4
-        if: env.PACKAGE == 'true'
-        with:
-          name: wview-sdk-${{ env.WVIEW_VERSION }}
-          path: dist-wview-sdk/
 
   build-web:
     name: Build wwlite for the browser
     needs: check
-    if: ${{ !cancelled() && needs.check.result != 'failure' && (github.event_name != 'workflow_dispatch' || (inputs.web && inputs.winweaver && inputs.package)) }}
+    if: ${{ !cancelled() && needs.check.result != 'failure' && (github.event_name != 'workflow_dispatch' || (inputs.web && inputs.package)) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -436,6 +273,13 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
+      - name: W# of the branch main (supakov/ww, a private git dependency)
+        # The token of the secret WW_TOKEN reads supakov/ww (AGENTS.md, section 5); cargo fetches it
+        # with git, and takes the last commit of main.
+        shell: bash
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.WW_TOKEN }}@github.com/supakov/ww".insteadOf "https://github.com/supakov/ww"
+          cargo update -p ww -p ww-base
       - name: Release build (wasm32)
         run: cargo build --release -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown
       - name: Page of the browser edition
@@ -477,11 +321,6 @@ jobs:
           path: dist
       - uses: actions/download-artifact@v4
         with:
-          pattern: wedit-*
-          merge-multiple: true
-          path: dist-wedit
-      - uses: actions/download-artifact@v4
-        with:
           pattern: wwlite-[0-9]*
           merge-multiple: true
           path: dist-wwlite
@@ -494,7 +333,6 @@ jobs:
         run: |
           v="$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)"
           (cd dist && zip -qr "WinWeaver-$v.zip" WinWeaver)
-          (cd dist-wedit && zip -qr "../dist/wedit-$v.zip" wedit)
           (cd dist-wwlite && zip -qr "../dist/wwlite-$v.zip" wwlite)
           (cd dist-web && zip -qr "../dist/wwlite-web-$v.zip" wwlite-web)
       - name: Release notes file

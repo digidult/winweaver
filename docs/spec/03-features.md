@@ -298,11 +298,7 @@ passwords when the master password is given, and makes a users file of its accou
 
 ## 16. wedit
 
-The text editor on W# (`crates/wedit`, its own archive `wedit-<version>.zip`): tabs of `.txt` and any text
-file in a monospace editor with its undo, Find with `F3` and `Shift+F3`, the line and the column in the
-status bar, Save and Save as with the line ends the file came with, drafts and the tabs of the last session;
-a `.md` file as a page with the search of its text and Edit as text; Light and Dark built in, more themes
-and languages as files; files dropped on the window or named on the command line.
+The text editor on W# lives in supakov/wview (folder `wedit`), with its own archive.
 
 ## 17. More of the window
 

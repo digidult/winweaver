@@ -23,7 +23,7 @@ wgpu = ["ww/wgpu"]
 [dependencies]
 winweaver-core = { path = "../winweaver-core", default-features = false }
 winweaver-mcp = { path = "../winweaver-mcp", optional = true }
-ww = { path = "../ww", default-features = false }
+ww.workspace = true
 # The master password of a users file is wiped when the tab locks or closes.
 zeroize = { version = "1", optional = true }
 eframe = { version = "0.36", default-features = false, features = ["accesskit", "default_fonts", "links"] }

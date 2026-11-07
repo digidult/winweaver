@@ -131,7 +131,8 @@ fn every_text_of_the_interface_is_translated() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut files = Vec::new();
     sources(&root.join("src"), &mut files);
-    sources(&root.join("../ww/src"), &mut files);
+    // W#, a git dependency: its checkout names its sources.
+    sources(Path::new(ww::SOURCES), &mut files);
     let mut keys = std::collections::BTreeSet::new();
     for path in files {
         if path.file_name().is_some_and(|n| n == "translations.rs") {

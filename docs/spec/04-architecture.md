@@ -4,17 +4,6 @@
 
 ```
 crates/
-├── ww-base/             W# base, pure Rust: jsonfile (strict JSON, the trait Document, atomic saves), paths
-│                        (a file inside the program folder kept relative to it), clock; re-exported by the core
-├── ww/                  W# (the framework, docs/ww.md): shell/ (the trait App, Shell, Window as eframe::App,
-│                        ShellAct, ShellDoc, the chrome drawn from what the program gives, the settings tab,
-│                        the themes), run (run::<A>, smoke_window::<A>), doc (Document, Search, Draft),
-│                        settings (Settings<X: Extra>), session (drafts, the log), store (the files of the
-│                        window: next to the executable natively, the storage of the page and downloads in
-│                        a browser), web (the start in a browser, wasm32), style, themes and their editor,
-│                        coloricons, i18n, tree, list, widgets, markdown and mdview, renderer, commands,
-│                        keys, icons, dialogs, folders; data/themes (Light, Dark)
-├── wedit/               the text editor on W#: main (the command line), app (impl ww::App), textdoc
 ├── winweaver-core/      catalog/ (model, embedded data, checks, values), profile, resolver, validate,
 │                        resources (time zones, editions, the input languages and layouts Windows lists),
 │                        diff, bookmarks, i18n, render/ (the answer file, one file a pass), thispc/ (plan,
@@ -45,22 +34,22 @@ data/
 ├── catalog/             groups.json, 00-17 rule files, lang/<code>.json
 ├── presets/             office, strict, laptop, home .wwprofile
 ├── lang/<code>/         ui.json and guide.md of each built-in language
-├── themes/              latte.wwtheme, matrix.wwtheme (Light and Dark are in crates/ww/data/themes)
+├── themes/              latte.wwtheme, matrix.wwtheme (Light and Dark are in W#, supakov/ww)
 ├── resources/           timezones.json
 ├── templates/           the runtime templates: the answer file skeleton and the scripts with {{slot}}s, VERSION
 ├── reference/           the reference of the parameters, linked from the doc field of a rule
 └── docs/                guide.md, the English guide
 agents/                  shipped in the archive: AGENTS.md, README.md, skills/, pi-agent/
 package/                 what the archive of WinWeaver adds: README.md for the user, lang/be/ui.json
-package-wedit/           what the archive of wedit adds: README.md, lang/uk/ui.json
 ```
 
-`ww-base` and `winweaver-core` compile on any system, so the tests of the core run on the Linux runner too;
-`winweaver-win`, `ww` and the programs are built for Windows, and their tests run on the Windows runner. The Linux
-job checks every crate for the Windows target without linking. The window itself is the framework W#
-(`ww`, `docs/ww.md`): a program implements `ww::App` with its documents, its acts and what it draws inside
-a tab, and the shell owns the tabs, the settings, the themes, the session and the chrome. WinWeaver and
-the editor wedit are its two programs.
+`winweaver-core` compiles on any system, so the tests of the core run on the Linux runner too;
+`winweaver-win` and the programs are built for Windows, and their tests run on the Windows runner. The
+Linux job checks every crate for the Windows target without linking. The window itself is the framework
+W# (`ww-base`, `ww`: supakov/ww, a git dependency of its branch `main`, `docs/ww.md` there): a program
+implements `ww::App` with its documents, its acts and what it draws inside a tab, and the shell owns the
+tabs, the settings, the themes, the session and the chrome. Its other programs, wview and wedit, live in
+supakov/wview.
 
 ## 2. Crates (dependencies policy P4)
 
@@ -176,8 +165,8 @@ errors.
   artifact, clippy of the whole workspace for `x86_64-pc-windows-gnu` and of wwlite for
   `wasm32-unknown-unknown`, the tests of the core), then a Windows job (clippy, `cargo test --workspace`
   with the screenshots of the window, the catalog check, the release build, the window smoke test, the
-  archives `WinWeaver-<version>.zip`, `wedit-<version>.zip` and `wwlite-<version>.zip`), a Windows job of
-  wview beside it (`docs/plugins.md`) and a job on Ubuntu that builds the browser edition
+  archives `WinWeaver-<version>.zip` and `wwlite-<version>.zip`) and a job on Ubuntu that builds the
+  browser edition
   (`wwlite-web-<version>`); a tag `v<version>` publishes a release with `docs/releases/v<version>.md`.
 - The zip is the deliverable: unzip, run. Nothing is installed.
 
@@ -194,9 +183,9 @@ errors.
 - Tests of `winweaver-win` on the Windows runner: the native read of the whole catalog, the features and
   capabilities through DISM as administrator, the native apply in a test key of HKCU and of the default
   profile, the accounts of a users file with a test account made and deleted.
-- Window tests with `egui_kittest`: a `Window` of WinWeaver (or wedit) drawn without a screen, clicked by
+- Window tests with `egui_kittest`: a `Window` of WinWeaver drawn without a screen, clicked by
   the labels of AccessKit, so no window ever opens; the translations test of every text of
-  `winweaver-ui` and `ww`; the screenshots of the main tabs and of sample pages into `target/screenshots`
+  `winweaver-ui` and `ww` (at `ww::SOURCES`); the screenshots of the main tabs and of sample pages into `target/screenshots`
   (the artifact `screenshots`) when `WINWEAVER_SCREENSHOTS` is set.
 - MCP tests: the protocol and the list of tools, the modes, the switches of the registry, the bookmarks
   and the catalogs, the folders a write may reach, and both transports on a free loopback port (the token
@@ -234,28 +223,11 @@ The repository, folder by folder and module by module.
 │                          in dist/, on demand the checks, the screenshots, the slides (section 5)
 ├── .github/workflows/ci.yml  CI: fmt (a patch artifact), clippy (wwlite for wasm32 too) and tests of
 │                          winweaver-core on Linux; clippy, tests, the catalog check, the release build and
-│                          the zip on Windows; the job build-wview beside it (wview, its archive and its
-│                          SDK); the job build-web (wwlite for the browser, the artifact
+│                          the zip on Windows (W# of main first, read with the token WW_TOKEN); the
+│                          job build-web (wwlite for the browser, the artifact
 │                          wwlite-web-<version>); a tag v<version> publishes a release with
 │                          docs/releases/v<version>.md
 ├── crates/
-│   ├── ww-base/           W# base, pure Rust: jsonfile (strict JSON, the trait Document, atomic saves),
-│   │                      paths (a file inside the program folder kept relative to it), clock; the core
-│   │                      re-exports them as `winweaver_core::{jsonfile, paths, clock}`
-│   ├── ww/                W# (the framework, `docs/ww.md`): shell/ (mod: the trait App, Shell, ShellAct,
-│   │                      ShellDoc, Nav, Messages; window: Window<A> as eframe::App, the acts of the window,
-│   │                      the keys, the question, the session restored; tabs, bar, nav, status, jobs: the chrome
-│   │                      drawn from what the program gives; settings: the settings tab with General;
-│   │                      theme: the theme shown, its editor, the title bar colours), run.rs (run::<A>,
-│   │                      smoke_window::<A>), doc.rs (Document, Search, Draft, Scrolled), settings.rs
-│   │                      (Settings<X: Extra>), session.rs (drafts, the log), store.rs (the files of the
-│   │                      window: next to the executable natively, the storage of the page in a browser,
-│   │                      downloads), web.rs (the start in a browser, wasm32), style.rs, themes.rs,
-│   │                      themeview.rs, i18n.rs, tree.rs, list.rs, widgets.rs, mdview.rs, renderer.rs,
-│   │                      commands.rs, keys.rs, icons.rs, coloricons.rs (the icons in colour through
-│   │                      DirectWrite), dialogs.rs, folders.rs; data/themes (Light, Dark)
-│   ├── wedit/             the editor on W#: main.rs (the command line, ww::run), app.rs (Wedit: Doc, Act,
-│   │                      Extra, impl ww::App), textdoc.rs (a text file in the editor of egui)
 │   ├── winweaver-core/    pure Rust, compiles everywhere: catalog/ (model, embedded data, checks, values: the
 │   │                      texts, numbers and items of the values of actions, read once), jsonfile (strict
 │   │                      reading, the trait Document: the parse with its format and version check, the load
@@ -366,25 +338,6 @@ The repository, folder by folder and module by module.
 │                          leaves out, the screenshots l1- to l4-; run alone: cargo test -p wwlite)
 ├── package-wwlite/        what the archive of wwlite adds: README.md, lang/de/guide-lite.txt (German, with
 │                          data/lang/de/ui.json copied by CI)
-├── package-wedit/         what the archive of wedit adds: README.md for its user, lang/uk/ui.json (every
-│                          text of wedit and of WW in Ukrainian, the example of a language file)
-├── wview/                 wview, a direction of its own (docs/plugins.md) and a workspace of its own:
-│                          crates/wwrt (the runtime, a Rust dylib: W# and egui re-exported; plugin:
-│                          the interface 2 with the loader and its check of the build; inner: the
-│                          views inside a view; mime: the type of some bytes; input: the keys and
-│                          the mouse of a view; blocks; testing), crates/wview (the viewer:
-│                          lang/<code>/ui.json and guide.md, docs/guide.md), plugins/wv-text
-│                          (Markdown and text), plugins/wv-image (WIC: wic, picture with the levels
-│                          and EXIF, compose for the frames of a GIF, view with the tiles, sample of
-│                          the tests), plugins/wv-binary (expr, format, engine, hex, content, view, wwbin,
-│                          diff, compareview, sample of the tests;
-│                          the description formats/pe.wwformat built in), each with lang/<code>.json,
-│                          plugins/wv-hello (the template of the SDK); sdk/ (README.md, pack.py: the
-│                          SDK of a release); package/README.md (for the user of the archive);
-│                          stable/ (wview.h: the stable interface for other languages, README.md,
-│                          wv-mandelbrot/mandelbrot.c and seahorse.mandel: its example in C,
-│                          rust/: the crate wview-stable of it for Rust of any toolchain);
-│                          .cargo/config.toml links std dynamically; README.md
 ├── package/               what the archive adds: README.md for the user (not this repository's), lang/be/ui.json
 │                          (Belarusian, every text: the example of a language, checked by a test of i18n.rs)
 └── docs/
@@ -393,7 +346,6 @@ The repository, folder by folder and module by module.
     │                      of CI (python-pptx), uploaded by the Windows job as presentation-<version>
     ├── ww.md              the framework W# for the programs written on it
     ├── wasm.md            wwlite in a browser (WebAssembly): what was built, what stays open, the study
-    ├── plugins.md         plugins of W# in Rust: the ways, the study, its measurements, the design of wview
     └── spec/              the specification (00 scope, 01 UI, 02 documents, 03 features, 04 architecture)
 ```
 

@@ -1,3 +1,8 @@
 # The Windows executable links the C runtime statically: it runs on a clean PC without a redistributable.
 [target.x86_64-pc-windows-msvc]
 rustflags = ["-C", "target-feature=+crt-static"]
+
+# W# (supakov/ww) is a private repository: cargo fetches it with git and the credentials of git
+# (in CI a token, AGENTS.md section 5).
+[net]
+git-fetch-with-cli = true

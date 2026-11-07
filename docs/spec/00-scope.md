@@ -38,8 +38,9 @@ The rule catalog, its translations, the presets, the time zones and the runtime 
 of the answer file and of the stand-alone scripts in `data/templates/`) are data of the project; the program
 code is its own.
 
-The window is built on W#, the framework of this repository (the crates `ww-base` and `ww`, described in
-`docs/ww.md`). W# also carries a second program, the text editor wedit (`crates/wedit`).
+The window is built on W#, the framework of supakov/ww (the crates `ww-base` and `ww`, described in
+its `docs/ww.md`), a git dependency of its branch `main`. W# also carries the text editor wedit and
+the viewer wview, in supakov/wview.
 
 ## 2. Non-goals
 

@@ -73,7 +73,8 @@ The blockers (all resolved, section 0):
 5. The profile views of `winweaver-ui` name the acts of This PC, the registry, catalogs and users
    files; wwlite has to separate them in any case, for Windows too.
 
-Effort: once the native wwlite exists, two medium changes of `ww` and small ones of `ww-base`, the
+Effort: once the native wwlite exists, two medium changes of `ww` and small ones of `ww-base` (W#,
+now in supakov/ww), the
 core, the start and CI. The separation of the views (part of wwlite) is the largest piece.
 
 ## 1. eframe 0.36 on the web
@@ -84,7 +85,7 @@ core, the start and CI. The separation of the views (part of wwlite) is the larg
   `NativeOptions` [2].
 - Renderer: the feature `wgpu` prefers WebGPU with WebGL as the fallback (since 0.34.1); `glow` draws
   with WebGL and makes a smaller `.wasm` [1][7]. The feature `wgpu` of `ww` builds wgpu with the `dx12`
-  backend only (`crates/ww/Cargo.toml:16,22`), which has nothing to draw with in a browser, so the web
+  backend only (`crates/ww/Cargo.toml:16,22` of W#), which has nothing to draw with in a browser, so the web
   takes `glow`. `WebOptions::webgl_context_option` is `BestFirst` by default [4].
 - `eframe::Frame` does not implement `HasWindowHandle` on wasm32 [5].
 - Build: trunk (`trunk build --release`, the site in `dist/`, `data-wasm-opt` in `index.html`) [3][6].

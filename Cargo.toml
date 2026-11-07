@@ -1,9 +1,6 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/ww-base",
-    "crates/ww",
-    "crates/wedit",
     "crates/winweaver-core",
     "crates/winweaver-win",
     "crates/winweaver-mcp",
@@ -13,7 +10,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.43.0"
+version = "0.44.0"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT"
@@ -21,6 +18,10 @@ repository = "https://github.com/digidult/winweaver"
 authors = ["digidult"]
 
 [workspace.dependencies]
+# W#, the framework of the window (supakov/ww, private): a git dependency of its branch main, which
+# `cargo update -p ww -p ww-base` follows; cargo fetches it with git (.cargo/config.toml).
+ww-base = { git = "https://github.com/supakov/ww", branch = "main" }
+ww = { git = "https://github.com/supakov/ww", branch = "main", default-features = false }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 indexmap = { version = "2", features = ["serde"] }

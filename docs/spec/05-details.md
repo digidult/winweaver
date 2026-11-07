@@ -542,7 +542,7 @@ change, read the section of the part it touches.
   `catalog::values`; in the Windows crate a new API call takes its wrappers from `ffi.rs`; in the MCP
   server a new tool is one row of `TOOLS` with its handler in `tools/<theme>.rs`.
 
-- W# (`docs/ww.md`): `ww::Window<WinWeaver>` owns `shell: Shell<WinWeaver>` (the tabs, the
+- W# (`docs/ww.md` of supakov/ww): `ww::Window<WinWeaver>` owns `shell: Shell<WinWeaver>` (the tabs, the
   settings, the status, the themes, the session) and `app: WinWeaver` apart, so every method of
   WinWeaver takes `shell: &mut Shell<WinWeaver>` (or `&Shell`) beside `self`; an act of the window
   is `Act::Shell(ShellAct::..)` (open, save, the tabs, the settings, the themes, `Ask` and `Answer`,
@@ -555,16 +555,15 @@ change, read the section of the part it touches.
   section of the settings is `SettingsSection` with its `index()` for `ShellAct::OpenSection`. The
   tests build `Window::new(WinWeaver::new(catalog, texts), settings)` and read `w.shell.docs`,
   `w.app.marks`; a method of the app is called as `w.app.m(&mut w.shell, ..)`. The texts of the
-  shell (`crates/ww/src`) are in every `ui.json` of WinWeaver (the test reads both crates) and in
-  `package-wedit/lang/uk/ui.json`. wedit is built by the release build of the workspace and packaged
-  by the job Package as `wedit-<version>.zip` (the exe, its README, `lang/`).
+  shell (the sources of W# at `ww::SOURCES`, its checkout of git) are in every `ui.json` of
+  WinWeaver (the test reads both crates).
 
 - The settings file: `Settings::load(program)` reads the
   first of `<exe stem>.settings.json`, `<program>.settings.json` and `settings.json` that exists and
   writes back to it (`Shell::settings_path`), so two copies of an executable with different names keep
   their own settings and a plain `settings.json` goes on. `Settings::wrap_lines` folds the lines of
   a text or a page to the width of the view (the setting Wrap lines of General); off, the view scrolls
-  sideways (a `layouter` of infinite width in wedit, an infinite width for the page). A page always
+  sideways (an infinite width for the page). A page always
   scrolls sideways for a table or a block of code wider than the view, and its code takes the colour
   `code_bg` of the theme. A program adds colours to the themes with `style::install_colors`
   (`ExtraColor`: name, label, light, dark); a theme file overrides them by name, the theme editor lists
@@ -598,11 +597,6 @@ change, read the section of the part it touches.
   glyph in one colour, so with Segoe UI Emoji the icons of the command bar and the tabs are pictures drawn by
   DirectWrite through Direct2D into WIC with the colours of the font (`ww::coloricons`, once a size and a
   colour, as textures; `style::paint_icon`); without them, or when DirectWrite fails, an icon is a glyph.
-
-- The editor of wedit: egui's TextEdit moves with the arrows, Home and End itself; Page Up and Page Down
-  move the cursor by the height of the view through the layout of the last frame (`TextDoc::page_keys`,
-  with Shift they select) and the view follows; the editor takes the focus at its first frame and again
-  whenever its tab comes back to the front (a gap in `cumulative_pass_nr`).
 
 - The panel of the work in the background (`App::jobs`, `ww::Job`, `shell/jobs.rs`): WinWeaver
   lists the read of this PC, an import, a change of this PC and the search of the registry (with
@@ -676,87 +670,9 @@ change, read the section of the part it touches.
 
 ## 8. wview and the plugins
 
-- Plugins (`docs/plugins.md`, `wview/`): a runtime as a Rust `dylib` (`wwrt.dll`, W# and egui
-  re-exported) and the plugins as `cdylib`s on it, one build of all (one compiler, one profile, the
-  same versions of the shared crates: `plugin::ABI`, its version, the interface, rustc, the target
-  and the profile, is checked at the load, and another version of a shared crate fails the load
-  by its symbols). The interface 2 (`wwrt::plugin`): `open` with the settings of the plugin (a
-  JSON object a plugin in `Extra::plugins` of wview, by the name of its DLL, drawn by
-  `settings_ui` in Settings, Plugins), `translations` (added by `ww::i18n::add`, on top of the
-  embedded ones, under the files of `lang/`), a `Host` with the requests of a view
-  (`Request::Browse`), `wwrt::input::area` for the keys and the mouse (a click gives the focus,
-  the keys a view names are its own without Ctrl and Alt, Tab and Escape give them back), and
-  `wwrt::testing` for the tests of the translations of a plugin (`plugin_texts`: tr, trf,
-  `const NAME`, `name:`, `label:`). The texts of the runtime (`wwrt::inner`) are translated by the
-  window: the test of wview scans `crates/wwrt/src` too, and `testing.rs` spells its patterns
-  `tr\u{28}` so that the scan finds none of its own. A view inside a view (`Host::open_inside`)
-  draws under `ui.push_id` of a serial number and at most 4 deep; a plugin takes the ids of its
-  panels and trees from the place of its view (`ui.make_persistent_id`, `ww::widgets::side_panel`
-  takes an `Id`), since a global id would clash with the same view inside itself. `View::act` and
-  `Plugin::act` get a `Host`, and its requests (`Status`, `Open`, `OpenBytes`) reach the window as
-  acts after the frame or the act (`shell.pending`); a tab of bytes has no path and steps through
-  no folder. The stable interface stays at version 1: its formats name no MIME type. The crate
-  `wview-stable` (`wview/stable/rust`) is edition 2021 with Rust 1.77: `plugin!` writes
-  `#[no_mangle]`, which its edition takes in the code of a crate of 2024 too (the test of wwrt is
-  one), and binds the function of the plugin outside its unsafe block (the lint
-  `macro_metavars_in_unsafe` of clippy); a plugin of it is built outside the tree of wview, whose
-  `.cargo/config.toml` links std dynamically. The window opens a file by `Plugins::for_file` (the
-  extension, else the type of the first bytes), so a plugin's `open` may get a file of an
-  extension it does not name; wv-binary then tries every description. The key of an item with a
-  number of 10 or more shows its hexadecimal (`13 (0xD)`): a lookup by the id of a resource
-  matches the number before ` (`. wwrt re-exports the crate `image` (`wwrt::image`) with the
-  decoders of Rust of WebP, TGA, Netpbm, QOI, Radiance HDR and farbfeld (eframe takes it already
-  for PNG and BMP, and the features join): a plugin takes it from there, never as a dependency of
-  its own; the same for `sha2` (`wwrt::sha2`, the SHA-256 of `wwrt::trust` and of wv-binary).
-  wview reads its settings in `main` before the plugins load (`Plugins::load_trusted` with
-  `Extra::trust`), and `ww::run` reads them again for the window. wview has the eight languages of WinWeaver: its `ui.json`
-  holds the texts of the shell of W# as WinWeaver translates them and its own. `plugin!` exports
-  nothing with the feature `library` of a plugin (each declares `library = []`): the tests of
-  wview take the plugins as libraries (`crate-type = ["cdylib", "rlib"]`) into one executable, and
-  egui_kittest comes through the feature `kittest` of wwrt. The release of wview is built in the
-  tree of `wview/sdk/pack.py` (W# in `framework/` with its inherited fields written out, wwrt and
-  wview in `crates/`, the plugins in `plugins/`), and that tree is its SDK: cargo hashes a path
-  dependency by its place relative to the root of the workspace only inside it, else by its
-  absolute path, and W# is outside `wview/` in the repository, so only a build in the tree makes a
-  `wwrt.dll` that a plugin built in a copy of it anywhere loads. CI and build-all.cmd build the
-  release there (`wview/target/tree` locally: the dlltool of gnu stops past 260 characters); CI
-  builds the template `wv-hello` in another copy and loads it. For msvc every module of the
-  family takes the CRT statically (`-C target-feature=+crt-static` in `wview/.cargo/config.toml`,
-  since the tree has no parent config): the std-<hash>.dll of msvc imports no DLL of the CRT, and
-  with the dynamic one every module imported `VCRUNTIME140.dll`. The package takes the
-  std-<hash>.dll `wview.exe` imports (`wview/sdk/imports.py --std`; the first of the sysroot was
-  another one and wview did not start), and a release build of wview attaches to the console of its
-  parent only when its output is not redirected. CI: the Linux job checks the format and clippy of `wview`, the job
-  `build-wview` (Windows, beside the one of WinWeaver) its clippy and tests (the screenshots `v1-`
-  to `v13-`, the artifact `screenshots-wview`), the release build and the artifacts
-  `wview-<version>` and `wview-sdk-<version>`; a release of WinWeaver does not carry them. The
-  template of the SDK is built in its copy with the target folder of the tree (`CARGO_TARGET_DIR`):
-  the crates of the registry are not built again, the crates of the SDK are cleaned first. The family links std dynamically
-  (`-C prefer-dynamic`, `std-<hash>.dll` ships), never takes LTO (a dylib refuses it, a plugin on
-  one stops) and keeps its dependencies at opt-level 2 in debug builds, where shared generics put
-  128973 exports into the DLL (a DLL holds 65535; a release one has about 15600). Every crate the
-  runtime holds is taken through it (`wwrt::serde`, `#[serde(crate = "wwrt::serde")]`). With the
-  toolchain gnu a link writes 68 import libraries of Windows through dlltool, about 50 s a link.
-  wv-image decodes in a thread of its own (`view::start`) and the window waits 250 ms for it, so a
-  test of the window or a screenshot of a large image waits for the decoding (`tests::decoded`),
-  since a debug build takes longer; its files for tests come from `wv_image::sample` (the
-  feature `library`). wv-binary reads a file by a description (`.wwformat`, docs/plugins.md
-  section 6.4): the language is checked whole by `format::Format::parse`, the engine reads the tree
-  at the open within `engine::Limits` and keeps the bytes in the file; a new field of the language
-  changes the parser, the engine, the tests of both and section 6.4. Its tests read `kernel32.dll`
-  of the Windows they run on (read only) and the screenshots `v9-` to `v11-` show it. A `lazy`
-  field is read when its node opens (`engine::expand`); Save the structure reads every one first
-  (`expand_all`) and writes `.wwbin` (`wwbin.rs`, SHA-256 of the crate `sha2`, the plugin's own).
-  A `.wwbin` reads back (`wwbin::read`) for its own tab and for Compare with a structure
-  (`diff.rs`: lines matched by key or name, marks; `compareview.rs`: the view, the notes); a
-  `.wwbindiff` keeps the two files and the notes by the path of a line. The tests of wview make
-  their files through `wv_binary::sample` (no dialog opens in a test). The stable interface
-  (`wview/stable/wview.h`, version 1) is the way of plugins in other languages: `wwrt::stable` wraps
-  a DLL that exports `wv_plugin_get` into a `Plugin` (its structures `#[repr(C)]`, their sizes
-  tested); a change of the header changes `stable.rs` and its test of the layout together. Its
-  example `wview/stable/wv-mandelbrot/mandelbrot.c` is built by CI with `cl` alone (no compiler of
-  C on the computer of the developer): its screenshot `v13-` and the step that draws it with
-  `wview --probe` are where a mistake of it shows.
+wview, its plugins and the editor wedit live in supakov/wview; their facts are in its
+`docs/details.md`, the facts of W# and of the system of the plugins in `docs/details.md` of
+supakov/ww.
 
 ## 9. Tests, CI, builds, archives and the command line
 
@@ -772,8 +688,8 @@ change, read the section of the part it touches.
 
 - Screenshots: the Windows job sets `WINWEAVER_SCREENSHOTS`, and the test `screenshots_of_the_window` draws the
   main tabs with wgpu (no screen) into `target/screenshots`, uploaded as the artifact `screenshots`
-  (`gh run download <id> -n screenshots -D <folder>`; the ones of wview, `v1-` to `v13-`, as
-  `screenshots-wview` of its job); the way to see the window without starting it on the
+  (`gh run download <id> -n screenshots -D <folder>`); the way to see the window without starting
+  it on the
   customer's PC. A renderer that cannot start writes `error.txt` there instead of failing the tests.
 
 - Window tests: `App::new` and `App::apply` test the logic without frames; `egui_kittest` (a dev-dependency
