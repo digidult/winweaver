@@ -157,7 +157,11 @@ fn profile_of_another_format_is_refused() {
         "x.wwprofile",
     )
     .unwrap_err();
-    assert!(err.to_string().contains("not a WinWeaver profile"), "{err}");
+    // W# names the kind of the file: "not a profile (format ..)", earlier "not a WinWeaver profile".
+    assert!(
+        err.to_string().contains("profile (format something)"),
+        "{err}"
+    );
     let err = Profile::parse(
         r#"{"format": "winweaver-profile", "version": 99, "catalog": "0", "name": "x"}"#,
         "x",

@@ -278,7 +278,7 @@ portable and bound to no machine: its only secret is the master password of the 
 
 ```json
 {
-  "format": "winweaver-theme",
+  "format": "ww-theme",
   "version": 1,
   "name": "Latte",
   "dark": false,

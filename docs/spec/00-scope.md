@@ -115,10 +115,10 @@ of Microsoft are not redistributed by the program; the user imports them from th
   (width 100) and `clippy -D warnings`.
 - Commit messages: an imperative first line up to 72 characters, a body when the why is not obvious.
   Author `digidult`.
-- A feature is a branch and a pull request into `main`, which the customer merges. CI runs for a pull
-  request that is ready for review, for `main` after a merge and for a tag (`AGENTS.md` section 5).
-- The version of the workspace grows with every pull request that reaches `main`: the second number for a
-  feature, the third for fixes only. Every build names its commit (`<version>+<12 digits of the commit>`),
+- A feature is a branch and a pull request into `main`, which the customer merges. CI runs on demand,
+  with the word of the user, and for a tag (`AGENTS.md` section 5).
+- The version of the workspace grows with every pull request that reaches `main`: an agent changes the
+  third number alone, the first and the second change on the word of the customer. Every build names its commit (`<version>+<12 digits of the commit>`),
   shown by `--version`, About, the logs, the MCP server, the answer file and the scripts. A release has its
   notes in `docs/releases/v<version>.md`.
 - The customer's work PC has no Rust toolchain and gets none: builds, tests and any run of the program

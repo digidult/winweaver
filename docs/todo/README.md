@@ -6,6 +6,4 @@ state and the history is in `../releases/`: a task done leaves this folder for t
 `../wasm.md`, the guides) and the notes of its version, and a file of this folder with nothing left
 in it goes.
 
-| File | Subject |
-|---|---|
-| [acceptance.md](acceptance.md) | The parts of the acceptance in a VM the customer has not marked yet |
+Nothing is planned now.

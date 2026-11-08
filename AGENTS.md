@@ -2,7 +2,7 @@
 
 For agents and developers: where things are, what to read first, which rules apply, where the
 information that changes is.
-Updated with every change of structure, commands or task status. Last update: 07.11.2026.
+Updated with every change of structure, commands or task status. Last update: 08.11.2026.
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -40,7 +40,6 @@ The information that changes:
 | What each version brought (the history) | [docs/releases/](docs/releases/) |
 | The facts a change of a part must respect | [docs/spec/05-details.md](docs/spec/05-details.md) |
 | The folders and the modules | [docs/spec/04-architecture.md](docs/spec/04-architecture.md), section 10 |
-| The acceptance in a VM | [docs/todo/acceptance.md](docs/todo/acceptance.md) |
 | The pull requests open, the runs of CI | `gh pr list`, `gh run list --workflow ci.yml` |
 
 ## 3. Folder structure
@@ -103,9 +102,9 @@ Every folder and module: `docs/spec/04-architecture.md`, section 10. Next to the
     files and logs, which stay English). A new rule needs its texts in
     every `data/catalog/lang/<code>.json` (`translations_cover_every_rule`); `package/lang/be/ui.json` may
     lag (English fills the gaps).
-11. Versions: `version` of the workspace `Cargo.toml` grows with every
-    pull request that reaches `main`: the second number for a feature (0.2.0 to 0.3.0, the third back to 0),
-    the third for fixes only (0.2.0 to 0.2.1); a pull request with both counts as a feature. Every build
+11. Versions: `version` of the workspace `Cargo.toml` (0.1.45 on 08.11.2026) grows with every
+    pull request that reaches `main`. An agent changes the third number alone (0.1.45 to 0.1.46);
+    the first and the second change only on the word of the customer. Every build
     names its commit: `winweaver_core::BUILD` is `<version>+<12 digits of the commit>` (`build.rs` of the core,
     `WINWEAVER_COMMIT` set by CI), shown by `--version`, About, the logs, the MCP server, the answer file
     and the scripts.
@@ -263,7 +262,8 @@ Before a change of a part, read its section of `docs/spec/05-details.md`:
 | MCP server | stdio and HTTP, 36 tools, 4 resources, modes, journal, token, configuration files; tests of both transports |
 | W#, wview, wedit | In their repositories since 07.11.2026: W# and the system of the plugins in supakov/ww, wview with its plugins and wedit in supakov/wview; this repository keeps their history until 0.43.0 |
 | wwlite | The light edition for Windows with its archive, built without the feature `full` of winweaver-ui; the browser edition (wasm32, `docs/wasm.md`) built by CI as `wwlite-web-<version>`: files from the browser and downloads, the settings and drafts in the storage of the page, the embedded list of input languages |
-| Plans | [docs/todo/](docs/todo/README.md); the history of every version: [docs/releases/](docs/releases/) |
+| Acceptance | Every part of every version up to 0.44.0 accepted (08.11.2026); the acceptance page of the customer (a claude.ai page with the steps of each part, run in a VM of Windows 11 on the archives of a build) holds no open part, and a new part comes when the customer asks for an acceptance |
+| Plans | [docs/todo/](docs/todo/README.md); the history of every version: [docs/releases/](docs/releases/) (from 0.1.45) |
 
 Decisions of the customer: the UI has the compact layout for narrow windows, its inline toggles and the
 secondary tabs; the search field grows into the free width of the navigation row; the extensions
