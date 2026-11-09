@@ -906,5 +906,10 @@
   "Author": "Penulis",
   "Edit the name, the author and the comment": "Ubah nama, penulis, dan komentar",
   "Read the selection: open a profile first": "Baca pilihan: buka profil terlebih dahulu",
-  "Coloured stripes in the parts of the description": "Garis berwarna di bagian deskripsi"
+  "Coloured stripes in the parts of the description": "Garis berwarna di bagian deskripsi",
+  "Search the page (Ctrl+F)": "Cari di halaman (Ctrl+F)",
+  "Untitled": "Tanpa judul",
+  "{name} is not a page": "{name} bukan halaman",
+  "{path} is larger than {mb} MB": "{path} lebih besar dari {mb} MB",
+  "{path} is not UTF-8 text": "{path} bukan teks UTF-8"
 }

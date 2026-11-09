@@ -906,5 +906,10 @@
   "Author": "Автор",
   "Edit the name, the author and the comment": "Изменить имя, автора и комментарий",
   "Read the selection: open a profile first": "Прочитать выбранное: сначала откройте профиль",
-  "Coloured stripes in the parts of the description": "Цветные полоски в частях описания"
+  "Coloured stripes in the parts of the description": "Цветные полоски в частях описания",
+  "Search the page (Ctrl+F)": "Поиск на странице (Ctrl+F)",
+  "Untitled": "Без названия",
+  "{name} is not a page": "{name} не является страницей",
+  "{path} is larger than {mb} MB": "{path} больше {mb} МБ",
+  "{path} is not UTF-8 text": "{path} не является текстом UTF-8"
 }

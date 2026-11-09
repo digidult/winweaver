@@ -906,5 +906,10 @@
   "Author": "Yazar",
   "Edit the name, the author and the comment": "Adı, yazarı ve yorumu düzenle",
   "Read the selection: open a profile first": "Seçimi oku: önce bir profil açın",
-  "Coloured stripes in the parts of the description": "Açıklama bölümlerinde renkli şeritler"
+  "Coloured stripes in the parts of the description": "Açıklama bölümlerinde renkli şeritler",
+  "Search the page (Ctrl+F)": "Sayfada ara (Ctrl+F)",
+  "Untitled": "Adsız",
+  "{name} is not a page": "{name} bir sayfa değil",
+  "{path} is larger than {mb} MB": "{path}, {mb} MB'tan büyük",
+  "{path} is not UTF-8 text": "{path} UTF-8 metni değil"
 }

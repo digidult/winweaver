@@ -254,6 +254,8 @@ impl Doc {
             Doc::Markdown(_) => DocKind::Markdown,
             Doc::Shell(ShellDoc::Settings(_)) => DocKind::Settings,
             Doc::Shell(ShellDoc::Theme(_)) => DocKind::Theme,
+            // A page of a set of embedded files, a document of the window shown as a page.
+            Doc::Shell(ShellDoc::Page(_)) => DocKind::Markdown,
             #[cfg(feature = "full")]
             Doc::Diff(_) => DocKind::Diff,
             #[cfg(feature = "full")]

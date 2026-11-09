@@ -906,5 +906,10 @@
   "Author": "Автор",
   "Edit the name, the author and the comment": "Змінити ім'я, автора й коментар",
   "Read the selection: open a profile first": "Прочитати вибране: спершу відкрийте профіль",
-  "Coloured stripes in the parts of the description": "Кольорові смужки в частинах опису"
+  "Coloured stripes in the parts of the description": "Кольорові смужки в частинах опису",
+  "Search the page (Ctrl+F)": "Пошук на сторінці (Ctrl+F)",
+  "Untitled": "Без назви",
+  "{name} is not a page": "{name} не є сторінкою",
+  "{path} is larger than {mb} MB": "{path} більший за {mb} МБ",
+  "{path} is not UTF-8 text": "{path} не є текстом UTF-8"
 }

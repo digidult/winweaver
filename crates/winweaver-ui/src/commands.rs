@@ -413,7 +413,7 @@ impl WinWeaver {
                     Menu::Pol.item(),
                 ]
             }
-            Some(Doc::Shell(ShellDoc::Settings(_))) => Vec::new(),
+            Some(Doc::Shell(ShellDoc::Settings(_) | ShellDoc::Page(_))) => Vec::new(),
             None => vec![new_profile(), open()],
         }
     }

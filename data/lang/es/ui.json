@@ -906,5 +906,10 @@
   "Author": "Autor",
   "Edit the name, the author and the comment": "Editar el nombre, el autor y el comentario",
   "Read the selection: open a profile first": "Leer la selección: abra primero un perfil",
-  "Coloured stripes in the parts of the description": "Franjas de color en las partes de la descripción"
+  "Coloured stripes in the parts of the description": "Franjas de color en las partes de la descripción",
+  "Search the page (Ctrl+F)": "Buscar en la página (Ctrl+F)",
+  "Untitled": "Sin título",
+  "{name} is not a page": "{name} no es una página",
+  "{path} is larger than {mb} MB": "{path} ocupa más de {mb} MB",
+  "{path} is not UTF-8 text": "{path} no es texto UTF-8"
 }
