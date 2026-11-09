@@ -128,7 +128,7 @@ impl WinWeaver {
             }
             if path
                 .extension()
-                .is_some_and(|e| e == winweaver_mcp::config::EXTENSION)
+                .is_some_and(|e| e == wwmcp::config::EXTENSION)
             {
                 self.open_mcp_config(shell, path);
                 return;

@@ -22,6 +22,7 @@ wgpu = ["winweaver-ui/wgpu"]
 winweaver-core = { path = "../winweaver-core" }
 winweaver-ui = { path = "../winweaver-ui", default-features = false, features = ["full"] }
 winweaver-mcp = { path = "../winweaver-mcp" }
+wwmcp.workspace = true
 winweaver-win = { path = "../winweaver-win" }
 serde_json.workspace = true
 

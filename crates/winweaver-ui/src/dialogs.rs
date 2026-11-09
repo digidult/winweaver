@@ -81,7 +81,7 @@ pub(crate) fn open_dialog() -> rfd::FileDialog {
                 bookmarks::EXTENSION,
                 admx::CATALOG_EXTENSION,
                 themes::EXTENSION,
-                winweaver_mcp::config::EXTENSION,
+                wwmcp::config::EXTENSION,
                 users::EXTENSION,
             ],
         )

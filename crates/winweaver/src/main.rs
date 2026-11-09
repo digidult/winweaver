@@ -56,11 +56,14 @@ const USAGE: &str = "WinWeaver
                               a name of the mcp folder next to the program)
   winweaver --mcp stdio [--config FILE] [--mode read|edit|files] [--read-pc]
                      [--registry off|read|write] [--edit-library] [--detailed-log] [--profile NAME]
+                     [--off winweaver/TOOL]
                               serve MCP on standard input and output
   winweaver --mcp http [--config FILE] [--token TOKEN] [--port N] [--mode ...] [--read-pc]
                      [--registry ...] [--edit-library] [--detailed-log] [--profile NAME]
                               serve MCP on http://127.0.0.1:N/mcp (port 8765 by default)
-                              the options change what the configuration file says, for this start
+                              the options change what the configuration file says, for this start;
+                              a configuration file of WinWeaver 0.1.46 or earlier is written again
+                              in the format of W# first
   winweaver --smoke-window [--renderer ...]
                               open a small window, draw two frames, print what drew them
   winweaver --help            this text";
@@ -108,85 +111,35 @@ fn with_imports(catalog: Catalog, dir: &std::path::Path) -> Catalog {
 /// has no console, so the log is where the reason of an early exit stays.
 fn refuse(text: &str) {
     eprintln!("{text}");
-    winweaver_mcp::log::line("ERROR", text);
+    wwmcp::log::line("ERROR", text);
 }
 
-/// The file of a configuration given on the command line: the path, or a name (with or without
-/// its extension) of the mcp folder next to the executable.
-fn config_path(text: &str) -> std::path::PathBuf {
-    let path = std::path::PathBuf::from(text);
-    if path.exists() {
-        return path;
-    }
-    let ext = winweaver_mcp::config::EXTENSION;
-    let name = if path.extension().is_some_and(|e| e == ext) {
-        text.to_owned()
-    } else {
-        format!("{text}.{ext}")
-    };
-    winweaver_mcp::config::Config::folder(&winweaver_ui::exe_dir()).join(name)
-}
-
-/// The configuration of a start without the window: the file of `--mcp FILE` or `--config FILE`,
-/// else the defaults, with the options of the command line over it.
-fn mcp_config(args: &[String]) -> Result<winweaver_mcp::config::Config, String> {
-    use winweaver_mcp::config::{Config, Transport};
-    let first = args.first().map(String::as_str).unwrap_or("");
-    let (file, transport) = match first {
-        "stdio" => (option(args, "--config"), Some(Transport::Stdio)),
-        "http" => (option(args, "--config"), Some(Transport::Http)),
-        "" => return Err("--mcp needs a configuration file, stdio or http".to_owned()),
-        other => (Some(other.to_owned()), None),
-    };
-    let mut config = match &file {
-        Some(f) => Config::load(&config_path(f))?,
-        None => Config::default(),
-    };
-    if let Some(t) = transport {
-        config.transport = t;
-    }
-    if let Some(text) = option(args, "--mode") {
-        config.mode = winweaver_mcp::Mode::parse(&text).ok_or("--mode is read, edit or files")?;
-    }
-    if let Some(text) = option(args, "--registry") {
-        config.registry = winweaver_mcp::RegistryAccess::parse(&text)
-            .ok_or("--registry is off, read or write")?;
-    }
-    if let Some(text) = option(args, "--port") {
-        config.port = text.parse().map_err(|_| "--port is a number")?;
-    }
-    if let Some(token) = option(args, "--token") {
-        config.token = token;
-    }
-    if let Some(name) = option(args, "--profile") {
-        config.profile = name;
-    }
-    let flag = |name: &str| args.iter().any(|a| a == name);
-    config.read_pc |= flag("--read-pc");
-    config.edit_library |= flag("--edit-library");
-    config.detailed_log |= flag("--detailed-log");
-    config.check()?;
-    Ok(config)
-}
-
+/// `--mcp ...`: the tools of WinWeaver on the server of W#, by the transport of the
+/// configuration, with the imports the settings of the window load.
 fn mcp(args: &[String]) -> ExitCode {
-    let config = match mcp_config(args) {
-        Ok(c) => c,
-        Err(e) => {
+    let dir = winweaver_ui::exe_dir();
+    // A configuration file of an earlier version is written in the format of W# first.
+    let (_, failed) = winweaver_mcp::legacy::migrate_folder(&wwmcp::Config::folder(&dir));
+    for why in failed {
+        wwmcp::log::line("WARN", &format!("not written in the format of W#: {why}"));
+    }
+    if let Some(file) = args
+        .first()
+        .filter(|a| !matches!(a.as_str(), "stdio" | "http"))
+    {
+        let path = wwmcp::cli::config_path(file, &dir);
+        if let Err(e) = winweaver_mcp::legacy::migrate(&path) {
             refuse(&e);
             return ExitCode::from(2);
         }
-    };
-    let transport = config.transport.name();
-    winweaver_mcp::log::line(
-        "INFO",
-        &format!(
-            "WinWeaver {} started for MCP over {transport} (process {})",
-            winweaver_core::BUILD,
-            std::process::id()
-        ),
-    );
-    let mode = config.mode;
+    }
+    if let Some(file) = wwmcp::cli::option(args, "--config") {
+        let path = wwmcp::cli::config_path(&file, &dir);
+        if let Err(e) = winweaver_mcp::legacy::migrate(&path) {
+            refuse(&e);
+            return ExitCode::from(2);
+        }
+    }
     let catalog = match Catalog::embedded() {
         Ok(c) => c,
         Err(e) => {
@@ -194,56 +147,38 @@ fn mcp(args: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let dir = winweaver_ui::exe_dir();
     let catalog = with_imports(catalog, &winweaver_ui::imports_dir());
-    let server = winweaver_mcp::Server::new(
+    let tools = winweaver_mcp::Tools::new(
         catalog,
         &winweaver_ui::PRESETS,
-        winweaver_mcp::Options {
-            mode,
-            registry: config.registry,
-            edit_library: config.edit_library,
+        winweaver_mcp::Paths {
             marks_path: dir.join(winweaver_core::bookmarks::DEFAULT_FILE),
             imports_dir: winweaver_ui::imports_dir(),
-            read_pc: config.read_pc,
             profiles_dir: dir.join("profiles"),
             output_dir: dir.join("output"),
-            detailed_log: config.detailed_log,
         },
     );
-    if !config.profile.is_empty()
-        && let Err(e) = server.select(&config.profile)
-    {
-        refuse(&format!("the profile {}: {e}", config.profile));
-        return ExitCode::from(2);
-    }
-    match config.transport {
-        winweaver_mcp::config::Transport::Stdio => match winweaver_mcp::stdio::serve(&server) {
-            Ok(()) => ExitCode::SUCCESS,
-            Err(e) => {
-                refuse(&format!("stdio: {e}"));
-                ExitCode::FAILURE
-            }
-        },
-        winweaver_mcp::config::Transport::Http => {
-            let token = config.token.clone();
-            if token.len() < winweaver_mcp::config::TOKEN_MIN {
-                refuse("a token of 32 characters or more is needed (--token or the file)");
-                return ExitCode::from(2);
-            }
-            let port = config.port;
-            match winweaver_mcp::http::HttpServer::start(std::sync::Arc::new(server), port, token) {
-                Ok(http) => {
-                    eprintln!("WinWeaver MCP on {} (mode {})", http.url(), mode.name());
-                    loop {
-                        std::thread::park();
-                    }
-                }
-                Err(e) => {
-                    refuse(&format!("http: {e}"));
-                    ExitCode::FAILURE
-                }
-            }
+    let tools = std::sync::Arc::new(tools);
+    let sources: Vec<std::sync::Arc<dyn wwmcp::Source>> = vec![tools.clone()];
+    let config = match wwmcp::cli::config(args, &dir, &sources) {
+        Ok(c) => c,
+        Err(e) => {
+            refuse(&e);
+            return ExitCode::from(2);
+        }
+    };
+    let server = match winweaver_mcp::server(tools, config) {
+        Ok(s) => s,
+        Err(e) => {
+            refuse(&e);
+            return ExitCode::from(2);
+        }
+    };
+    match wwmcp::cli::serve(std::sync::Arc::new(server)) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            refuse(&e);
+            ExitCode::FAILURE
         }
     }
 }
@@ -309,7 +244,9 @@ fn main() -> ExitCode {
     // The crash handlers first: a panic or a fatal exception of Windows is written to the logs
     // folder next to the executable, the MCP log for a process that only serves MCP.
     let headless = args.first().map(String::as_str) == Some("--mcp");
-    winweaver_mcp::log::init(&winweaver_ui::exe_dir().join("logs"), headless);
+    let program = format!("WinWeaver {}", winweaver_core::BUILD);
+    wwmcp::log::init(&winweaver_ui::exe_dir().join("logs"), &program, headless);
+    winweaver_win::on_fatal_exception(wwmcp::log::fatal);
     match args.first().map(String::as_str) {
         None => window(None),
         Some(a) if a == "--renderer" || a.starts_with("--renderer=") => {
@@ -370,7 +307,7 @@ fn window(renderer: Option<&str>) -> ExitCode {
         Err(e) => {
             attach_console();
             eprintln!("{e}");
-            winweaver_mcp::log::window_line("ERROR", &format!("the window failed: {e}"));
+            wwmcp::log::window_line("ERROR", &format!("the window failed: {e}"));
             ExitCode::FAILURE
         }
     }

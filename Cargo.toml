@@ -10,7 +10,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.46"
+version = "0.1.47"
 edition = "2024"
 rust-version = "1.88"
 license = "MIT"
@@ -22,6 +22,8 @@ authors = ["digidult"]
 # `cargo update -p ww -p ww-base` follows; cargo fetches it with git (.cargo/config.toml).
 ww-base = { git = "https://github.com/supakov/ww", branch = "main" }
 ww = { git = "https://github.com/supakov/ww", branch = "main", default-features = false }
+# The MCP server of W# (the tools, their configuration, the transports, the tab of the window).
+wwmcp = { git = "https://github.com/supakov/ww", branch = "main" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 indexmap = { version = "2", features = ["serde"] }

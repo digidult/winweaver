@@ -412,7 +412,12 @@ impl WinWeaver {
                 marks: Bookmarks::default(),
                 marks_path: exe_dir().join(bookmarks::DEFAULT_FILE),
                 mcp: mcpview::McpPanel::new(
-                    winweaver_mcp::config::Config::default_path(&exe_dir()),
+                    wwmcp::Config::default_path(&exe_dir()),
+                    mcpview::tools_of(
+                        &catalog,
+                        exe_dir().join(bookmarks::DEFAULT_FILE),
+                        imports_dir(),
+                    ),
                 ),
                 confirm: None,
                 running: None,

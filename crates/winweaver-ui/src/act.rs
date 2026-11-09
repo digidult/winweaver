@@ -286,9 +286,10 @@ pub enum MarksAct {
 #[cfg(feature = "full")]
 pub enum McpAct {
     Open,
-    Start,
-    Stop,
-    RenewToken,
+    /// An act of the tab of W#: start, stop, a token, the files, the log, a call by hand.
+    Panel(wwmcp::ui::McpAct),
+    /// The token renewed, after the question.
+    RenewConfirmed,
     OpenProfile(String),
 }
 

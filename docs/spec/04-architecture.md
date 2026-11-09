@@ -14,9 +14,9 @@ crates/
 ├── winweaver-win/       Windows API: ffi (the wrappers once), native (thispc::Machine), registry, accounts,
 │                        dism, apps, locales, users, execute/ (the plan run natively, one function an
 │                        operation, the hive of the default user), the start of the helper elevated
-├── winweaver-mcp/       the MCP server: lib (protocol, modes, workspace, journal), config (.wwmcp), log
-│                        (the JSON lines log, the crash handlers), tools/ (the table of the 36 tools and their
-│                        handlers by theme, the resources), stdio and http transports
+├── winweaver-mcp/       the tools of WinWeaver for the MCP server of W# (wwmcp): lib (the source Tools,
+│                        its workspace and options), legacy (the .wwmcp files of 0.1.46 and earlier),
+│                        tools/ (the table of the 36 tools and their handlers by theme, the resources)
 ├── winweaver-ui/        WinWeaver on the window of W#: lib (the types of the window), app/ (the methods of
 │                        WinWeaver by theme, each taking the shell; shell: impl ww::App, the draw by kind,
 │                        apply as a dispatcher; menu), act (Shell(ShellAct) for the acts of the window, the
@@ -82,10 +82,11 @@ library that needs a redistributable.
   it started from by its draft key), the search of the registry (`registry-search`, with a stop), the
   import of policy templates, and the run of the elevated helper (the thread waits for the helper and
   reads its report).
-- The MCP server keeps its state (its workspace of profiles, its journal) behind a mutex, independent of
-  the tabs; the window reads its workspace and journal for the MCP tab. The HTTP transport has a listening
-  thread and a thread for each connection (at most 8, each with a timeout of 15 s); the stdio transport
-  runs in the main thread of a process without the window.
+- The MCP server is the one of W# (`wwmcp`): its journal and configuration behind a mutex of the
+  server, the workspace of profiles behind a mutex of `winweaver_mcp::Tools`, both independent of the
+  tabs; the window reads them for the MCP tab. The HTTP transport has a listening thread and a thread for
+  each connection (at most 8, each with a timeout of 15 s); the stdio transport runs in the main thread of
+  a process without the window.
 - DISM is initialized once a process at its first use and never shut down, since it promises no second
   start; it is asked only when the process is elevated and the plan has such checks.
 
@@ -266,12 +267,12 @@ The repository, folder by folder and module by module.
 │   │                      executable as administrator), locales.rs (the input languages and layouts of
 │   │                      Windows), regions.rs (the regions of Windows: EnumSystemGeoNames, GetGeoInfoEx),
 │   │                      users.rs (the accounts of this PC read, created and changed for a users file)
-│   ├── winweaver-mcp/     the MCP server: lib.rs (protocol, modes, workspace, journal with Outcome, token),
-│   │                      config.rs (the .wwmcp configuration files), log.rs (the JSON lines log, the crash
-│   │                      handlers), tools/ (mod.rs: the table TOOLS of the 36 tools, each with its name,
-│   │                      description, schema, what it needs and its handler; Args, ToolError with its Kind;
-│   │                      profiles, rules, bookmarks, catalogs, registry: the handlers by theme; the 4
-│   │                      resources), stdio.rs, http.rs (127.0.0.1, bearer token, Host and Origin checks);
+│   ├── winweaver-mcp/     the tools of WinWeaver on the server of W#: lib.rs (Tools, the source
+│   │                      `winweaver`: its workspace, its options, its resources, `server`), legacy.rs (the
+│   │                      .wwmcp files of the format winweaver-mcp written in the format of W#), tools/
+│   │                      (mod.rs: the table TOOLS of the 36 tools, each with its name, description,
+│   │                      schema, what it needs and its handler, as a ToolDef of W#; profiles, rules,
+│   │                      bookmarks, catalogs, registry: the handlers by theme; the 4 resources);
 │   │                      tests/server.rs (both transports on a free loopback port)
 │   ├── winweaver-ui/      WinWeaver on the window of W#: lib.rs (the types: Sel, ProfileDoc, WinWeaver and
 │   │                      WinWeaver::new, run and smoke_window through ww, the helpers), app/ (the methods

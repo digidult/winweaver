@@ -175,10 +175,13 @@ lists the planned changes.
   `http://127.0.0.1:<port>/mcp` with a bearer token of at least 32 characters, the Host and Origin headers
   checked against DNS rebinding; started from the MCP tab or without the window (`--mcp http`, `--mcp
   FILE`). Protocol: MCP 2025-06-18 on JSON-RPC 2.0; a message is at most 4 MB.
-- Modes: read (nothing changes, the default), edit (profiles of the workspace change in memory), files
-  (profiles saved and the answer file written, only into the folders of the program). Switches, all off by
-  default: `read_pc` (the tool `read_this_pc`), `registry` (off, read or write), `edit_library` (the
-  bookmarks and the catalog files).
+- The server is the one of W# (`wwmcp`): WinWeaver is its source of tools `winweaver`
+  (`winweaver_mcp::Tools`). Modes: read (nothing changes, the default), edit (profiles of the workspace
+  change in memory), files (profiles saved and the answer file written, only into the folders of the
+  program). Options of the source, all off by default: `read_pc` (the tool `read_this_pc`), `registry`
+  (off, read or write), `edit_library` (the bookmarks and the catalog files); `profile` starts the
+  workspace. The user turns any tool, a group of tools or the whole source off in the MCP tab or the
+  configuration file; a tool that is off is not listed and does not run for a client.
 - 36 tools: `get_status`; the catalog (`list_groups`, `list_rules`, `get_rule`, `search_rules`); the
   profiles (`get_profile`, `set_rule`, `set_param`, `set_group`, `set_profile_info`, `check_profile`,
   `preview_build`, `write_answer_file`, `load_profile`, `save_profile`, `new_profile`, `list_profiles`,
@@ -197,7 +200,8 @@ lists the planned changes.
   `edit_library`. Passwords and product keys are `***` in every answer.
 - The server has its own workspace of profiles; the window shows them in the MCP tab and opens them as tabs.
   Its journal keeps the last 500 calls with their arguments and answers (passwords, keys, tokens and
-  authorizations left out, an answer cut at 16 KB).
+  authorizations left out, an answer cut at 16 KB). Call a tool of the tab runs any tool by its name as
+  the program, without the switches and the options.
 - A panic inside a request is caught: the request gets the error -32603 and the server goes on.
 - The agent skills (`agents/skills/`) and the instructions for any agent (`agents/`) ship in the archive;
   the skill of the tools is also served as a resource.

@@ -11,7 +11,7 @@
 | Users file | `.wwusers` | The local accounts to make on a PC with their passwords encrypted under a master password in the same file | List of accounts and the form of the selected one |
 | Registry file | `.reg` | The format of regedit (version 5 in UTF-16 with its mark, or REGEDIT4): keys, values and their deletions, comments; every line is kept, the ones the program does not read too | Outline of keys and comments, the lines of the selected key |
 | Theme | `.wwtheme` | The name, the base, the colours and the fonts of a theme | The editor of a theme |
-| MCP configuration | `.wwmcp` | The transport, port, token, mode and switches of an MCP server, its first profile, the detailed log | The MCP tab |
+| MCP configuration | `.wwmcp` | The transport, port, token and mode of an MCP server, the detailed log, the switches and the options of its sources of tools (WinWeaver: its first profile, This PC, the registry, the library) | The MCP tab |
 | Markdown page | `.md` | The guide, the licence, the reference, any Markdown file | Rendered page |
 | ADMX file | `.admx` | A policy template with the ADML files of the folders of the cultures next to it | Opened as a catalog, without importing it |
 | Answer file | `.xml` | The build; opened as the profile it embeds | Opens as a profile |
@@ -297,12 +297,17 @@ file `themes/<id>.json` in the same layout is read too; a `.wwtheme` file of the
 
 ## 14. MCP configuration
 
-`mcp/<name>.wwmcp`: `format` `winweaver-mcp`, `version`, `transport` (`http` or `stdio`, for a start
-without the window), `port` (8765 by default), `token` (the bearer token of HTTP, at least 32 characters;
-the window makes one when it is empty), `mode` (`read`, `edit`, `files`), `read_pc`, `registry` (`off`,
-`read`, `write`), `edit_library`, `profile` (the preset or profile file the workspace starts with, empty for
-the first preset) and `detailed_log`. Every field but the format has a default, so a short file is enough.
-The MCP tab saves its file at every change; `winweaver --mcp FILE` serves as the file says.
+`mcp/<name>.wwmcp`, the format of W# (`ww-mcp`, docs/mcp.md of supakov/ww): `format`, `version`,
+`transport` (`http` or `stdio`, for a start without the window), `port` (8765 by default), `token` (the
+bearer token of HTTP, at least 32 characters; the window makes one when it is empty), `mode` (`read`,
+`edit`, `files`), `detailed_log` and `plugins`, the settings of each source of tools by its id: for
+`winweaver`, `off`, `tools_off`, `groups_off` and `options` (`registry`: `off`, `read`, `write`; `read_pc`
+and `edit_library`: `off` or `on`; `profile`: the preset or profile file the workspace starts with, empty
+for the first preset). Every field but the format has a default, so a short file is enough. The MCP tab
+saves its file at every change; `winweaver --mcp FILE` serves as the file says. A file of the format
+`winweaver-mcp` (WinWeaver 0.1.46 and earlier: `read_pc`, `registry`, `edit_library` and `profile` at
+the top) is written again in the format of W# when the tab or `--mcp` opens it
+(`winweaver_mcp::legacy`).
 
 ## 15. Plans, backups and reports of the native apply
 

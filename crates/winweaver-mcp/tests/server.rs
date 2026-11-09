@@ -1,5 +1,6 @@
-//! Tests of the MCP server: the protocol, the modes, the tools and both transports (HTTP on a
-//! free loopback port).
+//! Tests of the tools of WinWeaver on the MCP server of W#: the protocol, the modes and the
+//! options of the source `winweaver`, the tools and both transports (HTTP on a free loopback
+//! port).
 
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -8,8 +9,9 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 use winweaver_core::catalog::Catalog;
-use winweaver_mcp::http::HttpServer;
-use winweaver_mcp::{Mode, Options, RegistryAccess, Server};
+use winweaver_mcp::{Paths, SOURCE, Tools};
+use wwmcp::http::HttpServer;
+use wwmcp::{Config, Mode, Server};
 
 const OFFICE: &str = include_str!("../../../data/presets/office.wwprofile");
 const STRICT: &str = include_str!("../../../data/presets/strict.wwprofile");
@@ -21,22 +23,72 @@ fn folder(name: &str) -> PathBuf {
     dir
 }
 
-fn server(mode: Mode, dir: &std::path::Path) -> Server {
-    Server::new(
+/// The server of the tools of WinWeaver, with them at hand for their workspace.
+struct S {
+    server: Arc<Server>,
+    tools: Arc<Tools>,
+}
+
+impl std::ops::Deref for S {
+    type Target = Server;
+
+    fn deref(&self) -> &Server {
+        &self.server
+    }
+}
+
+impl S {
+    /// Sets an option of the source `winweaver`, as the tab or the command line does.
+    fn set(&self, key: &str, value: &str) {
+        let mut config = self.server.config();
+        config
+            .source_mut(SOURCE)
+            .options
+            .insert(key.to_owned(), value.to_owned());
+        self.server.set_config(config);
+    }
+
+    fn set_registry(&self, access: &str) {
+        self.set("registry", access);
+    }
+
+    fn set_edit_library(&self, on: bool) {
+        self.set("edit_library", if on { "on" } else { "off" });
+    }
+
+    fn workspace(&self) -> Vec<(String, bool, String)> {
+        self.tools.workspace()
+    }
+}
+
+fn tools(dir: &std::path::Path) -> Tools {
+    Tools::new(
         Catalog::embedded().unwrap(),
         &[("Office", OFFICE), ("Strict", STRICT)],
-        Options {
-            mode,
-            registry: RegistryAccess::Off,
-            edit_library: false,
+        Paths {
             marks_path: dir.join("bookmarks.wwmarks"),
             imports_dir: dir.join("imports"),
-            read_pc: false,
             profiles_dir: dir.join("profiles"),
             output_dir: dir.join("output"),
-            detailed_log: false,
         },
     )
+}
+
+fn served(mode: Mode, tools: Tools) -> S {
+    let tools = Arc::new(tools);
+    let config = Config {
+        mode,
+        ..Config::default()
+    };
+    let server = Server::new(winweaver_mcp::info(), config).with(tools.clone());
+    S {
+        server: Arc::new(server),
+        tools,
+    }
+}
+
+fn server(mode: Mode, dir: &std::path::Path) -> S {
+    served(mode, tools(dir))
 }
 
 /// The tools of the registry are off until allowed, and write only when writing is allowed; here on
@@ -44,8 +96,8 @@ fn server(mode: Mode, dir: &std::path::Path) -> Server {
 #[test]
 fn the_registry_tools_are_off_until_allowed() {
     let dir = folder("registry");
-    let s = server(Mode::Read, &dir)
-        .with_registry(Arc::new(winweaver_core::registry::MemoryRegistry::default()));
+    let memory = Arc::new(winweaver_core::registry::MemoryRegistry::default());
+    let s = served(Mode::Read, tools(&dir).with_registry(memory));
     let key = "HKCU\\Software\\WinWeaverTest";
     assert_eq!(
         error_kind(&s, "read_registry_key", json!({ "path": "HKCU" })),
@@ -53,13 +105,13 @@ fn the_registry_tools_are_off_until_allowed() {
     );
     let any = json!({ "path": "HKCU", "text": "x" });
     assert_eq!(error_kind(&s, "search_registry", any), "not_allowed");
-    s.set_registry(RegistryAccess::Read);
+    s.set_registry("read");
     ok(&s, "read_registry_key", json!({ "path": "HKCU" }));
     assert_eq!(
         error_kind(&s, "create_registry_key", json!({ "path": key })),
         "not_allowed"
     );
-    s.set_registry(RegistryAccess::Write);
+    s.set_registry("write");
     ok(&s, "create_registry_key", json!({ "path": key }));
     ok(
         &s,
@@ -396,11 +448,11 @@ fn post(port: u16, token: &str, host: &str, body: &str) -> (u16, String) {
 #[test]
 fn the_http_transport_needs_the_token_and_the_loopback_host() {
     let dir = folder("http");
-    let s = Arc::new(server(Mode::Read, &dir));
-    let token = winweaver_mcp::new_token().unwrap();
+    let s = server(Mode::Read, &dir);
+    let token = wwmcp::new_token().unwrap();
     assert_eq!(token.len(), 40);
     assert!(token.chars().next().unwrap().is_ascii_alphabetic());
-    let mut http = HttpServer::start(s, 0, token.clone()).unwrap();
+    let mut http = HttpServer::start(s.server.clone(), 0, token.clone()).unwrap();
     let host = format!("127.0.0.1:{}", http.port);
     let ping = r#"{"jsonrpc": "2.0", "id": 1, "method": "ping"}"#;
     let (status, body) = post(http.port, &token, &host, ping);
@@ -420,9 +472,37 @@ fn the_stdio_transport_answers_line_by_line() {
     let s = server(Mode::Read, &dir);
     let input = "{\"jsonrpc\": \"2.0\", \"id\": 1, \"method\": \"ping\"}\n\n{\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\"}\n";
     let mut out = Vec::new();
-    winweaver_mcp::stdio::serve_on(&s, input.as_bytes(), &mut out).unwrap();
+    wwmcp::stdio::serve_on(&s, input.as_bytes(), &mut out).unwrap();
     let text = String::from_utf8(out).unwrap();
     assert_eq!(text.lines().count(), 1, "{text}");
     assert!(text.contains("\"id\":1"));
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+/// The options of the source `winweaver` reach its tools, and a profile of the option `profile`
+/// starts the workspace; a call of the program itself meets no option.
+#[test]
+fn the_options_of_the_source_decide_and_a_profile_starts_the_workspace() {
+    let dir = folder("options");
+    let mut config = Config::default();
+    config
+        .source_mut(SOURCE)
+        .options
+        .insert("profile".to_owned(), "Strict".to_owned());
+    let server = winweaver_mcp::server(Arc::new(tools(&dir)), config).unwrap();
+    let status = server
+        .call("get_status", &json!({}), &wwmcp::Caller::Client)
+        .unwrap();
+    assert_eq!(status["current"], json!("Strict"));
+    let pc = server.call("read_this_pc", &json!({}), &wwmcp::Caller::Client);
+    let why = pc.unwrap_err();
+    assert_eq!(why.kind, wwmcp::Kind::NotAllowed);
+    assert!(why.message.contains("--read-pc"), "{why}");
+    let mut wrong = Config::default();
+    wrong
+        .source_mut(SOURCE)
+        .options
+        .insert("profile".to_owned(), "No such".to_owned());
+    assert!(winweaver_mcp::server(Arc::new(tools(&dir)), wrong).is_err());
     std::fs::remove_dir_all(&dir).unwrap();
 }

@@ -194,13 +194,19 @@ impl WinWeaver {
                 cmd(icons::BOOK, tr("As a page"), CatalogAct::ComparePage),
             ],
             Some(Doc::Mcp(_)) => {
-                let running = self.full.mcp.run.is_some();
+                use wwmcp::ui::McpAct as Panel;
+                let running = self.full.mcp.running();
                 vec![
                     open(),
                     save_as(),
                     Item::Separator,
-                    when(icons::START, tr("Start"), !running, McpAct::Start),
-                    when(icons::STOP, tr("Stop"), running, McpAct::Stop),
+                    when(
+                        icons::START,
+                        tr("Start"),
+                        !running,
+                        McpAct::Panel(Panel::Start),
+                    ),
+                    when(icons::STOP, tr("Stop"), running, McpAct::Panel(Panel::Stop)),
                 ]
             }
             Some(Doc::Shell(ShellDoc::Theme(_))) => vec![

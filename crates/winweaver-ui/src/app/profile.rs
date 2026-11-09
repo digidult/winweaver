@@ -64,7 +64,7 @@ impl WinWeaver {
             #[cfg(feature = "full")]
             Some(Doc::Bookmarks(d)) => d.reveal = true,
             #[cfg(feature = "full")]
-            Some(Doc::Mcp(_)) => self.full.mcp.journal_reveal = true,
+            Some(Doc::Mcp(_)) => self.full.mcp.panel.journal_reveal = true,
             #[cfg(feature = "full")]
             Some(Doc::RegFile(d)) => d.follow = true,
             #[cfg(feature = "full")]

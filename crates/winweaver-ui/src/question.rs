@@ -27,7 +27,7 @@ pub fn renew_token() -> Question {
             "Renew the token of the MCP server? The clients set up with the old one lose their access until they get the new one.",
         ),
         tr("Renew"),
-        McpAct::RenewToken,
+        McpAct::RenewConfirmed,
     )
 }
 

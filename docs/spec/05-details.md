@@ -399,22 +399,32 @@ change, read the section of the part it touches.
   request is caught (`Server::handle_text`): the request gets the error -32603 and the server goes on; a
   release build has no console, so `eprintln!` of a headless process also goes to the log (`refuse`).
 
-- MCP: every setting of a server is a configuration file `mcp/<name>.wwmcp` (`config::Config`, strict, saved by the
-  MCP tab at every change through `App::persist_mcp`; `settings.json` keeps no MCP field (an
-  `mcp_token` of an older file is read once into `mcp/default.wwmcp`): the transport for a start without the window, port, token,
-  mode, read_pc, registry, edit_library, the first profile and `detailed_log`. `winweaver --mcp FILE` serves as the
-  file says, `--mcp stdio|http --config FILE` too, and the other options change it for that start
-  (`mcp_config` of `main.rs`). The journal keeps every call with its arguments and answer (`redact` leaves out
-  password, product_key, token and authorization; an answer is cut at 16 KB); the detailed log writes them as
-  DETAIL events. The MCP tab shows the selected call in a right panel (`mcpview::detail_view`) with buttons to the
-  places it names (`mcpview::places`: rules, workspace profiles, catalog files, registry keys);
+- MCP: the server, its protocol, transports, journal, log, tab and command line are the ones of W#
+  (`wwmcp`, a git dependency like `ww`); `winweaver_mcp::Tools` is the source `winweaver`, the tools,
+  their options and resources, and a start makes new tools (a workspace of its own) on the profile of
+  the option `profile` (`winweaver_mcp::server`, `mcpview::McpPanel::renew`). Every setting of a server
+  is a configuration file `mcp/<name>.wwmcp` (`wwmcp::Config`, strict, saved by the MCP tab at every
+  change; `settings.json` keeps no MCP field (an `mcp_token` of an older file is read once into
+  `mcp/default.wwmcp`): the transport for a start without the window, port, token, mode, `detailed_log`
+  and in `plugins.winweaver` the switches of the tools and the options read_pc, registry,
+  edit_library and profile. A file of the format `winweaver-mcp` is written in the format of W# by
+  `winweaver_mcp::legacy` when the tab opens it, at a start of `--mcp` for the folder `mcp` and for the
+  file named. `winweaver --mcp FILE` serves as the file says, `--mcp stdio|http --config FILE` too, and the
+  options of `wwmcp::cli` change it for that start (`--read-pc`, `--registry`, `--edit-library` and
+  `--profile` are the options of the source by their keys). The journal keeps every call with its
+  arguments and answer (`redact` leaves out password, token, authorization, secret and the
+  product_key of WinWeaver; an answer is cut at 16 KB); the detailed log writes them as DETAIL events.
+  The MCP tab shows the selected call in a right panel with buttons to the places it names
+  (`mcpview::places`: rules, workspace profiles, catalog files, registry keys); the texts of the tab are
+  the ones of `wwmcp` (`wwmcp::SOURCES` in the test of the translations), the names of the options and
+  the groups are translated at run time (`tr_any`) from the same `ui.json`;
   errors start with not_allowed, not_found, invalid, write_failed or read_failed; passwords and the product
   key are replaced by `***` in every answer.
 
 - MCP, bookmarks and catalogs: `list_bookmarks`, `list_catalogs` (by `CatalogHeader::read`), `get_catalog` (the
   groups, or the policies of a group) and `get_catalog_policy` read always, like profiles; `add_bookmark`,
   `set_bookmark_comment`, `remove_bookmark`, `set_catalog_policy` and `remove_catalog_policy` need
-  `Options::edit_library` (`--edit-library`, the switch of the MCP tab, off by default). A catalog
+  the option `edit_library` (`--edit-library`, the MCP tab, off by default). A catalog
   changes through `CatalogFile::put_rule` (the whole file is checked, a failure changes nothing),
   `remove_rule` (with its `.off` and the conflicts with it), `new_policy`, `new_group`; `admx::catalog_path`
   turns a key of regedit into `HKLM:\` or `DU:\`. The ids of catalogs are file names checked against `..`.

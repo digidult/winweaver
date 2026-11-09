@@ -14,7 +14,7 @@ default = ["full", "glow", "wgpu"]
 # the registry, registry and Group Policy files, users files, the catalogs of policy templates,
 # diffs, bookmarks and the MCP server. wwlite builds without it, so its executable holds none of
 # that code.
-full = ["dep:winweaver-mcp", "dep:zeroize", "winweaver-core/users", "winweaver-win/users"]
+full = ["dep:winweaver-mcp", "dep:wwmcp", "dep:zeroize", "winweaver-core/users", "winweaver-win/users"]
 # The renderers of the window (src/renderer.rs): OpenGL through glow, DirectX 12 through wgpu with that
 # backend only. At least one is needed; the settings and --renderer offer the ones built in.
 glow = ["ww/glow"]
@@ -23,6 +23,8 @@ wgpu = ["ww/wgpu"]
 [dependencies]
 winweaver-core = { path = "../winweaver-core", default-features = false }
 winweaver-mcp = { path = "../winweaver-mcp", optional = true }
+# The MCP server of W# with its tab.
+wwmcp = { workspace = true, optional = true, features = ["ui"] }
 ww.workspace = true
 # The master password of a users file is wiped when the tab locks or closes.
 zeroize = { version = "1", optional = true }

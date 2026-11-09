@@ -383,14 +383,14 @@ impl App for WinWeaver {
     /// The MCP server, while it runs.
     #[cfg(feature = "full")]
     fn status_right(&self, _shell: &Shell<Self>, ui: &mut egui::Ui) {
-        if let Some(run) = &self.full.mcp.run {
+        if let Some(http) = &self.full.mcp.panel.http {
             let p = style::palette(ui);
             ui.label(
                 RichText::new(trf(
                     "MCP: {url}, mode {mode}",
                     &[
-                        ("url", &run.http.url()),
-                        ("mode", &run.server.options().mode.name()),
+                        ("url", &http.url()),
+                        ("mode", &self.full.mcp.panel.config.mode.name()),
                     ],
                 ))
                 .size(style::size(ui, 11.0))

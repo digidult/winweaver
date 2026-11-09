@@ -124,15 +124,17 @@ fn the_example_translation_reads() {
     }
 }
 
-/// The texts of `winweaver-ui` and of `ww`: this file is left out, since it names texts that are
+/// The texts of `winweaver-ui`, of `ww` and of `wwmcp`: this file is left out, since it names texts that are
 /// not of the interface.
 #[test]
 fn every_text_of_the_interface_is_translated() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut files = Vec::new();
     sources(&root.join("src"), &mut files);
-    // W#, a git dependency: its checkout names its sources.
+    // W#, a git dependency: its checkout names its sources, and the tab of the MCP server of W#.
     sources(Path::new(ww::SOURCES), &mut files);
+    #[cfg(feature = "full")]
+    sources(Path::new(wwmcp::SOURCES), &mut files);
     let mut keys = std::collections::BTreeSet::new();
     for path in files {
         if path.file_name().is_some_and(|n| n == "translations.rs") {

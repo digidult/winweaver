@@ -1,15 +1,17 @@
-//! The tools and resources of the MCP server.
+//! The tools and resources of WinWeaver.
 //!
 //! Every tool is one entry of [`TOOLS`]: its name, its description, what it needs (the mode, the
 //! registry, the library, this PC) and the function that runs it, in `profiles`, `rules`,
 //! `bookmarks`, `catalogs` and `registry`. `definitions` and `call` read the table, so a tool is
-//! named once.
+//! named once; the server of W# checks the mode and the options a tool needs before it runs.
 
 use serde_json::{Value, json};
 use winweaver_core::profile::Profile;
 use winweaver_core::resolver::{self, Resolution};
+pub(crate) use wwmcp::{Args, Kind, ToolError, fail};
+use wwmcp::{Mode, ResourceDef, ToolDef};
 
-use crate::{Mode, RegistryAccess, Server, State, WsDoc};
+use crate::{Server, State, WsDoc};
 
 mod bookmarks;
 mod catalogs;
@@ -17,108 +19,15 @@ mod profiles;
 mod registry;
 mod rules;
 
-/// The longest text of one tool result; longer results are cut with a note.
-const TEXT_LIMIT: usize = 60_000;
 const LIST_LIMIT: usize = 200;
 /// The skill for agents, served as a resource.
 const SKILL: &str = include_str!("../../../../agents/skills/winweaver/SKILL.md");
 
-/// Why a tool call failed; its name starts the text the client sees.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Kind {
-    Invalid,
-    NotFound,
-    NotAllowed,
-    ReadFailed,
-    WriteFailed,
-}
-
-impl Kind {
-    pub(crate) fn name(self) -> &'static str {
-        match self {
-            Kind::Invalid => "invalid",
-            Kind::NotFound => "not_found",
-            Kind::NotAllowed => "not_allowed",
-            Kind::ReadFailed => "read_failed",
-            Kind::WriteFailed => "write_failed",
-        }
-    }
-}
-
-/// A failed tool call.
-pub(crate) struct ToolError {
-    pub kind: Kind,
-    pub message: String,
-}
-
-fn fail(kind: Kind, message: impl Into<String>) -> ToolError {
-    ToolError {
-        kind,
-        message: message.into(),
-    }
-}
-
 type Outcome = Result<Value, ToolError>;
 
-/// The arguments of a call: a JSON object, a field that is null as good as absent.
-pub(crate) struct Args<'a>(&'a Value);
-
-impl<'a> Args<'a> {
-    fn get(&self, name: &str) -> Option<&'a Value> {
-        self.0.get(name).filter(|v| !v.is_null())
-    }
-
-    /// A text that must be there.
-    fn text(&self, name: &str) -> Result<String, ToolError> {
-        self.str(name)
-            .map(str::to_owned)
-            .ok_or_else(|| fail(Kind::Invalid, format!("the argument {name} must be a text")))
-    }
-
-    /// A text that may be left out.
-    fn str(&self, name: &str) -> Option<&'a str> {
-        self.get(name).and_then(Value::as_str)
-    }
-
-    /// A text, empty when left out.
-    fn optional_text(&self, name: &str) -> String {
-        self.str(name).unwrap_or_default().to_owned()
-    }
-
-    /// A switch that must be there.
-    fn flag(&self, name: &str) -> Result<bool, ToolError> {
-        self.get(name).and_then(Value::as_bool).ok_or_else(|| {
-            fail(
-                Kind::Invalid,
-                format!("the argument {name} must be true or false"),
-            )
-        })
-    }
-
-    /// A switch with its default.
-    fn flag_or(&self, name: &str, default: bool) -> bool {
-        self.get(name).and_then(Value::as_bool).unwrap_or(default)
-    }
-
-    fn number(&self, name: &str) -> Option<u64> {
-        self.get(name).and_then(Value::as_u64)
-    }
-
-    /// A count between 1 and `max`, `default` when left out.
-    fn limit(&self, name: &str, default: usize, max: usize) -> usize {
-        match self.number(name) {
-            Some(n) => n.clamp(1, max as u64) as usize,
-            None => default,
-        }
-    }
-
-    fn list(&self, name: &str) -> Option<&'a Vec<Value>> {
-        self.get(name).and_then(Value::as_array)
-    }
-}
-
 /// What a tool needs before it runs: the mode, the registry (reading, or writing too), the
-/// library (bookmarks and catalogs) and this PC.
+/// library (bookmarks and catalogs) and this PC; the options of the source `winweaver` that the
+/// server of W# checks.
 #[derive(Clone, Copy)]
 pub(crate) struct Needs {
     mode: Mode,
@@ -160,20 +69,38 @@ impl Needs {
         ..Self::READ
     };
 
-    fn check(&self, state: &State) -> Result<(), ToolError> {
-        if self.read_pc && !state.options.read_pc {
-            return Err(fail(
-                Kind::NotAllowed,
-                "reading this PC is off; the user allows it in the window (MCP tab) or with --read-pc",
-            ));
-        }
+    /// The tool for the server: its mode and the options it needs.
+    fn def(&self, tool: &Tool) -> ToolDef {
+        let mut def =
+            ToolDef::new(tool.name, group(tool), tool.description, (tool.schema)()).mode(self.mode);
         if let Some(write) = self.registry {
-            registry_allowed(state, write)?;
+            def = def.needs("registry", if write { "write" } else { "read" });
         }
         if self.library {
-            library_allowed(state)?;
+            def = def.needs("edit_library", "on");
         }
-        need(state, self.mode)
+        if self.read_pc {
+            def = def.needs("read_pc", "on");
+        }
+        def
+    }
+}
+
+/// The group of a tool, by the family of its name: the switches of the tab turn a group off.
+fn group(tool: &Tool) -> &'static str {
+    let name = tool.name;
+    if name.contains("registry") {
+        "registry"
+    } else if name.contains("bookmark") {
+        "bookmarks"
+    } else if name.contains("catalog") {
+        "catalogs"
+    } else if name.contains("rule") || name.contains("group") || name.contains("param") {
+        "rules"
+    } else if name == "read_this_pc" {
+        "this_pc"
+    } else {
+        "profiles"
     }
 }
 
@@ -236,23 +163,27 @@ fn s(description: &str) -> Value {
     json!({ "type": "string", "description": description })
 }
 
-/// The definitions of the tools for `tools/list`.
-pub(crate) fn definitions() -> Vec<Value> {
-    TOOLS
-        .iter()
-        .map(|t| {
-            json!({ "name": t.name, "description": t.description, "inputSchema": (t.schema)() })
-        })
-        .collect()
+/// The definitions of the tools for the server.
+pub(crate) fn definitions() -> Vec<ToolDef> {
+    TOOLS.iter().map(|t| t.needs.def(t)).collect()
 }
 
-/// The resources for `resources/list`.
-pub(crate) fn resources() -> Vec<Value> {
+/// The resources of WinWeaver.
+pub(crate) fn resources() -> Vec<ResourceDef> {
+    let resource = |uri: &str, name: &str, mime: &str| ResourceDef {
+        uri: uri.to_owned(),
+        name: name.to_owned(),
+        mime: mime.to_owned(),
+    };
     vec![
-        json!({ "uri": "winweaver://catalog", "name": "Rule catalog", "mimeType": "application/json" }),
-        json!({ "uri": "winweaver://profile", "name": "Current profile", "mimeType": "application/json" }),
-        json!({ "uri": "winweaver://presets", "name": "Presets", "mimeType": "application/json" }),
-        json!({ "uri": "winweaver://skill", "name": "How to use WinWeaver over MCP", "mimeType": "text/markdown" }),
+        resource("winweaver://catalog", "Rule catalog", "application/json"),
+        resource("winweaver://profile", "Current profile", "application/json"),
+        resource("winweaver://presets", "Presets", "application/json"),
+        resource(
+            "winweaver://skill",
+            "How to use WinWeaver over MCP",
+            "text/markdown",
+        ),
     ]
 }
 
@@ -271,51 +202,7 @@ pub(crate) fn resource(server: &Server, state: &State, uri: &str) -> Option<Stri
         "winweaver://skill" => return Some(SKILL.to_owned()),
         _ => return None,
     };
-    Some(fit(
-        &serde_json::to_string_pretty(&value).unwrap_or_default()
-    ))
-}
-
-/// The arguments of a call for the journal: identifiers, numbers and switches; other texts are
-/// replaced by their kind.
-pub(crate) fn journal_detail(args: &Value) -> String {
-    let Some(map) = args.as_object() else {
-        return String::new();
-    };
-    map.iter()
-        .map(|(k, v)| {
-            let shown = match v {
-                Value::Bool(_) | Value::Number(_) => v.to_string(),
-                Value::String(s)
-                    if s.len() <= 80
-                        && s.chars()
-                            .all(|c| c.is_ascii_alphanumeric() || "._- ".contains(c)) =>
-                {
-                    s.clone()
-                }
-                Value::String(_) => "<text>".to_owned(),
-                _ => "<value>".to_owned(),
-            };
-            format!("{}={shown}", k.chars().take(40).collect::<String>())
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
-/// A text cut to the limit of one result.
-pub(crate) fn fit(text: &str) -> String {
-    if text.len() <= TEXT_LIMIT {
-        return text.to_owned();
-    }
-    let mut end = TEXT_LIMIT;
-    while !text.is_char_boundary(end) {
-        end -= 1;
-    }
-    format!(
-        "{}\n... (cut: {} more characters)",
-        &text[..end],
-        text.len() - end
-    )
+    Some(serde_json::to_string_pretty(&value).unwrap_or_default())
 }
 
 fn current(state: &State) -> &WsDoc {
@@ -341,48 +228,6 @@ fn current_mut(state: &mut State) -> &mut WsDoc {
 /// The resolution of the current profile.
 fn resolution(server: &Server, state: &State) -> Resolution {
     resolver::resolve(&server.catalog, &current(state).profile)
-}
-
-fn need(state: &State, mode: Mode) -> Result<(), ToolError> {
-    if state.options.mode >= mode {
-        Ok(())
-    } else {
-        Err(fail(
-            Kind::NotAllowed,
-            format!(
-                "the server is in the mode {}; this tool needs the mode {} (the user switches it in the window or with --mode)",
-                state.options.mode.name(),
-                mode.name()
-            ),
-        ))
-    }
-}
-
-/// The bookmarks and the catalog files: read always, changed only when the user allows it.
-fn library_allowed(state: &State) -> Result<(), ToolError> {
-    if state.options.edit_library {
-        Ok(())
-    } else {
-        Err(fail(
-            Kind::NotAllowed,
-            "changing the bookmarks and the catalogs is off; the user allows it in the window (MCP tab) or with --edit-library",
-        ))
-    }
-}
-
-/// The tools of the registry: off unless the user allows them, writing only when allowed too.
-fn registry_allowed(state: &State, write: bool) -> Result<(), ToolError> {
-    match (state.options.registry, write) {
-        (RegistryAccess::Write, _) | (RegistryAccess::Read, false) => Ok(()),
-        (RegistryAccess::Read, true) => Err(fail(
-            Kind::NotAllowed,
-            "writing the registry is off; the user allows it in the window (MCP tab) or with --registry write",
-        )),
-        (RegistryAccess::Off, _) => Err(fail(
-            Kind::NotAllowed,
-            "the registry is off; the user allows it in the window (MCP tab) or with --registry read or write",
-        )),
-    }
 }
 
 /// A profile without its passwords and product key.
@@ -413,7 +258,6 @@ pub(crate) fn call(server: &Server, state: &mut State, name: &str, args: &Value)
     let Some(tool) = TOOLS.iter().find(|t| t.name == name) else {
         return Err(fail(Kind::NotFound, format!("no tool {name}")));
     };
-    tool.needs.check(state)?;
     (tool.run)(server, state, &Args(args))
 }
 
@@ -452,12 +296,6 @@ mod tests {
                 && safe_file_name("C:x").is_err()
         );
         assert_eq!(safe_file_name("Office 2").ok().as_deref(), Some("Office 2"));
-        assert_eq!(
-            journal_detail(
-                &json!({ "id": "defender.pua", "on": true, "comment": "long free text, with commas" })
-            ),
-            "id=defender.pua on=true comment=<text>"
-        );
     }
 
     #[test]
@@ -472,6 +310,14 @@ mod tests {
             assert_eq!(schema["type"], "object", "{}", t.name);
             assert!(!t.description.is_empty(), "{}", t.name);
         }
-        assert_eq!(definitions().len(), count);
+        let defs = definitions();
+        assert_eq!(defs.len(), count);
+        let write = defs
+            .iter()
+            .find(|d| d.name == "set_registry_value")
+            .unwrap();
+        assert_eq!(write.needs[0].at_least, "write");
+        let pc = defs.iter().find(|d| d.name == "read_this_pc").unwrap();
+        assert_eq!((pc.mode, pc.group.as_str()), (Mode::Edit, "this_pc"));
     }
 }

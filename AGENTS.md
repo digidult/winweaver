@@ -26,7 +26,7 @@ dependency of its branch `main`; W# also carries wview and the text editor wedit
 | File types, formats, what lives next to the executable | `docs/spec/02-documents.md` |
 | What the program must do (feature inventory) | `docs/spec/03-features.md` |
 | Crates, modules, threads, build | `docs/spec/04-architecture.md` |
-| Use or change the MCP server | `crates/winweaver-mcp/src/lib.rs`, `tools/mod.rs` (the table of the tools), then `agents/skills/winweaver/SKILL.md` |
+| Use or change the MCP server | `crates/winweaver-mcp/src/lib.rs` (the source of the tools of WinWeaver), `tools/mod.rs` (the table of the tools), `agents/skills/winweaver/SKILL.md`; the server, its tab and its command line are W#'s (`docs/mcp.md` and `crates/wwmcp` of supakov/ww) |
 | Change what an AI agent or the archive gets | `agents/README.md`, `package/README.md` |
 | Change W#, the framework of the window, or its plugins | the repository supakov/ww (its AGENTS.md, `docs/ww.md`, `docs/plugins.md`); a change of W# is checked against WinWeaver before its pull request (section 5) |
 | Change wview or wedit | the repository supakov/wview (its AGENTS.md) |
@@ -102,7 +102,7 @@ Every folder and module: `docs/spec/04-architecture.md`, section 10. Next to the
     files and logs, which stay English). A new rule needs its texts in
     every `data/catalog/lang/<code>.json` (`translations_cover_every_rule`); `package/lang/be/ui.json` may
     lag (English fills the gaps).
-11. Versions: `version` of the workspace `Cargo.toml` (0.1.46 on 09.11.2026) grows with every
+11. Versions: `version` of the workspace `Cargo.toml` (0.1.47 on 09.11.2026) grows with every
     pull request that reaches `main`. An agent changes the third number alone (0.1.45 to 0.1.46);
     the first and the second change only on the word of the customer. Every build
     names its commit: `winweaver_core::BUILD` is `<version>+<12 digits of the commit>` (`build.rs` of the core,
@@ -259,7 +259,7 @@ Before a change of a part, read its section of `docs/spec/05-details.md`:
 | Core | Catalog, profiles, resolver, check, diff, bookmarks, build of the answer file, This PC (plan, judgement, capture, reports), stand-alone scripts, import of answer files and old JSON profiles, ADMX import and catalog files, registry files, users files; tests on the real data |
 | Windows API | The registry with the permissions of keys, the elevation, the locales and layouts, the language of Windows, the local accounts, DISM, the package API, the native apply with its backup and undo, the default user profile, the users of a users file |
 | Window | WinWeaver on W#: tabs, menu, command bar of each tab, navigation, search per tab, the painted tree and lists, detail panel, forms, check, build, diff tab, bookmarks, Markdown pages, This PC, registry, registry files, catalogs and their editor, users files, MCP tab, settings, nine languages, drafts, restored tabs, log, themes with fonts and icons in colour |
-| MCP server | stdio and HTTP, 36 tools, 4 resources, modes, journal, token, configuration files; tests of both transports |
+| MCP server | The server of W# (`wwmcp`) with the source `winweaver`: 36 tools in 6 groups, 4 resources, its options, the switches of the tools, the call by hand, configuration files of W# (older ones converted); tests of both transports |
 | W#, wview, wedit | In their repositories since 07.11.2026: W# and the system of the plugins in supakov/ww, wview with its plugins and wedit in supakov/wview; this repository keeps their history until 0.43.0 |
 | wwlite | The light edition for Windows with its archive, built without the feature `full` of winweaver-ui; the browser edition (wasm32, `docs/wasm.md`) built by CI as `wwlite-web-<version>`: files from the browser and downloads, the settings and drafts in the storage of the page, the embedded list of input languages |
 | Acceptance | Every part of every version up to 0.44.0 accepted (08.11.2026); the acceptance page of the customer (a claude.ai page with the steps of each part, run in a VM of Windows 11 on the archives of a build) holds no open part, and a new part comes when the customer asks for an acceptance |

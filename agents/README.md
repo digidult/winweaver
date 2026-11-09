@@ -49,9 +49,10 @@ You choose the mode in the MCP tab; the assistant never changes it.
 | edit | Also change the profiles of the server workspace in memory and create or load them |
 | files | Also save profiles into `profiles/` and write the answer file into `output/` |
 
-"Allow reading the settings of this PC" lets it read this PC (only reading, no administrator rights). The tab keeps
-these settings in `mcp/default.wwmcp`; `winweaver --mcp FILE` starts the server without the window as such a file
-says. The assistant never applies settings, never runs commands and never sees passwords or product keys.
+In the card WinWeaver under **Tools** of the tab, "Allow reading the settings of this PC" lets it read this PC (only
+reading, no administrator rights), and every tool can be turned off alone or with its group. The tab keeps these
+settings in `mcp/default.wwmcp`; `winweaver --mcp FILE` starts the server without the window as such a file says.
+The assistant never applies settings, never runs commands and never sees passwords or product keys.
 
 The server writes what it does into `logs/mcp-<date>.jsonl` next to `winweaver.exe`, one JSON object a line (no
 token, passwords or keys; the detailed log of the configuration adds every request and answer):

@@ -419,7 +419,7 @@ impl WinWeaver {
             shell.status = tr("Open a profile first").to_owned();
             return;
         };
-        let nonce = match winweaver_mcp::new_token() {
+        let nonce = match wwmcp::new_token() {
             Ok(n) => n,
             Err(e) => {
                 shell.status = e;
@@ -458,7 +458,7 @@ impl WinWeaver {
                 return;
             }
         };
-        let nonce = match winweaver_mcp::new_token() {
+        let nonce = match wwmcp::new_token() {
             Ok(n) => n,
             Err(e) => {
                 shell.status = e;

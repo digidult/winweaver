@@ -88,49 +88,25 @@ impl WinWeaver {
             return;
         };
         let search = &doc.search;
-        let panel = &mut self.full.mcp;
+        let mcpview::McpPanel { panel, tools } = &mut self.full.mcp;
         let imports: Vec<String> = self.imports.iter().map(|f| f.id.clone()).collect();
+        let profiles: Vec<String> = tools.workspace().into_iter().map(|w| w.0).collect();
         let catalog = &self.catalog;
         let texts = texts_for(&self.texts, &i18n::current());
-        let p = style::palette(ui);
-        let settings_frame = egui::Frame::new().fill(p.bg);
-        if panel.run.is_some() {
-            let max = (ui.available_height() - 120.0).max(160.0);
-            egui::Panel::top("mcp-settings")
-                .resizable(true)
-                .default_size(420.0)
-                .size_range(120.0..=max)
-                .frame(settings_frame)
-                .show(ui, |ui| {
-                    egui::ScrollArea::vertical()
-                        .auto_shrink(false)
-                        .show(ui, |ui| mcpview::mcp_view(ui, panel, acts));
-                });
-            if panel.detail_open {
-                egui::Panel::right("mcp-detail")
-                    .resizable(true)
-                    .default_size(380.0)
-                    .frame(
-                        egui::Frame::new()
-                            .fill(p.bg)
-                            .inner_margin(egui::Margin::same(12)),
-                    )
-                    .show(ui, |ui| {
-                        mcpview::detail_view(ui, panel, catalog, texts, &imports, acts)
-                    });
-            }
-            egui::CentralPanel::default()
-                .frame(egui::Frame::new().fill(p.card))
-                .show(ui, |ui| mcpview::journal_view(ui, panel, search));
-        } else {
-            egui::CentralPanel::default()
-                .frame(settings_frame)
-                .show(ui, |ui| {
-                    egui::ScrollArea::vertical()
-                        .auto_shrink(false)
-                        .show(ui, |ui| mcpview::mcp_view(ui, panel, acts));
-                });
-        }
+        let (mut own, mut cards, mut placed) = (Vec::new(), Vec::new(), Vec::new());
+        wwmcp::ui::draw(
+            ui,
+            panel,
+            search,
+            &mut own,
+            &mut |ui| mcpview::workspace_card(ui, tools, &mut cards),
+            &mut |ui, entry| {
+                mcpview::places_view(ui, entry, catalog, texts, &imports, &profiles, &mut placed)
+            },
+        );
+        acts.extend(own.into_iter().map(|a| Act::Mcp(McpAct::Panel(a))));
+        acts.extend(cards);
+        acts.extend(placed);
     }
 
     #[cfg(feature = "full")]
