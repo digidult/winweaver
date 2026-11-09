@@ -938,5 +938,7 @@
   "bookmarks": "закладки",
   "catalogs": "каталоги",
   "registry": "реестр",
-  "this_pc": "этот ПК"
+  "this_pc": "этот ПК",
+  "This needs WinWeaver on Windows: a browser reads and changes no PC": "Для этого нужен WinWeaver в Windows: браузер не читает и не меняет ПК",
+  "Archives of policy templates": "Архивы шаблонов политик"
 }

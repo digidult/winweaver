@@ -938,5 +938,7 @@
   "bookmarks": "yer imleri",
   "catalogs": "kataloglar",
   "registry": "kayıt defteri",
-  "this_pc": "bu bilgisayar"
+  "this_pc": "bu bilgisayar",
+  "This needs WinWeaver on Windows: a browser reads and changes no PC": "Bunun için Windows'ta WinWeaver gerekir: tarayıcı hiçbir bilgisayarı okumaz ve değiştirmez",
+  "Archives of policy templates": "İlke şablonu arşivleri"
 }

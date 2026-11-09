@@ -678,6 +678,14 @@ change, read the section of the part it touches.
   The menu of a page has no Open recent and no Exit (`cfg(not(target_arch = "wasm32"))` in
   `app/menu.rs`). `docs/wasm.md` section 6 builds the page by hand, without CI.
 
+- winweaverweb (`crates/winweaverweb`, `docs/wasm.md` section 0a): winweaver-ui with `full` and
+  without `pc` and `mcp` for wasm32; `winweaver-win` is a dependency on every target, since its
+  functions answer that there is no Windows elsewhere (no PC, a registry in memory). The writes of
+  the core and of the window go through `ww_base::files` (`jsonfile::write_atomic`,
+  `PolFile::save`, `RegFile::save`, the answer file, `ww::dialogs::write_file`), the list of the
+  imports too (`import_files`); in a browser a path under `ww_base::files::DOWNLOAD` is a download.
+  A new save or open of a file keeps to them, or the browser edition loses it.
+
 ## 8. wview and the plugins
 
 wview, its plugins and the editor wedit live in supakov/wview; their facts are in its

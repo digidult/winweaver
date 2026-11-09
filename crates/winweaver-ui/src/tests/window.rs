@@ -69,6 +69,7 @@ fn every_kind_of_tab_draws_without_a_screen() {
             Some("Select a policy in the tree."),
         ),
         (Act::Marks(MarksAct::Open), None),
+        #[cfg(feature = "mcp")]
         (Act::Mcp(McpAct::Open), None),
         (Act::File(FileAct::OpenGuide), None),
         (Act::File(FileAct::OpenDocs), Some("README.md")),
@@ -223,6 +224,7 @@ fn screenshots_of_the_window() {
     shot(&mut harness, "04-diff");
     for (act, name) in [
         (Act::Shell(ShellAct::OpenSettings), "05-settings"),
+        #[cfg(feature = "mcp")]
         (Act::Mcp(McpAct::Open), "06-mcp"),
         (Act::Marks(MarksAct::Open), "07-bookmarks"),
         (Act::File(FileAct::OpenGuide), "08-guide"),

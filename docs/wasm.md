@@ -53,6 +53,35 @@ close its tab), the tabs of the last session have no meaning there, the
 fonts are the ones of egui (no Segoe UI), the input languages show their English names, and the host
 of the page is the customer's decision (section 5). The size of the module is read from the artifact.
 
+## 0a. winweaverweb: WinWeaver in a browser
+
+The list of 09.11.2026 (the second, item 1): `crates/winweaverweb` builds the window of WinWeaver
+with the feature `full` of winweaver-ui, without its features `pc` (This PC, the registry of a PC,
+the native apply, the accounts of a PC) and `mcp` (the MCP server), for `wasm32-unknown-unknown`
+with `glow`. CI (the job `build-web`) and `build-all.cmd` make `winweaverweb-<version>`:
+`winweaverweb.html` (one file, `single.py`), `files/` (the page for a server), its `README.md` and
+`manifest.py`.
+
+- **Every file of WinWeaver**: Open and a drop take a profile, an answer file, a diff, bookmarks,
+  a catalog file, a zip archive of policy templates (`admx::read_archive_bytes`, made a catalog
+  file in a tab, its Save a download), a users file, a Group Policy file, a registry file, a
+  Markdown page (`app/web.rs`, `App::open_bytes`). A save goes through the file layer of W#
+  (`ww_base::files`): the file dialog of a browser (`dialogs::FileDialog`) gives a path under
+  `ww_base::files::DOWNLOAD`, which the layer of the page turns into a download, so Save, Save as,
+  Build, the scripts and the registry files of a profile work as natively.
+- **The storage of the page**: the settings, the drafts and the bookmarks (`bookmarks.wwmarks`
+  through the same layer) stay in `localStorage`; an import saved there too while it fits (a
+  browser keeps about 5 MB a site).
+- **The folder of the page over http**: `ww::store::preload` reads `files.json` next to the page
+  (a list of relative paths, which `manifest.py` writes for `imports/`, `themes/` and
+  `lang/<code>/ui.json`) and every file it names before the window starts; the store and the file
+  layer read them before the storage of the page, so the catalogs of `imports/` load, the themes
+  and the translations are offered. What blocked it: a browser cannot list a folder of a server and
+  a page reads files only as tasks, so the list is a file and the files are read before the start;
+  a page opened from `file://` reads none (the one-file edition has the built-in ones).
+- **Not there**: the menus and the buttons of what needs this PC are hidden (`act::needs_pc`), an
+  act of them is refused with a line; no MCP. The guide is the one of WinWeaver.
+
 ## The study of 24.10.2026
 
 **It can be done.** eframe 0.36 runs an `eframe::App` in a browser through `eframe::WebRunner`, and

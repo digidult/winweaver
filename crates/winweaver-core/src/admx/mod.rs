@@ -29,7 +29,7 @@ mod templates;
 mod tests;
 mod xml;
 
-pub use archive::{ARCHIVE_EXTENSION, Archive, read_archive};
+pub use archive::{ARCHIVE_EXTENSION, Archive, read_archive, read_archive_bytes};
 pub use compare::{Comparison, PolicyDifference, compare};
 pub use file::{CatalogFile, CopyWhat, LangTexts};
 pub use merge::{merge, merge_texts};

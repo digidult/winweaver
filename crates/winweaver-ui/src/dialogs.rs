@@ -2,6 +2,74 @@
 
 use crate::*;
 
+/// The file dialog of the window: rfd's natively. A page has none it could wait for, so in a
+/// browser this one answers no file at once: what saves goes to a download there, what opens to
+/// the dialog of the page (`ShellAct::Open`, then `App::open_bytes`).
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) use rfd::FileDialog;
+
+/// The file dialog in a browser: a file to save is a download under the name the dialog was given
+/// (a path under `ww_base::files::DOWNLOAD`, which the file layer of the page turns into a
+/// download), a folder to save into the downloads; a file to open, none (the dialog of the page
+/// does it).
+#[cfg(all(target_arch = "wasm32", feature = "full"))]
+#[derive(Default)]
+pub(crate) struct FileDialog {
+    name: String,
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "full"))]
+impl FileDialog {
+    pub(crate) fn new() -> Self {
+        Self::default()
+    }
+    pub(crate) fn set_title(self, _title: impl Into<String>) -> Self {
+        self
+    }
+    pub(crate) fn add_filter(
+        self,
+        _name: impl Into<String>,
+        _extensions: &[impl ToString],
+    ) -> Self {
+        self
+    }
+    pub(crate) fn set_file_name(mut self, name: impl Into<String>) -> Self {
+        self.name = name.into();
+        self
+    }
+    pub(crate) fn set_directory(self, _dir: impl AsRef<std::path::Path>) -> Self {
+        self
+    }
+    pub(crate) fn pick_file(self) -> Option<PathBuf> {
+        None
+    }
+    pub(crate) fn pick_folder(self) -> Option<PathBuf> {
+        Some(PathBuf::from(ww_base::files::DOWNLOAD))
+    }
+    pub(crate) fn save_file(self) -> Option<PathBuf> {
+        let name = if self.name.is_empty() {
+            "file".to_owned()
+        } else {
+            self.name
+        };
+        Some(ww_base::files::download_path(&name))
+    }
+}
+
+/// A dialog that starts in a folder (`ww::widgets::in_folder` natively).
+#[cfg(any(feature = "full", not(target_arch = "wasm32")))]
+pub(crate) fn in_folder(dialog: FileDialog, dir: &std::path::Path) -> FileDialog {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        widgets::in_folder(dialog, dir)
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let _ = dir;
+        dialog
+    }
+}
+
 #[cfg(feature = "full")]
 pub(crate) use ww::dialogs::{kept_name, write_file};
 
@@ -31,21 +99,21 @@ pub(crate) fn with_extension(path: PathBuf) -> PathBuf {
 }
 
 #[cfg(feature = "full")]
-pub(crate) fn file_dialog(kind: &str, extension: &str) -> rfd::FileDialog {
+pub(crate) fn file_dialog(kind: &str, extension: &str) -> FileDialog {
     let dir = profiles_dir();
-    let dialog = rfd::FileDialog::new().add_filter(kind, &[extension]);
-    widgets::in_folder(dialog, &dir)
+    let dialog = FileDialog::new().add_filter(kind, &[extension]);
+    in_folder(dialog, &dir)
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn profile_dialog() -> rfd::FileDialog {
-    let dialog = rfd::FileDialog::new().add_filter("WinWeaver profile", &[profile::EXTENSION]);
-    widgets::in_folder(dialog, &profiles_dir())
+#[cfg(any(feature = "full", not(target_arch = "wasm32")))]
+pub(crate) fn profile_dialog() -> FileDialog {
+    let dialog = FileDialog::new().add_filter("WinWeaver profile", &[profile::EXTENSION]);
+    in_folder(dialog, &profiles_dir())
 }
 
 /// The kinds of files the dialog of a browser offers (the light edition there): profiles, answer
 /// files, older profiles; a name and its extensions each.
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", not(feature = "full")))]
 pub(crate) fn open_filters() -> Vec<(String, Vec<String>)> {
     let kind = |name: &str, ext: &str| (name.to_owned(), vec![ext.to_owned()]);
     vec![
@@ -81,6 +149,7 @@ pub(crate) fn open_dialog() -> rfd::FileDialog {
                 bookmarks::EXTENSION,
                 admx::CATALOG_EXTENSION,
                 themes::EXTENSION,
+                #[cfg(feature = "mcp")]
                 wwmcp::config::EXTENSION,
                 users::EXTENSION,
             ],

@@ -183,7 +183,7 @@ impl WinWeaver {
             }
         };
         let stem = file_stem(&d.file.name);
-        let mut dialog = rfd::FileDialog::new()
+        let mut dialog = crate::dialogs::FileDialog::new()
             .set_title(tr("Save the script as"))
             .add_filter("PowerShell", &["ps1"])
             .set_file_name(format!("Create-{stem}.ps1"));

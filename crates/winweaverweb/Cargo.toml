@@ -1,0 +1,24 @@
+[package]
+name = "winweaverweb"
+description = "winweaverweb: WinWeaver in a browser, every file of WinWeaver without this PC and without MCP"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+
+[[bin]]
+name = "winweaverweb"
+path = "src/main.rs"
+
+[dependencies]
+winweaver-core = { path = "../winweaver-core" }
+# The window of WinWeaver with the files of the feature full; in a browser it draws with WebGL.
+winweaver-ui = { path = "../winweaver-ui", default-features = false, features = ["full", "glow"] }
+
+# The browser edition (web/index.html): the start of the window runs as a task of the page, and
+# the random source of the crypto of users files is the one of the browser.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4"
+getrandom = { version = "0.4", features = ["wasm_js"] }

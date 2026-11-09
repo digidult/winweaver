@@ -190,6 +190,8 @@ if not defined DO_WEB goto check_done
 call :step "Clippy of wwlite for the browser"
 call "%CARGO_CMD%" clippy --locked -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown -- -D warnings
 if errorlevel 1 goto failed
+call "%CARGO_CMD%" clippy --locked -p winweaverweb --target wasm32-unknown-unknown -- -D warnings
+if errorlevel 1 goto failed
 :check_done
 
 rem ---- The tests, with the screenshots when asked ----------------------------------------------
@@ -258,12 +260,24 @@ rem The edition by default: one HTML file with the glue and the packed module in
 call %PY% crates\wwlite\web\single.py "%DIST%\wwlite-web\files" "%DIST%\wwlite-web\wwlite.html"
 if errorlevel 1 goto failed
 copy /y package-wwlite\README.md "%DIST%\wwlite-web\README.md" >nul || goto failed
+call :step "Release build of winweaverweb, WinWeaver in a browser"
+call "%CARGO_CMD%" build --locked --release -p winweaverweb --target wasm32-unknown-unknown
+if errorlevel 1 goto failed
+call :fresh "%DIST%\winweaverweb" || goto failed
+call "%WBG%" --target web --no-typescript --out-dir "%DIST%\winweaverweb\files" target\wasm32-unknown-unknown\release\winweaverweb.wasm
+if errorlevel 1 goto failed
+copy /y crates\winweaverweb\web\index.html "%DIST%\winweaverweb\files\index.html" >nul || goto failed
+call %PY% crates\winweaverweb\web\single.py "%DIST%\winweaverweb\files" "%DIST%\winweaverweb\winweaverweb.html"
+if errorlevel 1 goto failed
+copy /y crates\winweaverweb\web\README.md "%DIST%\winweaverweb\README.md" >nul || goto failed
+copy /y crates\winweaverweb\web\manifest.py "%DIST%\winweaverweb\manifest.py" >nul || goto failed
 :web_done
 
 call :step "The archives"
 call :zip WinWeaver || goto failed
 call :zip wwlite || goto failed
 if defined DO_WEB call :zip wwlite-web || goto failed
+if defined DO_WEB call :zip winweaverweb || goto failed
 
 if not defined DO_SLIDES goto slides_done
 call :step "The presentation"

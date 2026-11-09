@@ -302,6 +302,9 @@ pub(crate) fn this_pc_buttons(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
                 Act::Pc(PcAct::SaveRegFile(true)),
             ),
         ] {
+            if !cfg!(feature = "pc") && crate::act::needs_pc(&act) {
+                continue;
+            }
             if ui.button(text).clicked() {
                 acts.push(act);
             }

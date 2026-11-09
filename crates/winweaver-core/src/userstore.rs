@@ -179,6 +179,14 @@ fn tag(key: &[u8], salt: &[u8], iv: &[u8], data: &[u8]) -> Hmac<Sha256> {
     mac
 }
 
+/// A text of `bytes` random bytes in hexadecimal, from the random source of the system (of the
+/// browser on the web): a nonce, a token.
+pub fn random_hex(bytes: usize) -> Result<String, String> {
+    let mut buffer = vec![0u8; bytes];
+    getrandom::fill(&mut buffer).map_err(|e| e.to_string())?;
+    Ok(buffer.iter().map(|b| format!("{b:02x}")).collect())
+}
+
 /// Encrypts the passwords under a master password with a fresh salt and vector.
 pub fn encrypt(passwords: &Passwords, master: &[u8], iterations: u32) -> Result<Container, String> {
     let mut salt = [0u8; SALT_SIZE];

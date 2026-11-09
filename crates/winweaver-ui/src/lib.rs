@@ -29,7 +29,7 @@ mod forms;
 mod importlist;
 #[cfg(feature = "full")]
 mod marksview;
-#[cfg(feature = "full")]
+#[cfg(feature = "mcp")]
 mod mcpview;
 mod pages;
 #[cfg(feature = "full")]
@@ -75,18 +75,20 @@ use winweaver_core::{
     users::{self, UsersFile},
 };
 
+#[cfg(feature = "mcp")]
+pub use act::McpAct;
 pub use act::{Act, FileAct, ProfileAct};
 #[cfg(feature = "full")]
 pub use act::{
-    CatalogAct, DiffAct, ImportAct, MarksAct, McpAct, PcAct, PolAct, RegFileAct, RegistryAct,
-    SettingsAct, UsersAct,
+    CatalogAct, DiffAct, ImportAct, MarksAct, PcAct, PolAct, RegFileAct, RegistryAct, SettingsAct,
+    UsersAct,
 };
 #[cfg(feature = "full")]
 pub(crate) use app::show_single;
 #[cfg(feature = "full")]
 pub use catalogview::TreeKey;
 pub use dialogs::file_stem;
-#[cfg(target_arch = "wasm32")]
+#[cfg(all(target_arch = "wasm32", not(feature = "full")))]
 pub(crate) use dialogs::open_filters;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use dialogs::{ask_save_path, open_dialog, with_extension};
@@ -369,6 +371,7 @@ struct Full {
     import_list: Vec<ImportEntry>,
     marks: Bookmarks,
     marks_path: PathBuf,
+    #[cfg(feature = "mcp")]
     mcp: mcpview::McpPanel,
     /// A plan waiting for the confirmation of the user.
     confirm: Option<winweaver_core::apply::Plan>,
@@ -411,6 +414,7 @@ impl WinWeaver {
                 import_list: Vec::new(),
                 marks: Bookmarks::default(),
                 marks_path: exe_dir().join(bookmarks::DEFAULT_FILE),
+                #[cfg(feature = "mcp")]
                 mcp: mcpview::McpPanel::new(
                     wwmcp::Config::default_path(&exe_dir()),
                     mcpview::tools_of(

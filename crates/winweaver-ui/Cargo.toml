@@ -9,12 +9,18 @@ repository.workspace = true
 authors.workspace = true
 
 [features]
-default = ["full", "glow", "wgpu"]
+default = ["full", "pc", "mcp", "glow", "wgpu"]
 # Everything of WinWeaver beyond the profile editor, the check and the build of wwlite: This PC,
 # the registry, registry and Group Policy files, users files, the catalogs of policy templates,
 # diffs, bookmarks and the MCP server. wwlite builds without it, so its executable holds none of
 # that code.
-full = ["dep:winweaver-mcp", "dep:wwmcp", "dep:zeroize", "winweaver-core/users", "winweaver-win/users"]
+full = ["dep:zeroize", "winweaver-core/users", "winweaver-win/users"]
+# This PC, the registry of this PC and the native apply: what reads or changes the Windows the
+# program runs on. WinWeaver has it; the browser edition (winweaverweb) has not.
+pc = ["full"]
+# The MCP server of W# with the tools of WinWeaver and its tab. WinWeaver has it; the browser
+# edition has not.
+mcp = ["full", "dep:winweaver-mcp", "dep:wwmcp", "wwmcp/ui"]
 # The renderers of the window (src/renderer.rs): OpenGL through glow, DirectX 12 through wgpu with that
 # backend only. At least one is needed; the settings and --renderer offer the ones built in.
 glow = ["ww/glow"]
@@ -22,10 +28,15 @@ wgpu = ["ww/wgpu"]
 
 [dependencies]
 winweaver-core = { path = "../winweaver-core", default-features = false }
+# The Windows API: the input languages of the form Languages; the rest of WinWeaver (This PC,
+# the registry, the native apply) with the feature pc. Outside Windows (the browser edition) its
+# functions answer that there is no Windows: no PC, a registry in memory.
+winweaver-win = { path = "../winweaver-win", default-features = false }
 winweaver-mcp = { path = "../winweaver-mcp", optional = true }
 # The MCP server of W# with its tab.
-wwmcp = { workspace = true, optional = true, features = ["ui"] }
+wwmcp = { workspace = true, optional = true }
 ww.workspace = true
+ww-base.workspace = true
 # The master password of a users file is wiped when the tab locks or closes.
 zeroize = { version = "1", optional = true }
 eframe = { version = "0.36", default-features = false, features = ["accesskit", "default_fonts", "links"] }
@@ -34,10 +45,7 @@ raw-window-handle = "0.6"
 serde.workspace = true
 serde_json.workspace = true
 
-# The Windows API: the input languages of the form Languages; the rest of WinWeaver (This PC,
-# the registry, the native apply) with the feature full.
-[target.'cfg(windows)'.dependencies]
-winweaver-win = { path = "../winweaver-win", default-features = false }
+
 
 [dev-dependencies]
 egui_kittest = { version = "0.36", features = ["eframe", "wgpu", "snapshot"] }

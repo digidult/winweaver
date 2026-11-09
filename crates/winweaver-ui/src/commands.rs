@@ -7,12 +7,14 @@ use winweaver_core::users::Operation;
 use ww::commands::{cmd, cmd_if, when};
 use ww::commands::{keyed, toggle};
 
+#[cfg(feature = "mcp")]
+use crate::McpAct;
 use crate::i18n::tr;
 use crate::{Act, Doc, FileAct, ProfileAct, Shell, ShellAct, ShellDoc, WinWeaver, icons};
 #[cfg(feature = "full")]
 use crate::{
-    CatalogAct, CatalogRef, DiffAct, ImportAct, McpAct, PolAct, RegFileAct, RegistryAct,
-    ScriptKind, UsersAct, regfileview, regview,
+    CatalogAct, CatalogRef, DiffAct, ImportAct, PolAct, RegFileAct, RegistryAct, ScriptKind,
+    UsersAct, regfileview, regview,
 };
 
 /// The keys of the commands of WinWeaver beyond the ones of WW, each named once.
@@ -193,6 +195,7 @@ impl WinWeaver {
                 ),
                 cmd(icons::BOOK, tr("As a page"), CatalogAct::ComparePage),
             ],
+            #[cfg(feature = "mcp")]
             Some(Doc::Mcp(_)) => {
                 use wwmcp::ui::McpAct as Panel;
                 let running = self.full.mcp.running();
@@ -334,6 +337,7 @@ impl WinWeaver {
                 items.extend([
                     Item::Separator,
                     cmd(icons::CHECK, tr("Check"), UsersAct::Check),
+                    #[cfg(feature = "pc")]
                     cmd(icons::THIS_PC, tr("Read this PC"), UsersAct::ReadPc),
                     when(
                         icons::START,

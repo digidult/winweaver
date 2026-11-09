@@ -63,9 +63,23 @@ impl CatalogFile {
         Ok(file)
     }
 
+    /// Reads the text of a catalog file under its name and checks every record, as `load`.
+    pub fn parse(text: &str, name: &str) -> Result<Self, String> {
+        if text.len() as u64 > CATALOG_MAX {
+            return Err(format!("{name}: too large"));
+        }
+        let file: Self = jsonfile::parse(text, name).map_err(|e| e.to_string())?;
+        file.check()?;
+        Ok(file)
+    }
+
+    /// The text of the file, as `save` writes it.
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(self).unwrap_or_default()
+    }
+
     pub fn save(&self, path: &Path) -> Result<(), String> {
-        let text = serde_json::to_string(self).map_err(|e| e.to_string())?;
-        jsonfile::write_atomic(path, &text).map_err(|e| e.to_string())
+        jsonfile::write_atomic(path, &self.to_json()).map_err(|e| e.to_string())
     }
 
     /// A new policy of the file, empty, in a group of it: the id `admx.<file>.<name>`, the phase of

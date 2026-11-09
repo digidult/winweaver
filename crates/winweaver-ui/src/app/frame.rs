@@ -75,7 +75,7 @@ impl WinWeaver {
         }
     }
 
-    #[cfg(feature = "full")]
+    #[cfg(feature = "mcp")]
     /// The MCP tab: the configuration, and with the server running the journal under it and
     /// the selected call on the right.
     pub(crate) fn draw_mcp(

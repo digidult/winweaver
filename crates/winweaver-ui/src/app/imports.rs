@@ -246,14 +246,14 @@ impl WinWeaver {
         }
         let path = match source {
             ImportSource::ThisWindows => None,
-            ImportSource::Folder => match rfd::FileDialog::new()
+            ImportSource::Folder => match crate::dialogs::FileDialog::new()
                 .set_title(tr("Choose the folder of the ADMX files"))
                 .pick_folder()
             {
                 Some(p) => Some(p),
                 None => return,
             },
-            ImportSource::CatalogFile => match rfd::FileDialog::new()
+            ImportSource::CatalogFile => match crate::dialogs::FileDialog::new()
                 .set_title(tr("Open a catalog file"))
                 .add_filter(tr("Catalog files"), &[admx::CATALOG_EXTENSION])
                 .pick_file()
@@ -261,7 +261,7 @@ impl WinWeaver {
                 Some(p) => Some(p),
                 None => return,
             },
-            ImportSource::Archive => match rfd::FileDialog::new()
+            ImportSource::Archive => match crate::dialogs::FileDialog::new()
                 .set_title(tr("Open an archive of templates or of a catalog file"))
                 .add_filter(tr("Zip archives"), &[admx::ARCHIVE_EXTENSION])
                 .pick_file()
@@ -377,7 +377,7 @@ impl WinWeaver {
         let Some(file) = self.imports.iter().find(|f| f.id == id) else {
             return;
         };
-        let Some(path) = rfd::FileDialog::new()
+        let Some(path) = crate::dialogs::FileDialog::new()
             .set_title(tr("Export the catalog file"))
             .add_filter(tr("Catalog files"), &[admx::CATALOG_EXTENSION])
             .set_file_name(format!("{}.{}", file.id, admx::CATALOG_EXTENSION))
@@ -670,7 +670,7 @@ impl WinWeaver {
             return;
         };
         let name = format!("{}.md", export::file_stem(&doc.title));
-        let Some(path) = rfd::FileDialog::new()
+        let Some(path) = crate::dialogs::FileDialog::new()
             .set_title(tr("Save the report of the comparison"))
             .add_filter(tr("Markdown pages"), &["md"])
             .set_file_name(name)

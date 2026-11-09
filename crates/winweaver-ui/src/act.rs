@@ -27,7 +27,7 @@ pub enum Act {
     Diff(DiffAct),
     #[cfg(feature = "full")]
     Marks(MarksAct),
-    #[cfg(feature = "full")]
+    #[cfg(feature = "mcp")]
     Mcp(McpAct),
     #[cfg(feature = "full")]
     Catalog(CatalogAct),
@@ -103,7 +103,7 @@ impl From<MarksAct> for Act {
     }
 }
 
-#[cfg(feature = "full")]
+#[cfg(feature = "mcp")]
 impl From<McpAct> for Act {
     fn from(act: McpAct) -> Self {
         Act::Mcp(act)
@@ -246,6 +246,26 @@ pub enum UsersAct {
     FromProfile,
 }
 
+/// Whether an act reads or changes the Windows the program runs on (This PC, its registry, its
+/// accounts, the native apply): the program without the feature `pc` (the browser edition) hides
+/// and refuses them. The scripts and the registry files of a profile are files, made anywhere.
+#[cfg(feature = "full")]
+pub(crate) fn needs_pc(act: &Act) -> bool {
+    matches!(
+        act,
+        Act::Pc(
+            PcAct::Read
+                | PcAct::ReadSelection
+                | PcAct::Check
+                | PcAct::PlanNative(_)
+                | PcAct::PlanUndo
+        ) | Act::Registry(_)
+            | Act::Users(
+                UsersAct::OfThisPc | UsersAct::ReadPc | UsersAct::AskRun(..) | UsersAct::Run(..)
+            )
+    )
+}
+
 /// The acts of the comparison of profiles and of the diff tab.
 #[cfg(feature = "full")]
 pub enum DiffAct {
@@ -283,7 +303,7 @@ pub enum MarksAct {
 }
 
 /// The acts of the MCP server and its tab.
-#[cfg(feature = "full")]
+#[cfg(feature = "mcp")]
 pub enum McpAct {
     Open,
     /// An act of the tab of W#: start, stop, a token, the files, the log, a call by hand.

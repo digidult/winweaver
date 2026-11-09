@@ -92,6 +92,7 @@ impl App for WinWeaver {
     /// The files next to the executable: the MCP configuration, the bookmarks, the imports.
     #[cfg(feature = "full")]
     fn load(&mut self, shell: &mut Shell<Self>) {
+        #[cfg(feature = "mcp")]
         self.load_mcp_config(shell);
         match Bookmarks::load_or_default(&self.full.marks_path) {
             Ok(marks) => self.full.marks = marks,
@@ -117,14 +118,27 @@ impl App for WinWeaver {
     }
 
     #[cfg(not(target_arch = "wasm32"))]
-    fn open_dialog(&self, _shell: &Shell<Self>) -> rfd::FileDialog {
+    fn open_dialog(&self, _shell: &Shell<Self>) -> crate::dialogs::FileDialog {
         open_dialog()
     }
 
     /// The kinds of files the dialog of the browser offers.
     #[cfg(target_arch = "wasm32")]
     fn open_filters(&self, _shell: &Shell<Self>) -> Vec<(String, Vec<String>)> {
-        open_filters()
+        #[cfg(feature = "full")]
+        {
+            crate::app::web::open_filters_full()
+        }
+        #[cfg(not(feature = "full"))]
+        {
+            open_filters()
+        }
+    }
+
+    /// A file the browser hands over by its bytes: every kind of file of WinWeaver.
+    #[cfg(all(feature = "full", target_arch = "wasm32"))]
+    fn open_bytes(&mut self, shell: &mut Shell<Self>, name: &str, bytes: Vec<u8>) {
+        self.open_full_bytes(shell, name, bytes);
     }
 
     /// A file the browser hands over by its bytes: the light edition opens it.
@@ -135,9 +149,9 @@ impl App for WinWeaver {
 
     fn save(&mut self, shell: &mut Shell<Self>, ask: bool) {
         match shell.active_doc().map(Doc::kind) {
-            #[cfg(feature = "full")]
+            #[cfg(feature = "mcp")]
             Some(DocKind::Mcp) if ask => self.save_mcp_as(shell),
-            #[cfg(feature = "full")]
+            #[cfg(feature = "mcp")]
             Some(DocKind::Mcp) => self.persist_mcp(),
             #[cfg(feature = "full")]
             Some(DocKind::Diff) if ask => self.save_active_diff(shell),
@@ -198,7 +212,7 @@ impl App for WinWeaver {
             Some(DocKind::Diff) => self.draw_diff(shell, ui, acts),
             #[cfg(feature = "full")]
             Some(DocKind::Bookmarks) => self.draw_marks(shell, ui, acts),
-            #[cfg(feature = "full")]
+            #[cfg(feature = "mcp")]
             Some(DocKind::Mcp) => self.draw_mcp(shell, ui, acts),
             #[cfg(feature = "full")]
             Some(DocKind::Catalog) => self.draw_catalog(shell, ui, acts),
@@ -381,7 +395,7 @@ impl App for WinWeaver {
     }
 
     /// The MCP server, while it runs.
-    #[cfg(feature = "full")]
+    #[cfg(feature = "mcp")]
     fn status_right(&self, _shell: &Shell<Self>, ui: &mut egui::Ui) {
         if let Some(http) = &self.full.mcp.panel.http {
             let p = style::palette(ui);
@@ -509,6 +523,12 @@ impl App for WinWeaver {
     }
 
     fn apply(&mut self, shell: &mut Shell<Self>, act: Act) {
+        #[cfg(all(feature = "full", not(feature = "pc")))]
+        if crate::act::needs_pc(&act) {
+            shell.status =
+                tr("This needs WinWeaver on Windows: a browser reads and changes no PC").to_owned();
+            return;
+        }
         match act {
             Act::Profile(a) => self.apply_profile(shell, a),
             Act::File(a) => self.apply_file(shell, a),
@@ -524,7 +544,7 @@ impl App for WinWeaver {
             Act::Diff(a) => self.apply_diff(shell, a),
             #[cfg(feature = "full")]
             Act::Marks(a) => self.apply_marks(shell, a),
-            #[cfg(feature = "full")]
+            #[cfg(feature = "mcp")]
             Act::Mcp(a) => self.apply_mcp(shell, a),
             #[cfg(feature = "full")]
             Act::Catalog(a) => self.apply_catalog(shell, a),
@@ -552,6 +572,7 @@ impl App for WinWeaver {
         self.poll_import(shell, ctx);
         self.poll_pc_read(shell, ctx);
         self.poll_registry_search(shell, ctx);
+        #[cfg(feature = "mcp")]
         self.persist_mcp();
     }
 }

@@ -116,9 +116,7 @@ impl Build {
 }
 
 fn write_file(path: &Path, bytes: &[u8]) -> Result<(), String> {
-    let tmp = path.with_extension("tmp");
-    std::fs::write(&tmp, bytes).map_err(|e| format!("{}: {e}", path.display()))?;
-    std::fs::rename(&tmp, path).map_err(|e| format!("{}: {e}", path.display()))
+    ww_base::files::write(path, bytes).map_err(|e| format!("{}: {e}", path.display()))
 }
 
 pub(super) fn err(rule: &Rule, text: impl Into<String>) -> RenderError {

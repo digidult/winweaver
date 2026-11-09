@@ -938,5 +938,7 @@
   "bookmarks": "penanda",
   "catalogs": "katalog",
   "registry": "registri",
-  "this_pc": "PC ini"
+  "this_pc": "PC ini",
+  "This needs WinWeaver on Windows: a browser reads and changes no PC": "Ini memerlukan WinWeaver di Windows: peramban tidak membaca atau mengubah PC",
+  "Archives of policy templates": "Arsip templat kebijakan"
 }

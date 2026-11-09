@@ -126,6 +126,7 @@ impl WinWeaver {
                 self.open_pol_path(shell, path);
                 return;
             }
+            #[cfg(feature = "mcp")]
             if path
                 .extension()
                 .is_some_and(|e| e == wwmcp::config::EXTENSION)
@@ -390,7 +391,7 @@ impl WinWeaver {
     /// Opens a file the browser handed over by its name and its bytes (the light edition in a
     /// browser): a profile, an answer file with the profile it embeds, or an older profile. The
     /// tab has no file, so a save is a download.
-    #[cfg(not(feature = "full"))]
+    #[cfg(any(not(feature = "full"), target_arch = "wasm32"))]
     pub(crate) fn open_any_bytes(
         &mut self,
         shell: &mut Shell<WinWeaver>,

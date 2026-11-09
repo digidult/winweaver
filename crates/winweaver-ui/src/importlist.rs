@@ -121,12 +121,9 @@ pub(crate) fn import_order(id: &str) -> (bool, String) {
 
 /// The catalog files of a folder of imports with their ids, in the order of the merge.
 pub fn import_files(dir: &Path) -> Vec<(String, PathBuf)> {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return Vec::new();
-    };
-    let mut files: Vec<(String, PathBuf)> = entries
-        .filter_map(Result::ok)
-        .map(|e| e.path())
+    // Through the file layer: in a browser the catalog files of the folder of the page.
+    let mut files: Vec<(String, PathBuf)> = ww_base::files::list(dir)
+        .into_iter()
         .filter(|p| p.extension().is_some_and(|e| e == admx::CATALOG_EXTENSION))
         .filter_map(|p| Some((p.file_stem()?.to_str()?.to_owned(), p)))
         .collect();

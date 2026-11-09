@@ -370,7 +370,7 @@ impl RegFile {
         } else {
             text.into_bytes()
         };
-        std::fs::write(path, bytes).map_err(|e| e.to_string())
+        ww_base::files::write(path, &bytes).map_err(|e| e.to_string())
     }
 
     /// The registry steps of a plan as a registry file; the steps a registry file cannot hold

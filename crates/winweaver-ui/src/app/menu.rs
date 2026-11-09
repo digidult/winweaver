@@ -49,6 +49,7 @@ impl WinWeaver {
                     Act::Users(UsersAct::New),
                     acts,
                 );
+                #[cfg(feature = "pc")]
                 menu_item(
                     ui,
                     icons::PEOPLE,
@@ -148,6 +149,7 @@ impl WinWeaver {
                 Act::Marks(MarksAct::Open),
                 acts,
             );
+            #[cfg(feature = "pc")]
             menu_item(
                 ui,
                 icons::REGISTRY,
@@ -168,6 +170,7 @@ impl WinWeaver {
                 )),
                 acts,
             );
+            #[cfg(feature = "mcp")]
             menu_item(
                 ui,
                 icons::LINK,
@@ -504,6 +507,9 @@ fn regfile_apply_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Ve
 /// undo and an audit report need none (item 6 and 7 of the list of 30.10.2026).
 fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>, profile: bool, applicable: bool) {
     let mut item = |ui: &mut egui::Ui, icon: &str, text: &str, act: Act| {
+        if !cfg!(feature = "pc") && crate::act::needs_pc(&act) {
+            return;
+        }
         let enabled = match &act {
             Act::Pc(
                 PcAct::ReadSelection

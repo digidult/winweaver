@@ -9,7 +9,7 @@ mod frame;
 mod imports;
 #[cfg(feature = "full")]
 mod marks;
-#[cfg(feature = "full")]
+#[cfg(feature = "mcp")]
 mod mcp;
 mod menu;
 #[cfg(feature = "full")]
@@ -24,6 +24,8 @@ mod settings;
 mod shell;
 #[cfg(feature = "full")]
 mod users;
+#[cfg(all(feature = "full", target_arch = "wasm32"))]
+mod web;
 
 #[cfg(feature = "full")]
 pub(crate) use session::show_single;

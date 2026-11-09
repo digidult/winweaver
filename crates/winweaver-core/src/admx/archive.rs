@@ -40,8 +40,20 @@ pub fn read_archive(path: &Path) -> Result<Archive, String> {
         return Err(format!("{name}: larger than {} MB", ARCHIVE_MAX >> 20));
     }
     let file = std::fs::File::open(path).map_err(|e| format!("{name}: {e}"))?;
-    let mut zip = zip::ZipArchive::new(std::io::BufReader::new(file))
-        .map_err(|e| format!("{name}: not a zip archive: {e}"))?;
+    read_zip(std::io::BufReader::new(file), &name)
+}
+
+/// [`read_archive`] of the bytes of an archive under its name: a file a browser hands over.
+pub fn read_archive_bytes(bytes: &[u8], name: &str) -> Result<Archive, String> {
+    if bytes.len() as u64 > ARCHIVE_MAX {
+        return Err(format!("{name}: larger than {} MB", ARCHIVE_MAX >> 20));
+    }
+    read_zip(std::io::Cursor::new(bytes), name)
+}
+
+fn read_zip<R: std::io::Read + std::io::Seek>(reader: R, name: &str) -> Result<Archive, String> {
+    let mut zip =
+        zip::ZipArchive::new(reader).map_err(|e| format!("{name}: not a zip archive: {e}"))?;
     if zip.len() > ARCHIVE_ENTRIES {
         return Err(format!("{name}: more than {ARCHIVE_ENTRIES} entries"));
     }

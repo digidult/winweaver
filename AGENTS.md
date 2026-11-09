@@ -30,6 +30,7 @@ dependency of its branch `main`; W# also carries wview and the text editor wedit
 | Change what an AI agent or the archive gets | `agents/README.md`, `package/README.md` |
 | Change W#, the framework of the window, or its plugins | the repository supakov/ww (its AGENTS.md, `docs/ww.md`, `docs/plugins.md`); a change of W# is checked against WinWeaver before its pull request (section 5) |
 | Change wview or wedit | the repository supakov/wview (its AGENTS.md) |
+| Change winweaverweb, WinWeaver in a browser | `crates/winweaverweb`, the features `pc` and `mcp` of `crates/winweaver-ui` (what the browser has not), `src/app/web.rs`, `docs/wasm.md` section 0a |
 | Change wwlite, the light edition | `crates/wwlite`, the feature `full` of `crates/winweaver-ui` (`cfg(feature = "full")` marks what wwlite leaves out), `package-wwlite/README.md`; the browser edition: `docs/wasm.md`, `crates/wwlite/web`, `crates/ww/src/web.rs` and `store.rs` |
 
 The information that changes:
@@ -52,7 +53,8 @@ The information that changes:
 ├── build-all.cmd          what CI makes, on a computer of Windows (section 5)
 ├── .github/workflows/ci.yml  CI (section 5)
 ├── crates/                winweaver-core, winweaver-win, winweaver-mcp, winweaver-ui, winweaver (the
-│                          executable), wwlite; W# comes from supakov/ww
+│                          executable), wwlite, winweaverweb (WinWeaver in a browser); W# comes from
+│                          supakov/ww
 ├── data/                  catalog, presets, resources, templates, lang, themes, docs, reference
 ├── agents/                what an AI agent gets in the archive
 ├── package/, package-wwlite/   what the archives add
@@ -102,7 +104,7 @@ Every folder and module: `docs/spec/04-architecture.md`, section 10. Next to the
     files and logs, which stay English). A new rule needs its texts in
     every `data/catalog/lang/<code>.json` (`translations_cover_every_rule`); `package/lang/be/ui.json` may
     lag (English fills the gaps).
-11. Versions: `version` of the workspace `Cargo.toml` (0.1.47 on 09.11.2026) grows with every
+11. Versions: `version` of the workspace `Cargo.toml` (0.1.48 on 09.11.2026) grows with every
     pull request that reaches `main`. An agent changes the third number alone (0.1.45 to 0.1.46);
     the first and the second change only on the word of the customer. Every build
     names its commit: `winweaver_core::BUILD` is `<version>+<12 digits of the commit>` (`build.rs` of the core,

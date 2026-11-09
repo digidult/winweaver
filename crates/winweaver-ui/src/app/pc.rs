@@ -281,8 +281,9 @@ impl WinWeaver {
             export::Done::Audit(n) => trf("{n} rules checked", &[("n", n)]),
         };
         let start = output_dir();
-        let dialog = rfd::FileDialog::new().set_title(tr("Choose the folder for the script"));
-        let dialog = widgets::in_folder(dialog, &start);
+        let dialog =
+            crate::dialogs::FileDialog::new().set_title(tr("Choose the folder for the script"));
+        let dialog = crate::dialogs::in_folder(dialog, &start);
         let Some(dir) = dialog.pick_folder() else {
             return;
         };
@@ -339,11 +340,11 @@ impl WinWeaver {
             return;
         }
         let start = output_dir();
-        let dialog = rfd::FileDialog::new()
+        let dialog = crate::dialogs::FileDialog::new()
             .set_title(tr("Save the registry file"))
             .add_filter(tr("Registry files"), &[regfile::EXTENSION])
             .set_file_name(reg.name.clone());
-        let dialog = widgets::in_folder(dialog, &start);
+        let dialog = crate::dialogs::in_folder(dialog, &start);
         let Some(path) = dialog.save_file() else {
             return;
         };
@@ -361,7 +362,7 @@ impl WinWeaver {
 
     /// Opens the report of an audit script made on another PC and reads it into a new profile.
     pub(crate) fn open_report(&mut self, shell: &mut Shell<WinWeaver>) {
-        let Some(path) = rfd::FileDialog::new()
+        let Some(path) = crate::dialogs::FileDialog::new()
             .set_title(tr("Open an audit report"))
             .add_filter(tr("Audit report"), &["json"])
             .pick_file()
@@ -419,7 +420,7 @@ impl WinWeaver {
             shell.status = tr("Open a profile first").to_owned();
             return;
         };
-        let nonce = match wwmcp::new_token() {
+        let nonce = match winweaver_core::userstore::random_hex(20) {
             Ok(n) => n,
             Err(e) => {
                 shell.status = e;
@@ -444,10 +445,10 @@ impl WinWeaver {
     /// Prepares the undo of a backup file the user picks.
     pub(crate) fn plan_undo(&mut self, shell: &mut Shell<WinWeaver>) {
         let start = output_dir();
-        let dialog = rfd::FileDialog::new()
+        let dialog = crate::dialogs::FileDialog::new()
             .set_title(tr("Choose the backup to restore"))
             .add_filter(tr("Backups"), &["json"]);
-        let dialog = widgets::in_folder(dialog, &start);
+        let dialog = crate::dialogs::in_folder(dialog, &start);
         let Some(path) = dialog.pick_file() else {
             return;
         };
@@ -458,7 +459,7 @@ impl WinWeaver {
                 return;
             }
         };
-        let nonce = match wwmcp::new_token() {
+        let nonce = match winweaver_core::userstore::random_hex(20) {
             Ok(n) => n,
             Err(e) => {
                 shell.status = e;

@@ -938,5 +938,7 @@
   "bookmarks": "Lesezeichen",
   "catalogs": "Kataloge",
   "registry": "Registrierung",
-  "this_pc": "dieser PC"
+  "this_pc": "dieser PC",
+  "This needs WinWeaver on Windows: a browser reads and changes no PC": "Dafür braucht es WinWeaver unter Windows: ein Browser liest und ändert keinen PC",
+  "Archives of policy templates": "Archive von Richtlinienvorlagen"
 }

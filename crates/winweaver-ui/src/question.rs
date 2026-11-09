@@ -3,8 +3,10 @@
 //! questions of the window itself (a tab closed with its changes, the recent files forgotten)
 //! come from the shell.
 
+#[cfg(feature = "mcp")]
+use crate::McpAct;
 use crate::i18n::{tr, trf};
-use crate::{CatalogAct, ImportAct, McpAct, Question, RegistryAct};
+use crate::{CatalogAct, ImportAct, Question, RegistryAct};
 
 /// Before an import is removed with its catalog file.
 pub fn remove_import(name: &str, id: String) -> Question {
@@ -20,6 +22,7 @@ pub fn remove_import(name: &str, id: String) -> Question {
 }
 
 /// Before the token of the MCP server is renewed.
+#[cfg(feature = "mcp")]
 pub fn renew_token() -> Question {
     Question::new(
         tr("Renew the token"),

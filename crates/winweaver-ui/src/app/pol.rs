@@ -94,13 +94,13 @@ impl WinWeaver {
                 .file_name()
                 .map(|n| n.to_string_lossy().into_owned())
                 .unwrap_or_else(|| "Registry.pol".to_owned());
-            let dialog = rfd::FileDialog::new()
+            let dialog = crate::dialogs::FileDialog::new()
                 .set_title(tr("Save the Group Policy file as"))
                 .add_filter(tr("Group Policy files"), &[winweaver_core::pol::EXTENSION])
                 .set_file_name(name);
             let dialog = match d.pol.path.parent().filter(|_| !system) {
-                Some(dir) => widgets::in_folder(dialog, dir),
-                None => widgets::in_folder(dialog, &output_dir()),
+                Some(dir) => crate::dialogs::in_folder(dialog, dir),
+                None => crate::dialogs::in_folder(dialog, &output_dir()),
             };
             match dialog.save_file() {
                 Some(p) => pol_extension(p),
@@ -133,7 +133,7 @@ impl WinWeaver {
     /// Adds the entries of a Group Policy file or of a registry file chosen in a dialog to the
     /// file in front: a registry file brings the changes of the hive of the root of the file.
     fn add_to_pol(&mut self, shell: &mut Shell<WinWeaver>) {
-        let Some(path) = rfd::FileDialog::new()
+        let Some(path) = crate::dialogs::FileDialog::new()
             .set_title(tr("Add the entries of a file"))
             .add_filter(
                 tr("Group Policy and registry files"),
@@ -195,7 +195,7 @@ impl WinWeaver {
             .file_stem()
             .map(|n| n.to_string_lossy().into_owned())
             .unwrap_or_else(|| "Registry".to_owned());
-        let Some(path) = rfd::FileDialog::new()
+        let Some(path) = crate::dialogs::FileDialog::new()
             .set_title(tr("Export as a registry file"))
             .add_filter(tr("Registry files"), &[regfile::EXTENSION])
             .set_file_name(format!("{stem}.{}", regfile::EXTENSION))
@@ -229,7 +229,7 @@ impl WinWeaver {
                 self.open_system_pol(shell, scope, key.as_deref(), value.as_deref());
             }
             PolAct::OpenFile => {
-                let dialog = rfd::FileDialog::new()
+                let dialog = crate::dialogs::FileDialog::new()
                     .set_title(tr("Open a Group Policy file"))
                     .add_filter(tr("Group Policy files"), &[winweaver_core::pol::EXTENSION]);
                 if let Some(path) = dialog.pick_file() {

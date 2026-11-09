@@ -312,10 +312,8 @@ impl PolFile {
 
     /// Writes the file through a temporary one beside it, so a failed write leaves the old file.
     pub fn save(&self, path: &Path) -> Result<(), String> {
-        let io = |e: std::io::Error| format!("{}: {e}", path.display());
-        let tmp = path.with_extension("pol.tmp");
-        std::fs::write(&tmp, self.to_bytes()).map_err(io)?;
-        std::fs::rename(&tmp, path).map_err(io)
+        ww_base::files::write(path, &self.to_bytes())
+            .map_err(|e| format!("{}: {e}", path.display()))
     }
 
     /// Sets an entry: one of the same key and value name that sets or deletes the value is

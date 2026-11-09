@@ -133,7 +133,7 @@ fn every_text_of_the_interface_is_translated() {
     sources(&root.join("src"), &mut files);
     // W#, a git dependency: its checkout names its sources, and the tab of the MCP server of W#.
     sources(Path::new(ww::SOURCES), &mut files);
-    #[cfg(feature = "full")]
+    #[cfg(feature = "mcp")]
     sources(Path::new(wwmcp::SOURCES), &mut files);
     let mut keys = std::collections::BTreeSet::new();
     for path in files {

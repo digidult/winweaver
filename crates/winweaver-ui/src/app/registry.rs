@@ -20,12 +20,12 @@ impl WinWeaver {
         };
         let path = if ask {
             let name = d.title();
-            let dialog = rfd::FileDialog::new()
+            let dialog = crate::dialogs::FileDialog::new()
                 .set_title(tr("Save the registry file as"))
                 .add_filter(tr("Registry files"), &[regfile::EXTENSION])
                 .set_file_name(name);
             let dialog = match d.path.parent() {
-                Some(dir) => widgets::in_folder(dialog, dir),
+                Some(dir) => crate::dialogs::in_folder(dialog, dir),
                 None => dialog,
             };
             match dialog.save_file() {

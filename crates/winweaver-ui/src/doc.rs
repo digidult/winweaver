@@ -17,7 +17,7 @@ use crate::diffview::DiffDoc;
 use crate::i18n::tr;
 #[cfg(feature = "full")]
 use crate::marksview::MarksDoc;
-#[cfg(feature = "full")]
+#[cfg(feature = "mcp")]
 use crate::mcpview::McpDoc;
 #[cfg(feature = "full")]
 use crate::polview::PolDoc;
@@ -80,7 +80,7 @@ pub enum DocKind {
     Markdown,
     #[cfg(feature = "full")]
     Bookmarks,
-    #[cfg(feature = "full")]
+    #[cfg(feature = "mcp")]
     Mcp,
     Settings,
     #[cfg(feature = "full")]
@@ -112,7 +112,7 @@ impl DocKind {
             DocKind::Diff | DocKind::Compare => icons::COMPARE,
             #[cfg(feature = "full")]
             DocKind::Bookmarks => icons::STAR,
-            #[cfg(feature = "full")]
+            #[cfg(feature = "mcp")]
             DocKind::Mcp => icons::LINK,
             #[cfg(feature = "full")]
             DocKind::Catalog => icons::PACKAGE,
@@ -139,7 +139,7 @@ impl DocKind {
             DocKind::Diff => "Search the differences (Ctrl+F)",
             #[cfg(feature = "full")]
             DocKind::Bookmarks => "Search the bookmarks (Ctrl+F)",
-            #[cfg(feature = "full")]
+            #[cfg(feature = "mcp")]
             DocKind::Mcp => "Filter the journal (Ctrl+F)",
             #[cfg(feature = "full")]
             DocKind::Catalog | DocKind::Compare => "Search policies (Ctrl+F)",
@@ -220,7 +220,7 @@ pub enum Doc {
     Markdown(Box<MdDoc>),
     #[cfg(feature = "full")]
     Bookmarks(Box<MarksDoc>),
-    #[cfg(feature = "full")]
+    #[cfg(feature = "mcp")]
     Mcp(Box<McpDoc>),
     /// The tree of an import of policy templates.
     #[cfg(feature = "full")]
@@ -260,7 +260,7 @@ impl Doc {
             Doc::Diff(_) => DocKind::Diff,
             #[cfg(feature = "full")]
             Doc::Bookmarks(_) => DocKind::Bookmarks,
-            #[cfg(feature = "full")]
+            #[cfg(feature = "mcp")]
             Doc::Mcp(_) => DocKind::Mcp,
             #[cfg(feature = "full")]
             Doc::Catalog(_) => DocKind::Catalog,
@@ -289,7 +289,7 @@ impl Doc {
             Doc::Diff(d) => &**d,
             #[cfg(feature = "full")]
             Doc::Bookmarks(d) => &**d,
-            #[cfg(feature = "full")]
+            #[cfg(feature = "mcp")]
             Doc::Mcp(d) => &**d,
             #[cfg(feature = "full")]
             Doc::Catalog(d) => &**d,
@@ -317,7 +317,7 @@ impl Doc {
             Doc::Diff(d) => &mut **d,
             #[cfg(feature = "full")]
             Doc::Bookmarks(d) => &mut **d,
-            #[cfg(feature = "full")]
+            #[cfg(feature = "mcp")]
             Doc::Mcp(d) => &mut **d,
             #[cfg(feature = "full")]
             Doc::Catalog(d) => &mut **d,
@@ -558,7 +558,7 @@ impl Tab for MarksDoc {
     }
 }
 
-#[cfg(feature = "full")]
+#[cfg(feature = "mcp")]
 impl Tab for McpDoc {
     fn title(&self) -> String {
         "MCP".to_owned()
