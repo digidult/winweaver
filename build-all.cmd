@@ -6,7 +6,7 @@ rem
 rem Without options: W# of the branch main of supakov/ww (cargo update), the release builds of
 rem WinWeaver and wwlite, wwlite for the browser, and the three archives of a release in the folder
 rem dist, each with its folder inside as CI zips it: WinWeaver-<version>.zip, wwlite-<version>.zip,
-rem wwlite-web-<version>.zip. wview and wedit are built in supakov/wview.
+rem wwlite-web-<version>.zip.
 rem
 rem   check         first the checks of a commit: the format, the three clippy runs, the tests of
 rem                 the workspace and of wwlite alone, the check of the catalog
@@ -318,7 +318,7 @@ echo build-all.cmd [check] [screenshots] [presentation] [all] [noweb]
 echo.
 echo Without options: W# of the branch main, the release builds of WinWeaver and wwlite, wwlite for
 echo the browser and the archives of a release in dist, the version in their names: WinWeaver,
-echo wwlite, wwlite-web. wview and wedit are built in supakov/wview.
+echo wwlite, wwlite-web.
 echo.
 echo   check         first the format, the three clippy runs, the tests and the check of the catalog
 echo   screenshots   the tests draw the window into dist\screenshots

@@ -13,8 +13,7 @@ The window is built on W# (`ww` in the code, WW in the documents), a small frame
 that analyse and manage a system: a window with document tabs, a command bar, a navigation row, themes,
 translations, drafts and the session, with the program bringing its documents and acts. W# and the
 system of its plugins live in [supakov/ww](https://github.com/supakov/ww), a git dependency of this
-repository; its other programs, the viewer wview and the text editor wedit, live in
-[supakov/wview](https://github.com/supakov/wview). The light edition `wwlite` (`wwlite-<version>.zip`)
+repository. The light edition `wwlite` (`wwlite-<version>.zip`)
 keeps the profile editor and the build of `autounattend.xml` alone, and runs in a browser too
 (`wwlite-web-<version>.zip`, a page for any static web server).
 

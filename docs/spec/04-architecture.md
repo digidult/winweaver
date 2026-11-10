@@ -48,8 +48,7 @@ package/                 what the archive of WinWeaver adds: README.md for the u
 Linux job checks every crate for the Windows target without linking. The window itself is the framework
 W# (`ww-base`, `ww`: supakov/ww, a git dependency of its branch `main`, `docs/ww.md` there): a program
 implements `ww::App` with its documents, its acts and what it draws inside a tab, and the shell owns the
-tabs, the settings, the themes, the session and the chrome. Its other programs, wview and wedit, live in
-supakov/wview.
+tabs, the settings, the themes, the session and the chrome.
 
 ## 2. Crates (dependencies policy P4)
 

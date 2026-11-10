@@ -686,13 +686,7 @@ change, read the section of the part it touches.
   imports too (`import_files`); in a browser a path under `ww_base::files::DOWNLOAD` is a download.
   A new save or open of a file keeps to them, or the browser edition loses it.
 
-## 8. wview and the plugins
-
-wview, its plugins and the editor wedit live in supakov/wview; their facts are in its
-`docs/details.md`, the facts of W# and of the system of the plugins in `docs/details.md` of
-supakov/ww.
-
-## 9. Tests, CI, builds, archives and the command line
+## 8. Tests, CI, builds, archives and the command line
 
 - The command line: `USAGE` of `main.rs` and the section Command line of the guide (`data/docs/guide.md` and every
   `data/lang/<code>/guide.md`) and of `package/README.md` list every parameter; a new one goes into all of them.

@@ -300,11 +300,7 @@ passwords when the master password is given, and makes a users file of its accou
   name (`export::out_path`). The exit code is 0 when the files were written, 2 for a wrong use, 1 for a
   failure, and every file written is named.
 
-## 16. wedit
-
-The text editor on W# lives in supakov/wview (folder `wedit`), with its own archive.
-
-## 17. More of the window
+## 16. More of the window
 
 - Registry files: the keys as a tree (by default) or a list; a value, a key or the whole file
   applied to this PC after a question that counts the changes and the deletions.
@@ -332,7 +328,7 @@ The text editor on W# lives in supakov/wview (folder `wedit`), with its own arch
 - The detail of a rule lists the rules of every catalog that write the same registry values, both
   ways; the parts of the description have colours of the theme.
 
-## 18. wwlite
+## 17. wwlite
 
 The light edition `wwlite.exe`: the window of WinWeaver with the profile editor, the forms, the
 check, the build of `autounattend.xml`, the presets, the catalogs of the folder `imports` and the

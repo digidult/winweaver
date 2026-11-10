@@ -39,8 +39,7 @@ of the answer file and of the stand-alone scripts in `data/templates/`) are data
 code is its own.
 
 The window is built on W#, the framework of supakov/ww (the crates `ww-base` and `ww`, described in
-its `docs/ww.md`), a git dependency of its branch `main`. W# also carries the text editor wedit and
-the viewer wview, in supakov/wview.
+its `docs/ww.md`), a git dependency of its branch `main`.
 
 ## 2. Non-goals
 

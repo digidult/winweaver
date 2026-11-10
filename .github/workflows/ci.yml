@@ -9,7 +9,7 @@ name: CI
 # developer), package=false the release builds, the archives and their checks (tests and screenshots
 # alone), windows=false the Windows job, web=false the browser edition. The jobs after the Linux one
 # run side by side. W# comes from supakov/ww, a private git dependency of its branch main, read with
-# the token of the secret WW_TOKEN; wview and wedit are in supakov/wview.
+# the token of the secret WW_TOKEN.
 on:
   push:
     tags: ["v*"]

@@ -201,7 +201,7 @@ Chromium); whether drafts of profiles with passwords may stay in `localStorage`.
 3. The files of `ww` on the web: `App::open_bytes`, the async pick, Save as a download, settings and
    drafts in `localStorage`, logs to the console, the items without a meaning hidden, other keys,
    `beforeunload`. Medium.
-4. wedit in the browser, the first proof of steps 1-3 (its documents are texts). Small.
+4. A program of texts alone in the browser, the first proof of steps 1-3. Small.
 5. The core: getrandom for the web binary (or a feature `users`), the snapshot of the languages from the
    Windows runner, the Ukrainian catalog texts alone. Small.
 6. wwlite natively (the customer's plan): the profile views without `winweaver-win` and
