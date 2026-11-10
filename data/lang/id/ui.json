@@ -940,5 +940,9 @@
   "registry": "registri",
   "this_pc": "PC ini",
   "This needs WinWeaver on Windows: a browser reads and changes no PC": "Ini memerlukan WinWeaver di Windows: peramban tidak membaca atau mengubah PC",
-  "Archives of policy templates": "Arsip templat kebijakan"
+  "Archives of policy templates": "Arsip templat kebijakan",
+  "Scripts": "Skrip",
+  "Scripts, this rule": "Skrip, aturan ini",
+  "Scripts, this selection": "Skrip, pilihan ini",
+  "Downloaded {name}; the page did not keep the import: {e}": "{name} diunduh; halaman tidak menyimpan impor: {e}"
 }

@@ -108,11 +108,15 @@ impl WinWeaver {
             Act::Shell(ShellAct::CloseTab(shell.active, false)),
             acts,
         );
-        // This PC from any tab: the acts that need no profile stay on.
+        // This PC from any tab: the acts that need no profile stay on. Without the feature pc
+        // (a browser) it holds the scripts and the registry files alone, and is named so.
         #[cfg(feature = "full")]
-        sub_menu(ui, icons::THIS_PC, tr("This PC"), |ui| {
-            self.this_pc_menu(shell, ui, acts);
-        });
+        {
+            let (icon, text) = crate::commands::this_pc_title();
+            sub_menu(ui, icon, text, |ui| {
+                self.this_pc_menu(shell, ui, acts);
+            });
+        }
         ui.separator();
         menu_item(
             ui,
@@ -158,6 +162,7 @@ impl WinWeaver {
                 Act::Registry(RegistryAct::Open("HKEY_LOCAL_MACHINE".to_owned(), None)),
                 acts,
             );
+            #[cfg(feature = "pc")]
             menu_item(
                 ui,
                 icons::SCRIPT,
@@ -347,6 +352,7 @@ impl WinWeaver {
             }
         }
         ui.separator();
+        // The templates of this Windows and a folder need WinWeaver on Windows.
         for (icon, text, source) in [
             (
                 icons::THIS_PC,
@@ -369,8 +375,9 @@ impl WinWeaver {
                 ImportSource::Archive,
             ),
         ] {
-            if menu_entry(ui, icon, text, "", true) {
-                acts.push(Act::Import(ImportAct::Templates(source)));
+            let act = Act::Import(ImportAct::Templates(source));
+            if crate::act::offered(&act) && menu_entry(ui, icon, text, "", true) {
+                acts.push(act);
             }
         }
         if menu_entry(ui, icons::NEW, tr("New catalog"), "", true) {
@@ -444,7 +451,8 @@ fn pol_root_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act
 }
 
 #[cfg(feature = "full")]
-/// The Group Policy files: the computer's and the users' of this Windows, or any file.
+/// The Group Policy files: the computer's and the users' of this Windows (with the feature pc),
+/// or any file.
 fn pol_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
     use winweaver_core::pol::Scope;
     for (icon, text, act) in [
@@ -465,8 +473,9 @@ fn pol_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
         ),
         (icons::NEW, tr("New Group Policy file"), PolAct::New),
     ] {
-        if menu_entry(ui, icon, text, "", true) {
-            acts.push(Act::Pol(act));
+        let act = Act::Pol(act);
+        if crate::act::offered(&act) && menu_entry(ui, icon, text, "", true) {
+            acts.push(act);
         }
     }
 }
@@ -500,14 +509,14 @@ fn regfile_apply_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Ve
 }
 
 #[cfg(feature = "full")]
-/// The commands of This PC for the selection (offered only when a rule of it can be applied on a
-/// PC) and for the whole profile.
 /// The menu This PC: the acts on the selection need a profile in front whose selection a PC has
-/// something of, the acts on the whole profile a profile in front; a read into a new profile, an
-/// undo and an audit report need none (item 6 and 7 of the list of 30.10.2026).
+/// something of (item 6 and 7 of the list of 30.10.2026), the acts on the whole profile a profile
+/// in front; a read into a new profile, an undo and an audit report need none. Without the
+/// feature pc only the scripts, the registry files and the audit report are there.
 fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>, profile: bool, applicable: bool) {
+    let pc = cfg!(feature = "pc");
     let mut item = |ui: &mut egui::Ui, icon: &str, text: &str, act: Act| {
-        if !cfg!(feature = "pc") && crate::act::needs_pc(&act) {
+        if !crate::act::offered(&act) {
             return;
         }
         let enabled = match &act {
@@ -525,25 +534,27 @@ fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>, profile: bool, applicabl
             acts.push(act);
         }
     };
-    item(
-        ui,
-        icons::THIS_PC,
-        tr("Read this PC into a new profile"),
-        Act::Pc(PcAct::Read),
-    );
-    item(
-        ui,
-        icons::REFRESH,
-        tr("Read the selection into this profile"),
-        Act::Pc(PcAct::ReadSelection),
-    );
-    item(
-        ui,
-        icons::CHECK,
-        tr("Check the selection on this PC"),
-        Act::Pc(PcAct::Check),
-    );
-    ui.separator();
+    if pc {
+        item(
+            ui,
+            icons::THIS_PC,
+            tr("Read this PC into a new profile"),
+            Act::Pc(PcAct::Read),
+        );
+        item(
+            ui,
+            icons::REFRESH,
+            tr("Read the selection into this profile"),
+            Act::Pc(PcAct::ReadSelection),
+        );
+        item(
+            ui,
+            icons::CHECK,
+            tr("Check the selection on this PC"),
+            Act::Pc(PcAct::Check),
+        );
+        ui.separator();
+    }
     item(
         ui,
         icons::SCRIPT,
@@ -600,25 +611,27 @@ fn this_pc_menu(ui: &mut egui::Ui, acts: &mut Vec<Act>, profile: bool, applicabl
         Act::Pc(PcAct::SaveRegFileAll(true)),
     );
     ui.separator();
-    item(
-        ui,
-        icons::START,
-        tr("Apply the selection to this PC..."),
-        Act::Pc(PcAct::PlanNative(false)),
-    );
-    item(
-        ui,
-        icons::UNDO,
-        tr("Return the selection to Windows defaults..."),
-        Act::Pc(PcAct::PlanNative(true)),
-    );
-    item(
-        ui,
-        icons::UNDO,
-        tr("Undo a change from its backup..."),
-        Act::Pc(PcAct::PlanUndo),
-    );
-    ui.separator();
+    if pc {
+        item(
+            ui,
+            icons::START,
+            tr("Apply the selection to this PC..."),
+            Act::Pc(PcAct::PlanNative(false)),
+        );
+        item(
+            ui,
+            icons::UNDO,
+            tr("Return the selection to Windows defaults..."),
+            Act::Pc(PcAct::PlanNative(true)),
+        );
+        item(
+            ui,
+            icons::UNDO,
+            tr("Undo a change from its backup..."),
+            Act::Pc(PcAct::PlanUndo),
+        );
+        ui.separator();
+    }
     item(
         ui,
         icons::OPEN,

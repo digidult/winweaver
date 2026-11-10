@@ -246,9 +246,11 @@ pub enum UsersAct {
     FromProfile,
 }
 
-/// Whether an act reads or changes the Windows the program runs on (This PC, its registry, its
-/// accounts, the native apply): the program without the feature `pc` (the browser edition) hides
-/// and refuses them. The scripts and the registry files of a profile are files, made anywhere.
+/// Whether an act reads or changes the Windows the program runs on or its disk (This PC, its
+/// registry, its accounts, the native apply, a registry file applied, its Group Policy files and
+/// policy templates, a file read again from its folder): the program without the feature `pc`
+/// (the browser edition) hides and refuses them. The scripts and the registry files of a profile
+/// are files, made anywhere.
 #[cfg(feature = "full")]
 pub(crate) fn needs_pc(act: &Act) -> bool {
     matches!(
@@ -263,7 +265,19 @@ pub(crate) fn needs_pc(act: &Act) -> bool {
             | Act::Users(
                 UsersAct::OfThisPc | UsersAct::ReadPc | UsersAct::AskRun(..) | UsersAct::Run(..)
             )
+            | Act::RegFile(RegFileAct::AskApply(_) | RegFileAct::Apply(_))
+            | Act::Pol(PolAct::OpenSystem(..) | PolAct::Refresh)
+            | Act::Import(ImportAct::Templates(
+                ImportSource::ThisWindows | ImportSource::Folder
+            ))
     )
+}
+
+/// Whether the window offers an act: all of them with the feature `pc`, else the ones that need
+/// no PC.
+#[cfg(feature = "full")]
+pub(crate) fn offered(act: &Act) -> bool {
+    cfg!(feature = "pc") || !needs_pc(act)
 }
 
 /// The acts of the comparison of profiles and of the diff tab.
@@ -451,4 +465,45 @@ pub enum RegFileAct {
     Apply(regfileview::ApplyScope),
     /// Clears the errors of the last apply from the message bar of the tab.
     ClearMessages,
+}
+
+#[cfg(all(test, feature = "full"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_acts_on_this_pc_and_its_disk_need_a_pc() {
+        let pc = [
+            Act::Pc(PcAct::Read),
+            Act::Pc(PcAct::PlanUndo),
+            Act::RegFile(RegFileAct::AskApply(regfileview::ApplyScope::File)),
+            Act::Pol(PolAct::OpenSystem(
+                winweaver_core::pol::Scope::Computer,
+                None,
+                None,
+            )),
+            Act::Pol(PolAct::Refresh),
+            Act::Import(ImportAct::Templates(ImportSource::ThisWindows)),
+            Act::Import(ImportAct::Templates(ImportSource::Folder)),
+            Act::Users(UsersAct::ReadPc),
+        ];
+        for act in &pc {
+            assert!(needs_pc(act));
+            assert_eq!(offered(act), cfg!(feature = "pc"));
+        }
+        // The files of a profile and the files the dialog hands over are made anywhere.
+        let anywhere = [
+            Act::Pc(PcAct::SaveScript(ScriptKind::Apply)),
+            Act::Pc(PcAct::SaveRegFileAll(false)),
+            Act::Pol(PolAct::OpenFile),
+            Act::Pol(PolAct::AddFile),
+            Act::Import(ImportAct::Templates(ImportSource::CatalogFile)),
+            Act::Import(ImportAct::Templates(ImportSource::Archive)),
+            Act::Diff(DiffAct::Compare),
+            Act::File(FileAct::OpenReport),
+        ];
+        for act in &anywhere {
+            assert!(!needs_pc(act) && offered(act));
+        }
+    }
 }

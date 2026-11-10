@@ -45,6 +45,10 @@ raw-window-handle = "0.6"
 serde.workspace = true
 serde_json.workspace = true
 
+# A browser: the dialog of the page answers in a task of the page, for a file asked for a purpose
+# (the other side of a comparison, the entries of a file added to a Group Policy file).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen-futures = "0.4"
 
 
 [dev-dependencies]

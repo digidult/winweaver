@@ -940,5 +940,9 @@
   "registry": "kayıt defteri",
   "this_pc": "bu bilgisayar",
   "This needs WinWeaver on Windows: a browser reads and changes no PC": "Bunun için Windows'ta WinWeaver gerekir: tarayıcı hiçbir bilgisayarı okumaz ve değiştirmez",
-  "Archives of policy templates": "İlke şablonu arşivleri"
+  "Archives of policy templates": "İlke şablonu arşivleri",
+  "Scripts": "Betikler",
+  "Scripts, this rule": "Betikler, bu kural",
+  "Scripts, this selection": "Betikler, bu seçim",
+  "Downloaded {name}; the page did not keep the import: {e}": "{name} indirildi; sayfa içe aktarmayı saklamadı: {e}"
 }

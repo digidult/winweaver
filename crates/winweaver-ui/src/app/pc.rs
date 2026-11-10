@@ -362,16 +362,27 @@ impl WinWeaver {
 
     /// Opens the report of an audit script made on another PC and reads it into a new profile.
     pub(crate) fn open_report(&mut self, shell: &mut Shell<WinWeaver>) {
-        let Some(path) = crate::dialogs::FileDialog::new()
-            .set_title(tr("Open an audit report"))
-            .add_filter(tr("Audit report"), &["json"])
-            .pick_file()
-        else {
-            return;
-        };
-        match Report::load(&path) {
-            Ok(report) => self.open_report_from(shell, report, &path),
-            Err(e) => shell.status = trf("Report not read: {e}", &[("e", &e)]),
+        let title = tr("Open an audit report");
+        // The dialog of the page: the report comes to a later frame and opens as any file does.
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = shell;
+            let filters = vec![super::web::kind(tr("Audit report"), &["json"])];
+            self.pick_for(super::web::Purpose::Open, title, filters);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let Some(path) = crate::dialogs::FileDialog::new()
+                .set_title(title)
+                .add_filter(tr("Audit report"), &["json"])
+                .pick_file()
+            else {
+                return;
+            };
+            match Report::load(&path) {
+                Ok(report) => self.open_report_from(shell, report, &path),
+                Err(e) => shell.status = trf("Report not read: {e}", &[("e", &e)]),
+            }
         }
     }
 

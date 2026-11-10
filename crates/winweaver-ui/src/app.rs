@@ -25,7 +25,7 @@ mod shell;
 #[cfg(feature = "full")]
 mod users;
 #[cfg(all(feature = "full", target_arch = "wasm32"))]
-mod web;
+pub(crate) mod web;
 
 #[cfg(feature = "full")]
 pub(crate) use session::show_single;

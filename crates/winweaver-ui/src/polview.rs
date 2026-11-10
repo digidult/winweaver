@@ -16,10 +16,12 @@ use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::pol::{self, Action, Entry, PolFile, Scope};
 use winweaver_core::registry::{self, Data};
 
+#[cfg(feature = "pc")]
+use crate::RegistryAct;
 use crate::i18n::{tr, trf};
 use crate::{
-    Act, PolAct, ProfileAct, Question, RegistryAct, Search, Tab, icons, list, matches_words,
-    regedit, style, tree, views, widgets,
+    Act, PolAct, ProfileAct, Question, Search, Tab, icons, list, matches_words, regedit, style,
+    tree, views, widgets,
 };
 
 pub struct PolDoc {
@@ -605,6 +607,7 @@ pub fn pol_view(
                         &trf("{n} entries", &[("n", &doc.pol.entries.len())]),
                         false,
                     );
+                    #[cfg(feature = "pc")]
                     if let Some(key) = &full
                         && doc.pol.scope.hive().is_some()
                         && ui.link(tr("Open in the registry")).clicked()

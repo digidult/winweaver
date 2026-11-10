@@ -133,49 +133,70 @@ impl WinWeaver {
     /// Adds the entries of a Group Policy file or of a registry file chosen in a dialog to the
     /// file in front: a registry file brings the changes of the hive of the root of the file.
     fn add_to_pol(&mut self, shell: &mut Shell<WinWeaver>) {
-        let Some(path) = crate::dialogs::FileDialog::new()
-            .set_title(tr("Add the entries of a file"))
-            .add_filter(
+        let title = tr("Add the entries of a file");
+        let kinds = [winweaver_core::pol::EXTENSION, regfile::EXTENSION];
+        // The dialog of the page: the file comes to a later frame by its bytes.
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = shell;
+            let filters = vec![super::web::kind(
                 tr("Group Policy and registry files"),
-                &[winweaver_core::pol::EXTENSION, regfile::EXTENSION],
-            )
-            .pick_file()
-        else {
-            return;
-        };
-        let reg = path
-            .extension()
-            .is_some_and(|e| e.eq_ignore_ascii_case(regfile::EXTENSION));
+                &kinds,
+            )];
+            self.pick_for(super::web::Purpose::AddToPol, title, filters);
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let Some(path) = crate::dialogs::FileDialog::new()
+                .set_title(title)
+                .add_filter(tr("Group Policy and registry files"), &kinds)
+                .pick_file()
+            else {
+                return;
+            };
+            let reg = path
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case(regfile::EXTENSION));
+            let added = if reg {
+                RegFile::load(&path).map(Added::Reg)
+            } else {
+                PolFile::load(&path).map(Added::Pol)
+            };
+            self.add_entries_to_pol(shell, added);
+        }
+    }
+
+    /// Adds the entries of a file read for the Group Policy file in front: a registry file
+    /// brings the changes of the hive of the root of the file.
+    pub(crate) fn add_entries_to_pol(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        added: Result<Added, String>,
+    ) {
         let Some(Doc::Pol(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
-        if reg {
-            if d.pol.scope.hive().is_none() {
-                shell.status =
-                    tr("Choose the root of the file first: a registry file names its hives")
-                        .to_owned();
-                return;
-            }
-            match RegFile::load(&path) {
-                Ok(file) => {
-                    let (taken, left) = d.pol.merge_reg(&file);
-                    d.dirty |= taken > 0;
-                    shell.status = trf(
-                        "{taken} changes added, {left} of other hives left out",
-                        &[("taken", &taken), ("left", &left)],
-                    );
+        match added {
+            Ok(Added::Reg(file)) => {
+                if d.pol.scope.hive().is_none() {
+                    shell.status =
+                        tr("Choose the root of the file first: a registry file names its hives")
+                            .to_owned();
+                    return;
                 }
-                Err(e) => shell.status = trf("Not read: {e}", &[("e", &e)]),
+                let (taken, left) = d.pol.merge_reg(&file);
+                d.dirty |= taken > 0;
+                shell.status = trf(
+                    "{taken} changes added, {left} of other hives left out",
+                    &[("taken", &taken), ("left", &left)],
+                );
             }
-        } else {
-            match PolFile::load(&path) {
-                Ok(file) => {
-                    let n = d.pol.merge(&file);
-                    d.dirty |= n > 0;
-                    shell.status = trf("{n} entries added", &[("n", &n)]);
-                }
-                Err(e) => shell.status = trf("Not read: {e}", &[("e", &e)]),
+            Ok(Added::Pol(file)) => {
+                let n = d.pol.merge(&file);
+                d.dirty |= n > 0;
+                shell.status = trf("{n} entries added", &[("n", &n)]);
             }
+            Err(e) => shell.status = trf("Not read: {e}", &[("e", &e)]),
         }
     }
 
@@ -229,11 +250,24 @@ impl WinWeaver {
                 self.open_system_pol(shell, scope, key.as_deref(), value.as_deref());
             }
             PolAct::OpenFile => {
-                let dialog = crate::dialogs::FileDialog::new()
-                    .set_title(tr("Open a Group Policy file"))
-                    .add_filter(tr("Group Policy files"), &[winweaver_core::pol::EXTENSION]);
-                if let Some(path) = dialog.pick_file() {
-                    self.open_pol_path(shell, path);
+                let title = tr("Open a Group Policy file");
+                #[cfg(target_arch = "wasm32")]
+                self.pick_for(
+                    super::web::Purpose::Open,
+                    title,
+                    vec![super::web::kind(
+                        tr("Group Policy files"),
+                        &[winweaver_core::pol::EXTENSION],
+                    )],
+                );
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let dialog = crate::dialogs::FileDialog::new()
+                        .set_title(title)
+                        .add_filter(tr("Group Policy files"), &[winweaver_core::pol::EXTENSION]);
+                    if let Some(path) = dialog.pick_file() {
+                        self.open_pol_path(shell, path);
+                    }
                 }
             }
             PolAct::New => {
@@ -292,6 +326,13 @@ impl WinWeaver {
             }
         }
     }
+}
+
+/// The entries of a file added to a Group Policy file: of a registry file or of another Group
+/// Policy file.
+pub(crate) enum Added {
+    Reg(RegFile),
+    Pol(PolFile),
 }
 
 /// Whether a path is one of the two files of Group Policy of this Windows.

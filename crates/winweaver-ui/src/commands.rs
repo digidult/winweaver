@@ -1,7 +1,7 @@
 //! The command bar of each tab as data: the window draws the items, the menu and the keyboard
 //! name their keys, and every key text lives here once.
 
-#[cfg(feature = "full")]
+#[cfg(feature = "pc")]
 use winweaver_core::users::Operation;
 #[cfg(feature = "full")]
 use ww::commands::{cmd, cmd_if, when};
@@ -78,7 +78,10 @@ impl Menu {
     /// The button of the command bar that opens the menu, with the least width of the menu.
     pub fn item(self) -> Item {
         let (icon, label, width) = match self {
-            Menu::ThisPc => (icons::THIS_PC, tr("This PC"), 300.0),
+            Menu::ThisPc => {
+                let (icon, label) = this_pc_title();
+                (icon, label, 300.0)
+            }
             Menu::CompareProfile => (icons::COMPARE, tr("Compare"), 220.0),
             Menu::Catalogs => (icons::PACKAGE, tr("Catalogs"), 300.0),
             Menu::CompareCatalog => (icons::COMPARE, tr("Compare"), 300.0),
@@ -89,6 +92,35 @@ impl Menu {
         };
         ww::commands::menu(icon, label, width, self as usize)
     }
+}
+
+#[cfg(feature = "full")]
+/// The icon and the name of the menu This PC: with the feature pc it reads, checks and changes
+/// this PC; without it (a browser) it saves the scripts and the registry files to run on a PC.
+pub(crate) fn this_pc_title() -> (&'static str, &'static str) {
+    if cfg!(feature = "pc") {
+        (icons::THIS_PC, tr("This PC"))
+    } else {
+        (icons::SCRIPT, tr("Scripts"))
+    }
+}
+
+/// The items without a separator at the start, at the end or after another one: the items left
+/// out where an act needs this PC leave none behind.
+#[cfg(feature = "full")]
+fn tidy(items: Vec<Item>) -> Vec<Item> {
+    let mut out: Vec<Item> = Vec::with_capacity(items.len());
+    for item in items {
+        let separator = matches!(item, Item::Separator);
+        if separator && out.last().is_none_or(|l| matches!(l, Item::Separator)) {
+            continue;
+        }
+        out.push(item);
+    }
+    if matches!(out.last(), Some(Item::Separator)) {
+        out.pop();
+    }
+    out
 }
 
 fn new_profile() -> Item {
@@ -146,9 +178,15 @@ impl WinWeaver {
         }
     }
 
-    /// The command bar of the active tab, in its order.
+    /// The command bar of the active tab, in its order; without the feature pc (a browser) the
+    /// commands that need this PC are left out.
     #[cfg(feature = "full")]
     pub(crate) fn tab_commands(&self, shell: &Shell<WinWeaver>) -> Vec<Item> {
+        tidy(self.all_tab_commands(shell))
+    }
+
+    #[cfg(feature = "full")]
+    fn all_tab_commands(&self, shell: &Shell<WinWeaver>) -> Vec<Item> {
         match shell.docs.get(shell.active) {
             Some(Doc::Profile(_)) => vec![
                 new_profile(),
@@ -212,7 +250,9 @@ impl WinWeaver {
                     when(icons::STOP, tr("Stop"), running, McpAct::Panel(Panel::Stop)),
                 ]
             }
+            // A browser opens no theme file (the window of W# has no dialog there).
             Some(Doc::Shell(ShellDoc::Theme(_))) => vec![
+                #[cfg(not(target_arch = "wasm32"))]
                 keyed(
                     icons::OPEN,
                     tr("Open"),
@@ -286,11 +326,13 @@ impl WinWeaver {
                         d.remove_question().map(Act::from),
                     ),
                     Item::Separator,
+                    #[cfg(feature = "pc")]
                     cmd_if(
                         icons::REGISTRY,
                         tr("Open in the registry"),
                         key.map(|(_, path)| RegistryAct::Open(path, d.selected_value()).into()),
                     ),
+                    #[cfg(feature = "pc")]
                     Menu::RegFileApply.item(),
                     Item::Separator,
                     if shell.settings.extra.regfile_tree {
@@ -303,6 +345,7 @@ impl WinWeaver {
             Some(Doc::Users(d)) => {
                 let one = d.selected_user().is_some();
                 let unlocked = d.unlocked();
+                #[cfg(feature = "pc")]
                 let create = Operation::Create {
                     update_existing: false,
                 };
@@ -339,12 +382,14 @@ impl WinWeaver {
                     cmd(icons::CHECK, tr("Check"), UsersAct::Check),
                     #[cfg(feature = "pc")]
                     cmd(icons::THIS_PC, tr("Read this PC"), UsersAct::ReadPc),
+                    #[cfg(feature = "pc")]
                     when(
                         icons::START,
                         tr("Create on this PC"),
                         unlocked,
                         UsersAct::AskRun(create, true),
                     ),
+                    #[cfg(feature = "pc")]
                     when(
                         icons::KEY,
                         tr("Apply passwords"),
@@ -388,12 +433,14 @@ impl WinWeaver {
                 Menu::Pol.item(),
             ],
             Some(Doc::Pol(d)) => {
+                #[cfg(feature = "pc")]
                 let key = d.sel.as_ref().map(|k| d.pol.full_key(k));
                 let known = d.pol.scope.hive().is_some();
                 vec![
                     open(),
                     save(),
                     save_as(),
+                    #[cfg(feature = "pc")]
                     cmd(icons::REFRESH, tr("Read again"), PolAct::Refresh),
                     Item::Separator,
                     cmd(icons::FOLDER, tr("New key"), PolAct::NewEntry(true)),
@@ -414,6 +461,7 @@ impl WinWeaver {
                     Menu::PolRoot.item(),
                     cmd(icons::IMPORT, tr("Add a file"), PolAct::AddFile),
                     when(icons::EXPORT, tr("To .reg"), known, PolAct::ExportReg),
+                    #[cfg(feature = "pc")]
                     cmd_if(
                         icons::REGISTRY,
                         tr("Open in the registry"),
@@ -426,5 +474,33 @@ impl WinWeaver {
             Some(Doc::Shell(ShellDoc::Settings(_) | ShellDoc::Page(_))) => Vec::new(),
             None => vec![new_profile(), open()],
         }
+    }
+}
+
+#[cfg(all(test, feature = "full"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_items_left_out_leave_no_separator_behind() {
+        let shape = |items: &[Item]| -> String {
+            items
+                .iter()
+                .map(|i| match i {
+                    Item::Separator => '|',
+                    _ => 'x',
+                })
+                .collect()
+        };
+        let items = vec![
+            Item::Separator,
+            open(),
+            Item::Separator,
+            Item::Separator,
+            save(),
+            Item::Separator,
+        ];
+        assert_eq!(shape(&tidy(items)), "x|x");
+        assert!(tidy(vec![Item::Separator, Item::Separator]).is_empty());
     }
 }

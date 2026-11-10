@@ -90,10 +90,12 @@ pub use catalogview::TreeKey;
 pub use dialogs::file_stem;
 #[cfg(all(target_arch = "wasm32", not(feature = "full")))]
 pub(crate) use dialogs::open_filters;
+#[cfg(all(feature = "full", not(target_arch = "wasm32")))]
+pub(crate) use dialogs::pick_profile;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use dialogs::{ask_save_path, open_dialog, with_extension};
 #[cfg(feature = "full")]
-pub(crate) use dialogs::{file_dialog, kept_name, pick_profile, reg_extension, write_file};
+pub(crate) use dialogs::{file_dialog, kept_name, reg_extension, write_file};
 #[cfg(feature = "full")]
 pub use diffview::DiffDoc;
 pub use doc::{Doc, DocKind, SettingsSection};
@@ -382,6 +384,9 @@ struct Full {
     users_import: Option<usersview::UsersImport>,
     /// The import being renamed in the settings and the name typed so far.
     renaming: Option<(String, String)>,
+    /// The files the dialog of the page hands over for a purpose (a browser).
+    #[cfg(target_arch = "wasm32")]
+    web: app::web::WebState,
 }
 
 /// The translation for a language code, `None` for English.
@@ -428,6 +433,8 @@ impl WinWeaver {
                 running_skipped: Vec::new(),
                 users_import: None,
                 renaming: None,
+                #[cfg(target_arch = "wasm32")]
+                web: Default::default(),
             },
             imports: Vec::new(),
             catalog,

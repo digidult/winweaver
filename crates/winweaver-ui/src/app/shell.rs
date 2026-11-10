@@ -471,18 +471,26 @@ impl App for WinWeaver {
         ui: &mut egui::Ui,
         acts: &mut Vec<Act>,
     ) {
-        match SettingsSection::ALL.get(section) {
-            #[cfg(feature = "full")]
-            Some(SettingsSection::Templates) => {
-                style::block(ui, |ui| self.imports_view(ui, acts));
-            }
-            Some(SettingsSection::Files) => {
-                style::block(ui, |ui| self.files_settings(shell, ui));
-            }
-            None => {}
-        }
         #[cfg(not(feature = "full"))]
         let _ = acts;
+        #[cfg(target_arch = "wasm32")]
+        let _ = shell;
+        // The light edition in a browser has no section after General.
+        #[cfg(all(not(feature = "full"), target_arch = "wasm32"))]
+        let _ = ui;
+        let Some(&section) = SettingsSection::ALL.get(section) else {
+            return;
+        };
+        match section {
+            #[cfg(feature = "full")]
+            SettingsSection::Templates => {
+                style::block(ui, |ui| self.imports_view(ui, acts));
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            SettingsSection::Files => {
+                style::block(ui, |ui| self.files_settings(shell, ui));
+            }
+        }
     }
 
     /// The keys of WinWeaver beyond the ones of the window; Escape cancels a plan waiting for
@@ -572,6 +580,8 @@ impl App for WinWeaver {
         self.poll_import(shell, ctx);
         self.poll_pc_read(shell, ctx);
         self.poll_registry_search(shell, ctx);
+        #[cfg(target_arch = "wasm32")]
+        self.take_picked(shell, ctx);
         #[cfg(feature = "mcp")]
         self.persist_mcp();
     }

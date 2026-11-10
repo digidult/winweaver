@@ -252,7 +252,12 @@ pub(crate) fn group_detail(
             .collect();
         if winweaver_core::export::applicable(catalog, &ids) {
             block(ui, |ui| {
-                style::section_title(ui, tr("This PC, this selection"));
+                let title = if cfg!(feature = "pc") {
+                    tr("This PC, this selection")
+                } else {
+                    tr("Scripts, this selection")
+                };
+                style::section_title(ui, title);
                 ui.add_space(4.0);
                 this_pc_buttons(ui, acts);
             });
@@ -302,7 +307,7 @@ pub(crate) fn this_pc_buttons(ui: &mut egui::Ui, acts: &mut Vec<Act>) {
                 Act::Pc(PcAct::SaveRegFile(true)),
             ),
         ] {
-            if !cfg!(feature = "pc") && crate::act::needs_pc(&act) {
+            if !crate::act::offered(&act) {
                 continue;
             }
             if ui.button(text).clicked() {

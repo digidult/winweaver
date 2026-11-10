@@ -14,6 +14,8 @@ use crate::catalogdiff::CompareDoc;
 use crate::catalogview::CatalogDoc;
 #[cfg(feature = "full")]
 use crate::diffview::DiffDoc;
+// The light edition in a browser names no section of the settings and no bookmarks.
+#[cfg(any(feature = "full", not(target_arch = "wasm32")))]
 use crate::i18n::tr;
 #[cfg(feature = "full")]
 use crate::marksview::MarksDoc;
@@ -183,22 +185,28 @@ pub enum SettingsSection {
     /// The policy templates: the imports.
     #[cfg(feature = "full")]
     Templates,
-    /// The folders of the program and the recent files.
+    /// The folders of the program and the recent files; a browser has neither.
+    #[cfg(not(target_arch = "wasm32"))]
     Files,
 }
 
 impl SettingsSection {
     /// The sections in their order after General.
-    #[cfg(feature = "full")]
+    #[cfg(all(feature = "full", not(target_arch = "wasm32")))]
     pub const ALL: [SettingsSection; 2] = [Self::Templates, Self::Files];
-    #[cfg(not(feature = "full"))]
+    #[cfg(all(feature = "full", target_arch = "wasm32"))]
+    pub const ALL: [SettingsSection; 1] = [Self::Templates];
+    #[cfg(all(not(feature = "full"), not(target_arch = "wasm32")))]
     pub const ALL: [SettingsSection; 1] = [Self::Files];
+    #[cfg(all(not(feature = "full"), target_arch = "wasm32"))]
+    pub const ALL: [SettingsSection; 0] = [];
 
     /// The title of the section.
     pub fn title(self) -> &'static str {
         match self {
             #[cfg(feature = "full")]
             Self::Templates => tr("Policy templates"),
+            #[cfg(not(target_arch = "wasm32"))]
             Self::Files => tr("Files"),
         }
     }

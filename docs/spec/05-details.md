@@ -684,7 +684,14 @@ change, read the section of the part it touches.
   the core and of the window go through `ww_base::files` (`jsonfile::write_atomic`,
   `PolFile::save`, `RegFile::save`, the answer file, `ww::dialogs::write_file`), the list of the
   imports too (`import_files`); in a browser a path under `ww_base::files::DOWNLOAD` is a download.
-  A new save or open of a file keeps to them, or the browser edition loses it.
+  A new save or open of a file keeps to them, or the browser edition loses it: no `std::fs`
+  outside the native code (a browser has none, so `create_dir_all` failed an import there).
+- A file dialog that opens (`pick_file`) answers nothing in a browser: an act that reads a file
+  calls `WinWeaver::pick_for` there with a `Purpose` (`app/web.rs`), whose bytes come to a later
+  frame, and keeps the native dialog under `cfg(not(target_arch = "wasm32"))`. A button or a menu
+  item of an act that needs this PC or its disk is left out without the feature `pc`
+  (`act::offered`, `#[cfg(feature = "pc")]` in `commands.rs`), and `act::needs_pc` names the act so
+  that `apply` refuses it too.
 
 ## 8. Tests, CI, builds, archives and the command line
 

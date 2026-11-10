@@ -940,5 +940,9 @@
   "registry": "registro",
   "this_pc": "questo PC",
   "This needs WinWeaver on Windows: a browser reads and changes no PC": "Serve WinWeaver su Windows: un browser non legge né modifica alcun PC",
-  "Archives of policy templates": "Archivi di modelli di criteri"
+  "Archives of policy templates": "Archivi di modelli di criteri",
+  "Scripts": "Script",
+  "Scripts, this rule": "Script, questa regola",
+  "Scripts, this selection": "Script, questa selezione",
+  "Downloaded {name}; the page did not keep the import: {e}": "Scaricato {name}; la pagina non ha conservato l'importazione: {e}"
 }

@@ -231,12 +231,36 @@ impl WinWeaver {
         if self.active_profile(shell).is_none() {
             return;
         }
-        let dialog = file_dialog(tr("Users files"), users::EXTENSION)
-            .set_title(tr("Accounts from a users file"));
-        let Some(path) = dialog.pick_file() else {
+        let title = tr("Accounts from a users file");
+        // The dialog of the page: the file comes to a later frame by its bytes.
+        #[cfg(target_arch = "wasm32")]
+        self.pick_for(
+            super::web::Purpose::UsersIntoProfile,
+            title,
+            vec![super::web::kind(tr("Users files"), &[users::EXTENSION])],
+        );
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let dialog = file_dialog(tr("Users files"), users::EXTENSION).set_title(title);
+            let Some(path) = dialog.pick_file() else {
+                return;
+            };
+            let file = UsersFile::load(&path).map_err(|e| e.to_string());
+            self.users_file_into_profile(shell, file);
+        }
+    }
+
+    /// Loads the accounts of a users file read into the profile in front, asking the master
+    /// password for their passwords when the file holds some.
+    pub(crate) fn users_file_into_profile(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        file: Result<UsersFile, String>,
+    ) {
+        if self.active_profile(shell).is_none() {
             return;
-        };
-        match UsersFile::load(&path) {
+        }
+        match file {
             Ok(file) if file.passwords.is_some() => {
                 let mut ask = usersview::MasterAsk::default();
                 ask.open(usersview::Purpose::Unlock);

@@ -239,7 +239,33 @@ impl WinWeaver {
         }
     }
 
+    /// An import in a browser: a catalog file or an archive chosen in the dialog of the page,
+    /// imported when it comes (`open_full_bytes`). The templates of this Windows and a folder
+    /// need WinWeaver on Windows.
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn start_import(&mut self, _shell: &mut Shell<WinWeaver>, source: ImportSource) {
+        let (title, filters) = match source {
+            ImportSource::CatalogFile => (
+                tr("Open a catalog file"),
+                vec![super::web::kind(
+                    tr("Catalog files"),
+                    &[admx::CATALOG_EXTENSION],
+                )],
+            ),
+            ImportSource::Archive => (
+                tr("Open an archive of templates or of a catalog file"),
+                vec![super::web::kind(
+                    tr("Zip archives"),
+                    &[admx::ARCHIVE_EXTENSION],
+                )],
+            ),
+            ImportSource::ThisWindows | ImportSource::Folder => return,
+        };
+        self.pick_for(super::web::Purpose::Open, title, filters);
+    }
+
     /// Starts an import in a thread: the templates of this Windows, a folder or a catalog file.
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn start_import(&mut self, shell: &mut Shell<WinWeaver>, source: ImportSource) {
         if self.full.importing.is_some() {
             return;
@@ -452,35 +478,37 @@ impl WinWeaver {
         }
         ui.horizontal(|ui| {
             let busy = self.full.importing.is_some();
-            if ui
-                .add_enabled(
-                    !busy,
-                    egui::Button::new(tr("Import the templates of this Windows")),
-                )
-                .clicked()
-            {
-                acts.push(Act::Import(ImportAct::Templates(ImportSource::ThisWindows)));
-            }
-            if ui
-                .add_enabled(!busy, egui::Button::new(tr("Import a folder...")))
-                .clicked()
-            {
-                acts.push(Act::Import(ImportAct::Templates(ImportSource::Folder)));
-            }
-            if ui
-                .add_enabled(!busy, egui::Button::new(tr("Import a catalog file...")))
-                .clicked()
-            {
-                acts.push(Act::Import(ImportAct::Templates(ImportSource::CatalogFile)));
-            }
-            if ui
-                .add_enabled(!busy, egui::Button::new(tr("Import an archive...")))
-                .on_hover_text(tr(
-                    "A zip archive of ADMX templates with their ADML, or of one catalog file; it is read without unpacking",
-                ))
-                .clicked()
-            {
-                acts.push(Act::Import(ImportAct::Templates(ImportSource::Archive)));
+            for (text, source, hint) in [
+                (
+                    tr("Import the templates of this Windows"),
+                    ImportSource::ThisWindows,
+                    None,
+                ),
+                (tr("Import a folder..."), ImportSource::Folder, None),
+                (
+                    tr("Import a catalog file..."),
+                    ImportSource::CatalogFile,
+                    None,
+                ),
+                (
+                    tr("Import an archive..."),
+                    ImportSource::Archive,
+                    Some(tr(
+                        "A zip archive of ADMX templates with their ADML, or of one catalog file; it is read without unpacking",
+                    )),
+                ),
+            ] {
+                let act = Act::Import(ImportAct::Templates(source));
+                if !crate::act::offered(&act) {
+                    continue;
+                }
+                let mut button = ui.add_enabled(!busy, egui::Button::new(text));
+                if let Some(hint) = hint {
+                    button = button.on_hover_text(hint);
+                }
+                if button.clicked() {
+                    acts.push(act);
+                }
             }
         });
         self.full.renaming = renaming;
@@ -524,7 +552,7 @@ impl WinWeaver {
                 .full
                 .imports_dir
                 .join(format!("{id}.{}", admx::CATALOG_EXTENSION));
-            if !path.exists() && !self.imports.iter().any(|f| f.id == id) {
+            if !ww_base::files::exists(&path) && !self.imports.iter().any(|f| f.id == id) {
                 break id;
             }
             n += 1;
@@ -541,7 +569,6 @@ impl WinWeaver {
             .full
             .imports_dir
             .join(format!("{id}.{}", admx::CATALOG_EXTENSION));
-        let _ = std::fs::create_dir_all(&self.full.imports_dir);
         if let Err(e) = file.save(&path) {
             shell.save_failed(e);
             return;
@@ -556,13 +583,11 @@ impl WinWeaver {
     }
 
     /// Saves the file of the editor in front after a check; a loaded import is read again.
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn save_catalog_edit(&mut self, shell: &mut Shell<WinWeaver>) {
         let Some(Doc::CatalogEdit(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
-        if let Some(parent) = d.path.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
         let result = d.file.check().and_then(|()| d.file.save(&d.path));
         if let Err(e) = result {
             shell.save_failed(e);
@@ -572,6 +597,47 @@ impl WinWeaver {
         let path = d.path.clone();
         let reload = d.import.then(|| d.file.clone());
         shell.saved(&path);
+        if let Some(file) = reload {
+            if let Some(slot) = self.imports.iter_mut().find(|f| f.id == file.id) {
+                *slot = file;
+            }
+            self.refresh_import_list();
+            self.rebuild_catalog(shell);
+        }
+    }
+
+    /// Saves the file of the editor in front after a check, in a browser: a download of the
+    /// catalog file, as every save there; an import is also kept in the storage of the page and
+    /// read again, so its options in the profiles change at once.
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn save_catalog_edit(&mut self, shell: &mut Shell<WinWeaver>) {
+        let Some(Doc::CatalogEdit(d)) = shell.docs.get_mut(shell.active) else {
+            return;
+        };
+        if let Err(e) = d.file.check() {
+            shell.save_failed(e);
+            return;
+        }
+        let name = d
+            .path
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| format!("{}.{}", d.file.id, admx::CATALOG_EXTENSION));
+        let json = d.file.to_json();
+        if let Err(e) = ww::store::download(&name, json.as_bytes(), "application/json") {
+            shell.save_failed(e);
+            return;
+        }
+        d.dirty = false;
+        let kept = d.import.then(|| d.file.save(&d.path));
+        let reload = d.import.then(|| d.file.clone());
+        shell.status = match kept {
+            Some(Err(e)) => trf(
+                "Downloaded {name}; the page did not keep the import: {e}",
+                &[("name", &name), ("e", &e)],
+            ),
+            _ => trf("Downloaded {name}", &[("name", &name)]),
+        };
         if let Some(file) = reload {
             if let Some(slot) = self.imports.iter_mut().find(|f| f.id == file.id) {
                 *slot = file;
@@ -812,8 +878,9 @@ impl WinWeaver {
             }
             ImportAct::RefreshList => self.refresh_import_list(),
             ImportAct::Remove(id) => {
-                let _ = std::fs::remove_file(
-                    self.full
+                ww_base::files::remove(
+                    &self
+                        .full
                         .imports_dir
                         .join(format!("{id}.{}", admx::CATALOG_EXTENSION)),
                 );

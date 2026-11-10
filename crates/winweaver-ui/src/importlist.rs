@@ -97,10 +97,10 @@ pub fn admx_file_catalog(path: &Path) -> Result<CatalogFile, String> {
 }
 
 /// Saves the catalog file of an import as `<id>.wwcatalog` in the imports folder `dir`, made
-/// first when missing; the path of the file.
+/// first when missing (the file layer does it; in a browser the folder is the storage of the
+/// page); the path of the file.
 pub fn save_import(dir: &Path, file: &CatalogFile) -> Result<PathBuf, String> {
     let path = dir.join(format!("{}.{}", file.id, admx::CATALOG_EXTENSION));
-    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     file.save(&path)?;
     Ok(path)
 }

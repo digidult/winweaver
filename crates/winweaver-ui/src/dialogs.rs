@@ -105,7 +105,7 @@ pub(crate) fn file_dialog(kind: &str, extension: &str) -> FileDialog {
     in_folder(dialog, &dir)
 }
 
-#[cfg(any(feature = "full", not(target_arch = "wasm32")))]
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn profile_dialog() -> FileDialog {
     let dialog = FileDialog::new().add_filter("WinWeaver profile", &[profile::EXTENSION]);
     in_folder(dialog, &profiles_dir())
@@ -123,7 +123,8 @@ pub(crate) fn open_filters() -> Vec<(String, Vec<String>)> {
     ]
 }
 
-#[cfg(feature = "full")]
+/// A profile chosen in the native dialog (a browser asks its page, `WinWeaver::pick_for`).
+#[cfg(all(feature = "full", not(target_arch = "wasm32")))]
 pub(crate) fn pick_profile() -> Option<PathBuf> {
     profile_dialog().set_title(tr("Open a profile")).pick_file()
 }

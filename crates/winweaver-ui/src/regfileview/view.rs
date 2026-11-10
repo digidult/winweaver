@@ -312,6 +312,7 @@ pub(crate) fn key_head(
             if in_default_user(path) {
                 style::chip(ui, tr("Default user profile"), false);
             }
+            #[cfg(feature = "pc")]
             if ui.link(tr("Open in the registry")).clicked() {
                 acts.push(Act::Registry(RegistryAct::Open(
                     path.clone(),
@@ -454,8 +455,10 @@ pub(crate) fn lines_list(
                     ),
                     None => (list::Cell::new(tr("deleted")).warn(), list::Cell::new("")),
                 };
+                // The registry tab reads this PC: a browser has none.
                 let button = key_path
                     .as_ref()
+                    .filter(|_| cfg!(feature = "pc"))
                     .map(|_| (icons::REGISTRY, tr("Open in the registry").to_owned()));
                 (
                     vec![list::Cell::new(value_title(name)), kind, shown],

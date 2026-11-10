@@ -1,6 +1,7 @@
 //! The settings of WinWeaver: its lines in the General section of the window, the section Files,
 //! the rename of an import.
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::ShellAct;
 use crate::*;
 
@@ -60,6 +61,7 @@ impl WinWeaver {
     }
 
     /// The folders next to the executable and the recent files.
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn files_settings(&self, shell: &mut Shell<WinWeaver>, ui: &mut egui::Ui) {
         style::section_title(ui, tr("Files"));
         ui.add_space(4.0);

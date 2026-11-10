@@ -12,9 +12,11 @@ use winweaver_core::admx::{self, CatalogFile};
 use winweaver_core::catalog::{Action, Phase, ROOT_POLICIES, RegKind, Rule};
 use winweaver_core::registry;
 
+#[cfg(feature = "pc")]
+use crate::RegistryAct;
 use crate::catalogview;
 use crate::i18n::{tr, trf};
-use crate::{Act, CatalogAct, ProfileAct, RegistryAct, TreeKey, icons, style, tree, widgets};
+use crate::{Act, CatalogAct, ProfileAct, TreeKey, icons, style, tree, widgets};
 
 /// The kinds of values the form writes.
 const KINDS: [RegKind; 4] = [
@@ -496,6 +498,7 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
                                 .hint_text(tr("Key"))
                                 .desired_width(key_w),
                         );
+                        #[cfg(feature = "pc")]
                         if ui
                             .small_button(icons::REGISTRY)
                             .on_hover_text(tr("Open in the registry"))

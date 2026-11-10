@@ -940,5 +940,9 @@
   "registry": "реестр",
   "this_pc": "этот ПК",
   "This needs WinWeaver on Windows: a browser reads and changes no PC": "Для этого нужен WinWeaver в Windows: браузер не читает и не меняет ПК",
-  "Archives of policy templates": "Архивы шаблонов политик"
+  "Archives of policy templates": "Архивы шаблонов политик",
+  "Scripts": "Скрипты",
+  "Scripts, this rule": "Скрипты, это правило",
+  "Scripts, this selection": "Скрипты, выбранное",
+  "Downloaded {name}; the page did not keep the import: {e}": "Загружено {name}; страница не сохранила импорт: {e}"
 }

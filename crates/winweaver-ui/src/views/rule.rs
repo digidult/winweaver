@@ -81,7 +81,8 @@ pub(crate) fn writes(ui: &mut egui::Ui, rule: &Rule, acts: &mut Vec<Act>) {
                 for (path, name, value, default) in &rows {
                     ui.horizontal(|ui| {
                         cell(ui, path, true, false, widths[0] - 24.0);
-                        #[cfg(feature = "full")]
+                        // The registry tab reads this PC: a browser has none.
+                        #[cfg(feature = "pc")]
                         {
                             let open = ui
                                 .small_button(icons::GO_TO)
@@ -91,6 +92,9 @@ pub(crate) fn writes(ui: &mut egui::Ui, rule: &Rule, acts: &mut Vec<Act>) {
                                 let act = RegistryAct::Open((*path).to_owned(), value);
                                 acts.push(Act::Registry(act));
                             }
+                        }
+                        #[cfg(feature = "full")]
+                        {
                             let value = (!name.is_empty()).then_some(name.as_str());
                             crate::polview::link(ui, path, value, acts);
                         }
@@ -347,7 +351,12 @@ pub(crate) fn rule_detail(
         let on_pc = winweaver_core::thispc::exclusion(rule).is_none();
         block(ui, |ui| {
             if on_pc {
-                style::section_title(ui, tr("This PC, this rule"));
+                let title = if cfg!(feature = "pc") {
+                    tr("This PC, this rule")
+                } else {
+                    tr("Scripts, this rule")
+                };
+                style::section_title(ui, title);
                 ui.add_space(4.0);
                 this_pc_buttons(ui, acts);
             }

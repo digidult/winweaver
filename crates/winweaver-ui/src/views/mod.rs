@@ -10,13 +10,15 @@ use winweaver_core::catalog::{
 use winweaver_core::i18n::CatalogTexts;
 use winweaver_core::resolver::State;
 
+#[cfg(feature = "pc")]
+use crate::RegistryAct;
 use crate::i18n::{tr, trf};
 use crate::{
     Act, Form, ProfileAct, ProfileDoc, Search, Sel, Settings, UNKNOWN_GROUP, icons, matches_words,
     style, tree,
 };
 #[cfg(feature = "full")]
-use crate::{CatalogAct, ImportAct, PcAct, RegistryAct, ScriptKind, TreeKey};
+use crate::{CatalogAct, ImportAct, PcAct, ScriptKind, TreeKey};
 
 mod detail;
 mod profile_tree;
@@ -185,13 +187,14 @@ pub(crate) fn linked_text(
                         acts.push(link.act(&rule.id));
                     }
                 }
-                #[cfg(feature = "full")]
+                // A key opens in the registry tab, which reads this PC: a browser has none.
+                #[cfg(feature = "pc")]
                 Piece::Key(path) => {
                     if ui.link(path.as_str()).clicked() {
                         acts.push(Act::Registry(RegistryAct::Open(path.clone(), None)));
                     }
                 }
-                #[cfg(not(feature = "full"))]
+                #[cfg(not(feature = "pc"))]
                 Piece::Key(path) => {
                     ui.label(RichText::new(path).color(color));
                 }

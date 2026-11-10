@@ -18,16 +18,24 @@ Windows.
 ## Files
 
 - **Open** (or a drop on the page) takes a profile, an answer file, a diff, bookmarks, a catalog
-  file, a zip archive of policy templates, a users file, a Group Policy file, a registry file or a
-  Markdown page. An archive of ADMX templates opens as a catalog: **Save** gives its catalog file,
-  which `files/imports/` loads at the next start.
-- **Save**, **Save as**, **Build**, the scripts and the registry files of the menu This PC are
-  downloads: the browser saves them where it saves downloads.
+  file, a zip archive of policy templates, a users file, a Group Policy file, a registry file, an
+  audit report or a Markdown page.
+- A **catalog file** or an **archive of ADMX templates** opened is imported at once: its options
+  appear in the profiles, as when WinWeaver loads a catalog next to it, and the page keeps it for
+  the next visit while its storage has room (about 5 MB a site; a larger catalog stays for this
+  visit only). So you extend the options yourself: make a catalog, edit it, open it.
+- **Save**, **Save as**, **Build**, the scripts and the registry files of the menu Scripts are
+  downloads: the browser saves them where it saves downloads. **Save** in the editor of a catalog
+  downloads its catalog file too.
+- **Compare with a file**, the accounts of a users file and **Add a file** of a Group Policy file
+  ask for the file with the dialog of the browser.
 - The settings, the drafts of unsaved tabs and the bookmarks stay in the storage of the page of
   this browser, as long as its data of the site is kept.
 
 ## Not in a browser
 
-This PC (reading it, checking it, applying to it, its accounts), the registry of a PC and the MCP
-server need WinWeaver on Windows; their menus are not there, and the native apply is replaced by the
-scripts and the registry files to run on the PC itself.
+This PC (reading it, checking it, applying to it, its accounts), the registry of a PC, the apply of
+a registry file, the Group Policy files of this Windows, the import of the templates of this
+Windows or of a folder and the MCP server need WinWeaver on Windows; their menus and buttons are
+not there, and the native apply is replaced by the scripts and the registry files to run on the PC
+itself.

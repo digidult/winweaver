@@ -235,6 +235,14 @@ impl WinWeaver {
     pub(crate) fn apply_diff(&mut self, shell: &mut Shell<WinWeaver>, act: DiffAct) {
         match act {
             DiffAct::Unsaved => self.diff_unsaved(shell),
+            // The dialog of the page: the profile comes to a later frame by its bytes.
+            #[cfg(target_arch = "wasm32")]
+            DiffAct::Compare => self.pick_for(
+                super::web::Purpose::Compare,
+                tr("Open a profile"),
+                vec![super::web::kind(tr("Profiles"), &[profile::EXTENSION])],
+            ),
+            #[cfg(not(target_arch = "wasm32"))]
             DiffAct::Compare => {
                 if let Some(path) = pick_profile() {
                     match Profile::load(&path) {
