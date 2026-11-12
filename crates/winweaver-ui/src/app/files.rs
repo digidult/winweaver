@@ -224,9 +224,7 @@ impl WinWeaver {
                 }
             }
         };
-        if let Some(parent) = path.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
+        // The folder of the file is made by the file layer when it writes (`ww_base::files`).
         let Some(Doc::Profile(doc)) = shell.docs.get_mut(shell.active) else {
             return;
         };

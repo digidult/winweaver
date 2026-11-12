@@ -39,6 +39,26 @@ fn helpers() {
     assert_eq!(reg_path("HKLM:\\X"), "'HKLM:\\X'");
 }
 
+/// The slots of a template are filled in one pass: a value that holds a slot stays as it is,
+/// a slot is filled wherever the template has it, and a slot without a value is an error.
+#[test]
+fn slots_are_filled_in_one_pass() {
+    let filled = fill(
+        "a {{x}} b {{y}} c {{x}}\r\n",
+        &[("x", "{{y}} {{x}}"), ("y", "Y}}"), ("unused", "U")],
+    );
+    assert_eq!(filled.unwrap(), "a {{y}} {{x}} b Y}} c {{y}} {{x}}\n");
+    assert_eq!(fill("no slot { } }}", &[]).unwrap(), "no slot { } }}");
+    for (template, left) in [
+        ("a {{x}} {{z}} b", "{{z}}"),
+        ("a {{open", "{{open"),
+        ("{{}}", "{{}}"),
+    ] {
+        let why = fill(template, &[("x", "X")]).unwrap_err().to_string();
+        assert_eq!(why, format!("a slot stayed unfilled: {left}"));
+    }
+}
+
 #[test]
 fn settings_nest() {
     let lines = setting_lines(

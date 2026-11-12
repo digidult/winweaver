@@ -84,6 +84,34 @@ change, read the section of the part it touches.
   profile in front against its file, or the preset of its name when it has none, through
   `compare_active`: the current profile left, the saved one right.
 
+- The installation media on a running PC is never the drive of Windows: a standard user can make
+  a folder at its root (`C:\Drivers`, `C:\sources\sxs`), and what is found there would be
+  installed by an administrator. The native apply looks on every drive but that one
+  (`execute::media_drives`, the drive of `ffi::system_drive`), and the stand-alone apply script
+  writes the search of `Op::RunFromMedia` itself (`scripts::media_lines`, `Find-MediaFolder` of
+  `Apply.runtime.ps1`) in place of the script of the catalog. The script of the catalog is
+  written for the installation and still looks at every drive in the answer file
+  (`tests/render.rs`, `tests/scripts.rs`). The drive of Windows alone is left out: another
+  fixed drive a standard user can write to is still looked at.
+
+- The elevated helper asks Windows for its folders (`ffi::system_dir` and `ffi::windows_dir`:
+  `GetSystemDirectoryW`, `GetSystemWindowsDirectoryW`) and never reads `SystemRoot` or `WINDIR`:
+  the environment of a process is set by whoever starts it, and the programs of a plan run from
+  the system folder as administrator (`system_program`).
+
+- The limits of a users file, the same in `userstore` and in `Create-Users.runtime.ps1` (a test
+  of `users::tests` compares them): the iterations of the passwords are 100 000 to 10 000 000
+  (`MIN_ITERATIONS`, `MAX_ITERATIONS`; a file outside them is refused in `userstore::check`
+  before a key is derived, with the reason), and the folder of a profile is one that does not
+  exist or is empty (`winweaver_win::users::profile_folder_problem`, `Test-ProfileFolder`): the
+  folder gets a new access list and a new owner, so the root of a drive (`users::is_drive_root`,
+  an error of the check of the file too), a path with `..`, a link, a file and a folder that
+  holds something are refused with the reason, and the profile an account has in that folder
+  already is left as it is (`Registered::Here`, `Get-ProfilePlace`). A password that is replaced
+  is wiped (`Passwords::put`), the map of a container is read straight into `Passwords` so that
+  a part read before an error is wiped too, and the texts of the two password windows are wiped
+  when a window goes (`Drop` of `MasterAsk` and `PasswordEdit`).
+
 ## 2. Languages, regions, the forms and the answer file
 
 - Input languages and keyboard layouts come from the system, the program has no list of them (the one
@@ -178,6 +206,20 @@ change, read the section of the part it touches.
   rules that are on (chosen or shown on through a linked rule) with their groups open, like a
   search; the switch of the command bar is `commands::toggle`, drawn pressed when on. MCP:
   `only_on` of `list_groups` (with the count `on` of each group), `list_rules` and `search_rules`.
+
+- A control character never reaches the answer file: XML 1.0 has none but the tab and the line
+  breaks, Windows Setup refuses a file that is not XML, and a line break inside a value ends a
+  line of an embedded script. `validate::control_problems` names the texts that are written in
+  the modes chosen (the form Installation, the languages, the accounts, the text and list
+  parameters of the rules in effect) as errors of the check, and `render::build` refuses the
+  same list with the same words, so a build that was not checked (the preview of MCP) writes
+  none either; a last look at the whole file refuses any other control character. A tab stays
+  in the free texts alone: a password, a display name, a description, a text parameter.
+
+- The slots of a template are filled in one pass (`render::params::fill`): a value is put in as
+  it is and never read again, so a profile named `{{blocks}}` is a name. A slot of a template
+  without a value is still an error. A value of a parameter (`substitute`) is likewise never
+  read again.
 
 ## 3. The catalog, its imports and the links of rules
 
@@ -308,6 +350,16 @@ change, read the section of the part it touches.
   three rules is no use) and `apps` with `apps.remove`. Only the root Other holds rules directly
   (the test `only_the_root_other_holds_rules_directly`).
 
+- A line of a script (`ps`) and a command of the answer file (`xml-pe-command`,
+  `xml-specialize-command`) are code (`Action::code_fields`): they are written as the catalog
+  has them and never filled with the value of a parameter, which would be run as code (as
+  SYSTEM, during the installation). The check of the catalog refuses a `{name}` of a parameter
+  of the rule in them (`check::check_rule`, the test `a_parameter_in_code_is_refused`; their
+  other braces are the ones of PowerShell); a value reaches a script only through an action
+  that quotes it (`reg`, `reg-list`, `exe` arguments through `ps_quote`) and the XML through
+  `xml_escape`. The type of a parameter is checked before a build (`validate`), not before the
+  scripts, the registry files and the native apply, which is one more reason for the quoting.
+
 ## 4. The registry, registry files, Group Policy and the scripts
 
 - The registry (`winweaver_core::registry`, `winweaver_win::NativeRegistry` with winreg, `this_registry()`):
@@ -388,6 +440,17 @@ change, read the section of the part it touches.
   never written (`PolDoc::is_system`, `pol_is_system`): Save asks for a place for a copy. The draft
   of a `.pol` tab is its bytes as hexadecimal with the root chosen (`POL_DRAFT`).
 
+- A registry file is read in linear time: a value that goes on in the next lines is collected
+  in one text (`RegFile::parse`), whatever the number of its lines. A Group Policy file with a
+  control character in a key, a value name or a name of a list is refused at the read
+  (`pol::refuse_control`): the file becomes lines of text when it is exported; `merge_reg` leaves
+  such a change of a registry file out (a lone CR inside a line), since the file could not be
+  read again. Every comment of
+  `PolFile::to_reg` and of `RegFile::from_plan` is made by `RegFile::note`, which leaves no
+  line break in it, and an entry made in memory with such a name is named in a comment and
+  never written as a line. A `]` inside a key needs nothing: regedit, and `line_of`, end a key
+  at the last `]` of its line.
+
 ## 5. The MCP server and the logs
 
 - Logs and crashes (`winweaver_mcp::log`, set up first in `main`): the MCP server writes `logs/mcp-<date>.jsonl`
@@ -419,7 +482,7 @@ change, read the section of the part it touches.
   the ones of `wwmcp` (`wwmcp::SOURCES` in the test of the translations), the names of the options and
   the groups are translated at run time (`tr_any`) from the same `ui.json`;
   errors start with not_allowed, not_found, invalid, write_failed or read_failed; passwords and the product
-  key are replaced by `***` in every answer.
+  key are replaced by `***` in every answer (the last fact of this section).
 
 - MCP, bookmarks and catalogs: `list_bookmarks`, `list_catalogs` (by `CatalogHeader::read`), `get_catalog` (the
   groups, or the policies of a group) and `get_catalog_policy` read always, like profiles; `add_bookmark`,
@@ -428,6 +491,14 @@ change, read the section of the part it touches.
   changes through `CatalogFile::put_rule` (the whole file is checked, a failure changes nothing),
   `remove_rule` (with its `.off` and the conflicts with it), `new_policy`, `new_group`; `admx::catalog_path`
   turns a key of regedit into `HKLM:\` or `DU:\`. The ids of catalogs are file names checked against `..`.
+
+- No secret leaves through an answer of a tool (the journal of W# is redacted by `redact`; the
+  answers are not, so the tools hide them themselves): `get_profile` and the resource of the
+  profile show `***` (`redacted`), `preview_build` hides the secrets of the whole answer file
+  and cuts it after (`profiles::beginning`; `hide_secrets` hides a value without its closing
+  tag to its end), and `compare_profiles` says of the product key only whether each side has
+  one (`hidden`) and of the accounts only that they differ. A new tool that returns a part of a
+  profile or of an answer file goes through one of them.
 
 ## 6. The window and W#
 
@@ -620,6 +691,18 @@ change, read the section of the part it touches.
   without a bar when the tabs are wider than the window: the wheel scrolls it sideways, a new active
   tab or count scrolls the active one into view, and a button after the new tab lists every tab.
 
+- The messages of the check are translated at the display: `validate.rs` makes each with `tr`
+  or `trf` of `winweaver_core::message` (the English text is the key, the values are kept
+  apart), `validate::check` gives them in English (the command line, MCP, the tests) and the
+  window calls `validate::check_shown` with `message_text` (the key through `tr`, the values filled in
+  one pass). The test `every_text_of_the_interface_is_translated` reads the files of
+  `CORE_MESSAGES` beside the sources of the window, so a new message of the check needs its
+  eight translations; a new file of the core with messages for the window goes into that list.
+  The test finds a literal on the line after the bracket too (as rustfmt puts a long one). The
+  line of the counts is `check_summary` of the window (`validate::summary` in English), the one
+  of a read of this PC `capture_line` and `verdict_text`; the notes and the forms a capture
+  names, the steps of a report and the warnings of a build stay English inside their sentence.
+
 ## 7. wwlite and the browser edition
 
 - wwlite (`crates/wwlite`): the window of WinWeaver built without the feature `full` of winweaver-ui
@@ -693,6 +776,12 @@ change, read the section of the part it touches.
   (`act::offered`, `#[cfg(feature = "pc")]` in `commands.rs`), and `act::needs_pc` names the act so
   that `apply` refuses it too.
 
+- The catalog files of the list of the imports are read through the file layer in a browser:
+  `admx::CatalogHeader::read`, `admx::rule_ids` and `admx::file_size` read the first bytes, the
+  stream and the size of a file from the disk natively and the whole file through
+  `ww_base::files::read` under `cfg(target_arch = "wasm32")`, where `std::fs` finds nothing (the
+  list showed sizes of 0 and ids for names, and Load catalogs found no file).
+
 ## 8. Tests, CI, builds, archives and the command line
 
 - The command line: `USAGE` of `main.rs` and the section Command line of the guide (`data/docs/guide.md` and every
@@ -734,3 +823,8 @@ change, read the section of the part it touches.
   `x86_64-pc-windows-gnu`), so a run on demand with `-f windows=false` checks a change of any crate
   in a few minutes; the Windows job runs the tests of the window, the tests that change Windows and
   the archives.
+
+- The workflow gives the token of a run the right to read the repository and nothing more
+  (`permissions: contents: read` at its top); the job `release` alone asks for `contents: write`.
+  wasm-bindgen is unpacked in CI only when its SHA-256 is the one its release names (the file
+  `.sha256sum` beside the archive), the check `build-all.cmd` makes for its download.

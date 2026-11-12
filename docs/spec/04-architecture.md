@@ -5,6 +5,7 @@
 ```
 crates/
 ├── winweaver-core/      catalog/ (model, embedded data, checks, values), profile, resolver, validate,
+│                        message (the messages the window translates),
 │                        resources (time zones, editions, the input languages and layouts Windows lists),
 │                        diff, bookmarks, i18n, render/ (the answer file, one file a pass), thispc/ (plan,
 │                        evaluate, judge, capture, report, an in-memory machine), scripts, import, apply,
@@ -234,7 +235,8 @@ The repository, folder by folder and module by module.
 │   │                      and the atomic save of the four JSON documents, DocError), i18n (catalog
 │   │                      translations), paths (a file inside the program folder kept relative to it),
 │   │                      profile (.wwprofile, set_param and set_group of an edit), resolver, validate (the
-│   │                      check of a profile by what it checks), resources (time zones, editions with their
+│   │                      check of a profile by what it checks), message (a message for the window: the
+│   │                      English text as the key of its translation, its values apart), resources (time zones, editions with their
 │   │                      keys, the input languages and layouts Windows lists), regions (the regions of
 │   │                      Windows with their GeoIDs, read like the locales; re-exported by resources),
 │   │                      diff (.wwdiff, ItemKey: the

@@ -266,6 +266,30 @@ pub fn is_profile_path(path: &str) -> bool {
     false
 }
 
+/// Whether an absolute path names no folder of its own: the root of a drive or of a share
+/// (`D:\`, `\\server\share`), or a path that climbs with `..` (which may end at a root). The
+/// folder of a profile gets a new access list and a new owner, so it is never one of these.
+pub fn is_drive_root(path: &str) -> bool {
+    let path = path.trim().replace('/', "\\");
+    let parts = |text: &str| -> Vec<String> {
+        let all = text.split('\\').filter(|p| !p.is_empty() && *p != ".");
+        all.map(str::to_owned).collect()
+    };
+    let (folders, climbs) = match path.strip_prefix("\\\\") {
+        // The host and the share are the root of a share.
+        Some(rest) => {
+            let all = parts(rest);
+            let climbs = all.iter().any(|p| p == "..");
+            (all.len().saturating_sub(2), climbs)
+        }
+        None => {
+            let all = parts(path.get(2..).unwrap_or(""));
+            (all.len(), all.iter().any(|p| p == ".."))
+        }
+    };
+    !path.is_empty() && (folders == 0 || climbs)
+}
+
 /// The checks of the accounts: the names, the paths, the duplicates and the shared profile
 /// folders.
 pub fn check(users: &[User]) -> Vec<Issue> {
@@ -280,6 +304,12 @@ pub fn check(users: &[User]) -> Vec<Issue> {
         if !is_profile_path(&u.profile_path) {
             let why = format!(
                 "The profile path {} is not an absolute path",
+                u.profile_path
+            );
+            issues.push(issue(true, &u.name, why));
+        } else if is_drive_root(&u.profile_path) {
+            let why = format!(
+                "The profile path {} is the root of a drive or holds .., not a folder of its own",
                 u.profile_path
             );
             issues.push(issue(true, &u.name, why));
@@ -474,6 +504,33 @@ mod tests {
         assert!(!is_profile_path("Profiles\\a"));
         assert!(!is_profile_path("D:\\a|b"));
         assert!(!is_profile_path("\\\\server"));
+        for root in [
+            "D:\\",
+            "d:/",
+            " C:\\ ",
+            "D:\\.\\",
+            "D:\\Profiles\\..",
+            "D:\\a\\..\\..\\b",
+            "\\\\server\\share",
+            "\\\\server\\share\\",
+            "\\\\server\\share\\a\\..",
+        ] {
+            assert!(is_drive_root(root), "{root}");
+        }
+        for folder in [
+            "",
+            "D:\\Profiles",
+            "D:\\a\\b..c",
+            "\\\\server\\share\\a",
+            "D:/x/",
+        ] {
+            assert!(!is_drive_root(folder), "{folder}");
+        }
+        let mut root = vec![user("r")];
+        root[0].profile_path = "D:\\".into();
+        let issues = check(&root);
+        assert_eq!(issues.len(), 1, "{issues:?}");
+        assert!(issues[0].error && issues[0].text.contains("root of a drive"));
         let mut users = vec![user("a"), user("A"), user("b")];
         users[0].profile_path = "D:\\P\\".into();
         users[2].profile_path = "d:\\p".into();
@@ -540,5 +597,12 @@ mod tests {
         assert!(text.contains("(???????????? 'A'.wwusers)"));
         let name = render::base64("Пользователи 'A'.wwusers");
         assert!(text.contains(&format!("FromBase64String('{name}')")));
+        // The limits of the program are the ones of the script: the iterations of the
+        // passwords, and a profile folder that is new or empty.
+        use crate::userstore::{MAX_ITERATIONS, MIN_ITERATIONS};
+        assert!(text.contains(&format!("$count -lt {MIN_ITERATIONS})")));
+        assert!(text.contains(&format!("$count -gt {MAX_ITERATIONS})")));
+        assert!(text.contains("$problem = Test-ProfileFolder -ProfilePath $ProfilePath"));
+        assert!(text.contains("exists and is not empty"));
     }
 }

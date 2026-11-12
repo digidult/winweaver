@@ -2,7 +2,7 @@
 
 For agents and developers: where things are, what to read first, which rules apply, where the
 information that changes is.
-Updated with every change of structure, commands or task status. Last update: 10.11.2026.
+Updated with every change of structure, commands or task status. Last update: 11.11.2026.
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -103,7 +103,7 @@ Every folder and module: `docs/spec/04-architecture.md`, section 10. Next to the
     files and logs, which stay English). A new rule needs its texts in
     every `data/catalog/lang/<code>.json` (`translations_cover_every_rule`); `package/lang/be/ui.json` may
     lag (English fills the gaps).
-11. Versions: `version` of the workspace `Cargo.toml` (0.1.50 on 10.11.2026) grows with every
+11. Versions: `version` of the workspace `Cargo.toml` (0.1.51 on 11.11.2026) grows with every
     pull request that reaches `main`. An agent changes the third number alone (0.1.45 to 0.1.46);
     the first and the second change only on the word of the customer. Every build
     names its commit: `winweaver_core::BUILD` is `<version>+<12 digits of the commit>` (`build.rs` of the core,
@@ -140,14 +140,15 @@ wasm-bindgen --target web --no-typescript --out-dir dist-web/wwlite-web target/w
 ```
 
 On a computer of Windows, `build-all.cmd` of the root makes what CI makes:
-the release builds of the workspace and of wwlite alone, wwlite for the browser (wasm-bindgen of the
-version of `Cargo.lock`, `single.py`), the folders of the step Package and the four archives of a
-release, `dist/WinWeaver-<version>.zip`, `wwlite-` and `wwlite-web-<version>.zip`, each
-with its folder inside as the job `release` zips it (`tar.exe` of Windows). `check` runs the checks of
+the release builds of the workspace and of wwlite alone, wwlite and winweaverweb for the browser
+(wasm-bindgen of the version of `Cargo.lock`, `single.py`), the folders of the step Package and the
+four archives of a release, `dist/WinWeaver-<version>.zip`, `wwlite-`, `wwlite-web-` and
+`winweaverweb-<version>.zip`, each with its folder inside as the job `release` zips it (`tar.exe` of
+Windows). `check` runs the checks of
 a commit first (the format, the three clippy runs, both test runs, `--check-catalog`), `screenshots`
 the tests with `WINWEAVER_SCREENSHOTS` set to `dist/screenshots`, `presentation` the slides into
 `dist/presentation` (python-pptx and pillow), `all` the three; `noweb` leaves out the browser
-edition. The tools come from `WW_CARGO` (a script that runs cargo on half of the processor, say),
+editions (two archives). The tools come from `WW_CARGO` (a script that runs cargo on half of the processor, say),
 `WW_PYTHON` and `WW_WASM_BINDGEN`, else from the PATH; a wasm-bindgen that is missing comes once into
 `target/tools` from its release on GitHub, as CI takes it, with its SHA-256 checked. Every tool is
 found before the first long step. It never runs the tests that change Windows and starts the

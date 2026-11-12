@@ -2,10 +2,17 @@
 //!
 //! An error stops the build; a warning names something the user should look at; an info is a
 //! fact worth knowing. The checks follow `docs/spec/03-features.md` section 3.
+//!
+//! Every message is made with `tr` or `trf` of [`crate::message`]: its English text is the key
+//! of its translation and its values are kept apart. [`check`] gives the messages in English
+//! (the command line, the MCP tools, the tests); the window gives [`check_shown`] its
+//! translation, and the test of its translations reads this file, so a new message needs its
+//! translations as a text of the window does.
 
 use serde_json::Value;
 
 use crate::catalog::{Action, Catalog, Level, Param, Pick, Rule, check::same_value};
+use crate::message::{Message, tr, trf};
 use crate::profile::{Account, Profile};
 use crate::resolver::{Resolution, State};
 
@@ -35,6 +42,9 @@ pub struct Issue {
     pub text: String,
 }
 
+/// What a check found, before its message is put into a language.
+type Found = (Severity, Target, Message);
+
 /// The rule that hides the online account screen of OOBE.
 pub const RULE_HIDE_ONLINE_ACCOUNT: &str = "oobe.hide-online-account";
 /// The rule that lets OOBE finish without a network connection.
@@ -45,36 +55,54 @@ pub const RULE_AUTOLOGON: &str = "accounts.autologon";
 const ACCOUNT_NAME_MAX: usize = 20;
 const NAME_MAX: usize = 15;
 
-/// Checks the profile; the issues are sorted by severity, errors first.
+/// Checks the profile; the issues are sorted by severity, errors first. The messages are English.
 pub fn check(catalog: &Catalog, profile: &Profile, resolution: &Resolution) -> Vec<Issue> {
-    let mut issues = Vec::new();
-    check_install(profile, &mut issues);
-    check_accounts(catalog, profile, resolution, &mut issues);
-    check_languages(profile, &mut issues);
-    check_rules(catalog, profile, resolution, &mut issues);
+    check_shown(catalog, profile, resolution, &Message::english)
+}
+
+/// [`check`] with every message put into words by `show`: the window translates the key of the
+/// message and fills its values (`Message::shown`).
+pub fn check_shown(
+    catalog: &Catalog,
+    profile: &Profile,
+    resolution: &Resolution,
+    show: &dyn Fn(&Message) -> String,
+) -> Vec<Issue> {
+    let mut found = Vec::new();
+    check_install(profile, &mut found);
+    check_accounts(catalog, profile, resolution, &mut found);
+    check_languages(profile, &mut found);
+    check_rules(catalog, profile, resolution, &mut found);
+    found.extend(control_found(catalog, profile, resolution));
     if !profile.unknown.is_empty() {
-        push(
-            &mut issues,
+        let n = profile.unknown.len();
+        found.push((
             Severity::Warning,
             Target::Unknown,
-            format!(
-                "{} options of catalogs that are not loaded are kept in the profile and left out of the build",
-                profile.unknown.len()
+            trf(
+                "{n} options of catalogs that are not loaded are kept in the profile and left out of the build",
+                &[("n", &n)],
             ),
-        );
+        ));
     }
-    issues.sort_by_key(|i| i.severity);
-    issues
+    found.sort_by_key(|(severity, _, _)| *severity);
+    issues_of(found, show)
+}
+
+fn issues_of(found: Vec<Found>, show: &dyn Fn(&Message) -> String) -> Vec<Issue> {
+    found
+        .into_iter()
+        .map(|(severity, target, message)| Issue {
+            severity,
+            target,
+            text: show(&message),
+        })
+        .collect()
 }
 
 /// One line with the counts: "Check: 1 error, 2 warnings" or "Check: no problems".
 pub fn summary(issues: &[Issue]) -> String {
-    let count = |s: Severity| issues.iter().filter(|i| i.severity == s).count();
-    let (e, w, n) = (
-        count(Severity::Error),
-        count(Severity::Warning),
-        count(Severity::Info),
-    );
+    let (e, w, n) = counts(issues);
     if e + w + n == 0 {
         return "Check: no problems".to_owned();
     }
@@ -93,6 +121,16 @@ pub fn summary(issues: &[Issue]) -> String {
     format!("Check: {}", parts.join(", "))
 }
 
+/// The numbers of the errors, the warnings and the infos of a check.
+pub fn counts(issues: &[Issue]) -> (usize, usize, usize) {
+    let count = |s: Severity| issues.iter().filter(|i| i.severity == s).count();
+    (
+        count(Severity::Error),
+        count(Severity::Warning),
+        count(Severity::Info),
+    )
+}
+
 pub fn errors(issues: &[Issue]) -> usize {
     issues
         .iter()
@@ -100,90 +138,190 @@ pub fn errors(issues: &[Issue]) -> usize {
         .count()
 }
 
-fn push(issues: &mut Vec<Issue>, severity: Severity, target: Target, text: impl Into<String>) {
-    issues.push(Issue {
-        severity,
-        target,
-        text: text.into(),
-    });
+/// Whether a text holds a control character the answer file cannot take: every one of them, but
+/// the tab where `tab` lets a free text keep it. XML 1.0 has no control character but the tab
+/// and the line breaks, Windows Setup refuses a file that is not XML, and a line break inside a
+/// value ends a line of an embedded script.
+fn has_control(text: &str, tab: bool) -> bool {
+    text.chars().any(|c| c.is_control() && !(tab && c == '\t'))
 }
 
-fn check_install(profile: &Profile, issues: &mut Vec<Issue>) {
+/// A name for a message: its control characters shown as `?`, so the message stays one line.
+fn shown(text: &str) -> String {
+    text.chars()
+        .map(|c| if c.is_control() { '?' } else { c })
+        .collect()
+}
+
+/// The texts of a profile that reach the answer file with a control character, as errors in
+/// English: the texts of the forms that are written in the modes chosen, the accounts and the
+/// text parameters of the rules in effect. The check reports them and the build refuses them
+/// (`render::build`), so none is ever written into the XML.
+pub fn control_problems(
+    catalog: &Catalog,
+    profile: &Profile,
+    resolution: &Resolution,
+) -> Vec<Issue> {
+    let found = control_found(catalog, profile, resolution);
+    issues_of(found, &Message::english)
+}
+
+fn control_found(catalog: &Catalog, profile: &Profile, resolution: &Resolution) -> Vec<Found> {
+    let mut found = Vec::new();
     let i = &profile.install;
-    let err = |issues: &mut Vec<Issue>, text: String| {
-        push(issues, Severity::Error, Target::Install, text)
-    };
+    let mut install = vec![&i.time_zone];
+    if i.product_key_mode == "key" {
+        install.push(&i.product_key);
+    }
+    if matches!(i.computer_name_mode.as_str(), "fixed" | "template") {
+        install.push(&i.computer_name);
+    }
+    install.push(&i.workgroup);
+    if i.disk_mode == "partition" {
+        install.extend([&i.disk_id, &i.partition_id]);
+    }
+    if install.iter().any(|t| has_control(t, false)) {
+        found.push((
+            Severity::Error,
+            Target::Install,
+            tr("A text of the installation holds a control character, a line break for one"),
+        ));
+    }
+    let l = &profile.languages;
+    let languages = [&l.ui_language, &l.system_locale, &l.user_locale];
+    if languages
+        .into_iter()
+        .chain(&l.input)
+        .any(|t| has_control(t, false))
+    {
+        found.push((
+            Severity::Error,
+            Target::Languages,
+            tr("A language holds a control character, a line break for one"),
+        ));
+    }
+    if i.account_mode == "file" {
+        for a in &profile.accounts {
+            let strict = [&a.name, &a.group];
+            let free = [&a.password, &a.display_name, &a.description];
+            if strict.iter().any(|t| has_control(t, false))
+                || free.iter().any(|t| has_control(t, true))
+            {
+                let name = shown(a.name.trim());
+                found.push((
+                    Severity::Error,
+                    Target::Accounts,
+                    trf(
+                        "Account {name}: a text holds a control character, a line break for one",
+                        &[("name", &name)],
+                    ),
+                ));
+            }
+        }
+    }
+    for rule in catalog.rules() {
+        if !resolution.in_effect(&rule.id) {
+            continue;
+        }
+        for name in rule.params.keys() {
+            // A text may keep a tab; an item of a list is a line of its own and may not.
+            let bad = match profile.param(catalog, &rule.id, name) {
+                Some(Value::String(text)) => has_control(&text, true),
+                Some(Value::Array(items)) => items
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .any(|t| has_control(t.trim(), false)),
+                _ => false,
+            };
+            if bad {
+                found.push((
+                    Severity::Error,
+                    Target::Rule(rule.id.clone()),
+                    trf(
+                        "Parameter {name}: the text holds a control character, a line break for one",
+                        &[("name", name)],
+                    ),
+                ));
+            }
+        }
+    }
+    found
+}
+
+fn check_install(profile: &Profile, found: &mut Vec<Found>) {
+    let i = &profile.install;
+    let mut err = |message: Message| found.push((Severity::Error, Target::Install, message));
     if i.edition.trim().is_empty() {
-        err(issues, "The edition is empty".into());
+        err(tr("The edition is empty"));
     }
     match i.product_key_mode.as_str() {
         "generic" | "ask" => {}
         "key" => {
             if !is_product_key(&i.product_key) {
-                err(
-                    issues,
-                    "The product key must be five groups of five letters or digits separated by hyphens"
-                        .into(),
-                );
+                err(tr(
+                    "The product key must be five groups of five letters or digits separated by hyphens",
+                ));
             }
         }
-        other => err(issues, format!("Unknown product key mode {other}")),
+        other => err(trf("Unknown product key mode {mode}", &[("mode", &other)])),
     }
     if i.time_zone.trim().is_empty() {
-        err(issues, "The time zone is empty".into());
+        err(tr("The time zone is empty"));
     }
     if !matches!(i.account_mode.as_str(), "file" | "ask") {
-        err(issues, format!("Unknown account mode {}", i.account_mode));
+        err(trf(
+            "Unknown account mode {mode}",
+            &[("mode", &i.account_mode)],
+        ));
     }
     match i.computer_name_mode.as_str() {
         "random" => {}
         "fixed" => {
             if !is_computer_name(&i.computer_name) {
-                err(
-                    issues,
-                    "A computer name is 1 to 15 Latin letters, digits and hyphens, not only digits"
-                        .into(),
-                );
+                err(tr(
+                    "A computer name is 1 to 15 Latin letters, digits and hyphens, not only digits",
+                ));
             }
         }
         "template" => {
             if !is_name_template(&i.computer_name) {
-                err(
-                    issues,
-                    "A computer name template holds Latin letters, digits, hyphens and the placeholders {serial}, {mac} and {random}, each with an optional length from 1 to 15 such as {serial:6}; the name with the full length of each placeholder fits 15 characters"
-                        .into(),
-                );
+                err(tr(
+                    "A computer name template holds Latin letters, digits, hyphens and the placeholders {serial}, {mac} and {random}, each with an optional length from 1 to 15 such as {serial:6}; the name with the full length of each placeholder fits 15 characters",
+                ));
             }
         }
-        other => err(issues, format!("Unknown computer name mode {other}")),
+        other => err(trf(
+            "Unknown computer name mode {mode}",
+            &[("mode", &other)],
+        )),
     }
     if !i.workgroup.is_empty() && !is_workgroup(&i.workgroup) {
-        err(
-            issues,
-            "A workgroup name is 1 to 15 Latin letters, digits and hyphens".into(),
-        );
+        err(tr(
+            "A workgroup name is 1 to 15 Latin letters, digits and hyphens",
+        ));
     }
     match i.disk_mode.as_str() {
         "ask" => {}
         "partition" => {
             if !i.disk_id.parse::<u32>().is_ok_and(|d| d <= 99) {
-                err(issues, "The disk number must be 0 to 99".into());
+                err(tr("The disk number must be 0 to 99"));
             }
             if !i
                 .partition_id
                 .parse::<u32>()
                 .is_ok_and(|p| (1..=128).contains(&p))
             {
-                err(issues, "The partition number must be 1 to 128".into());
+                err(tr("The partition number must be 1 to 128"));
             }
-            push(
-                issues,
+            found.push((
                 Severity::Warning,
                 Target::Install,
-                "In the disk mode partition nothing asks during Setup: the chosen partition is installed over",
-            );
+                tr(
+                    "In the disk mode partition nothing asks during Setup: the chosen partition is installed over",
+                ),
+            ));
         }
-        other => err(issues, format!("Unknown disk mode {other}")),
+        other => err(trf("Unknown disk mode {mode}", &[("mode", &other)])),
     }
 }
 
@@ -191,89 +329,86 @@ fn check_accounts(
     catalog: &Catalog,
     profile: &Profile,
     resolution: &Resolution,
-    issues: &mut Vec<Issue>,
+    found: &mut Vec<Found>,
 ) {
     let mode = profile.install.account_mode.as_str();
     if mode == "file" {
         if profile.accounts.is_empty() {
-            push(
-                issues,
+            found.push((
                 Severity::Error,
                 Target::Accounts,
-                "No account: Windows Setup needs at least one, or choose the mode ask",
-            );
+                tr("No account: Windows Setup needs at least one, or choose the mode ask"),
+            ));
         }
         let mut seen: Vec<String> = Vec::new();
         for a in &profile.accounts {
-            check_account(a, &mut seen, issues);
+            check_account(a, &mut seen, found);
         }
     } else if mode == "ask" {
         for id in [RULE_HIDE_ONLINE_ACCOUNT, RULE_BYPASS_NRO] {
             if catalog.rule(id).is_some() && !resolution.in_effect(id) {
-                push(
-                    issues,
+                found.push((
                     Severity::Warning,
                     Target::Accounts,
-                    format!(
-                        "In the account mode ask the rule {id} should be on, so that Setup asks for a local account"
+                    trf(
+                        "In the account mode ask the rule {id} should be on, so that Setup asks for a local account",
+                        &[("id", &id)],
                     ),
-                );
+                ));
             }
         }
     }
     if resolution.in_effect(RULE_AUTOLOGON) {
-        check_autologon(catalog, profile, mode, issues);
+        check_autologon(catalog, profile, mode, found);
     }
 }
 
 /// One account of the profile: its name, its password, its texts, its group, and the names seen
 /// so far (lower case) for a name listed twice.
-fn check_account(a: &Account, seen: &mut Vec<String>, issues: &mut Vec<Issue>) {
-    let err = |issues: &mut Vec<Issue>, text: String| {
-        push(issues, Severity::Error, Target::Accounts, text)
-    };
-    let name = a.name.trim();
+fn check_account(a: &Account, seen: &mut Vec<String>, found: &mut Vec<Found>) {
+    let mut err = |message: Message| found.push((Severity::Error, Target::Accounts, message));
+    let name = &shown(a.name.trim());
     if name.is_empty() {
-        err(issues, "An account has no name".into());
+        err(tr("An account has no name"));
         return;
     }
     if !name.is_ascii() || !a.password.is_ascii() {
-        err(
-            issues,
-            format!(
-                "Account {name}: the name and the password must be ASCII, Windows Setup turns other characters into question marks"
-            ),
-        );
+        err(trf(
+            "Account {name}: the name and the password must be ASCII, Windows Setup turns other characters into question marks",
+            &[("name", name)],
+        ));
     }
     if name.chars().count() > ACCOUNT_NAME_MAX {
-        err(
-            issues,
-            format!("Account {name}: the name is longer than {ACCOUNT_NAME_MAX} characters"),
-        );
-    }
-    if !a.display_name.is_ascii() {
-        push(
-            issues,
-            Severity::Info,
-            Target::Accounts,
-            format!("Account {name}: the display name outside ASCII is set after OOBE"),
-        );
+        err(trf(
+            "Account {name}: the name is longer than {max} characters",
+            &[("name", name), ("max", &ACCOUNT_NAME_MAX)],
+        ));
     }
     if !matches!(a.group.as_str(), "Administrators" | "Users") {
-        err(
-            issues,
-            format!("Account {name}: the group must be Administrators or Users"),
-        );
+        err(trf(
+            "Account {name}: the group must be Administrators or Users",
+            &[("name", name)],
+        ));
     }
     let lower = name.to_lowercase();
     if seen.contains(&lower) {
-        err(issues, format!("Account {name} is listed twice"));
+        err(trf("Account {name} is listed twice", &[("name", name)]));
     }
     seen.push(lower);
+    if !a.display_name.is_ascii() {
+        found.push((
+            Severity::Info,
+            Target::Accounts,
+            trf(
+                "Account {name}: the display name outside ASCII is set after OOBE",
+                &[("name", name)],
+            ),
+        ));
+    }
 }
 
 /// The automatic sign-in names an account of the profile without a password.
-fn check_autologon(catalog: &Catalog, profile: &Profile, mode: &str, issues: &mut Vec<Issue>) {
+fn check_autologon(catalog: &Catalog, profile: &Profile, mode: &str, found: &mut Vec<Found>) {
     let account = profile
         .param(catalog, RULE_AUTOLOGON, "account")
         .and_then(|v| v.as_str().map(str::to_owned))
@@ -284,75 +419,72 @@ fn check_autologon(catalog: &Catalog, profile: &Profile, mode: &str, issues: &mu
         .iter()
         .find(|a| a.name.eq_ignore_ascii_case(&account))
     {
-        Some(a) if !a.password.is_empty() => push(
-            issues,
+        Some(a) if !a.password.is_empty() => found.push((
             Severity::Error,
             target,
-            format!("The automatic sign-in needs an account without a password; {account} has one"),
-        ),
+            trf(
+                "The automatic sign-in needs an account without a password; {account} has one",
+                &[("account", &account)],
+            ),
+        )),
         Some(_) => {
             if mode == "ask" {
-                push(
-                    issues,
+                found.push((
                     Severity::Warning,
                     target,
-                    "The automatic sign-in names an account of the profile, but in the mode ask Windows Setup creates the account",
-                );
+                    tr(
+                        "The automatic sign-in names an account of the profile, but in the mode ask Windows Setup creates the account",
+                    ),
+                ));
             }
         }
-        None => push(
-            issues,
+        None => found.push((
             Severity::Error,
             target,
-            format!(
-                "The automatic sign-in names the account {account}, which the profile does not list"
+            trf(
+                "The automatic sign-in names the account {account}, which the profile does not list",
+                &[("account", &account)],
             ),
-        ),
+        )),
     }
 }
 
-fn check_languages(profile: &Profile, issues: &mut Vec<Issue>) {
+fn check_languages(profile: &Profile, found: &mut Vec<Found>) {
     let l = &profile.languages;
-    for (what, value) in [
-        ("display language", &l.ui_language),
-        ("system locale", &l.system_locale),
-        ("user locale", &l.user_locale),
-    ] {
-        if !is_culture(value) {
-            push(
-                issues,
-                Severity::Error,
-                Target::Languages,
-                format!("The {what} {value} is not a language tag such as uk-UA"),
-            );
-        }
+    let mut err = |message: Message| found.push((Severity::Error, Target::Languages, message));
+    if !is_culture(&l.ui_language) {
+        err(trf(
+            "The display language {value} is not a language tag such as uk-UA",
+            &[("value", &l.ui_language)],
+        ));
+    }
+    if !is_culture(&l.system_locale) {
+        err(trf(
+            "The system locale {value} is not a language tag such as uk-UA",
+            &[("value", &l.system_locale)],
+        ));
+    }
+    if !is_culture(&l.user_locale) {
+        err(trf(
+            "The user locale {value} is not a language tag such as uk-UA",
+            &[("value", &l.user_locale)],
+        ));
     }
     if l.input.is_empty() {
-        push(
-            issues,
-            Severity::Error,
-            Target::Languages,
-            "No input language: at least one is needed",
-        );
+        err(tr("No input language: at least one is needed"));
     }
     let table = crate::resources::locales();
     for item in &l.input {
         if !is_culture(item) && !is_layout(item) {
-            push(
-                issues,
-                Severity::Error,
-                Target::Languages,
-                format!(
-                    "The input language {item} is not a language tag or a layout id such as 0409:00000409"
-                ),
-            );
+            err(trf(
+                "The input language {item} is not a language tag or a layout id such as 0409:00000409",
+                &[("item", item)],
+            ));
         } else if !table.languages.is_empty() && table.input(item).is_none() {
-            push(
-                issues,
-                Severity::Error,
-                Target::Languages,
-                format!("Windows does not know the input language {item}"),
-            );
+            err(trf(
+                "Windows does not know the input language {item}",
+                &[("item", item)],
+            ));
         }
     }
 }
@@ -361,25 +493,26 @@ fn check_rules(
     catalog: &Catalog,
     profile: &Profile,
     resolution: &Resolution,
-    issues: &mut Vec<Issue>,
+    found: &mut Vec<Found>,
 ) {
     for rule in catalog.rules() {
         let target = || Target::Rule(rule.id.clone());
         match resolution.state(&rule.id) {
-            State::Blocked { by } => push(
-                issues,
+            State::Blocked { by } => found.push((
                 Severity::Warning,
                 target(),
-                format!("Chosen on but blocked: it needs {by}, which is off"),
-            ),
+                trf(
+                    "Chosen on but blocked: it needs {by}, which is off",
+                    &[("by", &by)],
+                ),
+            )),
             State::Off => {
                 if rule.level == Level::Baseline {
-                    push(
-                        issues,
+                    found.push((
                         Severity::Warning,
                         target(),
-                        "A baseline rule of the protection is off",
-                    );
+                        tr("A baseline rule of the protection is off"),
+                    ));
                 }
                 continue;
             }
@@ -392,21 +525,23 @@ fn check_rules(
             let Some(value) = profile.param(catalog, &rule.id, name) else {
                 continue;
             };
-            for text in param_problems(catalog, profile, rule, name, param, &value) {
-                push(issues, Severity::Error, target(), text);
+            for message in param_problems(catalog, profile, rule, name, param, &value) {
+                found.push((Severity::Error, target(), message));
             }
         }
-        if let Some(text) = region_problem(catalog, profile, rule) {
-            push(issues, Severity::Warning, target(), text);
+        if let Some(message) = region_problem(catalog, profile, rule) {
+            found.push((Severity::Warning, target(), message));
         }
     }
     for (a, b) in &resolution.conflicts {
-        push(
-            issues,
+        found.push((
             Severity::Error,
             Target::Rule(a.clone()),
-            format!("Conflicts with {b}: turn one of them off"),
-        );
+            trf(
+                "Conflicts with {other}: turn one of them off",
+                &[("other", b)],
+            ),
+        ));
     }
 }
 
@@ -419,7 +554,7 @@ fn param_problems(
     name: &str,
     param: &Param,
     value: &Value,
-) -> Vec<String> {
+) -> Vec<Message> {
     match param {
         Param::Enum {
             values,
@@ -429,8 +564,9 @@ fn param_problems(
         } => {
             let mut out = Vec::new();
             if !values.iter().any(|v| same_value(&v.value, value)) {
-                out.push(format!(
-                    "Parameter {name}: {value} is not one of its options"
+                out.push(trf(
+                    "Parameter {name}: {value} is not one of its options",
+                    &[("name", &name), ("value", value)],
                 ));
             }
             if let Some(other) = differs_from
@@ -438,7 +574,10 @@ fn param_problems(
                 && same_value(&other_value, value)
                 && !same_allowed.iter().any(|v| same_value(v, value))
             {
-                out.push(format!("Parameters {name} and {other} must differ"));
+                out.push(trf(
+                    "Parameters {name} and {other} must differ",
+                    &[("name", &name), ("other", other)],
+                ));
             }
             out
         }
@@ -446,7 +585,15 @@ fn param_problems(
             if value.as_i64().is_some_and(|v| (*min..=*max).contains(&v)) {
                 Vec::new()
             } else {
-                vec![format!("Parameter {name}: {value} is outside {min}..{max}")]
+                vec![trf(
+                    "Parameter {name}: {value} is outside {min}..{max}",
+                    &[
+                        ("name", &name),
+                        ("value", value),
+                        ("min", min),
+                        ("max", max),
+                    ],
+                )]
             }
         }
         Param::List { .. } => list_problems(rule, name, value),
@@ -458,19 +605,20 @@ fn param_problems(
             let text = value.as_str().unwrap_or_default();
             let mut out = Vec::new();
             if *required && text.trim().is_empty() {
-                out.push(format!("Parameter {name} is empty"));
+                out.push(trf("Parameter {name} is empty", &[("name", &name)]));
             }
             if let Some(max) = max_length
                 && text.chars().count() > *max
             {
-                out.push(format!(
-                    "Parameter {name}: at most {max} characters, the text has {}",
-                    text.chars().count()
+                out.push(trf(
+                    "Parameter {name}: at most {max} characters, the text has {n}",
+                    &[("name", &name), ("max", max), ("n", &text.chars().count())],
                 ));
             }
             if !text.is_ascii() {
-                out.push(format!(
-                    "Parameter {name}: the text must be ASCII, the embedded scripts are read without a code page"
+                out.push(trf(
+                    "Parameter {name}: the text must be ASCII, the embedded scripts are read without a code page",
+                    &[("name", &name)],
                 ));
             }
             out
@@ -481,7 +629,7 @@ fn param_problems(
 /// What is wrong with the region of a rule whose parameters pick one: the GeoID and the code do
 /// not name one region Windows lists. Nothing where the list is empty (Windows is not there), so
 /// it is a warning of the check, never an error.
-fn region_problem(catalog: &Catalog, profile: &Profile, rule: &Rule) -> Option<String> {
+fn region_problem(catalog: &Catalog, profile: &Profile, rule: &Rule) -> Option<Message> {
     let id_name = rule.param_picked(Pick::RegionId)?;
     let code_name = rule.param_picked(Pick::Region)?;
     let table = crate::regions::regions();
@@ -497,36 +645,46 @@ fn region_problem(catalog: &Catalog, profile: &Profile, rule: &Rule) -> Option<S
     let (id, code) = (text(id_name), text(code_name));
     match (table.by_id(&id), table.by_code(&code)) {
         (Some(a), Some(b)) if a.code == b.code => None,
-        (Some(a), Some(b)) => Some(format!(
-            "Parameters {id_name} and {code_name} name different regions: {id} is {} and {code} is {}",
-            a.name, b.name
+        (Some(a), Some(b)) => Some(trf(
+            "Parameters {id_name} and {code_name} name different regions: {id} is {a} and {code} is {b}",
+            &[
+                ("id_name", &id_name),
+                ("code_name", &code_name),
+                ("id", &id),
+                ("a", &a.name),
+                ("code", &code),
+                ("b", &b.name),
+            ],
         )),
-        (None, _) => Some(format!(
-            "Parameter {id_name}: Windows lists no region with the GeoID {id}"
+        (None, _) => Some(trf(
+            "Parameter {name}: Windows lists no region with the GeoID {id}",
+            &[("name", &id_name), ("id", &id)],
         )),
-        (_, None) => Some(format!(
-            "Parameter {code_name}: Windows lists no region with the code {code}"
+        (_, None) => Some(trf(
+            "Parameter {name}: Windows lists no region with the code {code}",
+            &[("name", &code_name), ("code", &code)],
         )),
     }
 }
 
 /// The problems of a list parameter: texts only, ASCII, and the names of the values of every
 /// `reg-list` that writes it.
-fn list_problems(rule: &Rule, name: &str, value: &Value) -> Vec<String> {
+fn list_problems(rule: &Rule, name: &str, value: &Value) -> Vec<Message> {
     let texts = value
         .as_array()
         .is_some_and(|items| items.iter().all(Value::is_string));
     if !texts {
-        return vec![format!("Parameter {name}: a list of texts is needed")];
+        return vec![trf(
+            "Parameter {name}: a list of texts is needed",
+            &[("name", &name)],
+        )];
     }
     let mut out = Vec::new();
     let items = crate::catalog::values::list_items(Some(value));
-    if items
-        .iter()
-        .any(|t| !t.is_ascii() || t.chars().any(char::is_control))
-    {
-        out.push(format!(
-            "Parameter {name}: every item must be ASCII text, the embedded scripts are read without a code page"
+    if items.iter().any(|t| !t.is_ascii()) {
+        out.push(trf(
+            "Parameter {name}: every item must be ASCII text, the embedded scripts are read without a code page",
+            &[("name", &name)],
         ));
     }
     for action in &rule.actions {
@@ -539,7 +697,11 @@ fn list_problems(rule: &Rule, name: &str, value: &Value) -> Vec<String> {
             && param == name
             && let Err(e) = crate::catalog::values::list_entries(*names, prefix, &items)
         {
-            out.push(format!("Parameter {name}: {e}"));
+            // The reason is the one of the list itself, in English as the logs have it.
+            out.push(trf(
+                "Parameter {name}: {error}",
+                &[("name", &name), ("error", &e)],
+            ));
         }
     }
     out

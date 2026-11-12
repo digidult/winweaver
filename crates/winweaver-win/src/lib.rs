@@ -209,7 +209,7 @@ pub fn show_in_folder(path: &std::path::Path) -> Result<(), String> {
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
-        let explorer = ffi::system_root().join("explorer.exe");
+        let explorer = ffi::windows_dir().join("explorer.exe");
         let mut command = std::process::Command::new(explorer);
         if path.is_file() {
             command.raw_arg(format!("/select,\"{}\"", path.display()));

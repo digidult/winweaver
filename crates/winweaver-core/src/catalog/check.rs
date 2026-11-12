@@ -23,7 +23,7 @@ fn check_rule(catalog: &Catalog, rule: &Rule, problems: &mut Vec<String>) {
     let id = &rule.id;
     if !is_safe_id(id) {
         problems.push(format!(
-            "rule {id}: the id has characters outside a-z, 0-9, dot, hyphen"
+            "rule {id}: the id has characters outside a-z, 0-9, dot, hyphen, underscore"
         ));
     }
     if rule.actions.is_empty() {
@@ -38,6 +38,16 @@ fn check_rule(catalog: &Catalog, rule: &Rule, problems: &mut Vec<String>) {
                 if !rule.params.contains_key(name) {
                     problems.push(format!(
                         "rule {id}: {}.{field} uses the unknown parameter {{{name}}}",
+                        action.kind()
+                    ));
+                }
+            }
+        }
+        for (field, text) in action.code_fields() {
+            for name in placeholders(&text) {
+                if rule.params.contains_key(name) {
+                    problems.push(format!(
+                        "rule {id}: {}.{field} holds the parameter {{{name}}}: it is code, and a value of a profile would be run as code",
                         action.kind()
                     ));
                 }
@@ -196,7 +206,8 @@ pub fn is_guid(text: &str) -> bool {
         })
 }
 
-/// Identifiers of rules and parameters: ASCII lower case letters, digits, dots and hyphens.
+/// Identifiers of rules and parameters: ASCII lower case letters, digits, dots, hyphens and
+/// underscores.
 pub fn is_safe_id(id: &str) -> bool {
     !id.is_empty()
         && id.bytes().all(|b| {
@@ -226,5 +237,62 @@ mod tests {
         assert!(placeholders("{ not an id }").is_empty());
         assert!(placeholders("{d3162b92-9365-467a-956b-92703aca08af} {1} {B4BF}").is_empty());
         assert!(is_guid("d3162b92-9365-467a-956b-92703aca08af"));
+    }
+
+    /// A line of a script and a command of the answer file are code: a `{name}` of a parameter
+    /// of the rule in one is a problem of the catalog (the value of a profile would be run),
+    /// while the braces of PowerShell and a parameter in a value that is quoted are none.
+    #[test]
+    fn a_parameter_in_code_is_refused() {
+        let catalog = Catalog::embedded().unwrap();
+        let rule = catalog
+            .rules()
+            .iter()
+            .find(|r| !r.params.is_empty())
+            .expect("a rule with a parameter");
+        let name = rule.params.keys().next().unwrap().clone();
+        // The problems of code alone: an action more may also move the rule to another root.
+        let problems_of = |action: Action| -> Vec<String> {
+            let mut changed = rule.clone();
+            changed.actions.push(action);
+            let mut problems = Vec::new();
+            check_rule(&catalog, &changed, &mut problems);
+            problems.retain(|p| p.contains("holds the parameter"));
+            problems
+        };
+        let script = |text: String| Action::Ps {
+            script: crate::catalog::Lines::Many(vec!["$x = 1".to_owned(), text]),
+        };
+        let sound = "if ($x) {return} else { '{0}' -f $x; & {exit} }".to_owned();
+        assert!(problems_of(script(sound)).is_empty());
+        let found = problems_of(script(format!("Write-Host {{{name}}}")));
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].contains("ps.script holds the parameter"),
+            "{found:?}"
+        );
+        let pe = problems_of(Action::XmlPeCommand {
+            command: format!("cmd.exe /c echo {{{name}}}"),
+            description: String::new(),
+        });
+        assert_eq!(pe.len(), 1, "{pe:?}");
+        assert!(pe[0].contains("xml-pe-command.command holds"), "{pe:?}");
+        let specialize = problems_of(Action::XmlSpecializeCommand {
+            command: format!("cmd.exe /c echo {{{name}}}"),
+            description: String::new(),
+        });
+        assert_eq!(specialize.len(), 1, "{specialize:?}");
+        // The whole embedded catalog has none, and its scripts are written as they are.
+        for rule in catalog.rules() {
+            for action in &rule.actions {
+                for (field, text) in action.code_fields() {
+                    let named: Vec<&str> = placeholders(&text)
+                        .into_iter()
+                        .filter(|n| rule.params.contains_key(*n))
+                        .collect();
+                    assert!(named.is_empty(), "{}: {field} {named:?}", rule.id);
+                }
+            }
+        }
     }
 }

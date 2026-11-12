@@ -5,8 +5,9 @@ use std::collections::BTreeMap;
 
 use crate::catalog::{Action, Catalog, Phase};
 use crate::profile::Profile;
-use crate::resolver;
+use crate::resolver::{self, Resolution};
 use crate::resources;
+use crate::validate;
 
 use super::accounts::{account_text_lines, accounts_xml};
 use super::languages::{InputLanguages, input_languages};
@@ -44,14 +45,20 @@ type Extra = BTreeMap<String, Vec<(String, Lines)>>;
 
 /// The rules in effect: their commands, settings and OOBE elements for the passes, the blocks of
 /// their script actions for the scripts.
-fn collect(catalog: &Catalog, profile: &Profile) -> Result<Collected, RenderError> {
-    let resolution = resolver::resolve(catalog, profile);
+fn collect(
+    catalog: &Catalog,
+    profile: &Profile,
+    resolution: &Resolution,
+) -> Result<Collected, RenderError> {
     let mut c = Collected::default();
     for rule in catalog.rules() {
         if !resolution.in_effect(&rule.id) {
             continue;
         }
         c.rule_ids.push(rule.id.clone());
+        // The values of the parameters fill the values of settings (escaped as XML) and of the
+        // script actions that quote them; a command and a line of a script are code and are
+        // written as the catalog has them (`Action::code_fields`).
         let params = params_of(catalog, profile, rule);
         for action in &rule.actions {
             match action {
@@ -60,14 +67,14 @@ fn collect(catalog: &Catalog, profile: &Profile) -> Result<Collected, RenderErro
                     description,
                 } => c.pe_commands.push(Command {
                     description: description.clone(),
-                    path: substitute(command, &params),
+                    path: command.clone(),
                 }),
                 Action::XmlSpecializeCommand {
                     command,
                     description,
                 } => c.specialize_commands.push(Command {
                     description: description.clone(),
-                    path: substitute(command, &params),
+                    path: command.clone(),
                 }),
                 Action::XmlOobe { element, value } => {
                     c.oobe_elements
@@ -122,7 +129,13 @@ pub fn build(
     profile: &Profile,
     app_version: &str,
 ) -> Result<Build, RenderError> {
-    let rules = collect(catalog, profile)?;
+    // A control character of a text of the profile never reaches the file: the check names it
+    // as an error, and a build that was not checked first is refused here with the same words.
+    let resolution = resolver::resolve(catalog, profile);
+    if let Some(issue) = validate::control_problems(catalog, profile, &resolution).first() {
+        return Err(RenderError::Profile(issue.text.clone()));
+    }
+    let rules = collect(catalog, profile, &resolution)?;
     let install = &profile.install;
     let languages = input_languages(profile)?;
     let account_texts = if install.account_mode == "file" {
@@ -170,6 +183,15 @@ pub fn build(
     if let Some(c) = xml.chars().find(|c| !c.is_ascii()) {
         return Err(RenderError::Profile(format!(
             "the answer file must be ASCII; the character {c:?} (U+{:04X}) came from the profile",
+            c as u32
+        )));
+    }
+    // XML 1.0 has no control character but the tab and the line breaks; Windows Setup refuses
+    // a file that holds another one, wherever it came from.
+    let not_xml = |c: &char| c.is_control() && !matches!(c, '\t' | '\n' | '\r');
+    if let Some(c) = xml.chars().find(not_xml) {
+        return Err(RenderError::Profile(format!(
+            "the answer file may hold no control character; U+{:04X} came from the profile",
             c as u32
         )));
     }

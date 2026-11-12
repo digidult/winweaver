@@ -1,6 +1,26 @@
 use super::*;
 use winweaver_core::apply::{Step, plan_undo};
 
+/// The installation media is never looked for on the drive of Windows: a folder of that drive
+/// with the files asked for (here the system folder and its libraries) is not taken.
+#[test]
+fn the_media_is_never_the_system_drive() {
+    let system = crate::ffi::system_drive().expect("the drive of Windows");
+    let drives: Vec<u8> = media_drives(Some(system)).collect();
+    assert!(!drives.contains(&system) && drives.len() == 23);
+    assert_eq!(media_drives(None).count(), 24);
+    let dir = crate::ffi::system_dir();
+    let text = dir.to_string_lossy().into_owned();
+    // `Windows\System32` of `C:\Windows\System32`: a folder every system drive has.
+    let folder = text[3..].to_owned();
+    if let Some(found) = media_folder(&folder, "*.dll", false) {
+        let letter = found.to_string_lossy().bytes().next();
+        assert_ne!(letter.map(|b| b.to_ascii_uppercase()), Some(system));
+    }
+    assert!(media_folder("..\\Windows", "*.dll", false).is_none());
+    assert!(media_folder("C:\\Windows", "*.dll", false).is_none());
+}
+
 #[test]
 #[ignore = "changes this Windows: run in CI or a VM, AGENTS.md section 5"]
 fn a_plan_writes_backs_up_and_undoes_in_a_test_key() {

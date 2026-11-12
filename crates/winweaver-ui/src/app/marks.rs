@@ -60,11 +60,9 @@ impl WinWeaver {
         Some(Bookmark::option(&item, &path))
     }
 
-    /// Writes the bookmark file; `false` (and a status message) when it cannot be written.
+    /// Writes the bookmark file, its folder made by the file layer; `false` (and a status
+    /// message) when it cannot be written.
     pub(crate) fn save_marks(&mut self, shell: &mut Shell<WinWeaver>) -> bool {
-        if let Some(parent) = self.full.marks_path.parent() {
-            let _ = std::fs::create_dir_all(parent);
-        }
         match self.full.marks.save(&self.full.marks_path) {
             Ok(()) => true,
             Err(e) => {

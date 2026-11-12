@@ -33,39 +33,57 @@ fn the_embedded_files_translate_and_english_is_the_fallback() {
     );
 }
 
-/// The literals of the `tr` and `trf` calls of a source text.
+/// The literals of the `tr` and `trf` calls of a source text: the literal right after the
+/// bracket, or on the next line as rustfmt puts a long one. A call whose first argument is no
+/// literal names no text.
 fn literals(text: &str) -> Vec<String> {
     let mut out = Vec::new();
-    for pattern in ["tr(\"", "trf(\""] {
+    for pattern in ["tr(", "trf("] {
         let mut rest = text;
         while let Some(i) = rest.find(pattern) {
             let before = rest[..i].chars().last();
-            let after = &rest[i + pattern.len()..];
+            let after = rest[i + pattern.len()..].trim_start();
+            rest = &rest[i + pattern.len()..];
             if before.is_some_and(|c| c.is_alphanumeric() || c == '_') {
-                rest = after;
                 continue;
             }
+            let Some(after) = after.strip_prefix('"') else {
+                continue;
+            };
             let mut literal = String::new();
-            let mut escaped = false;
-            let mut used = 0;
-            for c in after.chars() {
-                used += c.len_utf8();
-                if escaped {
-                    literal.push(c);
-                    escaped = false;
-                } else if c == '\\' {
-                    escaped = true;
-                } else if c == '"' {
-                    break;
-                } else {
-                    literal.push(c);
+            let mut chars = after.chars().peekable();
+            while let Some(c) = chars.next() {
+                match c {
+                    '"' => break,
+                    '\\' => match chars.next() {
+                        // A line of the literal that goes on: the break and the indentation
+                        // of the next line are no part of the text.
+                        Some('\n') => while chars.next_if(|c| c.is_whitespace()).is_some() {},
+                        Some('n') => literal.push('\n'),
+                        Some('t') => literal.push('\t'),
+                        Some(other) => literal.push(other),
+                        None => break,
+                    },
+                    c => literal.push(c),
                 }
             }
             out.push(literal);
-            rest = &after[used..];
         }
     }
     out
+}
+
+/// The literals are found wherever rustfmt puts them.
+#[test]
+fn the_literals_of_a_source_are_found() {
+    let source = concat!(
+        "let a = tr(\"One\"); let b = trf(\n    \"Two {n} \\\"x\\\"\",\n    &[(\"n\", &1)],\n);\n",
+        "let c = tr(\n        \"Three \\\n         more\",\n    );\n",
+        "attr(\"no\"); str(\"no\"); tr(name); trf(key, &[]);\n",
+    );
+    let mut found = literals(source);
+    found.sort();
+    assert_eq!(found, vec!["One", "Three more", "Two {n} \"x\""]);
 }
 
 /// Every Rust source under a folder, in its subfolders too.
@@ -124,13 +142,24 @@ fn the_example_translation_reads() {
     }
 }
 
-/// The texts of `winweaver-ui`, of `ww` and of `wwmcp`: this file is left out, since it names texts that are
-/// not of the interface.
+/// The files of the core whose messages the window shows translated: each makes its messages
+/// with the `tr` and `trf` of `winweaver_core::message`, which keep the English text as the key
+/// of the translation, so their literals are texts of the interface like the ones of the window.
+const CORE_MESSAGES: [&str; 1] = ["validate.rs"];
+
+/// The texts of `winweaver-ui`, of `ww` and of `wwmcp`, and the messages of the core the window
+/// shows (`CORE_MESSAGES`): this file is left out, since it names texts that are not of the
+/// interface.
 #[test]
 fn every_text_of_the_interface_is_translated() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut files = Vec::new();
     sources(&root.join("src"), &mut files);
+    for name in CORE_MESSAGES {
+        let file = root.join("../winweaver-core/src").join(name);
+        assert!(file.is_file(), "{}", file.display());
+        files.push(file);
+    }
     // W#, a git dependency: its checkout names its sources, and the tab of the MCP server of W#.
     sources(Path::new(ww::SOURCES), &mut files);
     #[cfg(feature = "mcp")]

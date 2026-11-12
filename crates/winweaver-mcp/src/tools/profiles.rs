@@ -16,6 +16,8 @@ use super::{
 use crate::{Server, State, WsDoc};
 
 const PRESET_IDS: [&str; 4] = ["office", "strict", "laptop", "home"];
+/// How much of the answer file `preview_build` shows.
+const PREVIEW_CHARS: usize = 6000;
 
 pub(super) const GET_STATUS: Tool = Tool {
     name: "get_status",
@@ -121,7 +123,7 @@ pub(super) const LIST_PROFILES: Tool = Tool {
 
 pub(super) const COMPARE_PROFILES: Tool = Tool {
     name: "compare_profiles",
-    description: "The differences between two profiles: workspace names, presets or file names.",
+    description: "The differences between two profiles: workspace names, presets or file names. A product key shows as ***, the accounts only as differing.",
     needs: Needs::READ,
     schema: || {
         schema(
@@ -239,7 +241,8 @@ fn write(path: &Path, bytes: &[u8]) -> Result<(), ToolError> {
     std::fs::rename(&tmp, path).map_err(|e| fail(Kind::WriteFailed, e.to_string()))
 }
 
-/// The answer file text with the product key and the passwords hidden.
+/// The answer file text with the product key and the passwords hidden. A value without its
+/// closing tag (a text that was cut) is hidden to its end: no part of a secret is ever shown.
 pub(super) fn hide_secrets(xml: &str) -> String {
     let mut out = String::with_capacity(xml.len());
     let mut rest = xml;
@@ -256,13 +259,25 @@ pub(super) fn hide_secrets(xml: &str) -> String {
         out.push_str(&rest[..start]);
         let close = tag.replace('<', "</");
         match rest[start..].find(&close) {
-            Some(end) if end > 0 => {
+            Some(0) => rest = &rest[start..],
+            Some(end) => {
                 out.push_str("***");
                 rest = &rest[start + end..];
             }
-            _ => rest = &rest[start..],
+            None => {
+                if start < rest.len() {
+                    out.push_str("***");
+                }
+                return out;
+            }
         }
     }
+}
+
+/// The first `limit` characters of an answer file for a preview: the secrets of the whole text
+/// are hidden first and the text is cut after, so the cut never falls inside a secret.
+pub(super) fn beginning(xml: &str, limit: usize) -> String {
+    hide_secrets(xml).chars().take(limit).collect()
 }
 
 /// A new workspace profile, made current.
@@ -396,8 +411,7 @@ fn preview_build(server: &Server, state: &mut State, _args: &Args<'_>) -> Outcom
     let doc = current(state);
     let build = render::build(&server.catalog, &doc.profile, winweaver_core::BUILD)
         .map_err(|e| fail(Kind::Invalid, format!("the build fails: {e}")))?;
-    let mut head: String = build.xml.chars().take(6000).collect();
-    head = hide_secrets(&head);
+    let head = beginning(&build.xml, PREVIEW_CHARS);
     Ok(json!({
         "rules": build.rule_ids.len(),
         "scripts": build.scripts.iter().map(|(n, _)| n.clone()).collect::<Vec<_>>(),
@@ -510,6 +524,14 @@ fn list_profiles(server: &Server, state: &mut State, _args: &Args<'_>) -> Outcom
     }))
 }
 
+/// A secret of a comparison: `***` when it is set, as `redacted` shows it in a profile.
+fn hidden(value: &serde_json::Value) -> serde_json::Value {
+    match value.as_str() {
+        Some("") | None => value.clone(),
+        Some(_) => json!("***"),
+    }
+}
+
 fn compare_profiles(server: &Server, state: &mut State, args: &Args<'_>) -> Outcome {
     let (a, a_file) = find_profile(server, state, &args.text("a")?)?;
     let (b, b_file) = find_profile(server, state, &args.text("b")?)?;
@@ -527,7 +549,15 @@ fn compare_profiles(server: &Server, state: &mut State, args: &Args<'_>) -> Outc
     Ok(json!({
         "differences": diff.count(),
         "rules": diff.rules.iter().take(LIST_LIMIT).map(|(id, d)| json!({ "id": id, "a": state_of(&d.base), "b": state_of(&d.other) })).collect::<Vec<_>>(),
-        "install": diff.install.iter().map(|(k, f)| (k.clone(), json!({ "a": f.base, "b": f.other }))).collect::<serde_json::Map<_, _>>(),
+        "install": diff.install.iter().map(|(k, f)| {
+            // The product key is a secret: the answer says that it differs, never what it is.
+            let (a, b) = if k == "product_key" {
+                (hidden(&f.base), hidden(&f.other))
+            } else {
+                (f.base.clone(), f.other.clone())
+            };
+            (k.clone(), json!({ "a": a, "b": b }))
+        }).collect::<serde_json::Map<_, _>>(),
         "languages": diff.languages.iter().map(|(k, f)| (k.clone(), json!({ "a": f.base, "b": f.other }))).collect::<serde_json::Map<_, _>>(),
         "accounts_differ": diff.accounts.is_some(),
     }))

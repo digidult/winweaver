@@ -56,19 +56,36 @@ pub(crate) fn fill_value(value: &Value, params: &BTreeMap<String, Value>) -> Val
     }
 }
 
+/// A template with its `{{name}}` slots filled, in one pass over the template: a value is put
+/// in as it is and never read again, so a value that holds `{{name}}` (a profile named so, a
+/// line of a script) is never filled as a slot. A slot of the template without a value is an
+/// error.
 pub(crate) fn fill(template: &str, slots: &[(&str, &str)]) -> Result<String, RenderError> {
-    let mut text = template.replace("\r\n", "\n");
-    for (name, value) in slots {
-        text = text.replace(&format!("{{{{{name}}}}}"), value);
+    let template = template.replace("\r\n", "\n");
+    let values: usize = slots.iter().map(|(_, value)| value.len()).sum();
+    let mut out = String::with_capacity(template.len() + values);
+    let mut rest = template.as_str();
+    while let Some(start) = rest.find("{{") {
+        out.push_str(&rest[..start]);
+        let after = &rest[start + 2..];
+        let end = after.find("}}");
+        let slot = end.and_then(|end| slots.iter().find(|(name, _)| *name == &after[..end]));
+        match (end, slot) {
+            (Some(end), Some((_, value))) => {
+                out.push_str(value);
+                rest = &after[end + 2..];
+            }
+            _ => {
+                let end = end.map_or(rest.len(), |e| start + 2 + e + 2);
+                return Err(RenderError::Template(format!(
+                    "a slot stayed unfilled: {}",
+                    &rest[start..end]
+                )));
+            }
+        }
     }
-    if let Some(i) = text.find("{{") {
-        let end = text[i..].find("}}").map_or(text.len(), |e| i + e + 2);
-        return Err(RenderError::Template(format!(
-            "a slot stayed unfilled: {}",
-            &text[i..end]
-        )));
-    }
-    Ok(text)
+    out.push_str(rest);
+    Ok(out)
 }
 
 /// The parameter values of a rule in the profile (the defaults where the profile has none).

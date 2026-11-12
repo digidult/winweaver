@@ -170,7 +170,7 @@ pub(crate) fn import_entries(dir: &Path, loaded: &[CatalogFile]) -> Vec<ImportEn
     import_files(dir)
         .into_iter()
         .map(|(id, path)| {
-            let bytes = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+            let bytes = admx::file_size(&path);
             let name = match loaded.iter().find(|f| f.id == id) {
                 Some(f) => f.name.clone(),
                 None => admx::CatalogHeader::read(&path)

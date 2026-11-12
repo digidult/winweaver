@@ -19,6 +19,9 @@ use windows_sys::Win32::Security::{
     PROTECTED_DACL_SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, PSID, SID_NAME_USE,
     UNPROTECTED_DACL_SECURITY_INFORMATION,
 };
+use windows_sys::Win32::System::SystemInformation::{
+    GetSystemDirectoryW, GetSystemWindowsDirectoryW,
+};
 use winreg::RegKey;
 use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, HKEY_USERS};
 
@@ -290,14 +293,59 @@ pub(crate) fn hive_path(path: &str) -> Result<(RegKey, String), String> {
     Ok((RegKey::predef(hive), sub.to_owned()))
 }
 
-/// The folder of Windows, `C:\Windows` when the environment does not say.
-pub(crate) fn system_root() -> PathBuf {
-    PathBuf::from(std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".to_owned()))
+/// A folder of Windows as a function of the system names it (the functions that fill a buffer
+/// and give the length they wrote); `None` when the call fails or the buffer is too small.
+fn folder_of(call: unsafe extern "system" fn(*mut u16, u32) -> u32) -> Option<PathBuf> {
+    let mut buffer = [0u16; 1024];
+    // SAFETY: the buffer holds the number of units the call is told, and the call writes no more.
+    let len = unsafe { call(buffer.as_mut_ptr(), buffer.len() as u32) } as usize;
+    (len > 0 && len < buffer.len()).then(|| PathBuf::from(String::from_utf16_lossy(&buffer[..len])))
+}
+
+/// The system folder (`C:\Windows\System32`), asked of Windows itself (`GetSystemDirectoryW`)
+/// and never read from the environment: `SystemRoot` is set by whoever starts a process, and
+/// the elevated helper runs the programs of this folder as administrator.
+pub(crate) fn system_dir() -> PathBuf {
+    folder_of(GetSystemDirectoryW).unwrap_or_else(|| PathBuf::from("C:\\Windows\\System32"))
+}
+
+/// The folder of Windows (`C:\Windows`), asked of Windows itself (`GetSystemWindowsDirectoryW`).
+pub(crate) fn windows_dir() -> PathBuf {
+    folder_of(GetSystemWindowsDirectoryW).unwrap_or_else(|| PathBuf::from("C:\\Windows"))
+}
+
+/// The letter of the drive Windows is on, in upper case.
+pub(crate) fn system_drive() -> Option<u8> {
+    let dir = system_dir();
+    let text = dir.to_string_lossy();
+    let bytes = text.as_bytes();
+    (bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':')
+        .then(|| bytes[0].to_ascii_uppercase())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The folders of the system come from Windows, whatever the environment says.
+    #[test]
+    fn the_system_folder_is_the_one_of_windows() {
+        let system = system_dir();
+        assert!(system.is_absolute() && system.join("kernel32.dll").is_file());
+        let windows = windows_dir();
+        assert!(windows.join("explorer.exe").is_file(), "{windows:?}");
+        assert!(system.starts_with(&windows), "{system:?}");
+        let drive = system_drive().expect("a drive letter");
+        assert!(drive.is_ascii_uppercase());
+        assert_eq!(
+            Some(drive),
+            windows
+                .to_string_lossy()
+                .bytes()
+                .next()
+                .map(|b| b.to_ascii_uppercase())
+        );
+    }
 
     #[test]
     fn texts_go_to_utf16_and_back() {

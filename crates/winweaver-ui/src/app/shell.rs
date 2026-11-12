@@ -302,7 +302,7 @@ impl App for WinWeaver {
         }
         Some(Messages {
             error: validate::errors(&doc.issues) > 0,
-            summary: validate::summary(&doc.issues),
+            summary: check_summary(&doc.issues),
             clear: Act::Profile(ProfileAct::ClearMessages),
         })
     }

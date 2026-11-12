@@ -153,6 +153,87 @@ fn broken_forms_are_errors() {
     assert_eq!(issues[0].severity, Severity::Error, "errors come first");
 }
 
+/// A control character in a text that reaches the answer file is an error of the check, with
+/// the form or the rule it belongs to; a tab in a free text is none.
+#[test]
+fn control_characters_are_errors() {
+    let catalog = Catalog::embedded().unwrap();
+    let about = |profile: &Profile| -> Vec<Target> {
+        check(&catalog, profile)
+            .into_iter()
+            .filter(|i| i.severity == Severity::Error && i.text.contains("control character"))
+            .map(|i| i.target)
+            .collect()
+    };
+    assert!(about(&preset("office")).is_empty());
+    let mut profile = preset("office");
+    profile.install.time_zone = "FLE Standard Time\r\n".into();
+    assert_eq!(about(&profile), vec![Target::Install]);
+    let mut profile = preset("office");
+    profile.languages.user_locale = "uk-UA\u{0}".into();
+    assert_eq!(about(&profile), vec![Target::Languages]);
+    let mut profile = preset("office");
+    profile.accounts = vec![
+        Account {
+            name: "Admin".into(),
+            group: "Administrators".into(),
+            description: "a tab\tis a text".into(),
+            password: "pass\tword".into(),
+            ..Account::default()
+        },
+        Account {
+            name: "User".into(),
+            group: "Users".into(),
+            password: "pass\nword".into(),
+            ..Account::default()
+        },
+        Account {
+            name: "Us\u{8}er".into(),
+            group: "Users".into(),
+            ..Account::default()
+        },
+    ];
+    let issues = check(&catalog, &profile);
+    let texts: Vec<&str> = issues
+        .iter()
+        .filter(|i| i.text.contains("control character"))
+        .map(|i| i.text.as_str())
+        .collect();
+    assert_eq!(texts.len(), 2, "{texts:?}");
+    assert!(texts[0].starts_with("Account User:"), "{texts:?}");
+    assert!(texts[1].starts_with("Account Us?er:"), "{texts:?}");
+    assert!(issues.iter().all(|i| !i.text.contains('\u{8}')));
+    // In the mode ask the accounts are not written, so they are not refused.
+    profile.install.account_mode = "ask".into();
+    assert!(about(&profile).is_empty());
+    let rule = catalog
+        .rules()
+        .iter()
+        .find(|r| {
+            r.params
+                .values()
+                .any(|p| matches!(p, winweaver_core::catalog::Param::Text { pick: None, .. }))
+        })
+        .expect("a rule with a text parameter");
+    let (name, _) = rule
+        .params
+        .iter()
+        .find(|(_, p)| matches!(p, winweaver_core::catalog::Param::Text { pick: None, .. }))
+        .unwrap();
+    let mut profile = preset("office");
+    profile.set_on(&rule.id, true);
+    for needed in &rule.requires {
+        profile.set_on(needed, true);
+    }
+    profile.set_param(&catalog, &rule.id, name, Value::from("a\tb"));
+    assert!(about(&profile).is_empty());
+    profile.set_param(&catalog, &rule.id, name, Value::from("a\u{c}b"));
+    assert_eq!(about(&profile), vec![Target::Rule(rule.id.clone())]);
+    // A rule that is off writes nothing, so its text is not looked at.
+    profile.set_on(&rule.id, false);
+    assert!(about(&profile).is_empty());
+}
+
 #[test]
 fn rule_parameters_and_dependencies_are_checked() {
     let catalog = Catalog::embedded().unwrap();

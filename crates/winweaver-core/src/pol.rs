@@ -230,6 +230,24 @@ fn action_of(name: &str, kind: u32, data: &[u8]) -> (String, Action) {
     (name.to_owned(), Action::Set(value))
 }
 
+/// Whether a key or a name can stand in a line of a registry file: a control character (a line
+/// break above all) would end the line and begin another one.
+fn fits_a_line(text: &str) -> bool {
+    !text.chars().any(char::is_control)
+}
+
+/// Refuses a key or a name of an entry that holds a control character: no key and no value of
+/// a policy has one, and the file becomes lines of text when it is shown or exported.
+fn refuse_control(what: &str, text: &str, i: usize) -> Result<(), String> {
+    if fits_a_line(text) {
+        Ok(())
+    } else {
+        Err(format!(
+            "the {what} of the entry at byte {i} holds a control character"
+        ))
+    }
+}
+
 /// The entry at `i`, `[key;name;type;size;data]`, and the index after it.
 fn entry_at(bytes: &[u8], i: usize) -> Result<(Entry, usize), String> {
     let at = expect(bytes, i, '[')?;
@@ -246,6 +264,13 @@ fn entry_at(bytes: &[u8], i: usize) -> Result<(Entry, usize), String> {
         .ok_or("data beyond the end of the file")?;
     let at = expect(bytes, at + size, ']')?;
     let (name, action) = action_of(&value, kind, data);
+    refuse_control("key", &key, i)?;
+    refuse_control("value name", &name, i)?;
+    if let Action::DeleteValues(list) | Action::DeleteKeys(list) = &action {
+        for listed in list {
+            refuse_control("list of names", listed, i)?;
+        }
+    }
     Ok((Entry { key, name, action }, at))
 }
 
@@ -369,6 +394,16 @@ impl PolFile {
                 left += 1;
                 continue;
             };
+            // A key or a name with a control character (a lone CR inside a line of the
+            // registry file) is left out: the file written with it would not be read again.
+            let named = match &change {
+                Change::Set { name, .. } | Change::DeleteValue { name, .. } => name.as_str(),
+                Change::CreateKey(_) | Change::DeleteKey(_) => "",
+            };
+            if !fits_a_line(&key) || !fits_a_line(named) {
+                left += 1;
+                continue;
+            }
             taken += 1;
             match change {
                 Change::CreateKey(_) => {
@@ -415,6 +450,11 @@ impl PolFile {
     /// first entry, a value set or deleted as a line, the values and keys deleted by a list as
     /// lines, and what a registry file cannot hold (every value of a key deleted, the rights of
     /// a key, a value set only when absent) said in comments. `None` without a hive.
+    ///
+    /// A registry file is lines of text: every comment is made by `RegFile::note`, which
+    /// leaves no line break in it, and a key or a name with a control character (a file read
+    /// has none, an entry made in memory may) is named in a comment and never written as a
+    /// line. A `]` inside a key needs nothing: regedit ends a key at the last `]` of its line.
     pub fn to_reg(&self) -> Option<RegFile> {
         let hive = self.scope.hive()?;
         let mut file = RegFile::default();
@@ -431,25 +471,44 @@ impl PolFile {
                 format!("{hive}\\{key}")
             };
             file.lines.push(Line::Blank);
+            if !fits_a_line(key) {
+                file.note(&format!(
+                    "Not in a registry file, a key with a control character: {path}"
+                ));
+                continue;
+            }
             file.lines.push(Line::Key {
                 path: path.clone(),
                 delete: false,
             });
             let mut after: Vec<Line> = Vec::new();
+            let odd = |file: &mut RegFile, name: &str| {
+                let fits = fits_a_line(name);
+                if !fits {
+                    file.note(&format!(
+                        "Not in a registry file, a name with a control character: {name}"
+                    ));
+                }
+                !fits
+            };
             for e in self
                 .entries
                 .iter()
                 .filter(|e| e.key.eq_ignore_ascii_case(key))
             {
+                if e.action.of_value() && odd(&mut file, &e.name) {
+                    continue;
+                }
                 match &e.action {
                     Action::Set(d) => file.lines.push(Line::Value {
                         name: e.name.clone(),
                         data: Some(d.clone()),
                     }),
                     Action::Soft(d) => {
-                        let note =
-                            format!("; Group Policy sets {} only when it is not there", e.name);
-                        file.lines.push(Line::Comment(note));
+                        file.note(&format!(
+                            "Group Policy sets {} only when it is not there",
+                            e.name
+                        ));
                         file.lines.push(Line::Value {
                             name: e.name.clone(),
                             data: Some(d.clone()),
@@ -461,25 +520,28 @@ impl PolFile {
                     }),
                     Action::DeleteValues(list) => {
                         for name in list {
+                            if odd(&mut file, name) {
+                                continue;
+                            }
                             file.lines.push(Line::Value {
                                 name: name.clone(),
                                 data: None,
                             });
                         }
                     }
-                    Action::DeleteAll => file.lines.push(Line::Comment(
-                        "; Group Policy deletes every value of this key first".to_owned(),
-                    )),
-                    Action::SecureKey(on) => {
-                        let note = if *on {
-                            "; Group Policy lets only the administrators change this key"
-                        } else {
-                            "; Group Policy gives this key its own rights back"
-                        };
-                        file.lines.push(Line::Comment(note.to_owned()));
+                    Action::DeleteAll => {
+                        file.note("Group Policy deletes every value of this key first");
                     }
+                    Action::SecureKey(on) => file.note(if *on {
+                        "Group Policy lets only the administrators change this key"
+                    } else {
+                        "Group Policy gives this key its own rights back"
+                    }),
                     Action::DeleteKeys(list) => {
                         for name in list {
+                            if odd(&mut file, name) {
+                                continue;
+                            }
                             after.push(Line::Key {
                                 path: format!("{path}\\{name}"),
                                 delete: true,
@@ -693,6 +755,101 @@ mod tests {
             "a value of the other file replaces its entry"
         );
         assert_eq!(Scope::from_name(Scope::User.name()), Scope::User);
+    }
+
+    /// A key or a name with a line break is refused at the read, and an entry made in memory
+    /// with one never becomes lines of the registry file: nothing it names is set or deleted.
+    #[test]
+    fn a_name_with_a_line_break_makes_no_line_of_a_registry_file() {
+        let path = Path::new("C:\\GroupPolicy\\Machine\\Registry.pol");
+        let evil = "A\r\n[HKEY_LOCAL_MACHINE\\Evil]\r\n\"Planted\"=\"y\"";
+        let file = |key: &str, name: &str, kind: u32, data: &[u8]| {
+            let mut bytes = b"PReg".to_vec();
+            bytes.extend(1u32.to_le_bytes());
+            bytes.extend(entry(key, name, kind, data));
+            PolFile::parse(&bytes, path)
+        };
+        let one = 1u32.to_le_bytes();
+        let why = file("Software\\Test", evil, 4, &one).unwrap_err();
+        assert!(
+            why.contains("value name") && why.contains("control"),
+            "{why}"
+        );
+        let why = file(evil, "On", 4, &one).unwrap_err();
+        assert!(why.contains("the key of the entry at byte 8"), "{why}");
+        assert!(file("Software\\Test", "**del.A\nB", 1, &[0, 0]).is_err());
+        assert!(file("Software\\Test", "**soft.A\u{85}B", 4, &one).is_err());
+        let list: Vec<u8> = "A;B\rC\0"
+            .encode_utf16()
+            .flat_map(u16::to_le_bytes)
+            .collect();
+        assert!(file("Software\\Test", "**DeleteKeys", 1, &list).is_err());
+        assert!(file("Software\\Test", "**DeleteValues", 1, &list).is_err());
+        assert!(file("Software\\Test", "A tab\tB", 4, &one).is_err());
+        assert!(file("Software\\Te]st", "A [name]", 4, &one).is_ok());
+
+        let mut pol = PolFile::empty(path);
+        let entries = [
+            ("Software\\Test", evil, Action::Set(Data::Dword(1))),
+            ("Software\\Test", evil, Action::Soft(Data::Dword(1))),
+            ("Software\\Test", evil, Action::Delete),
+            (
+                "Software\\Test",
+                "",
+                Action::DeleteValues(vec![evil.to_owned()]),
+            ),
+            (
+                "Software\\Test",
+                "",
+                Action::DeleteKeys(vec![evil.to_owned()]),
+            ),
+            (evil, "On", Action::Set(Data::Dword(1))),
+            ("Software\\Te]st", "Kept", Action::Soft(Data::Dword(7))),
+        ];
+        for (key, name, action) in entries {
+            pol.entries.push(Entry {
+                key: key.to_owned(),
+                name: name.to_owned(),
+                action,
+            });
+        }
+        let reg = pol.to_reg().unwrap();
+        let text = reg.to_text();
+        for line in text.split("\r\n") {
+            assert!(!line.contains(['\r', '\n']), "{line:?}");
+            assert!(!line.starts_with("[HKEY_LOCAL_MACHINE\\Evil"), "{line}");
+            assert!(!line.starts_with("\"Planted\""), "{line}");
+        }
+        let read = RegFile::parse(&text).unwrap();
+        assert_eq!(read, reg, "what is written reads the same");
+        // The key with a `]` and its value are all that is left to do.
+        let kept = "HKEY_LOCAL_MACHINE\\Software\\Te]st".to_owned();
+        let test = "HKEY_LOCAL_MACHINE\\Software\\Test".to_owned();
+        assert_eq!(
+            read.changes(None),
+            vec![
+                Change::CreateKey(test),
+                Change::CreateKey(kept.clone()),
+                Change::Set {
+                    key: kept,
+                    name: "Kept".to_owned(),
+                    data: Data::Dword(7),
+                },
+            ]
+        );
+        assert!(text.contains("; Group Policy sets Kept only when it is not there\r\n"));
+        // A registry file whose line holds a lone CR in a name gives the file no entry: what
+        // the file would write, it could not read again.
+        let lone = "Windows Registry Editor Version 5.00\r\n\r\n\
+            [HKEY_LOCAL_MACHINE\\Software\\Test]\r\n\
+            \"A\rB\"=dword:00000001\r\n\
+            \"Fine\"=dword:00000002\r\n";
+        let mut merged = PolFile::empty(path);
+        assert_eq!(merged.merge_reg(&RegFile::parse(lone).unwrap()), (2, 1));
+        let again = PolFile::parse(&merged.to_bytes(), path).unwrap();
+        assert_eq!(again.entries, merged.entries);
+        assert!(again.entries.iter().all(|e| e.name != "A\rB"));
+        assert!(text.contains("; Not in a registry file, a name with a control character: A  ["));
     }
 
     #[test]

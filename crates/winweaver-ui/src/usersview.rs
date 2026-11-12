@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use eframe::egui;
 use winweaver_core::users::{self, Issue, Operation, Outcome, State, User, UsersFile};
 use winweaver_core::userstore::{self, Passwords};
-use zeroize::Zeroizing;
+use zeroize::{Zeroize, Zeroizing};
 
 use crate::i18n::{tr, trf};
 use crate::tree::Scroll;
@@ -41,12 +41,28 @@ impl MasterAsk {
     }
 }
 
+/// What was typed into the window is wiped when the window goes, however it goes.
+impl Drop for MasterAsk {
+    fn drop(&mut self) {
+        self.text.zeroize();
+        self.again.zeroize();
+    }
+}
+
 /// The window that sets the password of an account.
 pub struct PasswordEdit {
     pub name: String,
     pub text: String,
     pub again: String,
     pub error: String,
+}
+
+/// What was typed into the window is wiped when the window goes, however it goes.
+impl Drop for PasswordEdit {
+    fn drop(&mut self) {
+        self.text.zeroize();
+        self.again.zeroize();
+    }
 }
 
 pub struct UsersDoc {
@@ -163,7 +179,7 @@ impl UsersDoc {
                 .passwords
                 .as_ref()
                 .map_or(userstore::DEFAULT_ITERATIONS, |c| c.iterations)
-                .max(userstore::MIN_ITERATIONS);
+                .clamp(userstore::MIN_ITERATIONS, userstore::MAX_ITERATIONS);
             self.file.passwords = Some(userstore::encrypt(passwords, master, iterations)?);
         }
         Ok(())
@@ -566,12 +582,12 @@ fn master_window(ui: &mut egui::Ui, doc: &mut UsersDoc) {
             } else if doc.ask.text.is_empty() {
                 doc.ask.error = tr("The master password is empty").to_owned();
             } else {
-                let text = std::mem::take(&mut doc.ask.text);
+                let text = Zeroizing::new(std::mem::take(&mut doc.ask.text));
                 match doc.enter_master(purpose, &text) {
                     Ok(()) => doc.ask = MasterAsk::default(),
                     Err(e) => doc.ask.error = e,
                 }
-                doc.ask.again.clear();
+                doc.ask.again.zeroize();
             }
         }
         None => {}
@@ -633,7 +649,7 @@ fn password_window(ui: &mut egui::Ui, doc: &mut UsersDoc) {
                 return;
             }
             let name = edit.name.clone();
-            let text = std::mem::take(&mut edit.text);
+            let text = Zeroizing::new(std::mem::take(&mut edit.text));
             if let Some(p) = &mut doc.passwords {
                 p.set(&name, &text);
             }

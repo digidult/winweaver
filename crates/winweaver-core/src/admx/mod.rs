@@ -87,11 +87,39 @@ pub struct CatalogHeader {
 /// How much of the start of a catalog file its header may take.
 const HEADER_BYTES: u64 = 16 * 1024;
 
+/// The first `limit` bytes of a catalog file. A disk gives them without the rest of the file;
+/// in a browser the files are the ones of the file layer (the storage of the page, the folder
+/// of the page), which reads a file whole.
+fn first_bytes(path: &Path, limit: u64) -> Option<Vec<u8>> {
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        use std::io::Read;
+        let mut bytes = Vec::new();
+        let file = std::fs::File::open(path).ok()?;
+        file.take(limit).read_to_end(&mut bytes).ok()?;
+        Some(bytes)
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        let mut bytes = ww_base::files::read(path, CATALOG_MAX).ok()?;
+        bytes.truncate(limit as usize);
+        Some(bytes)
+    }
+}
+
+/// The size of a catalog file in bytes for the list of the imports, 0 when it cannot be read.
+pub fn file_size(path: &Path) -> u64 {
+    #[cfg(not(target_arch = "wasm32"))]
+    let size = std::fs::metadata(path).map(|m| m.len());
+    #[cfg(target_arch = "wasm32")]
+    let size = ww_base::files::read(path, CATALOG_MAX).map(|b| b.len() as u64);
+    size.unwrap_or(0)
+}
+
 impl CatalogHeader {
     /// The header of a catalog file as WinWeaver writes it: the fields before the groups. `None`
     /// for another file, a file of another version, or one whose fields come in another order.
     pub fn read(path: &Path) -> Option<Self> {
-        use std::io::Read;
         #[derive(Deserialize)]
         struct Head {
             format: String,
@@ -104,12 +132,7 @@ impl CatalogHeader {
             #[serde(default)]
             created: String,
         }
-        let mut bytes = Vec::new();
-        std::fs::File::open(path)
-            .ok()?
-            .take(HEADER_BYTES)
-            .read_to_end(&mut bytes)
-            .ok()?;
+        let bytes = first_bytes(path, HEADER_BYTES)?;
         let text = String::from_utf8_lossy(&bytes);
         // A quote inside a string of JSON is escaped, so this marks the end of the header.
         let end = text.find(",\"groups\":")?;
@@ -128,8 +151,9 @@ impl CatalogHeader {
     }
 }
 
-/// The ids of the rules of a catalog file, read as a stream without keeping the file in memory:
-/// what the search for the catalog of an option the loaded catalog does not have needs.
+/// The ids of the rules of a catalog file, read as a stream without keeping the file in memory
+/// (in a browser through the file layer, which gives the file whole): what the search for the
+/// catalog of an option the loaded catalog does not have needs.
 pub fn rule_ids(path: &Path) -> Result<HashSet<String>, String> {
     #[derive(Deserialize)]
     struct Id {
@@ -141,9 +165,17 @@ pub fn rule_ids(path: &Path) -> Result<HashSet<String>, String> {
         rules: Vec<Id>,
     }
     let name = jsonfile::display_name(path);
-    let file = std::fs::File::open(path).map_err(|e| format!("{name}: {e}"))?;
-    let reader = std::io::BufReader::new(std::io::Read::take(file, CATALOG_MAX));
-    let ids: Ids = serde_json::from_reader(reader).map_err(|e| format!("{name}: {e}"))?;
+    #[cfg(not(target_arch = "wasm32"))]
+    let ids: Ids = {
+        let file = std::fs::File::open(path).map_err(|e| format!("{name}: {e}"))?;
+        let reader = std::io::BufReader::new(std::io::Read::take(file, CATALOG_MAX));
+        serde_json::from_reader(reader).map_err(|e| format!("{name}: {e}"))?
+    };
+    #[cfg(target_arch = "wasm32")]
+    let ids: Ids = {
+        let bytes = ww_base::files::read(path, CATALOG_MAX).map_err(|e| format!("{name}: {e}"))?;
+        serde_json::from_slice(&bytes).map_err(|e| format!("{name}: {e}"))?
+    };
     if ids.format != CATALOG_FORMAT {
         return Err(format!("{name}: not a catalog file"));
     }

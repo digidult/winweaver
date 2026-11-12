@@ -146,6 +146,25 @@ function Invoke-Exe {
     }
 }
 
+function Find-MediaFolder {
+    # The folder of the installation media on a running Windows: the first ready drive, the drive
+    # of Windows left out, whose folder holds a file of the filter. A standard user can make a
+    # folder at the root of the system drive (C:\Drivers, C:\sources\sxs) and this script runs as
+    # administrator, so that drive is never taken for the media.
+    param([Parameter(Mandatory)][string]$Folder, [Parameter(Mandatory)][string]$Filter, [switch]$Recurse)
+    $system = [System.IO.Path]::GetPathRoot([Environment]::SystemDirectory)
+    foreach ($d in [System.IO.DriveInfo]::GetDrives()) {
+        try {
+            if (-not $d.IsReady) { continue }
+            if ($d.RootDirectory.FullName -eq $system) { continue }
+            $p = Join-Path $d.RootDirectory.FullName $Folder
+            if (-not (Test-Path -LiteralPath $p -PathType Container)) { continue }
+            if (Get-ChildItem -LiteralPath $p -Filter $Filter -File -Recurse:$Recurse -ErrorAction SilentlyContinue | Select-Object -First 1) { return $p }
+        } catch { }
+    }
+    return $null
+}
+
 function Set-Feature {
     param([Parameter(Mandatory)][string]$Name, [Parameter(Mandatory)][ValidateSet('Enabled','Disabled')][string]$State)
     try {

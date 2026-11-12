@@ -2,7 +2,8 @@
 
 The fixed parts of the answer file and of the stand-alone scripts. The build (`crates/winweaver-core/src/render/`
 for the answer file, `scripts.rs` and `users.rs` for the stand-alone scripts) fills the `{{name}}` slots with the
-blocks of the enabled rules and with profile data; everything else is copied as is.
+blocks of the enabled rules and with profile data, in one pass (a value that holds `{{name}}` is never
+filled as a slot); everything else is copied as is.
 
 | File | Content | Slots |
 |---|---|---|
@@ -16,9 +17,9 @@ blocks of the enabled rules and with profile data; everything else is copied as 
 | `Post-OOBE.runtime.ps1` | Waiting for OOBE to finish, Set-Reg and Remove-Reg, list of accounts, Set-AccountText and ConvertFrom-Base64Text (display names and descriptions outside ASCII, set through ADSI), removal of the task | `accounts`, `account_texts`, `blocks` |
 | `Audit.runtime.ps1` | Read-only audit of selected rules on a running Windows: Test-Reg, Test-RegList, Test-ServiceStart, Test-Feature, Test-AppAbsent and others; JSON report, with `system` when the data forms are read | `build_label`, `blocks`, `system_section` |
 | `section-read-system.ps1` | The data forms of the audit report, which WinWeaver turns into a profile: edition, time zone, computer name, languages, local accounts and their groups (no passwords, no keys) | none |
-| `Apply.runtime.ps1` | Applying selected rules to a running Windows, or returning them to the Windows defaults: administrator check, the same helpers as Setup-System with the previous state saved to `backup-*.json` (Set-RegList saves every value of the key it touches), default user hive mounting | `build_label`, `accounts`, `blocks` |
+| `Apply.runtime.ps1` | Applying selected rules to a running Windows, or returning them to the Windows defaults: administrator check, the same helpers as Setup-System with the previous state saved to `backup-*.json` (Set-RegList saves every value of the key it touches), Find-MediaFolder (the folder of the installation media on every ready drive but the one of Windows, which `scripts::media_lines` calls in place of the script of the catalog), default user hive mounting | `build_label`, `accounts`, `blocks` |
 | `Undo.runtime.ps1` | Restoring from `backup-*.json` of the apply script or of the native apply; a list of values comes back value by value | `build_label` |
-| `Create-Users.runtime.ps1` | The stand-alone script of a users file (`.wwusers`): asks the master password, creates or updates the local accounts of the file next to it | `users_label`, `users_file_b64`, `build` |
+| `Create-Users.runtime.ps1` | The stand-alone script of a users file (`.wwusers`): asks the master password, creates or updates the local accounts of the file next to it; the limits of `userstore` and of `winweaver_win::users` (the iterations of the passwords, Test-ProfileFolder: a profile folder that is new or empty) | `users_label`, `users_file_b64`, `build` |
 
 `VERSION` holds the version of the runtime templates (`render::runtime_version`), the same as the version of the
 catalog (`CATALOG_VERSION`); the header of the answer file names both, and a profile stores the catalog version

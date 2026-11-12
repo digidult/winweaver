@@ -117,6 +117,74 @@ fn the_audit_script_checks_what_the_rules_write() {
     );
 }
 
+/// On a running Windows the installation media is never the drive of Windows: the apply script
+/// looks for it with the function of its template, which leaves that drive out, in place of
+/// the script of the catalog, which is written for the installation and looks at every drive.
+#[test]
+fn the_apply_script_never_takes_the_system_drive_for_the_media() {
+    let catalog = Catalog::embedded().unwrap();
+    let mut profile = office();
+    for id in ["install.netfx3", "install.drivers-from-media"] {
+        profile.set_on(id, true);
+    }
+    let (text, plan) = scripts::apply_script(&catalog, &profile, &all(&catalog), "test").unwrap();
+    for id in ["install.netfx3", "install.drivers-from-media"] {
+        assert!(plan.applied.iter().any(|a| a == id), "{id}");
+    }
+    assert!(text.contains(concat!(
+        "# [install.netfx3]\n",
+        "$src = Find-MediaFolder -Folder 'sources\\sxs' -Filter '*.cab'\n",
+        "if ($src) { Invoke-Exe 'dism.exe' @('/Online','/Enable-Feature','/FeatureName:NetFx3',",
+        "'/All','/LimitAccess',('/Source:' + $src + ''),'/NoRestart','/Quiet') }\n",
+        "else { Write-Log 'sources\\sxs with *.cab is on no drive but the one of Windows, skipped' 'WARN' }\n",
+    )));
+    assert!(text.contains(concat!(
+        "# [install.drivers-from-media]\n",
+        "$src = Find-MediaFolder -Folder 'Drivers' -Filter '*.inf' -Recurse\n",
+        "if ($src) { Invoke-Exe 'pnputil.exe' @('/add-driver',('' + $src + '\\*.inf'),",
+        "'/subdirs','/install') }\n",
+    )));
+    // The drives are listed in one place, the function, which skips the drive of Windows.
+    assert_eq!(
+        text.matches("[System.IO.DriveInfo]::GetDrives()").count(),
+        1
+    );
+    assert!(text.contains("if ($d.RootDirectory.FullName -eq $system) { continue }"));
+    assert!(
+        text.contains("$system = [System.IO.Path]::GetPathRoot([Environment]::SystemDirectory)")
+    );
+}
+
+/// A profile named like a slot of a template is a name and nothing more: the script holds the
+/// name in its first line, and the slot is filled once, where the template has it.
+#[test]
+fn a_profile_named_like_a_slot_fills_no_slot() {
+    let catalog = Catalog::embedded().unwrap();
+    let ids = all(&catalog);
+    let (plain, _) = scripts::apply_script(&catalog, &office(), &ids, "test").unwrap();
+    let mut named = office();
+    named.name = "{{blocks}}".into();
+    let (text, _) = scripts::apply_script(&catalog, &named, &ids, "test").unwrap();
+    assert!(text.contains("# WinWeaver test, profile: {{blocks}} (rules that are off"));
+    assert_eq!(markers(&text), markers(&plain), "the blocks once");
+    assert_eq!(
+        text.replace("profile: {{blocks}}", "profile: Office"),
+        plain
+    );
+    for name in [
+        "{{accounts}}",
+        "{{build_label}}",
+        "{{name}}",
+        "{{nothing}} {{",
+    ] {
+        named.name = name.into();
+        let (text, _) = scripts::revert_script(&catalog, &named, &ids, "test").unwrap();
+        assert!(text.contains(&format!("profile: {name} (return")), "{name}");
+        let undo = scripts::undo_script(&named, "test").unwrap();
+        assert!(undo.contains(&format!("profile: {name}\n")), "{name}");
+    }
+}
+
 #[test]
 fn undo_and_file_bytes() {
     let undo = scripts::undo_script(&office(), "test").unwrap();

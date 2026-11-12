@@ -7,6 +7,7 @@ use std::collections::HashSet;
 
 use serde_json::Value;
 
+use crate::apply::{self, Op};
 use crate::catalog::{Action, Catalog, Phase, Rule};
 use crate::profile::Profile;
 use crate::render::{self, RenderError};
@@ -214,6 +215,54 @@ fn with_dependents(catalog: &Catalog, ids: &HashSet<String>) -> HashSet<String> 
     }
 }
 
+/// The lines of the stand-alone script for a rule whose script step works on the installation
+/// media (`apply::script_ops` names it), `None` for every other rule. The script of the catalog
+/// is written for the installation and looks at every drive; on a running Windows the media is
+/// never the drive of Windows (`Find-MediaFolder` of the template leaves it out, as the native
+/// apply does), so a folder a standard user made at its root is never taken.
+fn media_lines(rule: &str, profile: &Profile) -> Option<Vec<String>> {
+    let quote = |s: &str| render::ps_quote(s);
+    let mut lines = Vec::new();
+    for op in apply::script_ops(rule, profile)? {
+        let Op::RunFromMedia {
+            folder,
+            pattern,
+            deep,
+            file,
+            args,
+        } = op
+        else {
+            return None;
+        };
+        // `{source}` of an argument is the folder found: a text joined with `$src`.
+        let args: Vec<String> = args
+            .iter()
+            .map(|arg| {
+                let parts: Vec<String> = arg.split("{source}").map(quote).collect();
+                if parts.len() == 1 {
+                    parts.concat()
+                } else {
+                    format!("({})", parts.join(" + $src + "))
+                }
+            })
+            .collect();
+        let recurse = if deep { " -Recurse" } else { "" };
+        lines.push(format!(
+            "$src = Find-MediaFolder -Folder {} -Filter {}{recurse}",
+            quote(&folder),
+            quote(&pattern)
+        ));
+        lines.push(format!(
+            "if ($src) {{ Invoke-Exe {} @({}) }}",
+            quote(&file),
+            args.join(",")
+        ));
+        let why = format!("{folder} with {pattern} is on no drive but the one of Windows, skipped");
+        lines.push(format!("else {{ Write-Log {} 'WARN' }}", quote(&why)));
+    }
+    (!lines.is_empty()).then_some(lines)
+}
+
 fn accounts(profile: &Profile) -> String {
     let names: Vec<String> = if profile.install.account_mode == "file" {
         profile.accounts.iter().map(|a| a.name.clone()).collect()
@@ -252,9 +301,20 @@ pub fn apply_script(
         }
         if is_applied {
             let params = render::params_of(catalog, profile, rule);
+            let media = media_lines(&rule.id, profile);
             let mut lines = Vec::new();
+            let mut searched = false;
             for action in &rule.actions {
-                lines.extend(render::script_lines(rule, action, &params, rule.phase)?);
+                match (&media, action) {
+                    // The search for the media of a running Windows, once, in place of the
+                    // script of the catalog.
+                    (Some(_), Action::Ps { .. }) if searched => {}
+                    (Some(steps), Action::Ps { .. }) => {
+                        lines.extend(steps.iter().cloned());
+                        searched = true;
+                    }
+                    _ => lines.extend(render::script_lines(rule, action, &params, rule.phase)?),
+                }
             }
             if !selected.contains(&rule.id) {
                 plan.added.push(rule.id.clone());

@@ -228,7 +228,8 @@ portable and bound to no machine: its only secret is the master password of the 
 
 - An account: `name` (a name of a local account: up to 20 characters, none of `" / \ [ ] : ; | = , + * ? < > @`,
   not ending with a dot), `full_name`, `description`, `admin` (the group Administrators, else Users),
-  `password_never_expires`, `profile_path` (empty, or an absolute path `D:\Profiles\x` or `\\server\share\x`),
+  `password_never_expires`, `profile_path` (empty, or an absolute path `D:\Profiles\x` or `\\server\share\x`,
+  never the root of a drive and without `..`),
   and the orders for an account that already exists on the PC, without which it is left as it is:
   `apply_password` (set the password of the file), `state` (`keep`, `enabled`, `disabled`; a new account is
   made enabled or disabled) and `force_group` (exactly the group of `admin`, the other membership removed).
@@ -240,12 +241,14 @@ portable and bound to no machine: its only secret is the master password of the 
   with AES-256-CBC under the first 32 bytes of PBKDF2-HMAC-SHA256(master password in UTF-8, `salt` of 32
   bytes, `iterations`, 64 bytes); `mac` is HMAC-SHA256 under the last 32 bytes of `salt`, `iv` (16 bytes) and
   the ciphertext `data`, verified before anything is decrypted. A wrong master password and a changed byte give
-  one message. A new salt and vector come at every save; `iterations` is at least 100000, 600000 by default.
+  one message. A new salt and vector come at every save; `iterations` is at least 100000 and at most
+  10000000 (a file outside them is refused before a key is derived), 600000 by default.
   The master password is never kept on disk, and no password reaches the status bar, the logs or a script.
 - The operations on this PC (`users::Plan`, run natively as administrator, no PowerShell): create the
   accounts that are missing with the password, the flags, the description and the full name, the group of
   `admin` only, and the profile folder with an access list of SYSTEM, Administrators and the account itself,
-  registered in `ProfileList`; change the existing ones by their orders only (update existing also by the
+  registered in `ProfileList` (only a folder that does not exist or is empty is taken: one that holds
+  something is refused with the reason); change the existing ones by their orders only (update existing also by the
   rest of the row, never the password); or set the passwords of the accounts that exist and nothing else. An
   account is never deleted, a profile registered elsewhere is never moved, and the account of the process is
   never removed from Administrators. One status an account: CREATED, UPDATED (with the changes),

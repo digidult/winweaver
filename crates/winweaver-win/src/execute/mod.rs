@@ -18,7 +18,7 @@ use winweaver_core::catalog::{RegKind, values};
 use winweaver_core::registry::Data;
 use winweaver_core::thispc::Machine;
 
-use crate::ffi::{buffer_text, hive_path, system_root, utf16_bytes, wide};
+use crate::ffi::{buffer_text, hive_path, system_dir, utf16_bytes, wide};
 use crate::native::NativeMachine;
 
 mod hive;

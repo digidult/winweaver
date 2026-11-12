@@ -136,8 +136,9 @@ impl WinWeaver {
             shell.status = tr("Nothing to check: the active tab is not a profile").to_owned();
             return;
         };
-        doc.issues = validate::check(catalog, &doc.profile, &doc.resolution);
-        shell.status = validate::summary(&doc.issues);
+        // The messages of the check in the language of the window (`validate::check_shown`).
+        doc.issues = validate::check_shown(catalog, &doc.profile, &doc.resolution, &message_text);
+        shell.status = check_summary(&doc.issues);
     }
 
     /// Checks the profile, builds the answer file and writes it with its scripts into the

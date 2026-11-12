@@ -36,7 +36,7 @@ pub fn system_program(file: &str) -> Result<PathBuf, String> {
     if !ok {
         return Err(format!("{file} is not a program of the system folder"));
     }
-    Ok(system_root().join("System32").join(file))
+    Ok(system_dir().join(file))
 }
 
 pub(crate) fn run(file: &str, args: &[String]) -> Result<String, String> {
@@ -137,8 +137,17 @@ pub(crate) fn has_file(dir: &Path, extension: &str, deep: bool, seen: &mut usize
     false
 }
 
-/// The first drive from C: whose `folder` holds a file of `pattern` (`*.cab`), as the script steps
-/// look for the folders of the installation media. A drive without a disk asks nothing.
+/// The drives the installation media is looked for on, a running Windows: every letter from C:
+/// but the drive of Windows itself. A standard user can make a folder at the root of the system
+/// drive (`C:\Drivers`, `C:\sources\sxs`), and what is found is installed by an administrator,
+/// so that drive is never taken for the media.
+pub(crate) fn media_drives(system: Option<u8>) -> impl Iterator<Item = u8> {
+    (b'C'..=b'Z').filter(move |letter| Some(*letter) != system)
+}
+
+/// The first drive from C:, the system drive left out ([`media_drives`]), whose `folder` holds a
+/// file of `pattern` (`*.cab`): the folder of the installation media. A drive without a disk
+/// asks nothing.
 pub(crate) fn media_folder(folder: &str, pattern: &str, deep: bool) -> Option<PathBuf> {
     use windows_sys::Win32::System::Diagnostics::Debug::{
         SEM_FAILCRITICALERRORS, SEM_NOOPENFILEERRORBOX, SetErrorMode,
@@ -150,7 +159,7 @@ pub(crate) fn media_folder(folder: &str, pattern: &str, deep: bool) -> Option<Pa
     }
     // SAFETY: the error mode of the process; the previous one comes back below.
     let before = unsafe { SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX) };
-    let found = (b'C'..=b'Z')
+    let found = media_drives(crate::ffi::system_drive())
         .map(|letter| PathBuf::from(format!("{}:\\", char::from(letter))).join(folder))
         .find(|dir| dir.is_dir() && has_file(dir, extension, deep, &mut 0));
     // SAFETY: the mode the process had.
@@ -402,7 +411,8 @@ pub(crate) fn run_from_media(
     args: &[String],
 ) -> Outcome {
     let Some(source) = media_folder(folder, pattern, deep) else {
-        return ("skipped", format!("no drive has {folder} with {pattern}"));
+        let why = format!("no drive but the one of Windows has {folder} with {pattern}");
+        return ("skipped", why);
     };
     let source = source.display().to_string();
     let args: Vec<String> = args

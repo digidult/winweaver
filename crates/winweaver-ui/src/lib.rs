@@ -443,6 +443,74 @@ impl WinWeaver {
     }
 }
 
+/// A message of the core in the language of the window: its key translated, its values filled
+/// after, in one pass.
+pub(crate) fn message_text(message: &winweaver_core::message::Message) -> String {
+    message.shown(|key| tr(key).to_owned())
+}
+
+/// One line with the counts of a check, in the language of the window: what
+/// `validate::summary` says in English.
+pub(crate) fn check_summary(issues: &[Issue]) -> String {
+    let (errors, warnings, infos) = validate::counts(issues);
+    let mut parts = Vec::new();
+    match errors {
+        0 => {}
+        1 => parts.push(tr("1 error").to_owned()),
+        n => parts.push(trf("{n} errors", &[("n", &n)])),
+    }
+    match warnings {
+        0 => {}
+        1 => parts.push(tr("1 warning").to_owned()),
+        n => parts.push(trf("{n} warnings", &[("n", &n)])),
+    }
+    match infos {
+        0 => {}
+        1 => parts.push(tr("1 info").to_owned()),
+        n => parts.push(trf("{n} infos", &[("n", &n)])),
+    }
+    if parts.is_empty() {
+        return tr("Check: no problems").to_owned();
+    }
+    trf("Check: {counts}", &[("counts", &parts.join(", "))])
+}
+
+/// The verdict of a read of this PC, in the language of the window.
+#[cfg(feature = "full")]
+fn verdict_text(verdict: Verdict) -> &'static str {
+    match verdict {
+        Verdict::InEffect => tr("in effect"),
+        Verdict::Partly => tr("partly in effect"),
+        Verdict::NotInEffect => tr("not in effect"),
+        Verdict::NotReadable => tr("not readable"),
+        Verdict::AsDefault => tr("as on a clean Windows"),
+    }
+}
+
+/// The counts of a capture by verdict in one line, in the language of the window: what
+/// `CaptureSummary::line` says in English.
+#[cfg(feature = "full")]
+fn capture_line(summary: &thispc::CaptureSummary) -> String {
+    let parts: Vec<String> = Verdict::ALL
+        .iter()
+        .filter_map(|v| {
+            let n = summary.counts.get(v.title()).copied().unwrap_or(0);
+            (n > 0).then(|| match v {
+                Verdict::InEffect => trf("{n} in effect", &[("n", &n)]),
+                Verdict::Partly => trf("{n} partly in effect", &[("n", &n)]),
+                Verdict::NotInEffect => trf("{n} not in effect", &[("n", &n)]),
+                Verdict::NotReadable => trf("{n} not readable", &[("n", &n)]),
+                Verdict::AsDefault => trf("{n} as on a clean Windows", &[("n", &n)]),
+            })
+        })
+        .collect();
+    if parts.is_empty() {
+        tr("nothing read").to_owned()
+    } else {
+        parts.join(", ")
+    }
+}
+
 /// The profile tab with this draft key.
 #[cfg(feature = "full")]
 fn profile_doc<'a>(docs: &'a mut [Doc], key: &str) -> Option<&'a mut ProfileDoc> {

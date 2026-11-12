@@ -148,9 +148,9 @@ impl WinWeaver {
             issues.push(Issue {
                 severity: Severity::Info,
                 target: Target::Profile,
-                text: format!(
-                    "This PC: {} rules act only during installation or at a first sign-in and were not read",
-                    plan.excluded.len()
+                text: trf(
+                    "This PC: {n} rules act only during installation or at a first sign-in and were not read",
+                    &[("n", &plan.excluded.len())],
                 ),
             });
         }
@@ -163,7 +163,10 @@ impl WinWeaver {
             doc.profile = profile;
             doc.refresh(catalog);
             doc.issues = issues;
-            shell.status = format!("Read the selection on this PC: {}", summary.line());
+            shell.status = trf(
+                "Read the selection on this PC: {summary}",
+                &[("summary", &capture_line(&summary))],
+            );
         } else {
             profile.name = thispc::pc_profile_name(&report.computer);
             profile.created = clock::now_utc_iso();
@@ -172,12 +175,15 @@ impl WinWeaver {
             doc.dirty = true;
             doc.issues = issues;
             shell.open_tab(Doc::Profile(Box::new(doc)));
-            let forms = if summary.forms.is_empty() {
-                String::new()
+            let line = capture_line(&summary);
+            shell.status = if summary.forms.is_empty() {
+                trf("Read this PC: {summary}", &[("summary", &line)])
             } else {
-                format!("; forms: {}", summary.forms.join(", "))
+                trf(
+                    "Read this PC: {summary}; forms: {forms}",
+                    &[("summary", &line), ("forms", &summary.forms.join(", "))],
+                )
             };
-            shell.status = format!("Read this PC: {}{forms}", summary.line());
         }
     }
 
@@ -216,11 +222,17 @@ impl WinWeaver {
                     Severity::Warning
                 },
                 target: Target::Rule(r.rule.clone()),
-                text: format!(
-                    "This PC: {} ({} in the profile)",
-                    r.verdict.title(),
-                    if on { "on" } else { "off" }
-                ),
+                text: if on {
+                    trf(
+                        "This PC: {verdict} (on in the profile)",
+                        &[("verdict", &verdict_text(r.verdict))],
+                    )
+                } else {
+                    trf(
+                        "This PC: {verdict} (off in the profile)",
+                        &[("verdict", &verdict_text(r.verdict))],
+                    )
+                },
             });
         }
         issues.sort_by_key(|i| i.severity);
@@ -417,7 +429,13 @@ impl WinWeaver {
         doc.dirty = true;
         doc.issues = capture_issues(&summary);
         shell.open_tab(Doc::Profile(Box::new(doc)));
-        shell.status = format!("Read the report {}: {}", path.display(), summary.line());
+        shell.status = trf(
+            "Read the report {path}: {summary}",
+            &[
+                ("path", &path.display()),
+                ("summary", &capture_line(&summary)),
+            ],
+        );
     }
 
     /// Prepares the native apply or return of the selection and asks for the confirmation.
@@ -567,7 +585,26 @@ impl WinWeaver {
                                     Severity::Info
                                 },
                                 target: Target::Rule(r.rule.clone()),
-                                text: format!("{}: {} {}", r.status, r.what, r.note),
+                                // The step and its note are the words of the report, in
+                                // English as the report file has them.
+                                text: match r.status.as_str() {
+                                    "failed" => trf(
+                                        "failed: {what} {note}",
+                                        &[("what", &r.what), ("note", &r.note)],
+                                    ),
+                                    "skipped" => trf(
+                                        "skipped: {what} {note}",
+                                        &[("what", &r.what), ("note", &r.note)],
+                                    ),
+                                    status => trf(
+                                        "{status}: {what} {note}",
+                                        &[
+                                            ("status", &status),
+                                            ("what", &r.what),
+                                            ("note", &r.note),
+                                        ],
+                                    ),
+                                },
                             })
                             .collect();
                         issues.extend(skipped.into_iter().map(|(rule, why)| Issue {

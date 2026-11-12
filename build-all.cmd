@@ -4,9 +4,9 @@ rem
 rem   build-all.cmd [check] [screenshots] [presentation] [all] [noweb]
 rem
 rem Without options: W# of the branch main of supakov/ww (cargo update), the release builds of
-rem WinWeaver and wwlite, wwlite for the browser, and the three archives of a release in the folder
-rem dist, each with its folder inside as CI zips it: WinWeaver-<version>.zip, wwlite-<version>.zip,
-rem wwlite-web-<version>.zip.
+rem WinWeaver and wwlite, wwlite and WinWeaver for the browser, and the four archives of a release
+rem in the folder dist, each with its folder inside as CI zips it: WinWeaver-<version>.zip,
+rem wwlite-<version>.zip, wwlite-web-<version>.zip, winweaverweb-<version>.zip.
 rem
 rem   check         first the checks of a commit: the format, the three clippy runs, the tests of
 rem                 the workspace and of wwlite alone, the check of the catalog
@@ -14,7 +14,7 @@ rem   screenshots   the tests draw the window into dist\screenshots (the artifac
 rem   presentation  the slides of the screenshots, dist\presentation\WinWeaver.pptx (needs the
 rem                 Python packages python-pptx and pillow); takes the screenshots too
 rem   all           check, screenshots and presentation
-rem   noweb         without the browser edition (no wasm32, no wasm-bindgen)
+rem   noweb         without the browser editions (no wasm32, no wasm-bindgen): two archives
 rem
 rem What stays with CI or a VM: the tests that change Windows (cargo test -p winweaver-win -- --ignored,
 rem as administrator), the smoke test of the window and of the command line, which start the program.
@@ -316,15 +316,15 @@ exit /b 0
 :options
 echo build-all.cmd [check] [screenshots] [presentation] [all] [noweb]
 echo.
-echo Without options: W# of the branch main, the release builds of WinWeaver and wwlite, wwlite for
-echo the browser and the archives of a release in dist, the version in their names: WinWeaver,
-echo wwlite, wwlite-web.
+echo Without options: W# of the branch main, the release builds of WinWeaver and wwlite, both for
+echo the browser and the four archives of a release in dist, the version in their names: WinWeaver,
+echo wwlite, wwlite-web, winweaverweb.
 echo.
 echo   check         first the format, the three clippy runs, the tests and the check of the catalog
 echo   screenshots   the tests draw the window into dist\screenshots
 echo   presentation  dist\presentation\WinWeaver.pptx of the screenshots (python-pptx, pillow)
 echo   all           check, screenshots and presentation
-echo   noweb         without the browser edition
+echo   noweb         without the browser editions
 echo.
 echo WW_CARGO, WW_PYTHON and WW_WASM_BINDGEN name the tools when the PATH has none of them.
 exit /b 0

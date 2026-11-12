@@ -431,6 +431,55 @@ fn edit_and_files_change_the_workspace_and_write_only_into_the_folders() {
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
+/// A comparison and a preview never show a product key or a password, whole or in part: the
+/// comparison says only that the key differs.
+#[test]
+fn secrets_never_leave_through_a_comparison_or_a_preview() {
+    use winweaver_core::profile::{Account, Profile};
+    let dir = folder("secrets");
+    std::fs::create_dir_all(dir.join("profiles")).unwrap();
+    let keys = [
+        "QZQZQ-QZQZQ-QZQZQ-QZQZQ-QZQZ2",
+        "QZQZQ-QZQZQ-QZQZQ-QZQZQ-QZQZ3",
+    ];
+    for (name, key) in ["Left", "Right"].into_iter().zip(keys) {
+        let mut p = Profile::parse(OFFICE, "Office").unwrap();
+        p.name = name.to_owned();
+        p.install.product_key_mode = "key".to_owned();
+        p.install.product_key = key.to_owned();
+        p.accounts = vec![Account {
+            name: "Admin".to_owned(),
+            group: "Administrators".to_owned(),
+            password: format!("pw-{key}"),
+            ..Account::default()
+        }];
+        p.save(&dir.join("profiles").join(format!("{name}.wwprofile")))
+            .unwrap();
+    }
+    let s = server(Mode::Edit, &dir);
+    let cmp = ok(&s, "compare_profiles", json!({ "a": "Left", "b": "Right" }));
+    assert_eq!(
+        cmp["install"]["product_key"],
+        json!({ "a": "***", "b": "***" })
+    );
+    assert_eq!(cmp["accounts_differ"], json!(true));
+    assert!(!cmp.to_string().contains("QZQZ"), "{cmp}");
+    // Against a profile without a key the answer still tells an empty key from a set one.
+    let cmp = ok(
+        &s,
+        "compare_profiles",
+        json!({ "a": "Office", "b": "Right" }),
+    );
+    assert_eq!(
+        cmp["install"]["product_key"],
+        json!({ "a": "", "b": "***" })
+    );
+    ok(&s, "load_profile", json!({ "name": "Left" }));
+    let preview = ok(&s, "preview_build", json!({}));
+    assert!(!preview.to_string().contains("QZQZ"), "{preview}");
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
 fn post(port: u16, token: &str, host: &str, body: &str) -> (u16, String) {
     let mut stream = TcpStream::connect(("127.0.0.1", port)).unwrap();
     let request = format!(

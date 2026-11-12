@@ -20,6 +20,9 @@ use zeroize::{Zeroize, Zeroizing};
 pub const KDF: &str = "pbkdf2-sha256";
 pub const DEFAULT_ITERATIONS: u32 = 600_000;
 pub const MIN_ITERATIONS: u32 = 100_000;
+/// The most iterations a container may ask for: a file that names more is refused before any
+/// key is derived, so a file never makes the program (or the script) compute for hours.
+pub const MAX_ITERATIONS: u32 = 10_000_000;
 const SALT_SIZE: usize = 32;
 const IV_SIZE: usize = 16;
 const KEY_SIZE: usize = 32;
@@ -116,7 +119,14 @@ impl Passwords {
         {
             gone.zeroize();
         }
-        self.map.insert(name.to_owned(), password.to_owned());
+        self.put(name.to_owned(), password.to_owned());
+    }
+
+    /// Keeps a password under a name; the password the name had is wiped.
+    fn put(&mut self, name: String, password: String) {
+        if let Some(mut old) = self.map.insert(name, password) {
+            old.zeroize();
+        }
     }
 
     /// Removes the password of a name; `true` when there was one.
@@ -137,7 +147,7 @@ impl Passwords {
         if let Some(key) = self.key(old)
             && let Some(password) = self.map.remove(&key)
         {
-            self.map.insert(new.trim().to_owned(), password);
+            self.put(new.trim().to_owned(), password);
         }
     }
 
@@ -148,13 +158,43 @@ impl Passwords {
             .map_err(|e| e.to_string())
     }
 
+    /// The passwords of the map a container holds. The entries are read straight into a
+    /// [`Passwords`], so the ones read before an error, and the ones of a map that is refused,
+    /// are wiped when it is dropped.
     fn from_plaintext(bytes: &[u8]) -> Result<Self, String> {
-        let map: BTreeMap<String, String> =
+        let passwords: Self =
             serde_json::from_slice(bytes).map_err(|_| WRONG_PASSWORD.to_owned())?;
-        if map.keys().any(|k| k.trim().is_empty()) {
+        if passwords.map.keys().any(|k| k.trim().is_empty()) {
             return Err(WRONG_PASSWORD.to_owned());
         }
-        Ok(Self { map })
+        Ok(passwords)
+    }
+}
+
+impl<'de> Deserialize<'de> for Passwords {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Entries;
+
+        impl<'de> serde::de::Visitor<'de> for Entries {
+            type Value = Passwords;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str("a map of names and passwords")
+            }
+
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut access: A,
+            ) -> Result<Passwords, A::Error> {
+                let mut passwords = Passwords::default();
+                while let Some((name, password)) = access.next_entry::<String, String>()? {
+                    passwords.put(name, password);
+                }
+                Ok(passwords)
+            }
+        }
+
+        deserializer.deserialize_map(Entries)
     }
 }
 
@@ -208,6 +248,10 @@ pub fn encrypt_with(
         let why = format!("too few iterations: {iterations} (at least {MIN_ITERATIONS})");
         return Err(why);
     }
+    if iterations > MAX_ITERATIONS {
+        let why = format!("too many iterations: {iterations} (at most {MAX_ITERATIONS})");
+        return Err(why);
+    }
     if salt.len() != SALT_SIZE || iv.len() != IV_SIZE {
         return Err("the salt is 32 bytes and the vector 16".to_owned());
     }
@@ -238,6 +282,12 @@ pub fn check(container: &Container) -> Result<(), String> {
         let n = container.iterations;
         return Err(format!(
             "too few iterations: {n} (at least {MIN_ITERATIONS})"
+        ));
+    }
+    if container.iterations > MAX_ITERATIONS {
+        let n = container.iterations;
+        return Err(format!(
+            "too many iterations: {n} (at most {MAX_ITERATIONS})"
         ));
     }
     let field = |name: &str, text: &str, size: Option<usize>| -> Result<Vec<u8>, String> {
@@ -340,6 +390,48 @@ mod tests {
         let fresh = encrypt(&sample(), master, MIN_ITERATIONS).unwrap();
         assert_ne!(fresh.salt, c.salt);
         assert_eq!(decrypt(&fresh, master).unwrap().len(), 3);
+    }
+
+    /// A container that asks for more iterations than the limit is refused with the reason,
+    /// before a key is derived (the test would run for minutes otherwise), and none is made.
+    #[test]
+    fn too_many_iterations_are_refused() {
+        let salt = [1u8; SALT_SIZE];
+        let iv = [2u8; IV_SIZE];
+        // A container of the right shape, made by hand: no key is derived in this test.
+        let mut c = Container {
+            kdf: KDF.to_owned(),
+            iterations: MAX_ITERATIONS + 1,
+            salt: BASE64.encode(salt),
+            iv: BASE64.encode(iv),
+            mac: BASE64.encode([3u8; KEY_SIZE]),
+            data: BASE64.encode([4u8; IV_SIZE]),
+        };
+        let why = check(&c).unwrap_err();
+        assert!(why.contains("too many iterations"), "{why}");
+        assert_eq!(decrypt(&c, b"master").unwrap_err(), why);
+        c.iterations = u32::MAX;
+        assert!(decrypt(&c, b"master").unwrap_err().contains("at most"));
+        c.iterations = MAX_ITERATIONS;
+        assert!(check(&c).is_ok());
+        let made = encrypt_with(&sample(), b"master", MAX_ITERATIONS + 1, &salt, &iv);
+        assert!(made.unwrap_err().contains("too many iterations"));
+    }
+
+    /// The map of a container is read into the passwords themselves: the last of two entries
+    /// of a name wins, and a map that is no map of texts, or names nothing, is refused.
+    #[test]
+    fn the_map_of_a_container_is_read_or_refused() {
+        let p = Passwords::from_plaintext(br#"{"a":"1","b":"2","a":"3"}"#).unwrap();
+        assert_eq!((p.len(), p.get("a"), p.get("B")), (2, Some("3"), Some("2")));
+        for bad in [
+            &br#"{"a":"1","b":2}"#[..],
+            br#"{"a":"1","#,
+            br#"{" ":"1"}"#,
+            br#"["a"]"#,
+        ] {
+            assert_eq!(Passwords::from_plaintext(bad).unwrap_err(), WRONG_PASSWORD);
+        }
     }
 
     const REFERENCE_DATA: &str = concat!(

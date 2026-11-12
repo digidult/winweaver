@@ -89,8 +89,9 @@ pub(crate) fn script_lines(
                 ps_quote(name)
             )
         }
+        // The lines of a script are code: written as they are, never filled with a value.
         Action::Ps { script } => {
-            return Ok(script.lines().iter().map(|l| s(l)).collect());
+            return Ok(script.lines().iter().map(|l| (*l).to_owned()).collect());
         }
         _ if limited => {
             return Err(err(

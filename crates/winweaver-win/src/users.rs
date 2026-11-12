@@ -289,14 +289,70 @@ fn set_folder_owner(folder: &str, sid: &str) -> Result<(), String> {
     }
 }
 
-/// Whether the identifier has a profile registered in another folder.
-fn profile_elsewhere(sid: &str, folder: &str) -> bool {
-    profile_of(sid).is_some_and(|p| !p.eq_ignore_ascii_case(folder.trim_end_matches('\\')))
+/// Where the profile of an identifier is, against the folder a users file names for it.
+#[derive(Debug, PartialEq, Eq)]
+enum Registered {
+    /// Windows has no profile of the account yet.
+    Nowhere,
+    /// The profile is in this folder already: nothing is left to do.
+    Here,
+    /// The profile is in another folder, and no profile is ever moved.
+    Elsewhere,
+}
+
+fn registered(sid: &str, folder: &str) -> Registered {
+    let same = |p: &str| {
+        let trim = |t: &str| t.trim().trim_end_matches(['\\', '/']).to_lowercase();
+        trim(p) == trim(folder)
+    };
+    match profile_of(sid) {
+        None => Registered::Nowhere,
+        Some(p) if same(&p) => Registered::Here,
+        Some(_) => Registered::Elsewhere,
+    }
+}
+
+/// Why a folder cannot become the folder of a profile; nothing when it can. The folder gets a
+/// new access list and a new owner, so only a folder that does not exist yet or is empty is
+/// taken: never the root of a drive, a link to another place, a file, or a folder that holds
+/// something (the profile of another account, a folder of data).
+fn profile_folder_problem(folder: &str) -> Option<String> {
+    use std::os::windows::fs::MetadataExt;
+    const REPARSE_POINT: u32 = 0x400;
+    use winweaver_core::users::{is_drive_root, is_profile_path};
+    if !is_profile_path(folder) || is_drive_root(folder) {
+        let why = "is the root of a drive or no absolute path, not a folder of its own";
+        return Some(format!("the profile folder {folder} {why}"));
+    }
+    let meta = match std::fs::symlink_metadata(folder) {
+        Ok(meta) => meta,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return None,
+        Err(e) => return Some(format!("the profile folder {folder}: {e}")),
+    };
+    if meta.file_attributes() & REPARSE_POINT != 0 {
+        return Some(format!(
+            "the profile folder {folder} is a link to another place"
+        ));
+    }
+    if !meta.is_dir() {
+        return Some(format!("the profile folder {folder} is a file"));
+    }
+    match std::fs::read_dir(folder).map(|mut entries| entries.next().is_some()) {
+        Ok(false) => None,
+        Ok(true) => Some(format!(
+            "the profile folder {folder} exists and is not empty: only a new or an empty folder is taken"
+        )),
+        Err(e) => Some(format!("the profile folder {folder}: {e}")),
+    }
 }
 
 /// Makes the folder of a profile, lets only SYSTEM, Administrators and the account into it, and
-/// registers it for the identifier. A refused owner is named, not an error.
+/// registers it for the identifier. A folder that exists and holds something is refused
+/// ([`profile_folder_problem`]). A refused owner is named, not an error.
 fn make_profile(sid: &str, folder: &str) -> Result<Option<String>, String> {
+    if let Some(why) = profile_folder_problem(folder) {
+        return Err(why);
+    }
     std::fs::create_dir_all(folder).map_err(|e| format!("the folder {folder}: {e}"))?;
     let dacl = format!("D:PAI(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)(A;OICI;FA;;;{sid})");
     set_folder_access(folder, &dacl)?;
@@ -367,13 +423,18 @@ fn update(user: &User, password: &str, update_existing: bool) -> Result<Vec<Stri
         changes.push("Description".to_owned());
     }
     if !user.profile_path.is_empty() {
-        if profile_elsewhere(&sid, &user.profile_path) {
-            changes.push("ProfilePath kept (an existing profile)".to_owned());
-        } else {
-            if let Some(warning) = make_profile(&sid, &user.profile_path)? {
-                changes.push(warning);
+        match registered(&sid, &user.profile_path) {
+            // The profile is where the file wants it: its folder is the account's and is left.
+            Registered::Here => {}
+            Registered::Elsewhere => {
+                changes.push("ProfilePath kept (an existing profile)".to_owned());
             }
-            changes.push("ProfilePath".to_owned());
+            Registered::Nowhere => {
+                if let Some(warning) = make_profile(&sid, &user.profile_path)? {
+                    changes.push(warning);
+                }
+                changes.push("ProfilePath".to_owned());
+            }
         }
     }
     Ok(changes)
@@ -457,6 +518,37 @@ pub fn run(plan: &Plan, passwords: &Passwords) -> Vec<Outcome> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Only a folder that does not exist or is empty becomes the folder of a profile: a folder
+    /// that holds something, a file and the root of a drive are refused with the reason.
+    #[test]
+    fn only_a_new_or_an_empty_folder_becomes_a_profile() {
+        let base = std::env::temp_dir().join(format!("winweaver-profile-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(base.join("empty")).unwrap();
+        std::fs::create_dir_all(base.join("full")).unwrap();
+        std::fs::write(base.join("full").join("NTUSER.DAT"), b"x").unwrap();
+        std::fs::write(base.join("file"), b"x").unwrap();
+        let problem = |name: &str| {
+            let folder = base.join(name);
+            profile_folder_problem(&folder.display().to_string())
+        };
+        assert_eq!(problem("new"), None);
+        assert_eq!(problem("new/deeper"), None);
+        assert_eq!(problem("empty"), None);
+        let full = problem("full").expect("a folder that holds a file");
+        assert!(full.contains("is not empty"), "{full}");
+        let file = problem("file").expect("a file");
+        assert!(file.contains("is a file"), "{file}");
+        let drive = base.display().to_string()[..3].to_owned();
+        for root in [drive.as_str(), "Profiles"] {
+            let why = profile_folder_problem(root).expect(root);
+            assert!(why.contains("not a folder of its own"), "{why}");
+        }
+        let climbing = format!("{}\\..", base.display());
+        assert!(profile_folder_problem(&climbing).is_some());
+        std::fs::remove_dir_all(&base).unwrap();
+    }
 
     /// On the CI runner, as administrator: an account is created with its group, its flags and
     /// its password, updated by its orders, read back, and deleted again (the program never

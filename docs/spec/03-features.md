@@ -76,7 +76,8 @@ lists the planned changes.
   ASCII (set after OOBE), an account twice, an automatic sign-in that names an account with a password or
   one the profile lacks, a tag that is not a language tag, an input language Windows does not know, a rule
   chosen on but blocked, a baseline rule off, two rules in conflict, a parameter outside its options or
-  range, an empty required text, two parameters that must differ, a text of a script outside ASCII, a list
+  range, an empty required text, two parameters that must differ, a text of a script outside ASCII, a
+  control character (a line break, for one) in a text that reaches the answer file, a list
   item without `=` or a name twice, options of a catalog that is not loaded, a region whose GeoID and
   code do not name one region Windows lists (a warning, nothing where Windows is not).
 - Build (`F9`): `output/autounattend.xml` from the runtime templates (`data/templates/`: the skeleton and

@@ -280,7 +280,7 @@ pub(crate) fn select(server: &Server, state: &mut State, name: &str) -> Result<(
 
 #[cfg(test)]
 mod tests {
-    use super::profiles::{hide_secrets, safe_file_name};
+    use super::profiles::{beginning, hide_secrets, safe_file_name};
     use super::*;
 
     #[test]
@@ -296,6 +296,30 @@ mod tests {
                 && safe_file_name("C:x").is_err()
         );
         assert_eq!(safe_file_name("Office 2").ok().as_deref(), Some("Office 2"));
+    }
+
+    /// The preview hides the secrets of the whole text before it cuts: wherever the cut falls,
+    /// inside the product key or inside a password, no character of either is shown, and a
+    /// value that lost its closing tag is hidden to its end.
+    #[test]
+    fn a_cut_never_shows_a_part_of_a_secret() {
+        let xml =
+            "<a><Key>QZQZQ-ZQZQZ</Key><b>text</b><Password><Value>ZZQQZZQQ</Value></Password></a>";
+        for limit in 0..=xml.len() {
+            let shown = beginning(xml, limit);
+            assert!(!shown.contains(['Q', 'Z']), "{limit}: {shown}");
+        }
+        assert_eq!(
+            beginning(xml, 200),
+            "<a><Key>***</Key><b>text</b><Password><Value>***</Value></Password></a>"
+        );
+        assert_eq!(hide_secrets("<Key>QZQZQ-ZQ"), "<Key>***");
+        assert_eq!(hide_secrets("<b>x</b><Value>ZZQ"), "<b>x</b><Value>***");
+        assert_eq!(hide_secrets("<Value>"), "<Value>");
+        assert_eq!(
+            hide_secrets("<Key>A</Key><Value>ZZ</Val"),
+            "<Key>***</Key><Value>***"
+        );
     }
 
     #[test]

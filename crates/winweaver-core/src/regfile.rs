@@ -302,21 +302,32 @@ impl RegFile {
             );
         }
         let mut lines = Vec::new();
-        let mut pending: Option<String> = None;
+        // A value that goes on in the next lines is collected in one text, each line added at
+        // its end: the time is linear in the size of the value, whatever the number of lines.
+        let mut joined = String::new();
+        let mut continued = false;
         for l in raw {
-            let joined = match pending.take() {
-                Some(start) => format!("{start}{}", l.trim_start()),
-                None => l.to_owned(),
-            };
+            if continued {
+                joined.push_str(l.trim_start());
+            } else {
+                joined.clear();
+                joined.push_str(l);
+            }
             let end = joined.trim_end();
-            if end.ends_with('\\') && !end.trim_start().starts_with(';') && end.contains('=') {
-                pending = Some(end[..end.len() - 1].to_owned());
+            // A line that goes on is a value (it holds `=`) and no comment; both stay true of
+            // the text collected, so only its end is looked at from the second line on.
+            let value = continued || (!end.trim_start().starts_with(';') && end.contains('='));
+            if value && end.ends_with('\\') {
+                let cut = end.len() - 1;
+                joined.truncate(cut);
+                continued = true;
                 continue;
             }
             lines.push(line_of(&joined));
+            continued = false;
         }
-        if let Some(rest) = pending {
-            lines.push(line_of(&rest));
+        if continued {
+            lines.push(line_of(&joined));
         }
         Ok(Self { header, lines })
     }
@@ -486,9 +497,13 @@ impl RegFile {
         file
     }
 
-    /// Adds a comment line; a line break of the text would end the comment, so it is a space.
-    fn note(&mut self, text: &str) {
-        let text = text.replace(['\r', '\n'], " ");
+    /// Adds a comment line, whatever the text holds: a line break (or another control
+    /// character but a tab) would end the comment and begin a line of its own, so it is a space.
+    pub(crate) fn note(&mut self, text: &str) {
+        let text: String = text
+            .chars()
+            .map(|c| if c.is_control() && c != '\t' { ' ' } else { c })
+            .collect();
         self.lines.push(Line::Comment(format!("; {text}")));
     }
 
@@ -632,6 +647,54 @@ mod tests {
                 name: "Two".to_owned(),
                 data: Some(two),
             }
+        );
+    }
+
+    /// A value of many continuation lines is read as the same value written in one line, and a
+    /// file that ends inside a continued value keeps what it has.
+    #[test]
+    fn a_value_of_many_lines_is_read_as_one() {
+        let bytes: Vec<u8> = (0..60_000u32).map(|i| (i % 251) as u8).collect();
+        let line = value_text("Big", Some(&Data::Binary(bytes.clone())));
+        assert!(line.matches("\\\r\n").count() > 2000, "many lines");
+        let head = format!("{HEADER}\r\n[HKEY_CURRENT_USER\\X]\r\n");
+        let many = RegFile::parse(&format!("{head}{line}\r\n\"After\"=dword:00000001\r\n"));
+        let single = line.replace("\\\r\n  ", "");
+        let one = RegFile::parse(&format!("{head}{single}\r\n\"After\"=dword:00000001\r\n"));
+        let many = many.unwrap();
+        assert_eq!(many, one.unwrap());
+        assert_eq!(
+            many.lines[1],
+            Line::Value {
+                name: "Big".to_owned(),
+                data: Some(Data::Binary(bytes)),
+            }
+        );
+        assert_eq!(many.lines.len(), 3);
+        // The spaces before a continuation and after the `\` are no part of the value, a
+        // comment and a line without `=` never go on, and the last line may be left open.
+        let odd = [
+            HEADER,
+            "; a comment \\",
+            "\"A\"=hex:01,\\  ",
+            "\t02,\\",
+            "",
+            "path\\",
+            "\"B\"=hex:03,\\",
+        ];
+        let file = RegFile::parse(&odd.join("\r\n")).unwrap();
+        let binary = |name: &str, bytes: &[u8]| Line::Value {
+            name: name.to_owned(),
+            data: Some(Data::Binary(bytes.to_vec())),
+        };
+        assert_eq!(
+            file.lines,
+            vec![
+                Line::Comment("; a comment \\".to_owned()),
+                binary("A", &[1, 2]),
+                Line::Other("path\\".to_owned()),
+                binary("B", &[3]),
+            ]
         );
     }
 

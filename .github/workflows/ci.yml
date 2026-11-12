@@ -32,6 +32,11 @@ on:
         type: boolean
         default: true
 
+# The token of a run reads the repository and nothing more; the job release alone asks for the
+# right to write (it publishes the release).
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -289,11 +294,21 @@ jobs:
       - name: Page of the browser edition
         # wasm-bindgen of the version Cargo.lock names (its crate and its tool must match), the prebuilt
         # binary of its release: it writes the module and the JavaScript glue next to index.html in
-        # files/, and single.py makes of them wwlite.html, the whole edition in one file.
+        # files/, and single.py makes of them wwlite.html, the whole edition in one file. The download
+        # is unpacked only when its SHA-256 is the one its release names (the first word of the file
+        # .sha256sum beside it), the check build-all.cmd makes.
         run: |
           v="$(grep -A1 '^name = "wasm-bindgen"$' Cargo.lock | grep '^version' | cut -d'"' -f2)"
           tool="wasm-bindgen-$v-x86_64-unknown-linux-musl"
-          curl -sSL -o wasm-bindgen.tar.gz "https://github.com/wasm-bindgen/wasm-bindgen/releases/download/$v/$tool.tar.gz"
+          url="https://github.com/wasm-bindgen/wasm-bindgen/releases/download/$v/$tool.tar.gz"
+          curl -fsSL -o wasm-bindgen.tar.gz "$url"
+          curl -fsSL -o wasm-bindgen.tar.gz.sha256sum "$url.sha256sum"
+          want="$(awk 'NR == 1 { print tolower($1) }' wasm-bindgen.tar.gz.sha256sum)"
+          got="$(sha256sum wasm-bindgen.tar.gz | awk '{ print tolower($1) }')"
+          if [ "${#want}" -ne 64 ] || [ "$want" != "$got" ]; then
+            echo "::error::The SHA-256 of wasm-bindgen $v is not the one of its release: $got, not $want"
+            exit 1
+          fi
           tar xzf wasm-bindgen.tar.gz
           out="dist-web/wwlite-web"
           "./$tool/wasm-bindgen" --target web --no-typescript --out-dir "$out/files" target/wasm32-unknown-unknown/release/wwlite.wasm

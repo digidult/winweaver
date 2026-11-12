@@ -379,15 +379,12 @@ impl Action {
     }
 
     /// The fields in which `{name}` placeholders are filled in; every other field is literal.
+    /// Each is a place where the value is data: quoted in a script, escaped in the XML.
     pub fn placeholder_fields(&self) -> Vec<(&'static str, String)> {
         match self {
-            Action::XmlPeCommand { command, .. } | Action::XmlSpecializeCommand { command, .. } => {
-                vec![("command", command.clone())]
-            }
             Action::XmlSetting { value, .. } | Action::XmlOobe { value, .. } => {
                 vec![("value", value.clone())]
             }
-            Action::Ps { script } => vec![("script", script.lines().join("\n"))],
             Action::Reg { value, .. } => match value {
                 Value::String(s) => vec![("value", s.clone())],
                 Value::Array(items) => items
@@ -398,6 +395,20 @@ impl Action {
                 _ => Vec::new(),
             },
             Action::Exe { args, .. } => args.iter().map(|a| ("args", a.clone())).collect(),
+            _ => Vec::new(),
+        }
+    }
+
+    /// The fields that are code: the lines of a script and a command of the answer file. They
+    /// are written as they are and never filled, since a value of a profile put into code
+    /// unquoted would be run as code (as SYSTEM, during the installation). Their braces are
+    /// the ones of PowerShell, so only a `{name}` of a parameter of the rule is refused.
+    pub fn code_fields(&self) -> Vec<(&'static str, String)> {
+        match self {
+            Action::XmlPeCommand { command, .. } | Action::XmlSpecializeCommand { command, .. } => {
+                vec![("command", command.clone())]
+            }
+            Action::Ps { script } => vec![("script", script.lines().join("\n"))],
             _ => Vec::new(),
         }
     }

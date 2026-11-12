@@ -62,8 +62,10 @@ pub enum Op {
     /// names; the backup names each one found, and no undo brings it back.
     RemoveApps { names: Vec<String> },
     /// Runs a program of the system folder on a folder of the installation media: the first drive
-    /// whose `folder` holds a file of `pattern` (`*.cab`), in its subfolders too when `deep`;
-    /// `{source}` in the arguments is that folder. Skipped when no drive has one.
+    /// but the one of Windows whose `folder` holds a file of `pattern` (`*.cab`), in its
+    /// subfolders too when `deep`; `{source}` in the arguments is that folder. Skipped when no
+    /// drive has one. The drive of Windows is left out on a running PC: a standard user can make
+    /// a folder at its root, and what is found is installed by an administrator.
     RunFromMedia {
         folder: String,
         pattern: String,
@@ -178,7 +180,8 @@ pub struct Step {
 pub struct Plan {
     pub format: String,
     pub version: u32,
-    /// A random text the helper must get on its command line too.
+    /// A random text that makes the bytes of every plan, and so its SHA-256, its own. The helper
+    /// gets the SHA-256 of the file on its command line, never this text.
     pub nonce: String,
     /// What the plan does, for the log: "apply", "revert" or "undo".
     pub purpose: String,

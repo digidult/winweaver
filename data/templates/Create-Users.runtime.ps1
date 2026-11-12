@@ -108,8 +108,13 @@ function Test-AccountName {
 function Unprotect-Passwords {
     param($Container, [System.Security.SecureString] $Master)
     if ((Get-Field $Container 'kdf' '') -ne 'pbkdf2-sha256') { throw 'The passwords use an unknown key derivation.' }
-    $iterations = [int](Get-Field $Container 'iterations' 0)
-    if ($iterations -lt 100000) { throw 'The passwords have too few iterations.' }
+    # The same limits as WinWeaver: a file that asks for more work than the upper one is refused
+    # before a key is derived, so a file never keeps this window computing for hours.
+    $count = 0L
+    if (-not [long]::TryParse([string](Get-Field $Container 'iterations' 0), [ref] $count)) { throw 'The passwords have an invalid number of iterations.' }
+    if ($count -lt 100000) { throw 'The passwords have too few iterations.' }
+    if ($count -gt 10000000) { throw 'The passwords have too many iterations (at most 10000000).' }
+    $iterations = [int]$count
     $salt = [Convert]::FromBase64String([string](Get-Field $Container 'salt' ''))
     $iv = [Convert]::FromBase64String([string](Get-Field $Container 'iv' ''))
     $mac = [Convert]::FromBase64String([string](Get-Field $Container 'mac' ''))
@@ -195,9 +200,30 @@ function Set-Membership {
     return ,$changes
 }
 
+function Test-ProfileFolder {
+    # Why a folder cannot become the folder of a profile, or nothing. The folder gets a new access
+    # list and a new owner, so only a folder that does not exist yet or is empty is taken: never
+    # the root of a drive, a link to another place, a file, or a folder that holds something.
+    param([string] $ProfilePath)
+    $full = [System.IO.Path]::GetFullPath($ProfilePath).TrimEnd('\')
+    $root = [System.IO.Path]::GetPathRoot($full).TrimEnd('\')
+    if (-not $root -or $full -eq $root) { return 'the profile folder is the root of a drive, not a folder of its own' }
+    if ($full -ne $ProfilePath.Replace('/', '\').TrimEnd('\')) { return 'the profile folder is no plain absolute path (it holds . or .., or ends with a dot or a space)' }
+    if (-not (Test-Path -LiteralPath $full)) { return $null }
+    $item = Get-Item -LiteralPath $full -Force
+    if ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { return 'the profile folder is a link to another place' }
+    if (-not $item.PSIsContainer) { return 'the profile folder is a file' }
+    if (@(Get-ChildItem -LiteralPath $full -Force | Select-Object -First 1).Count -gt 0) {
+        return 'the profile folder exists and is not empty: only a new or an empty folder is taken'
+    }
+    return $null
+}
+
 function New-ProfileFolder {
     # Only SYSTEM, Administrators and the account itself may enter the folder.
     param([string] $ProfilePath, [string] $UserSid)
+    $problem = Test-ProfileFolder -ProfilePath $ProfilePath
+    if ($problem) { throw ($ProfilePath + ': ' + $problem) }
     if (-not (Test-Path -LiteralPath $ProfilePath)) { New-Item -ItemType Directory -Path $ProfilePath -Force | Out-Null }
     $acl = Get-Acl -LiteralPath $ProfilePath
     $acl.SetAccessRuleProtection($true, $false)
@@ -216,12 +242,17 @@ function New-ProfileFolder {
     catch { Write-Log -Action 'PROFILE_OWNER' -Name $UserSid -Result 'SKIPPED' -Detail $_.Exception.Message }
 }
 
-function Test-ProfileElsewhere {
+function Get-ProfilePlace {
+    # Where the profile of an account is, against the folder the file names: 'nowhere' (Windows
+    # has none yet), 'here' (in this folder already) or 'elsewhere' (no profile is ever moved).
     param([string] $UserSid, [string] $ProfilePath)
     $key = Join-Path $PROFILE_LIST $UserSid
-    if (-not (Test-Path -LiteralPath $key)) { return $false }
+    if (-not (Test-Path -LiteralPath $key)) { return 'nowhere' }
     $current = (Get-ItemProperty -LiteralPath $key -Name 'ProfileImagePath' -ErrorAction SilentlyContinue).ProfileImagePath
-    return ([bool]$current -and $current -ne $ProfilePath)
+    if (-not $current) { return 'nowhere' }
+    $trim = [char[]]'\/ '
+    if ($current.TrimEnd($trim) -eq $ProfilePath.TrimEnd($trim)) { return 'here' }
+    return 'elsewhere'
 }
 
 function Register-Profile {
@@ -273,10 +304,11 @@ function Update-Account {
     if ($Entry.full_name -and $Entry.full_name -ne $Existing.FullName) { Set-LocalUser -Name $name -FullName $Entry.full_name; $changes += 'FullName' }
     if ($Entry.description -and $Entry.description -ne $Existing.Description) { Set-LocalUser -Name $name -Description $Entry.description; $changes += 'Description' }
     if ($Entry.profile_path) {
-        if (Test-ProfileElsewhere -UserSid $sid -ProfilePath $Entry.profile_path) {
+        $place = Get-ProfilePlace -UserSid $sid -ProfilePath $Entry.profile_path
+        if ($place -eq 'elsewhere') {
             Write-Log -Action 'PROFILE_PATH' -Name $name -Result 'KEPT' -Detail 'An existing profile was found and was not moved.'
         }
-        else {
+        elseif ($place -eq 'nowhere') {
             New-ProfileFolder -ProfilePath $Entry.profile_path -UserSid $sid
             Register-Profile -UserSid $sid -ProfilePath $Entry.profile_path
             $changes += 'ProfilePath'

@@ -11,6 +11,7 @@ pub mod diff;
 pub mod export;
 pub mod i18n;
 pub mod import;
+pub mod message;
 pub mod pol;
 pub mod profile;
 pub mod regfile;
@@ -30,8 +31,9 @@ pub mod validate;
 
 pub use ww_base::{clock, jsonfile, paths};
 
-/// The version of the program, taken from the workspace: the second number grows with a feature,
-/// the third with a fix.
+/// The version of the program, taken from the workspace: the third number grows with every pull
+/// request that reaches `main`, the first and the second only on the word of the customer
+/// (`AGENTS.md`, rule 11).
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// The commit the build is made from, 12 hexadecimal digits or "unknown" (`build.rs`).
