@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use eframe::egui;
 use winweaver_core::admx::CatalogFile;
 use winweaver_core::catalog::{Group, Rule};
+use winweaver_core::i18n::CatalogTexts;
 
 use crate::ShellAct;
 use crate::i18n::{tr, trf};
@@ -83,18 +84,38 @@ pub(crate) fn group_title<'a>(file: &'a CatalogFile, lang: &str, group: &'a Grou
     file.texts
         .get(lang)
         .and_then(|t| t.groups.get(&group.id))
-        .map_or(group.title.as_str(), String::as_str)
+        .and_then(|t| t.title.as_deref())
+        .unwrap_or(&group.title)
 }
 
+/// The title and the summary of a policy of a file in a language, the English ones where the
+/// file has none.
 pub(crate) fn rule_texts<'a>(
     file: &'a CatalogFile,
     lang: &str,
     rule: &'a Rule,
 ) -> (&'a str, &'a str) {
-    match file.texts.get(lang).and_then(|t| t.rules.get(&rule.id)) {
-        Some((title, summary)) => (title.as_str(), summary.as_str()),
-        None => (rule.title.as_str(), rule.summary.as_str()),
-    }
+    let text = file.texts.get(lang).and_then(|t| t.rules.get(&rule.id));
+    (
+        text.and_then(|t| t.title.as_deref()).unwrap_or(&rule.title),
+        text.and_then(|t| t.summary.as_deref())
+            .unwrap_or(&rule.summary),
+    )
+}
+
+/// The translation of one policy of a file, in the form the cards of a rule read: every text of
+/// the policy in the language, its parameters and their values too.
+pub(crate) fn rule_translation(
+    file: &CatalogFile,
+    lang: &str,
+    rule: &Rule,
+) -> Option<CatalogTexts> {
+    let text = file.texts.get(lang)?.rules.get(&rule.id)?;
+    Some(CatalogTexts {
+        code: lang.to_owned(),
+        rules: std::iter::once((rule.id.clone(), text.clone())).collect(),
+        ..CatalogTexts::default()
+    })
 }
 
 /// The rules that hold every word of the search and the groups above them.
@@ -330,12 +351,10 @@ fn detail(
         return;
     };
     // The policy in the cards of the profile view: the head, the parameters, the description.
-    let (title, summary) = rule_texts(file, lang, rule);
-    let mut shown = rule.clone();
-    shown.title = title.to_owned();
-    shown.summary = summary.to_owned();
+    let texts = rule_translation(file, lang, rule);
+    let (title, _) = rule_texts(file, lang, rule);
     crate::views::header(ui, |ui| {
-        ui.label(style::strong(ui, &shown.title, 18.0));
+        ui.label(style::strong(ui, title, 18.0));
         crate::views::id_line(ui, &rule.id);
         ui.horizontal_wrapped(|ui| {
             let mechanism = winweaver_core::catalog::Catalog::mechanism(rule);
@@ -363,7 +382,10 @@ fn detail(
                 .show(ui, |ui| {
                     for (name, param) in &rule.params {
                         ui.label(egui::RichText::new(name).monospace());
-                        ui.label(param.title());
+                        ui.label(match &texts {
+                            Some(t) => t.param_title(rule, name),
+                            None => param.title(),
+                        });
                         ui.end_row();
                     }
                 });
@@ -390,7 +412,7 @@ fn detail(
             }
         });
     }
-    crate::views::rule_description(ui, catalog, None, &shown, settings, link, acts);
+    crate::views::rule_description(ui, catalog, texts.as_ref(), rule, settings, link, acts);
 }
 
 /// The group above a group, the groups in it and its policies, as links of the tree of the tab.

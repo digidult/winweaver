@@ -216,10 +216,18 @@ setiap penghapusan, meminta konfirmasi lebih dulu.
 Panel detail sebuah opsi menautkan tab katalog yang memuatnya dan kebijakan yang sama di pohon impor lain;
 penanda opsi itu juga. Di Pengaturan, Umum dipilih bagian deskripsi mana yang terbuka sejak awal.
 
-**Sunting** di bilah tab katalog membuka katalog di editor, dan **Katalog baru** di menu templat memulai katalog
-kosong milik Anda. Sebuah kebijakan mendapat judul, deskripsi, komputer atau profil pengguna bawaan, dan nilai
-registri yang ditulis atau dihapusnya; **Terapkan** memeriksa seluruh file, dan tidak ada yang berubah bila
-pemeriksaan gagal. Simpan (Ctrl+S) menulis file dan memuatnya lagi. **Hapus grup** menghapus grup yang dipilih, setelah sebuah pertanyaan, beserta semua grup dan kebijakan di dalamnya; grup teratas file tetap ada.
+**Sunting** di bilah tab katalog membuka katalog di editor, dan **Katalog baru** di menu templat memulai
+katalog kosong milik Anda. Kebijakan disunting utuh, seperti aturan katalog bawaan: judul dan deskripsinya,
+grupnya, kapan dijalankan (tahap file jawaban, skrip instalasi, profil pengguna bawaan, masuk pertama, setelah
+OOBE), tingkatnya, teks di **Rincian**, parameternya, dan tindakannya dari jenis apa pun (nilai registri,
+pengaturan dan perintah file jawaban, baris skrip, layanan, fitur, kapabilitas, aplikasi, program), dan di
+**Terjemahan** setiap teks dalam bahasa lain, dengan teks bahasa Inggris ditampilkan di kolom kosong. Grup
+mendapat judul, deskripsi, dan tempatnya: kebijakan file jawaban berada di Instalasi, yang hanya menulis
+registri di Kebijakan, sisanya di Lainnya. **Terapkan** memeriksa seluruh file seperti katalog bawaan
+diperiksa, dan tidak ada yang berubah bila pemeriksaan gagal. Simpan (Ctrl+S) menulis file dan memuatnya lagi.
+**Hapus grup** menghapus grup yang dipilih, setelah sebuah pertanyaan, beserta semua grup dan kebijakan di
+dalamnya; grup teratas file tetap ada. Katalog dengan skrip, perintah, atau program sendiri hanya diimpor
+setelah sebuah pertanyaan: impor katalog seperti itu hanya dari sumber yang Anda percayai.
 
 Perbandingan terbuka di sebuah tab: kebijakan yang berbeda dalam pohon kategorinya, dengan sakelar untuk
 yang hanya ada di katalog pertama, hanya di katalog kedua dan yang berbeda, serta kebijakan terpilih apa
@@ -303,7 +311,7 @@ menyebutkan apa yang dipakai jendela untuk menggambar.
 | `--version` | Menampilkan versi |
 | `--check-catalog` | Memuat katalog bawaan dengan terjemahannya dan menampilkan masalahnya |
 | `--build PROFILE` | Memeriksa profil dan membuat file jawabannya tanpa jendela: `autounattend.xml` di `output`, dengan skrip yang disematkannya di sampingnya; PROFILE adalah file `.wwprofile`, preset (`Office`, `Strict`, `Laptop`, `Home`), atau nama profil dari `profiles/`; kesalahan pemeriksaan menghentikan pembuatan |
-| `--import-admx SOURCE` | Mengimpor templat kebijakan seperti Pengaturan, Templat kebijakan: `system` (templat Windows ini), folder file ADMX, file `.admx` dengan ADML dari folder bahasanya, arsip `.zip`, atau file `.wwcatalog`; file katalog masuk ke `imports/`, dan jendela serta server MCP memuatnya pada start berikutnya (jalankan saat jendela tertutup) |
+| `--import-admx SOURCE` | Mengimpor templat kebijakan seperti Pengaturan, Templat kebijakan: `system` (templat Windows ini), folder file ADMX, file `.admx` dengan ADML dari folder bahasanya, arsip `.zip`, atau file `.wwcatalog`; file katalog masuk ke `imports/`, dan jendela serta server MCP memuatnya pada start berikutnya (jalankan saat jendela tertutup); katalog yang aturannya menjalankan kode sendiri memerlukan `--code allow` |
 | `--export-catalog SOURCE` | Menulis file katalog (`.wwcatalog`) seperti Ekspor di Pengaturan, Templat kebijakan: dari impor menurut id-nya (nama file-nya di `imports/`), atau dari sumber `--import-admx` yang dibaca tanpa mengimpornya; `<id>.wwcatalog` di `output` |
 | `--read-pc` | Tanpa `--mcp`: membaca PC ini ke profil baru bernama komputer, seperti PC Ini, Baca PC ini, dan menyimpannya di `profiles/`; dengan file `.xml` di `--out`, menulis file jawaban profil itu sebagai gantinya; fitur dan kemampuan Windows hanya dibaca saat program berjalan sebagai administrator |
 | `--base PROFILE` | Dengan `--read-pc`: profil awal pembacaan, diberikan seperti untuk `--build`; secara default preset Office |

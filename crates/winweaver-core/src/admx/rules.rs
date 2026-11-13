@@ -13,6 +13,7 @@ use crate::catalog::{
 use super::file::{CatalogFile, LangTexts};
 use super::templates::{Element, Policy, Templates, Texts, Val};
 use super::{CATALOG_FORMAT, CATALOG_VERSION, CULTURES, NAME_MAX, SUMMARY_MAX};
+use crate::i18n::{GroupText, RuleText};
 
 pub(super) fn slug(text: &str) -> String {
     let s: String = text
@@ -517,11 +518,13 @@ pub fn to_catalog_file(
         });
         for (culture, code) in CULTURES.iter().skip(1) {
             if let Some(text) = c.title.get(*culture) {
-                texts
-                    .entry((*code).to_owned())
-                    .or_default()
-                    .groups
-                    .insert(gid.clone(), cut(&format!("{text}{mark}"), 200));
+                texts.entry((*code).to_owned()).or_default().groups.insert(
+                    gid.clone(),
+                    GroupText {
+                        title: Some(cut(&format!("{text}{mark}"), 200)),
+                        summary: None,
+                    },
+                );
             }
         }
     }
@@ -596,13 +599,14 @@ pub fn to_catalog_file(
                 used.insert(format!("{rid}.off"));
                 for (culture, code) in CULTURES.iter().skip(1) {
                     if let Some(title) = p.title.get(*culture) {
-                        let summary = p
-                            .explain
-                            .get(*culture)
-                            .map(|s| cut(s, SUMMARY_MAX))
-                            .unwrap_or_default();
+                        let summary = p.explain.get(*culture).map(|s| cut(s, SUMMARY_MAX));
                         let lang = texts.entry((*code).to_owned()).or_default();
-                        lang.rules.insert(rid.clone(), (cut(title, 300), summary));
+                        let text = RuleText {
+                            title: Some(cut(title, 300)),
+                            summary: summary.filter(|s| !s.is_empty()),
+                            ..RuleText::default()
+                        };
+                        lang.rules.insert(rid.clone(), text);
                     }
                 }
                 rules.push(on);

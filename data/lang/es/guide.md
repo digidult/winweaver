@@ -234,9 +234,19 @@ directiva en los árboles de otras importaciones; un marcador de la opción tamb
 General se elige qué partes de la descripción se abren al principio.
 
 **Editar** en la barra de una pestaña de catálogo lo abre en un editor, y **Nuevo catálogo** en el menú de las
-plantillas empieza uno vacío propio. Una directiva recibe su título, su descripción, el equipo o el perfil
-de usuario predeterminado y los valores del registro que escribe o quita; **Aplicar** comprueba todo el
-archivo, y nada cambia si la comprobación falla. Guardar (Ctrl+S) escribe el archivo y lo vuelve a cargar. **Quitar el grupo** quita el grupo seleccionado, tras una pregunta, con todos los grupos y directivas que contiene; el grupo superior del archivo se queda.
+plantillas empieza uno vacío propio. Una directiva se edita entera, como una regla del catálogo integrado: su
+título y su descripción, su grupo, cuándo se ejecuta (una fase del archivo de respuestas, el script de la
+instalación, el perfil de usuario predeterminado, el primer inicio de sesión, después de OOBE), su nivel, los
+textos de **Detalles**, sus parámetros y sus acciones de cualquier tipo (valores del registro, configuraciones
+y comandos del archivo de respuestas, líneas del script, servicios, características, funcionalidades,
+aplicaciones, programas), y en **Traducciones** cada texto en otro idioma, con el inglés mostrado en un campo
+vacío. Un grupo recibe su título, su descripción y su lugar: una directiva del archivo de respuestas va bajo
+Instalación, una que solo escribe el registro bajo Directivas, el resto bajo Otros. **Aplicar** comprueba todo
+el archivo como se comprueba el catálogo integrado, y nada cambia si la comprobación falla. Guardar (Ctrl+S)
+escribe el archivo y lo vuelve a cargar. **Quitar el grupo** quita el grupo seleccionado, tras una pregunta,
+con todos los grupos y directivas que contiene; el grupo superior del archivo se queda. Un catálogo con
+scripts, comandos o programas propios se importa solo tras una pregunta: importe un catálogo así solo desde
+una fuente de confianza.
 
 La comparación se abre en una pestaña: las directivas que difieren en el árbol de sus categorías, con
 interruptores para las que solo están en el primer catálogo, solo en el segundo y las distintas, y la
@@ -325,7 +335,7 @@ registro de `logs/` indica con qué dibuja la ventana.
 | `--version` | Muestra la versión |
 | `--check-catalog` | Carga el catálogo integrado con sus traducciones y muestra sus problemas |
 | `--build PROFILE` | Comprueba un perfil y genera su archivo de respuesta sin la ventana: `autounattend.xml` en `output`, con los scripts que incrusta junto a él; PROFILE es un archivo `.wwprofile`, un perfil predefinido (`Office`, `Strict`, `Laptop`, `Home`) o el nombre de un perfil de `profiles/`; un error de la comprobación detiene la generación |
-| `--import-admx SOURCE` | Importa plantillas de directivas como lo hace Configuración, Plantillas de directivas: `system` (las plantillas de este Windows), una carpeta de archivos ADMX, un archivo `.admx` con los ADML de las carpetas de sus idiomas, un archivo `.zip` o un archivo `.wwcatalog`; el archivo de catálogo va a `imports/`, y la ventana y el servidor MCP lo cargan en su próximo inicio (ejecútelo con la ventana cerrada) |
+| `--import-admx SOURCE` | Importa plantillas de directivas como lo hace Configuración, Plantillas de directivas: `system` (las plantillas de este Windows), una carpeta de archivos ADMX, un archivo `.admx` con los ADML de las carpetas de sus idiomas, un archivo `.zip` o un archivo `.wwcatalog`; el archivo de catálogo va a `imports/`, y la ventana y el servidor MCP lo cargan en su próximo inicio (ejecútelo con la ventana cerrada); un catálogo cuyas reglas ejecutan código propio necesita `--code allow` |
 | `--export-catalog SOURCE` | Escribe un archivo de catálogo (`.wwcatalog`) como lo hace Exportar en Configuración, Plantillas de directivas: de una importación por su identificador (el nombre de su archivo en `imports/`), o de un origen de `--import-admx` leído sin importarlo; `<id>.wwcatalog` en `output` |
 | `--read-pc` | Sin `--mcp`: lee este equipo en un perfil nuevo con el nombre del equipo, como Este equipo, Leer este PC, y lo guarda en `profiles/`; con un archivo `.xml` en `--out` escribe en su lugar el archivo de respuesta de ese perfil; las características y funcionalidades de Windows solo se leen cuando el programa se ejecuta como administrador |
 | `--base PROFILE` | Con `--read-pc`: el perfil del que parte la lectura, indicado como para `--build`; por defecto el perfil predefinido Office |

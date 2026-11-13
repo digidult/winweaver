@@ -110,3 +110,9 @@ pub fn load() -> Result<Catalog, CatalogError> {
     }
     Catalog::from_parts(CATALOG_VERSION, groups.groups, rules)
 }
+
+/// The embedded catalog, read once: the rules a catalog file may name and the roots of the tree.
+pub fn cached() -> Option<&'static Catalog> {
+    static CATALOG: std::sync::OnceLock<Option<Catalog>> = std::sync::OnceLock::new();
+    CATALOG.get_or_init(|| load().ok()).as_ref()
+}

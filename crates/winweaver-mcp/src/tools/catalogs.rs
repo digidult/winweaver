@@ -3,9 +3,11 @@
 
 use std::path::PathBuf;
 
+use indexmap::IndexMap;
 use serde_json::{Value, json};
 use winweaver_core::admx::{self, CatalogFile, CatalogHeader};
 use winweaver_core::catalog::Rule;
+use winweaver_core::i18n::RuleText;
 
 use super::{Args, Kind, Needs, Outcome, Tool, ToolError, fail, s, schema};
 use crate::{Server, State};
@@ -33,7 +35,7 @@ pub(super) const GET_CATALOG: Tool = Tool {
 
 pub(super) const GET_CATALOG_POLICY: Tool = Tool {
     name: "get_catalog_policy",
-    description: "A policy of a catalog file as JSON (texts, parameters, registry actions), with its Disabled rule when it has one.",
+    description: "A policy of a catalog file as JSON (texts, parameters, actions), with its Disabled rule when it has one and the translations of both by language code (texts, off_texts).",
     needs: Needs::READ,
     schema: || {
         schema(
@@ -46,11 +48,15 @@ pub(super) const GET_CATALOG_POLICY: Tool = Tool {
 
 pub(super) const SET_CATALOG_POLICY: Tool = Tool {
     name: "set_catalog_policy",
-    description: "Writes a policy into a catalog file, a new one or in place of the one of its id, as JSON in the form of get_catalog_policy; the whole file is checked, then saved. The program reads it at its next load. Needs the option edit_library.",
+    description: "Writes a policy into a catalog file, a new one or in place of the one of its id, as JSON in the form of get_catalog_policy, with its translations when texts is given (they replace the ones the policy had); the whole file is checked, then saved. The program reads it at its next load. A policy that runs code (a script, a command, a program or a setting of the answer file) is written in the editor of the window only. Needs the option edit_library.",
     needs: Needs::LIBRARY,
     schema: || {
         schema(
-            json!({ "id": s("The id of the catalog"), "policy": { "type": "object", "description": "The policy" } }),
+            json!({
+                "id": s("The id of the catalog"),
+                "policy": { "type": "object", "description": "The policy" },
+                "texts": { "type": "object", "description": "The translations of the policy by language code, each in the form of a rule of the translation files of the catalog (title, summary, effect, risk, versions, verify, rollback, note, tags, params, values)" }
+            }),
             &["id", "policy"],
         )
     },
@@ -154,14 +160,43 @@ fn get_catalog_policy(_server: &Server, state: &mut State, args: &Args<'_>) -> O
         .find(|r| r.id == policy)
         .ok_or_else(|| fail(Kind::NotFound, format!("no policy {policy}")))?;
     let off = file.rules.iter().find(|r| r.id == format!("{policy}.off"));
-    Ok(json!({ "policy": rule, "off": off }))
+    let texts_of = |id: &str| -> serde_json::Map<String, Value> {
+        file.texts
+            .iter()
+            .filter_map(|(code, lang)| {
+                let text = lang.rules.get(id)?;
+                Some((code.clone(), serde_json::to_value(text).ok()?))
+            })
+            .collect()
+    };
+    let off_texts = off.map(|r| texts_of(&r.id));
+    Ok(json!({ "policy": rule, "texts": texts_of(&rule.id), "off": off, "off_texts": off_texts }))
 }
 
 fn set_catalog_policy(_server: &Server, state: &mut State, args: &Args<'_>) -> Outcome {
     let (mut file, path) = load_catalog(state, args)?;
     let rule: Rule = serde_json::from_value(args.get("policy").cloned().unwrap_or_default())
         .map_err(|e| fail(Kind::Invalid, format!("policy: {e}")))?;
-    file.put_rule(rule).map_err(|e| fail(Kind::Invalid, e))?;
+    if rule.runs_code() {
+        return Err(fail(
+            Kind::Invalid,
+            "a policy that runs code (a script, a command, a program or a setting of the answer file) is written in the editor of the window only",
+        ));
+    }
+    let texts = match args.get("texts") {
+        Some(v) => Some(
+            serde_json::from_value::<IndexMap<String, RuleText>>(v.clone())
+                .map_err(|e| fail(Kind::Invalid, format!("texts: {e}")))?,
+        ),
+        None => None,
+    };
+    let id = rule.id.clone();
+    let mut next = file.clone();
+    if let Some(texts) = texts {
+        next.set_rule_texts(&id, texts);
+    }
+    next.put_rule(rule).map_err(|e| fail(Kind::Invalid, e))?;
+    file = next;
     file.save(&path).map_err(|e| fail(Kind::WriteFailed, e))?;
     Ok(json!({ "saved": file.id, "policies": file.rules.len() }))
 }

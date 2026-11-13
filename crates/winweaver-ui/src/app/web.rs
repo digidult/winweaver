@@ -138,7 +138,7 @@ impl WinWeaver {
             }
             e if e == admx::CATALOG_EXTENSION => {
                 match text().and_then(|t| CatalogFile::parse(&t, name)) {
-                    Ok(file) => self.import_catalog_file(shell, file),
+                    Ok(file) => self.import_catalog_file(shell, file, false),
                     Err(e) => shell.open_failed(e),
                 }
                 return;
@@ -153,7 +153,7 @@ impl WinWeaver {
                     }
                 });
                 match file {
-                    Ok(file) => self.import_catalog_file(shell, file),
+                    Ok(file) => self.import_catalog_file(shell, file, false),
                     Err(e) => shell.open_failed(e),
                 }
                 return;
@@ -197,34 +197,6 @@ impl WinWeaver {
             }
             Err(e) => shell.open_failed(e),
         }
-    }
-
-    /// Imports a catalog file the browser handed over, as WinWeaver loads one of the folder next
-    /// to it: kept among the imports in the storage of the page (a catalog the storage refuses,
-    /// too large for it, stays for this page only), loaded, its options in the profiles, and its
-    /// tab in front. An import of the same id is replaced: the file is a newer version of it.
-    fn import_catalog_file(&mut self, shell: &mut Shell<WinWeaver>, file: CatalogFile) {
-        let saved = save_import(&self.full.imports_dir, &file);
-        let rules = file.rules.len();
-        let skipped = file.skipped.len();
-        let id = file.id.clone();
-        self.imports.retain(|f| f.id != id);
-        self.imports.push(file);
-        self.imports.sort_by_key(|f| import_order(&f.id));
-        // Loaded at the next start only when the page keeps the file.
-        if saved.is_ok() {
-            self.mark_loaded(shell, &id);
-        }
-        self.refresh_import_list();
-        self.rebuild_catalog(shell);
-        self.open_catalog(shell, &id);
-        shell.status = match saved {
-            Ok(_) => trf(
-                "Imported: {rules} rules, {skipped} policies skipped",
-                &[("rules", &rules), ("skipped", &skipped)],
-            ),
-            Err(e) => trf("Imported, but not saved: {e}", &[("e", &e)]),
-        };
     }
 }
 

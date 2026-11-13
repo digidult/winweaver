@@ -192,6 +192,12 @@ impl Param {
 }
 
 impl Rule {
+    /// Whether the rule runs code of its own: a script, a command or a program, or a setting of
+    /// the answer file, which can run commands too.
+    pub fn runs_code(&self) -> bool {
+        self.actions.iter().any(Action::runs_code)
+    }
+
     /// The name of the parameter of the rule chosen from a list of Windows.
     pub fn param_picked(&self, pick: Pick) -> Option<&str> {
         self.params
@@ -361,6 +367,19 @@ impl Action {
             Action::Capability { .. } => "capability",
             Action::Appx { .. } => "appx",
         }
+    }
+
+    /// Whether the action runs code of its own: a script, a command or a program, or a setting
+    /// of the answer file, whose components can run commands too.
+    pub fn runs_code(&self) -> bool {
+        matches!(
+            self,
+            Action::Ps { .. }
+                | Action::XmlPeCommand { .. }
+                | Action::XmlSpecializeCommand { .. }
+                | Action::XmlSetting { .. }
+                | Action::Exe { .. }
+        )
     }
 
     /// Whether the action is a setting or a command of the answer file itself.

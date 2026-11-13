@@ -6,7 +6,7 @@
 |---|---|---|---|
 | Profile | `.wwprofile` | The choices of rules with parameters and the installation forms | Tree and detail panel |
 | Diff | `.wwdiff` | The differences between two profiles, with comments | List and the selected difference |
-| Catalog file | `.wwcatalog` | The rules and groups of one import of policy templates, exchangeable between PCs | Tree without check boxes |
+| Catalog file | `.wwcatalog` | The rules and groups of one catalog of the user (an import of policy templates or one made in the editor), exchangeable between PCs | Tree without check boxes |
 | Bookmark file | `.wwmarks` | Options and registry keys with comments | List and the selected bookmark |
 | Users file | `.wwusers` | The local accounts to make on a PC with their passwords encrypted under a master password in the same file | List of accounts and the form of the selected one |
 | Registry file | `.reg` | The format of regedit (version 5 in UTF-16 with its mark, or REGEDIT4): keys, values and their deletions, comments; every line is kept, the ones the program does not read too | Outline of keys and comments, the lines of the selected key |
@@ -107,13 +107,21 @@ keeps an optional comment of several lines by the key of an item: `rule:<id>`, `
 
 ## 5. Catalog file
 
-The rules and groups of one import of policy templates: `format` `winweaver-catalog`, `version`, `kind`
-(`admx`), `id`, `name`, `windows` (the build the templates came from), `created`, `groups`, `rules`,
-`texts` (the titles and summaries in other languages, by language code) and `skipped` (the policies the
-import left out, and why). Plain JSON. The file is checked at every load: ids under `admx.`, groups under
-the policies root, the phases of the machine or of the default user profile, only registry values, their
-removals and lists under `HKLM:\` or `DU:\`, safe keys, value names and texts, placeholders only for the
-parameters of the rule, conflicts only inside the file (`03-features.md` section 6).
+The rules and groups of one catalog of the user, an import of policy templates or a catalog made in the
+editor: `format` `winweaver-catalog`, `version` (2; a file of version 1 is still read), `kind` (`admx`),
+`id`, `name`, `windows` (the build the templates came from), `created`, `groups`, `rules`, `texts` and
+`skipped` (the policies the import left out, and why). Plain JSON. A rule of the file is a rule of the
+built-in catalog, with every field and every kind of action (`03-features.md` section 2). `texts` holds
+the translations by language code in the form of the translation files of the catalog: `groups` (the
+title and the summary of a group) and `rules` (every text of a rule, the titles of its parameters and of
+their values); version 1 held the title of a group and the title and summary of a rule. The file is
+checked at every load with the checks of the built-in catalog (the mechanism of a rule and the root of
+its group, its parameters, placeholders only for parameters and never in code) and its own: ids under
+`admx.`, groups under a root of the tree or a group of the file without a cycle, the rules a rule needs
+or conflicts with in the file or in the built-in catalog, registry keys under `HKLM:\`, `DU:\`,
+`HKCU:\` or `HKU:\` with safe segments, safe texts where the registry, a script or the answer file takes
+them, translations without control characters. A catalog whose rules run code of their own is imported
+only after a question (`03-features.md` section 6).
 
 ## 6. Bookmark file
 

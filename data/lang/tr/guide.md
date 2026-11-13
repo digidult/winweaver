@@ -220,10 +220,19 @@ Bir seçeneğin ayrıntı paneli, onu içeren katalog sekmelerine ve diğer içe
 ilkeye bağlantı verir; seçeneğin yer imi de öyle. Ayarlar, Genel'de açıklamanın hangi bölümlerinin baştan
 açık olacağı seçilir.
 
-Bir katalog sekmesinin çubuğundaki **Düzenle** kataloğu bir düzenleyicide açar, şablon menüsündeki **Yeni katalog**
-de size ait boş bir katalog başlatır. Bir ilke başlığını, açıklamasını, bilgisayarı veya varsayılan kullanıcı
-profilini ve yazdığı ya da kaldırdığı kayıt defteri değerlerini alır; **Uygula** tüm dosyayı denetler ve denetim
-başarısız olursa hiçbir şey değişmez. Kaydet (Ctrl+S) dosyayı yazar ve yeniden yükler. Seçili grup, bir sorudan sonra **Grubu kaldır** ile içindeki tüm grup ve ilkelerle birlikte kaldırılır; dosyanın en üst grubu kalır.
+Bir katalog sekmesinin çubuğundaki **Düzenle** kataloğu bir düzenleyicide açar, şablon menüsündeki **Yeni
+katalog** de size ait boş bir katalog başlatır. Bir ilke, yerleşik kataloğun bir kuralı gibi bütünüyle
+düzenlenir: başlığı ve açıklaması, grubu, ne zaman çalıştığı (yanıt dosyasının bir geçişi, kurulum betiği,
+varsayılan kullanıcı profili, ilk oturum açma, OOBE sonrası), düzeyi, **Ayrıntılar** altındaki metinler,
+parametreleri ve her türden eylemi (kayıt defteri değerleri, yanıt dosyasının ayarları ve komutları, betik
+satırları, hizmetler, özellikler, yetenekler, uygulamalar, programlar), **Çeviriler** altında da başka bir
+dildeki her metin; boş bir alanda İngilizcesi gösterilir. Bir grup başlığını, açıklamasını ve yerini alır:
+yanıt dosyasının bir ilkesi Kurulum altında, yalnızca kayıt defterine yazan biri İlkeler altında, geri kalanı
+Diğer altında yer alır. **Uygula** tüm dosyayı yerleşik katalog nasıl denetleniyorsa öyle denetler ve denetim
+başarısız olursa hiçbir şey değişmez. Kaydet (Ctrl+S) dosyayı yazar ve yeniden yükler. Seçili grup, bir
+sorudan sonra **Grubu kaldır** ile içindeki tüm grup ve ilkelerle birlikte kaldırılır; dosyanın en üst grubu
+kalır. Kendi betikleri, komutları ya da programları olan bir katalog yalnızca bir sorudan sonra içe aktarılır:
+böyle bir kataloğu yalnızca güvendiğiniz bir kaynaktan içe aktarın.
 
 Karşılaştırma bir sekmede açılır: farklı ilkeler kategorilerinin ağacında, yalnızca ilk katalogda,
 yalnızca ikincisinde olanlar ve farklı olanlar için anahtarlarla; seçili ilke her iki katalogdaki haliyle
@@ -309,7 +318,7 @@ yazılır: `--renderer=directx`.
 | `--version` | Sürümü yazdırır |
 | `--check-catalog` | Yerleşik kataloğu çevirileriyle yükler ve sorunlarını yazdırır |
 | `--build PROFILE` | Pencere olmadan bir profili denetler ve yanıt dosyasını oluşturur: `output` içinde `autounattend.xml` ve yanında gömdüğü betikler; PROFILE bir `.wwprofile` dosyası, bir hazır ayar (`Office`, `Strict`, `Laptop`, `Home`) veya `profiles/` içindeki bir profilin adıdır; denetimin bir hatası oluşturmayı durdurur |
-| `--import-admx SOURCE` | İlke şablonlarını Ayarlar, İlke şablonları gibi içeri aktarır: `system` (bu Windows'un şablonları), ADMX dosyalarından oluşan bir klasör, dil klasörlerinin ADML'leriyle bir `.admx` dosyası, bir `.zip` arşivi veya bir `.wwcatalog` dosyası; katalog dosyası `imports/` içine konur, pencere ve MCP sunucusu onu bir sonraki başlatmalarında yükler (pencere kapalıyken çalıştırın) |
+| `--import-admx SOURCE` | İlke şablonlarını Ayarlar, İlke şablonları gibi içeri aktarır: `system` (bu Windows'un şablonları), ADMX dosyalarından oluşan bir klasör, dil klasörlerinin ADML'leriyle bir `.admx` dosyası, bir `.zip` arşivi veya bir `.wwcatalog` dosyası; katalog dosyası `imports/` içine konur, pencere ve MCP sunucusu onu bir sonraki başlatmalarında yükler (pencere kapalıyken çalıştırın); kuralları kendi kodunu çalıştıran bir katalog `--code allow` gerektirir |
 | `--export-catalog SOURCE` | Ayarlar, İlke şablonları içindeki Dışarı aktar gibi bir katalog dosyası (`.wwcatalog`) yazar: kimliğiyle bir içeri aktarımın (`imports/` içindeki dosyasının adı) veya içeri aktarılmadan okunan bir `--import-admx` kaynağının; `output` içinde `<id>.wwcatalog` |
 | `--read-pc` | `--mcp` olmadan: bu bilgisayarı Bu bilgisayar, Bu bilgisayarı oku gibi bilgisayarın adını taşıyan yeni bir profile okur ve `profiles/` içine kaydeder; `--out` içinde bir `.xml` dosyasıyla bunun yerine o profilin yanıt dosyasını yazar; Windows özellikleri ve yetenekleri yalnızca program yönetici olarak çalıştığında okunur |
 | `--base PROFILE` | `--read-pc` ile: okumanın başladığı profil, `--build` için olduğu gibi verilir; varsayılan olarak Office hazır ayarı |

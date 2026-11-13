@@ -19,6 +19,19 @@ pub fn check(catalog: &Catalog) -> Vec<String> {
     problems
 }
 
+/// The problems of some rules of a catalog: the checks of `check` for each of them. A catalog
+/// file checks its own rules so, in a catalog of the roots and its groups.
+pub fn check_rules<'a>(
+    catalog: &Catalog,
+    rules: impl IntoIterator<Item = &'a Rule>,
+) -> Vec<String> {
+    let mut problems = Vec::new();
+    for rule in rules {
+        check_rule(catalog, rule, &mut problems);
+    }
+    problems
+}
+
 fn check_rule(catalog: &Catalog, rule: &Rule, problems: &mut Vec<String>) {
     let id = &rule.id;
     if !is_safe_id(id) {

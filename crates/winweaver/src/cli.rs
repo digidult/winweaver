@@ -344,10 +344,12 @@ fn load_at_start(settings: &mut winweaver_ui::Settings, dir: &Path, id: &str) ->
     earlier || !named
 }
 
-/// `--import-admx system|PATH`: imports policy templates as Settings, Policy templates does: the
-/// catalog file goes into the imports folder, and the settings name it among the loaded imports.
+/// `--import-admx system|PATH [--code allow]`: imports policy templates as Settings, Policy
+/// templates does: the catalog file goes into the imports folder, and the settings name it among
+/// the loaded imports. A catalog whose rules run code of their own (scripts, commands, programs,
+/// settings of the answer file) needs `--code allow`, as the window asks first.
 fn import_admx(args: &[String]) -> Result<(), Stop> {
-    let words = Words::parse(args, &[])?;
+    let words = Words::parse(args, &["code"])?;
     let [text] = words.positional.as_slice() else {
         let text = "--import-admx needs system, a folder of ADMX files or a file of templates";
         return Err(usage(text));
@@ -360,6 +362,13 @@ fn import_admx(args: &[String]) -> Result<(), Stop> {
         Err(_) => Vec::new(),
     };
     let file = source.read(&taken)?;
+    let code = file.code_rules().len();
+    if code > 0 && words.option("code") != Some("allow") {
+        let text = format!(
+            "the catalog runs code of its own in {code} rules (scripts, commands, programs, settings of the answer file); add --code allow to import it from a source you trust"
+        );
+        return Err(failed(text));
+    }
     let path = winweaver_ui::save_import(&dir, &file).map_err(failed)?;
     let (rules, skipped) = (file.rules.len(), file.skipped.len());
     let shown = path.display();

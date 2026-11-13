@@ -156,7 +156,8 @@ lists the planned changes.
 - Copy to: the selected policy (with its Disabled rule) or group (with the groups under it) of a catalog
   tab into a catalog open in its editor or into a new one, with its ids and its texts in other languages
   (`CatalogFile::copy_from`).
-- The editor of a catalog (`01-ui.md` section 18) changes the policies of a catalog file, and New catalog
+- The editor of a catalog (`01-ui.md` section 18) edits the policies, groups and translations of a
+  catalog file with every feature of the built-in catalog, the answer file included, and New catalog
   makes an empty import.
 - Templates in UTF-8 or UTF-16 with its mark (the templates of vendors such as Chrome, Edge, Brave and
   Office); a second copy of a policy in one import is left out and listed as skipped, and policies of two
@@ -165,9 +166,12 @@ lists the planned changes.
   of the cultures next to them, else its one catalog file. Limits: 256 MB of archive, 20 000 entries,
   512 MB unpacked, each entry up to the limit of its kind whatever size it declares.
 - Every record is checked on import and at every load: safe characters in keys, value names and values,
-  keys without empty, `.` or `..` segments, only registry values under `HKLM:\` and `DU:\`, ranges,
-  unique parameters, a depth limit; a policy the program cannot represent is skipped and listed, never
-  stops the import.
+  keys without empty, `.` or `..` segments under `HKLM:\`, `DU:\`, `HKCU:\` or `HKU:\`, ranges, unique
+  parameters, a depth limit and the checks of the built-in catalog (`02-documents.md` section 5); a
+  policy the program cannot represent is skipped and listed, never stops the import.
+- A catalog whose rules run code of their own (scripts, commands, programs, settings of the answer
+  file, which can run commands too) is imported only after a question that names how many rules do so;
+  the command line needs `--code allow` for it, and an MCP client never writes such a policy.
 - A policy whose values a built-in rule in effect writes is linked (section 1).
 
 ## 7. MCP server
@@ -294,7 +298,7 @@ passwords when the master password is given, and makes a users file of its accou
   (`crates/winweaver/src/cli.rs`): `--build PROFILE` (the check, then `autounattend.xml` with its scripts
   beside it; PROFILE a file, a preset or a name of `profiles/`); `--import-admx system|PATH` (the templates
   of this Windows, a folder, an `.admx`, `.zip` or `.wwcatalog` file into `imports/`, named among the loaded
-  imports of the settings); `--export-catalog ID|PATH` (the catalog file of an import or of templates read
+  imports of the settings; a catalog whose rules run code of their own with `--code allow` alone); `--export-catalog ID|PATH` (the catalog file of an import or of templates read
   without importing them); `--read-pc [--base PROFILE]` (this PC read into a new profile on the base, Office
   by default, or its answer file); `--diff A B` (a `.wwdiff`); `--script` and `--reg`. `--out` names the
   file when it ends with the extension the command writes, else it is a folder for the file of the default

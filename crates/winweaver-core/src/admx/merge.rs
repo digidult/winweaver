@@ -3,7 +3,7 @@
 use std::collections::HashSet;
 
 use crate::catalog::{Catalog, CatalogError, Group, Rule};
-use crate::i18n::{CatalogTexts, GroupText, RuleText};
+use crate::i18n::{CatalogTexts, RuleText};
 
 use super::CatalogFile;
 
@@ -40,8 +40,11 @@ pub fn merge(
                 skipped += 1;
                 continue;
             }
+            // A rule of the file may name rules of the file and of the built-in catalog.
             let mut r = r.clone();
-            r.conflicts.retain(|c| own_rules.contains(c.as_str()));
+            let named = |c: &String| own_rules.contains(c.as_str()) || base.rule(c).is_some();
+            r.conflicts.retain(named);
+            r.requires.retain(named);
             rule_ids.insert(r.id.clone());
             rules.push(r);
         }
@@ -56,9 +59,10 @@ pub fn merge(
     Ok((catalog, notes))
 }
 
-/// Adds the texts of the catalog files to the translations of the catalog. The Disabled rule
-/// `<id>.off` of a policy is titled `<title>: <word>` with the word of the translation file
-/// (`_disabled`); without the word it keeps its English title.
+/// Adds the texts of the catalog files to the translations of the catalog; a text the catalog has
+/// already stays. The Disabled rule `<id>.off` of a policy without a text of its own is titled
+/// `<title>: <word>` with the word of the translation file (`_disabled`); without the word it keeps
+/// its English title.
 pub fn merge_texts(texts: &mut [CatalogTexts], files: &[CatalogFile]) {
     for f in files {
         let ids: HashSet<&str> = f.rules.iter().map(|r| r.id.as_str()).collect();
@@ -66,25 +70,20 @@ pub fn merge_texts(texts: &mut [CatalogTexts], files: &[CatalogFile]) {
             let Some(t) = texts.iter_mut().find(|t| &t.code == code) else {
                 continue;
             };
-            for (id, title) in &lang.groups {
-                t.groups.entry(id.clone()).or_insert_with(|| GroupText {
-                    title: Some(title.clone()),
-                    summary: None,
-                });
+            for (id, text) in &lang.groups {
+                t.groups.entry(id.clone()).or_insert_with(|| text.clone());
             }
-            for (id, (title, summary)) in &lang.rules {
-                let summary = (!summary.is_empty()).then(|| summary.clone());
-                t.rules.entry(id.clone()).or_insert_with(|| RuleText {
-                    title: Some(title.clone()),
-                    summary: summary.clone(),
-                    ..RuleText::default()
-                });
+            for (id, text) in &lang.rules {
+                t.rules.entry(id.clone()).or_insert_with(|| text.clone());
                 let off = format!("{id}.off");
-                if !t.disabled.is_empty() && ids.contains(off.as_str()) {
+                let derived = !t.disabled.is_empty()
+                    && ids.contains(off.as_str())
+                    && !lang.rules.contains_key(&off);
+                if let Some(title) = text.title.as_deref().filter(|_| derived) {
                     let title = format!("{title}: {}", t.disabled);
                     t.rules.entry(off).or_insert_with(|| RuleText {
                         title: Some(title),
-                        summary,
+                        summary: text.summary.clone(),
                         ..RuleText::default()
                     });
                 }

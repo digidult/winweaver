@@ -4,48 +4,90 @@
 //! summaries by group id) and one entry per rule id. A missing text falls back to English.
 
 use indexmap::IndexMap;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::catalog::{EnumValue, Group, Rule, embedded};
 use crate::jsonfile::{self, JsonError};
 
-#[derive(Debug, Clone, Default, Deserialize)]
+/// The texts of a group in one language: of the translation files of the catalog and of the
+/// catalog files alike.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct GroupText {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub summary: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, Deserialize)]
+/// The texts of a rule in one language: of the translation files of the catalog and of the
+/// catalog files alike. A text left out is the English one.
+#[derive(Debug, Clone, Default, PartialEq, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct RuleText {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub summary: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub effect: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub risk: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub versions: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub verify: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rollback: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tags: Option<Vec<String>>,
     /// Parameter titles by parameter name.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     pub params: IndexMap<String, String>,
     /// Titles of enum values by parameter name and value (as text).
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     pub values: IndexMap<String, IndexMap<String, String>>,
+}
+
+impl RuleText {
+    /// Whether the text holds nothing, so that a file leaves it out.
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
+
+    /// Every text of the translation, for a search.
+    pub fn all_texts(&self) -> impl Iterator<Item = &str> {
+        [
+            &self.title,
+            &self.summary,
+            &self.effect,
+            &self.risk,
+            &self.versions,
+            &self.verify,
+            &self.rollback,
+            &self.note,
+        ]
+        .into_iter()
+        .filter_map(|t| t.as_deref())
+        .chain(self.tags.iter().flatten().map(String::as_str))
+        .chain(self.params.values().map(String::as_str))
+        .chain(
+            self.values
+                .values()
+                .flat_map(|v| v.values().map(String::as_str)),
+        )
+    }
+}
+
+/// The key of a value of an enum parameter in a translation: its text (`1`, `Warn`).
+pub fn value_key(value: &Value) -> String {
+    match value {
+        Value::String(s) => s.clone(),
+        other => other.to_string(),
+    }
 }
 
 /// The translation of the catalog into one language.
@@ -164,10 +206,7 @@ impl CatalogTexts {
     /// The title of a value of an enum parameter of a rule; the file keys the values by their
     /// text (`1`, `Warn`).
     pub fn value_title<'a>(&'a self, rule: &'a Rule, name: &str, value: &'a EnumValue) -> &'a str {
-        let key = match &value.value {
-            Value::String(s) => s.clone(),
-            other => other.to_string(),
-        };
+        let key = value_key(&value.value);
         self.rules
             .get(&rule.id)
             .and_then(|t| t.values.get(name))

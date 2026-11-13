@@ -4,8 +4,9 @@
 //! Every template is untrusted input: no DTD, size and depth limits, safe characters in keys,
 //! value names and values (they reach the registry, the scripts and a CDATA section of the answer
 //! file). A policy the program cannot represent is skipped and listed, never fatal. A catalog
-//! file is checked again when it is loaded, so that a crafted file cannot bring anything but
-//! registry values.
+//! file holds rules of every kind the built-in catalog has (one made in the editor too) and is
+//! checked again when it is loaded, with the checks of the built-in catalog and its own; one
+//! whose rules run code is imported only after a question.
 //!
 //! The folder: `xml` (a small tree of XML elements), `templates` (the model of the templates and
 //! their reading from ADMX and ADML), `rules` (the conversion into rules), `file` (the catalog
@@ -37,7 +38,7 @@ pub use rules::to_catalog_file;
 pub use templates::{Templates, Texts, Val, read_file, read_folder};
 
 pub const CATALOG_FORMAT: &str = "winweaver-catalog";
-pub const CATALOG_VERSION: u32 = 1;
+pub const CATALOG_VERSION: u32 = 2;
 pub const CATALOG_EXTENSION: &str = "wwcatalog";
 /// The prefix of the ids of the rules and groups an import brings.
 pub const RULE_PREFIX: &str = "admx.";

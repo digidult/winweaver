@@ -315,9 +315,12 @@ fn a_catalog_file_is_edited_policy_by_policy_and_stays_valid() {
     );
     let mut bad = rule.clone();
     if let Action::Reg { path, .. } = &mut bad.actions[0] {
-        *path = "HKCU:\\X".to_owned();
+        *path = "HKCR:\\X".to_owned();
     }
-    assert!(f.put_rule(bad).is_err());
+    assert!(
+        f.put_rule(bad).is_err(),
+        "a key of a form a catalog never writes"
+    );
     let kept = f.rules.iter().find(|r| r.id == rule.id).unwrap();
     assert!(
         matches!(&kept.actions[0], Action::Reg { path, .. } if path.starts_with("HKLM:")),
@@ -420,7 +423,10 @@ fn templates_become_rules_and_groups() {
             .any(|(p, why)| p == "sample:Unsafe" && why.contains("unsafe"))
     );
     assert_eq!(
-        f.texts["uk"].rules["admx.sample.turnoff"].0,
+        f.texts["uk"].rules["admx.sample.turnoff"]
+            .title
+            .as_deref()
+            .unwrap(),
         "Вимкнути зразок"
     );
     f.check().unwrap();
@@ -525,24 +531,81 @@ fn a_catalog_file_merges_and_crafted_files_are_refused() {
         .as_deref()
         .unwrap_or_default();
     assert!(off.ends_with(&format!(": {}", uk.disabled)), "{off}");
+    // A script is a rule of the root Other or of the installation, as in the built-in catalog.
     let mut bad = f.clone();
     bad.rules[0].actions.push(Action::Ps {
         script: crate::catalog::Lines::One("x".into()),
     });
-    assert!(bad.check().is_err(), "an import never brings a script");
+    assert!(
+        bad.check().unwrap_err().contains("mechanism"),
+        "a script under the root of the policies"
+    );
+    let mut good = bad.clone();
+    let id = good.rules[0].id.clone();
+    let other = good.groups[0].id.clone() + ".other";
+    good.groups.push(crate::catalog::Group {
+        id: other.clone(),
+        title: "Other".into(),
+        order: 2000,
+        summary: String::new(),
+        parent: Some(crate::catalog::ROOT_OTHER.into()),
+    });
+    good.rules[0].group = other;
+    good.check().unwrap();
+    let code: Vec<&str> = good.code_rules().iter().map(|r| r.id.as_str()).collect();
+    assert_eq!(code, [id.as_str()]);
     let mut bad = f.clone();
     if let Action::Reg { path, .. } = &mut bad.rules[0].actions[0] {
-        *path = "HKCU:\\X".into();
+        *path = "HKCR:\\X".into();
     }
     assert!(
         bad.check().is_err(),
-        "only the machine and the default user branches"
+        "only the machine, the default user, the current user and the users"
+    );
+    let mut bad = f.clone();
+    bad.rules[0].conflicts.push("no.such.rule".into());
+    assert!(bad.check().is_err(), "a conflict with a rule nowhere");
+    let mut fine = f.clone();
+    let builtin = base.rules()[0].id.clone();
+    fine.rules[0].conflicts.push(builtin.clone());
+    fine.check().unwrap();
+    let (merged, _) = merge(&base, std::slice::from_ref(&fine)).unwrap();
+    let kept = merged.rule(&fine.rules[0].id).unwrap();
+    assert!(
+        kept.conflicts.contains(&builtin),
+        "a conflict with a built-in rule stays"
     );
     let mut bad = f;
     if let Action::Reg { value, .. } = &mut bad.rules[0].actions[0] {
         *value = Value::from("x]]>y");
     }
     assert!(bad.check().is_err(), "nothing that closes a CDATA section");
+}
+
+/// A catalog file of version 1 held a group as its title and a rule as its title and summary; it
+/// is still read, and written again as version 2 with the texts of the translation files.
+#[test]
+fn a_catalog_file_of_version_1_is_read() {
+    let f = sample();
+    let mut old: Value = serde_json::from_str(&f.to_json()).unwrap();
+    old["version"] = Value::from(1);
+    old["texts"] = serde_json::json!({
+        "uk": {
+            "groups": { "admx.test": "Зразки" },
+            "rules": { "admx.sample.turnoff": ["Вимкнути", "Опис"] }
+        }
+    });
+    let read = CatalogFile::parse(&old.to_string(), "old.wwcatalog").unwrap();
+    assert_eq!(read.version, CATALOG_VERSION);
+    let uk = &read.texts["uk"];
+    assert_eq!(uk.groups["admx.test"].title.as_deref(), Some("Зразки"));
+    let rule = &uk.rules["admx.sample.turnoff"];
+    assert_eq!(
+        (rule.title.as_deref(), rule.summary.as_deref()),
+        (Some("Вимкнути"), Some("Опис"))
+    );
+    let again = CatalogFile::parse(&read.to_json(), "new.wwcatalog").unwrap();
+    assert_eq!(again.texts, read.texts, "the new form reads back the same");
 }
 
 #[test]

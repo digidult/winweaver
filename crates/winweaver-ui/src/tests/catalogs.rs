@@ -214,14 +214,16 @@ fn a_new_catalog_is_edited_checked_and_saved() {
     let id = d.form.as_ref().map(|f| f.id.clone()).unwrap();
     assert_eq!(id, "admx.custom-1.mute");
     if let Some(form) = d.form.as_mut() {
-        form.actions.push(cataledit::ActionRow {
-            remove: false,
-            key: "HKU\\X".to_owned(),
+        let mut row = cataledit::ActionRow::of(&winweaver_core::catalog::Action::Reg {
+            path: "HKLM:\\X".to_owned(),
             name: "Mute".to_owned(),
             kind: winweaver_core::catalog::RegKind::DWord,
-            value: "1".to_owned(),
-            keep: None,
+            value: serde_json::Value::from(1),
+            default: None,
+            why: String::new(),
         });
+        row.key = "HKEY_CLASSES_ROOT\\X".to_owned();
+        form.actions.push(row);
     }
     d.apply();
     assert!(d.error.is_some(), "a key of another root is refused");
@@ -427,5 +429,82 @@ fn removals_ask_first_and_two_catalogs_compare() {
         "{}",
         app.shell.status
     );
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+/// A catalog whose rules run code is imported only after a question; a no imports nothing. The
+/// editor writes a policy of the root Other with a script and its translation, and a rule of the
+/// file names a built-in rule it conflicts with.
+#[test]
+fn a_catalog_with_code_asks_before_its_import_and_the_editor_writes_everything() {
+    use winweaver_core::catalog::{Action, Lines, ROOT_OTHER};
+    let dir = std::env::temp_dir().join(format!("winweaver-code-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let catalog = Catalog::embedded().unwrap();
+    let builtin = catalog.rules()[0].id.clone();
+    let settings = Settings {
+        extra: Extra {
+            loaded_imports: Some(Vec::new()),
+            ..Extra::default()
+        },
+        ..Settings::default()
+    };
+    let mut app = Window::new(WinWeaver::new(catalog, Vec::new()), settings);
+    app.app.full.imports_dir = dir.join("imports");
+    let mut file = admx::to_catalog_file(&admx::Templates::default(), "code", "Code", "", "now");
+    let top = file.groups[0].id.clone();
+    let scripts = file.new_group(&top, "Scripts").unwrap();
+    if let Some(g) = file.groups.iter_mut().find(|g| g.id == scripts) {
+        g.parent = Some(ROOT_OTHER.to_owned());
+    }
+    let mut rule = file.new_policy(&scripts, "Hello").unwrap();
+    rule.actions.push(Action::Ps {
+        script: Lines::One("Write-Output hello".to_owned()),
+    });
+    rule.conflicts.push(builtin.clone());
+    file.put_rule(rule).unwrap();
+    let path = dir.join("code.wwcatalog");
+    file.save(&path).unwrap();
+    app.apply(vec![Act::Shell(ShellAct::OpenPath(path.clone()))]);
+    app.apply(vec![Act::Catalog(CatalogAct::ImportOpen)]);
+    assert!(app.shell.question.is_some(), "an import of code asks");
+    app.apply(vec![Act::Shell(ShellAct::Answer(false))]);
+    assert!(app.app.imports.is_empty(), "a no imports nothing");
+    app.apply(vec![Act::Catalog(CatalogAct::ImportOpen)]);
+    app.apply(vec![Act::Shell(ShellAct::Answer(true))]);
+    let id = "admx.code.hello";
+    let rule = app.app.catalog.rule(id).expect("imported after the yes");
+    assert!(
+        rule.conflicts.contains(&builtin),
+        "a conflict with a built-in rule stays"
+    );
+    // The editor: a translation and a registry value of the default user profile.
+    let tab = app.shell.active;
+    app.apply(vec![Act::Catalog(CatalogAct::Edit(CatalogRef::Tab(tab)))]);
+    let Some(Doc::CatalogEdit(d)) = app.shell.docs.get_mut(app.shell.active) else {
+        panic!("the editor");
+    };
+    d.select(&TreeKey::Rule(id.to_owned()));
+    if let Some(form) = d.form.as_mut() {
+        form.rule.phase = winweaver_core::catalog::Phase::DefaultUser;
+        let mut row = cataledit::ActionRow::of(&Action::RegRemove {
+            path: "HKLM:\\X".to_owned(),
+            name: "Old".to_owned(),
+            default: None,
+        });
+        row.key = "HKEY_CURRENT_USER\\Software\\Hello".to_owned();
+        form.actions.push(row);
+        form.texts.entry("uk".to_owned()).or_default().title = Some("Привіт".to_owned());
+    }
+    d.apply();
+    assert!(d.error.is_none(), "{:?}", d.error);
+    let rule = d.file.rules.iter().find(|r| r.id == id).unwrap();
+    assert!(matches!(
+        &rule.actions[1],
+        Action::RegRemove { path, .. } if path == "DU:\\Software\\Hello"
+    ));
+    let uk = &d.file.texts["uk"].rules[id];
+    assert_eq!(uk.title.as_deref(), Some("Привіт"));
     std::fs::remove_dir_all(&dir).unwrap();
 }

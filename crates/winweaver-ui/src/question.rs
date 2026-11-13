@@ -6,7 +6,7 @@
 #[cfg(feature = "mcp")]
 use crate::McpAct;
 use crate::i18n::{tr, trf};
-use crate::{CatalogAct, ImportAct, Question, RegistryAct};
+use crate::{Act, CatalogAct, ImportAct, Question, RegistryAct};
 
 /// Before an import is removed with its catalog file.
 pub fn remove_import(name: &str, id: String) -> Question {
@@ -18,6 +18,19 @@ pub fn remove_import(name: &str, id: String) -> Question {
         ),
         tr("Remove"),
         ImportAct::Remove(id),
+    )
+}
+
+/// Before a catalog file whose rules run code of their own is imported.
+pub fn import_code(name: &str, rules: usize, act: Act) -> Question {
+    Question::new(
+        tr("Import a catalog with code"),
+        trf(
+            "{name} runs code of its own: {n} rules with scripts, commands, programs or settings of the answer file. A profile that turns them on runs them as SYSTEM during the installation or on this PC. Import it only from a source you trust.",
+            &[("name", &name), ("n", &rules)],
+        ),
+        tr("Import"),
+        act,
     )
 }
 

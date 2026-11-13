@@ -238,10 +238,20 @@ stratégie dans les arborescences d'autres importations ; un signet de l'option 
 choisit quelles parties de la description sont ouvertes d'abord.
 
 **Modifier** dans la barre d'un onglet de catalogue ouvre le catalogue dans un éditeur, et **Nouveau
-catalogue** dans le menu des modèles en commence un vide à vous. Une stratégie reçoit son titre, sa
-description, l'ordinateur ou le profil utilisateur par défaut et les valeurs du registre qu'elle écrit ou
-supprime ; **Appliquer** contrôle tout le fichier, et rien ne change si le contrôle échoue. Enregistrer
-(Ctrl+S) écrit le fichier et le recharge. **Supprimer le groupe** retire le groupe sélectionné, après une question, avec tous les groupes et stratégies qu'il contient ; le groupe supérieur du fichier reste.
+catalogue** dans le menu des modèles en commence un vide à vous. Une stratégie se modifie en entier, comme une
+règle du catalogue intégré : son titre et sa description, son groupe, le moment où elle s'exécute (une passe
+du fichier de réponses, le script de l'installation, le profil utilisateur par défaut, la première connexion,
+après OOBE), son niveau, les textes de **Détails**, ses paramètres et ses actions de toute sorte (valeurs du
+registre, paramètres et commandes du fichier de réponses, lignes du script, services, fonctionnalités,
+fonctionnalités à la demande, applications, programmes), et sous **Traductions** chaque texte dans une autre
+langue, l'anglais montré dans un champ vide. Un groupe reçoit son titre, sa description et sa place : une
+stratégie du fichier de réponses se place sous Installation, celle qui n'écrit que le registre sous
+Stratégies, le reste sous Autre. **Appliquer** contrôle tout le fichier comme le catalogue intégré est
+contrôlé, et rien ne change si le contrôle échoue. Enregistrer (Ctrl+S) écrit le fichier et le recharge.
+**Supprimer le groupe** retire le groupe sélectionné, après une question, avec tous les groupes et stratégies
+qu'il contient ; le groupe supérieur du fichier reste. Un catalogue avec ses propres scripts, commandes ou
+programmes n'est importé qu'après une question : importez un tel catalogue uniquement depuis une source de
+confiance.
 
 La comparaison s'ouvre dans un onglet : les stratégies qui diffèrent dans l'arbre de leurs catégories,
 avec des cases pour celles du premier catalogue seul, du second seul et les différentes, et la stratégie
@@ -331,7 +341,7 @@ démarrage. Le journal de `logs/` indique avec quoi la fenêtre dessine.
 | `--version` | Affiche la version |
 | `--check-catalog` | Charge le catalogue intégré avec ses traductions et affiche leurs problèmes |
 | `--build PROFILE` | Vérifie un profil et génère son fichier de réponses sans la fenêtre : `autounattend.xml` dans `output`, avec à côté les scripts qu'il intègre ; PROFILE est un fichier `.wwprofile`, un préréglage (`Office`, `Strict`, `Laptop`, `Home`) ou le nom d'un profil de `profiles/` ; une erreur de la vérification arrête la génération |
-| `--import-admx SOURCE` | Importe des modèles de stratégie comme le fait Paramètres, Modèles de stratégie : `system` (les modèles de ce Windows), un dossier de fichiers ADMX, un fichier `.admx` avec les ADML des dossiers de ses langues, une archive `.zip` ou un fichier `.wwcatalog` ; le fichier de catalogue va dans `imports/`, et la fenêtre et le serveur MCP le chargent à leur prochain démarrage (à lancer fenêtre fermée) |
+| `--import-admx SOURCE` | Importe des modèles de stratégie comme le fait Paramètres, Modèles de stratégie : `system` (les modèles de ce Windows), un dossier de fichiers ADMX, un fichier `.admx` avec les ADML des dossiers de ses langues, une archive `.zip` ou un fichier `.wwcatalog` ; le fichier de catalogue va dans `imports/`, et la fenêtre et le serveur MCP le chargent à leur prochain démarrage (à lancer fenêtre fermée) ; un catalogue dont les règles exécutent leur propre code demande `--code allow` |
 | `--export-catalog SOURCE` | Écrit un fichier de catalogue (`.wwcatalog`) comme le fait Exporter dans Paramètres, Modèles de stratégie : d'une importation par son identifiant (le nom de son fichier dans `imports/`), ou d'une source de `--import-admx` lue sans l'importer ; `<id>.wwcatalog` dans `output` |
 | `--read-pc` | Sans `--mcp` : lit ce PC dans un nouveau profil au nom de l'ordinateur, comme Ce PC, Lire ce PC, et l'enregistre dans `profiles/` ; avec un fichier `.xml` dans `--out`, écrit à la place le fichier de réponses de ce profil ; les fonctionnalités et capacités de Windows ne sont lues que si le programme s'exécute en tant qu'administrateur |
 | `--base PROFILE` | Avec `--read-pc` : le profil dont part la lecture, donné comme pour `--build` ; le préréglage Office par défaut |

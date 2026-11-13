@@ -234,10 +234,19 @@ den Strukturen anderer Importe; ein Lesezeichen der Option ebenso. Unter Einstel
 gewählt, welche Teile der Beschreibung zuerst geöffnet sind.
 
 **Bearbeiten** in der Leiste eines Katalog-Tabs öffnet den Katalog in einem Editor, und **Neuer Katalog** im
-Menü der Vorlagen beginnt einen leeren eigenen. Eine Richtlinie bekommt ihren Titel, ihre Beschreibung, den
-Computer oder das Standardbenutzerprofil und die Registrierungswerte, die sie schreibt oder entfernt;
-**Übernehmen** prüft die ganze Datei, und nichts ändert sich, wenn die Prüfung fehlschlägt. Speichern
-(Ctrl+S) schreibt die Datei und lädt sie neu. Eine gewählte Gruppe entfernt **Gruppe entfernen** nach einer Frage mit allen Gruppen und Richtlinien darin; die oberste Gruppe der Datei bleibt.
+Menü der Vorlagen beginnt einen leeren eigenen. Eine Richtlinie wird ganz bearbeitet, wie eine Regel des
+eingebauten Katalogs: Titel und Beschreibung, ihre Gruppe, wann sie läuft (ein Durchlauf der Antwortdatei, das
+Skript der Installation, das Standardbenutzerprofil, die erste Anmeldung, nach OOBE), ihre Stufe, die Texte
+unter **Details**, ihre Parameter und ihre Aktionen jeder Art (Registrierungswerte, Einstellungen und Befehle
+der Antwortdatei, Zeilen des Skripts, Dienste, Features, Funktionen, Apps, Programme) und unter
+**Übersetzungen** jeder Text in einer anderen Sprache, der englische in einem leeren Feld gezeigt. Eine Gruppe
+bekommt Titel, Beschreibung und ihren Platz: eine Richtlinie der Antwortdatei gehört unter Installation, eine,
+die nur die Registrierung schreibt, unter Richtlinien, der Rest unter Sonstiges. **Übernehmen** prüft die
+ganze Datei, wie der eingebaute Katalog geprüft wird, und nichts ändert sich, wenn die Prüfung fehlschlägt.
+Speichern (Ctrl+S) schreibt die Datei und lädt sie neu. Eine gewählte Gruppe entfernt **Gruppe entfernen**
+nach einer Frage mit allen Gruppen und Richtlinien darin; die oberste Gruppe der Datei bleibt. Ein Katalog mit
+eigenen Skripten, Befehlen oder Programmen wird erst nach einer Frage importiert: importieren Sie einen
+solchen Katalog nur aus einer Quelle, der Sie vertrauen.
 
 Der Vergleich öffnet sich in einem Tab: die abweichenden Richtlinien im Baum ihrer Kategorien, mit
 Schaltern für die nur im ersten Katalog, nur im zweiten und die unterschiedlichen, und die gewählte
@@ -326,7 +335,7 @@ oder `=`: `--renderer=directx`.
 | `--version` | Gibt die Version aus |
 | `--check-catalog` | Lädt den integrierten Katalog mit seinen Übersetzungen und gibt ihre Probleme aus |
 | `--build PROFILE` | Prüft ohne Fenster ein Profil und erstellt seine Antwortdatei: `autounattend.xml` in `output`, daneben die Skripts, die sie einbettet; PROFILE ist eine `.wwprofile`-Datei, eine Vorlage (`Office`, `Strict`, `Laptop`, `Home`) oder der Name eines Profils aus `profiles/`; ein Fehler der Prüfung stoppt die Erstellung |
-| `--import-admx SOURCE` | Importiert Richtlinienvorlagen wie Einstellungen, Richtlinienvorlagen: `system` (die Vorlagen dieses Windows), einen Ordner mit ADMX-Dateien, eine `.admx`-Datei mit den ADML ihrer Sprachordner, ein `.zip`-Archiv oder eine `.wwcatalog`-Datei; die Katalogdatei kommt nach `imports/`, und das Fenster und der MCP-Server laden sie bei ihrem nächsten Start (bei geschlossenem Fenster ausführen) |
+| `--import-admx SOURCE` | Importiert Richtlinienvorlagen wie Einstellungen, Richtlinienvorlagen: `system` (die Vorlagen dieses Windows), einen Ordner mit ADMX-Dateien, eine `.admx`-Datei mit den ADML ihrer Sprachordner, ein `.zip`-Archiv oder eine `.wwcatalog`-Datei; die Katalogdatei kommt nach `imports/`, und das Fenster und der MCP-Server laden sie bei ihrem nächsten Start (bei geschlossenem Fenster ausführen); ein Katalog, dessen Regeln eigenen Code ausführen, braucht `--code allow` |
 | `--export-catalog SOURCE` | Schreibt eine Katalogdatei (`.wwcatalog`) wie Exportieren in Einstellungen, Richtlinienvorlagen: eines Imports nach seiner ID (dem Namen seiner Datei in `imports/`) oder einer Quelle von `--import-admx`, gelesen ohne Import; `<id>.wwcatalog` in `output` |
 | `--read-pc` | Ohne `--mcp`: liest diesen PC in ein neues Profil mit dem Namen des Computers, wie Dieser PC, Diesen PC lesen, und speichert es in `profiles/`; mit einer `.xml`-Datei in `--out` schreibt es stattdessen die Antwortdatei dieses Profils; die Features und Funktionen von Windows werden nur gelesen, wenn das Programm als Administrator läuft |
 | `--base PROFILE` | Mit `--read-pc`: das Profil, von dem das Lesen ausgeht, angegeben wie bei `--build`; standardmäßig die Vorlage Office |

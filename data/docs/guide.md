@@ -216,9 +216,18 @@ trees of other imports; a bookmark of the option does the same. Settings, Genera
 the description open at first.
 
 **Edit** in the bar of a catalog tab opens the catalog in an editor, and **New catalog** in the menu of the
-templates starts an empty one of your own. A policy gets its title, its description, the computer or the
-default user profile, and the registry values it writes or removes; **Apply** checks the whole file, and
-nothing changes when the check fails. Save (Ctrl+S) writes the file and loads it again. A selected group goes with **Remove the group**, after a question, with every group and policy under it; the top group of the file stays.
+templates starts an empty one of your own. A policy is edited whole, as a rule of the built-in catalog: its
+title and description, its group, when it runs (a pass of the answer file, the script of the installation, the
+default user profile, the first sign-in, after OOBE), its level, the texts under **Details**, its parameters
+and its actions of every kind (registry values, settings and commands of the answer file, lines of the script,
+services, features, capabilities, apps, programs), and under **Translations** every text in another language,
+with the English one shown in an empty field. A group gets its title, its description and its place: a policy
+of the answer file lives under Installation, one that only writes the registry under Policies, the rest under
+Other. **Apply** checks the whole file as the built-in catalog is checked, and nothing changes when the check
+fails. Save (Ctrl+S) writes the file and loads it again. A selected group goes with **Remove the group**,
+after a question, with every group and policy under it; the top group of the file stays. A catalog with
+scripts, commands or programs of its own is imported only after a question: import such a catalog only from a
+source you trust.
 
 The comparison opens in a tab: the policies that differ in the tree of their categories, with switches
 for the ones only in the first catalog, only in the second and the different ones, and the selected
@@ -302,7 +311,7 @@ names what the window draws with.
 | `--version` | Prints the version |
 | `--check-catalog` | Loads the built-in catalog with its translations and prints their problems |
 | `--build PROFILE` | Checks a profile and builds its answer file without the window: `autounattend.xml` in `output`, with the scripts it embeds beside it; PROFILE is a `.wwprofile` file, a preset (`Office`, `Strict`, `Laptop`, `Home`) or the name of a profile of `profiles/`; an error of the check stops the build |
-| `--import-admx SOURCE` | Imports policy templates as Settings, Policy templates does: `system` (the templates of this Windows), a folder of ADMX files, an `.admx` file with the ADML of its culture folders, a `.zip` archive or a `.wwcatalog` file; the catalog file goes into `imports/`, and the window and the MCP server load it at their next start (run it while the window is closed) |
+| `--import-admx SOURCE` | Imports policy templates as Settings, Policy templates does: `system` (the templates of this Windows), a folder of ADMX files, an `.admx` file with the ADML of its culture folders, a `.zip` archive or a `.wwcatalog` file; the catalog file goes into `imports/`, and the window and the MCP server load it at their next start (run it while the window is closed); a catalog whose rules run code of their own needs `--code allow` |
 | `--export-catalog SOURCE` | Writes a catalog file (`.wwcatalog`) as Export in Settings, Policy templates does: of an import by its id (the name of its file in `imports/`), or of a source of `--import-admx` read without importing it; `<id>.wwcatalog` in `output` |
 | `--read-pc` | Without `--mcp`: reads this PC into a new profile named after the computer, as This PC, Read this PC does, and saves it in `profiles/`; with an `.xml` file in `--out` it writes the answer file of that profile instead; the features and capabilities of Windows are read only when the program runs as administrator |
 | `--base PROFILE` | With `--read-pc`: the profile the read starts from, given as for `--build`; the preset Office by default |

@@ -301,7 +301,9 @@ The repository, folder by folder and module by module.
 │   │                      rule), forms.rs, diffview.rs, marksview.rs, mcpview.rs, settings.rs (Extra:
 │   │                      the fields of WinWeaver in settings.json), pages.rs (the guide, the license,
 │   │                      the reference), catalogview.rs, catalogdiff.rs (two catalogs compared in a
-│   │                      tab), regview.rs, regedit.rs, cataledit.rs,
+│   │                      tab), regview.rs, regedit.rs, cataledit/ (the editor of a catalog file:
+│   │                      the document and the forms of a policy, its parameters, its actions,
+│   │                      a group and the translations),
 │   │                      regfileview/, usersview.rs, polview.rs (the tab of a .pol file, the files of
 │   │                      this Windows read once, the links of the other tabs), tests/ (the window
 │   │                      tests: a Window of WinWeaver,

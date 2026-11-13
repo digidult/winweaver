@@ -32,11 +32,19 @@ impl WinWeaver {
     }
 
     /// Imports the catalog file of the active tab: it is saved next to the executable, merged
-    /// into the catalog, and the tab shows the import from now on.
-    pub(crate) fn import_open_catalog(&mut self, shell: &mut Shell<WinWeaver>) {
+    /// into the catalog, and the tab shows the import from now on. A file whose rules run code
+    /// asks first (`confirmed` after the yes).
+    pub(crate) fn import_open_catalog(&mut self, shell: &mut Shell<WinWeaver>, confirmed: bool) {
         let Some(Doc::Catalog(c)) = shell.docs.get_mut(shell.active) else {
             return;
         };
+        let code = c.file.as_ref().map_or(0, |f| f.code_rules().len());
+        if code > 0 && !confirmed {
+            let name = c.file.as_ref().map(|f| f.name.clone()).unwrap_or_default();
+            let act = Act::Catalog(CatalogAct::ImportOpenConfirmed);
+            shell.ask(crate::question::import_code(&name, code, act));
+            return;
+        }
         let Some(mut file) = c.file.take() else {
             return;
         };
@@ -315,25 +323,7 @@ impl WinWeaver {
             Ok(result) => {
                 self.full.importing = None;
                 match result {
-                    Ok(file) => {
-                        let saved = save_import(&self.full.imports_dir, &file);
-                        let rules = file.rules.len();
-                        let skipped = file.skipped.len();
-                        let id = file.id.clone();
-                        self.imports.retain(|f| f.id != id);
-                        self.imports.push(file);
-                        self.imports.sort_by_key(|f| import_order(&f.id));
-                        self.mark_loaded(shell, &id);
-                        self.refresh_import_list();
-                        self.rebuild_catalog(shell);
-                        shell.status = match saved {
-                            Ok(_) => trf(
-                                "Imported: {rules} rules, {skipped} policies skipped",
-                                &[("rules", &rules), ("skipped", &skipped)],
-                            ),
-                            Err(e) => trf("Imported, but not saved: {e}", &[("e", &e)]),
-                        };
-                    }
+                    Ok(file) => self.import_catalog_file(shell, file, false),
                     Err(e) => shell.status = trf("The import failed: {e}", &[("e", &e)]),
                 }
             }
@@ -342,6 +332,48 @@ impl WinWeaver {
             }
             Err(std::sync::mpsc::TryRecvError::Disconnected) => self.full.importing = None,
         }
+    }
+
+    /// Takes a catalog file into the imports: saved next to the executable (in a browser in the
+    /// storage of the page, or, too large for it, for this page only), loaded, merged, its options
+    /// in the profiles; a browser shows its tab. An import of the same id is replaced: the file is
+    /// a newer version of it. A file whose rules run code asks first (`confirmed` after the yes).
+    pub(crate) fn import_catalog_file(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        file: CatalogFile,
+        confirmed: bool,
+    ) {
+        let code = file.code_rules().len();
+        if code > 0 && !confirmed {
+            let name = file.name.clone();
+            self.full.pending_import = Some(Box::new(file));
+            let act = Act::Import(ImportAct::Confirmed);
+            shell.ask(crate::question::import_code(&name, code, act));
+            return;
+        }
+        let saved = save_import(&self.full.imports_dir, &file);
+        let rules = file.rules.len();
+        let skipped = file.skipped.len();
+        let id = file.id.clone();
+        self.imports.retain(|f| f.id != id);
+        self.imports.push(file);
+        self.imports.sort_by_key(|f| import_order(&f.id));
+        // Loaded at the next start only when the file is kept.
+        if saved.is_ok() {
+            self.mark_loaded(shell, &id);
+        }
+        self.refresh_import_list();
+        self.rebuild_catalog(shell);
+        #[cfg(target_arch = "wasm32")]
+        self.open_catalog(shell, &id);
+        shell.status = match saved {
+            Ok(_) => trf(
+                "Imported: {rules} rules, {skipped} policies skipped",
+                &[("rules", &rules), ("skipped", &skipped)],
+            ),
+            Err(e) => trf("Imported, but not saved: {e}", &[("e", &e)]),
+        };
     }
 
     /// Opens the tab of an import, or brings it to the front.
@@ -807,7 +839,8 @@ impl WinWeaver {
                 }
                 self.reveal_selection(shell);
             }
-            CatalogAct::ImportOpen => self.import_open_catalog(shell),
+            CatalogAct::ImportOpen => self.import_open_catalog(shell, false),
+            CatalogAct::ImportOpenConfirmed => self.import_open_catalog(shell, true),
             CatalogAct::CopyTo(target) => self.copy_to_catalog(shell, target),
             act @ (CatalogAct::CompareSelect(_)
             | CatalogAct::CompareExpand(..)
@@ -891,6 +924,11 @@ impl WinWeaver {
             ImportAct::LoadCatalogs => self.load_catalogs_for_unknown(shell),
             ImportAct::Export(id) => self.export_import(shell, &id),
             ImportAct::Rename(id, name) => self.rename_import(shell, &id, &name),
+            ImportAct::Confirmed => {
+                if let Some(file) = self.full.pending_import.take() {
+                    self.import_catalog_file(shell, *file, true);
+                }
+            }
         }
     }
 }

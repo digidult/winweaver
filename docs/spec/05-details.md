@@ -272,13 +272,25 @@ change, read the section of the part it touches.
   `Settings::desc_sections` gives the parts of the description open at first (the id of a part holds the
   setting, so a change shows at once).
 
-- The editor of a catalog (`Doc::CatalogEdit`, `cataledit.rs`): Edit in the bar of a catalog tab
-  (`Act::EditCatalog`, an import or the file of the tab) or New catalog of the menu of the templates
-  (`custom-<n>`, an empty import, loaded). The form of a policy edits its title, its description, the phase
-  (the computer or the default user profile) and its Reg and RegRemove actions of DWORD, QWORD, SZ and
-  EXPAND_SZ with keys in the form of regedit (`admx::catalog_path` turns them into `HKLM:\` or `DU:\`);
-  other actions are kept as they are. Apply goes through `CatalogFile::put_rule`, Save (Ctrl+S) checks and
-  writes the file and loads a loaded import again; a removal asks first.
+- The editor of a catalog (`Doc::CatalogEdit`, the folder `cataledit/`: `mod.rs` the document, the
+  forms and Apply; `rule.rs`, `param.rs`, `action.rs`, `group.rs`, `texts.rs` the parts of the forms):
+  Edit in the bar of a catalog tab (`Act::EditCatalog`, an import or the file of the tab) or New catalog
+  of the menu of the templates (`custom-<n>`, an empty import, loaded). A policy is a `Rule` edited in
+  place; what is JSON in the catalog stays text in the form (`ActionRow`: the key in the form of regedit,
+  which `action::catalog_key` turns into `HKLM:\`, `DU:\` in the phase of the default user and `HKCU:\`
+  in the others, or `HKU:\`; a value in decimal or `0x` hex, lines, hex bytes, or `{name}` for a
+  parameter; `ParamRow`: the values of a choice). Apply goes through `CatalogFile::put_rule_with_texts` or
+  `put_group`, which check the whole file, and the form starts again from the file. Save (Ctrl+S) checks
+  and writes the file and loads a loaded import again; a removal asks first.
+- A catalog file is checked as a catalog of its own (`CatalogFile::check`): the checks of the built-in
+  catalog run on its rules in a catalog of the three roots and its groups (`as_catalog`; a policy without
+  actions yet, one the editor just made, only for its place), and its rules may need or conflict with
+  rules of the built-in catalog (`embedded::cached`), which `merge` keeps. Its texts are
+  `i18n::GroupText` and `RuleText`, the types of the translation files, read from the pairs of version 1
+  too, and `merge_texts` adds them whole. `CatalogFile::code_rules` (`Rule::runs_code`: ps, the commands
+  and settings of the answer file, exe) is what the question before an import counts
+  (`WinWeaver::import_catalog_file` for the dialog, an archive and a browser, `import_open_catalog` for a
+  tab) and what `set_catalog_policy` of MCP refuses; `--import-admx` needs `--code allow` for it.
 
 - Links: a rule named in a view leads where `views::RuleLink` says
   (`Profile`: `Act::Reveal`, select and open the tree down to it; `Catalog(file)`: `Act::CatalogReveal`

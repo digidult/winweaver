@@ -354,6 +354,8 @@ pub enum CatalogAct {
     Expand(String, bool),
     /// Imports the catalog file of the active tab.
     ImportOpen,
+    /// Imports the catalog file of the active tab after the question about its code.
+    ImportOpenConfirmed,
     /// Selects a row of the comparison in front.
     CompareSelect(crate::catalogdiff::CmpKey),
     /// Opens or folds a category of the comparison in front.
@@ -385,6 +387,8 @@ pub enum ImportAct {
     LoadCatalogs,
     Export(String),
     Rename(String, String),
+    /// Imports the catalog file waiting for the answer to the question about its code.
+    Confirmed,
 }
 
 /// The acts of the registry tab.

@@ -225,9 +225,18 @@ criterio negli alberi di altre importazioni; anche un segnalibro dell'opzione. I
 sceglie quali parti della descrizione sono aperte all'inizio.
 
 **Modifica** nella barra di una scheda di catalogo lo apre in un editor, e **Nuovo catalogo** nel menu dei
-modelli ne avvia uno vuoto tutto vostro. Un criterio riceve titolo, descrizione, il computer o il profilo
-utente predefinito e i valori del registro che scrive o rimuove; **Applica** controlla tutto il file, e
-nulla cambia se il controllo fallisce. Salva (Ctrl+S) scrive il file e lo ricarica. **Rimuovi il gruppo** rimuove il gruppo selezionato, dopo una domanda, con tutti i gruppi e i criteri che contiene; il gruppo superiore del file resta.
+modelli ne avvia uno vuoto tutto vostro. Un criterio si modifica per intero, come una regola del catalogo
+integrato: titolo e descrizione, il suo gruppo, quando viene eseguito (un passaggio del file di risposte, lo
+script dell'installazione, il profilo utente predefinito, il primo accesso, dopo OOBE), il suo livello, i
+testi di **Dettagli**, i suoi parametri e le sue azioni di ogni tipo (valori del registro, impostazioni e
+comandi del file di risposte, righe dello script, servizi, funzionalità, funzionalità su richiesta, app,
+programmi), e in **Traduzioni** ogni testo in un'altra lingua, con quello inglese mostrato in un campo vuoto.
+Un gruppo riceve titolo, descrizione e posto: un criterio del file di risposte sta sotto Installazione, uno
+che scrive solo il registro sotto Criteri, il resto sotto Altro. **Applica** controlla tutto il file come si
+controlla il catalogo integrato, e nulla cambia se il controllo fallisce. Salva (Ctrl+S) scrive il file e lo
+ricarica. **Rimuovi il gruppo** rimuove il gruppo selezionato, dopo una domanda, con tutti i gruppi e i
+criteri che contiene; il gruppo superiore del file resta. Un catalogo con script, comandi o programmi propri
+si importa solo dopo una domanda: importate un catalogo così solo da una fonte di cui vi fidate.
 
 Il confronto si apre in una scheda: i criteri che differiscono nell'albero delle loro categorie, con
 interruttori per quelli solo nel primo catalogo, solo nel secondo e i diversi, e il criterio selezionato
@@ -314,7 +323,7 @@ in `logs/` indica con che cosa disegna la finestra.
 | `--version` | Stampa la versione |
 | `--check-catalog` | Carica il catalogo integrato con le sue traduzioni e stampa i loro problemi |
 | `--build PROFILE` | Verifica un profilo e genera il suo file di risposte senza la finestra: `autounattend.xml` in `output`, con accanto gli script che incorpora; PROFILE è un file `.wwprofile`, una preimpostazione (`Office`, `Strict`, `Laptop`, `Home`) o il nome di un profilo di `profiles/`; un errore della verifica ferma la generazione |
-| `--import-admx SOURCE` | Importa modelli di criteri come Impostazioni, Modelli di criteri: `system` (i modelli di questo Windows), una cartella di file ADMX, un file `.admx` con gli ADML delle cartelle delle sue lingue, un archivio `.zip` o un file `.wwcatalog`; il file di catalogo va in `imports/`, e la finestra e il server MCP lo caricano al loro prossimo avvio (da eseguire a finestra chiusa) |
+| `--import-admx SOURCE` | Importa modelli di criteri come Impostazioni, Modelli di criteri: `system` (i modelli di questo Windows), una cartella di file ADMX, un file `.admx` con gli ADML delle cartelle delle sue lingue, un archivio `.zip` o un file `.wwcatalog`; il file di catalogo va in `imports/`, e la finestra e il server MCP lo caricano al loro prossimo avvio (da eseguire a finestra chiusa); un catalogo le cui regole eseguono codice proprio richiede `--code allow` |
 | `--export-catalog SOURCE` | Scrive un file di catalogo (`.wwcatalog`) come Esporta in Impostazioni, Modelli di criteri: di un'importazione per il suo id (il nome del suo file in `imports/`), o di una sorgente di `--import-admx` letta senza importarla; `<id>.wwcatalog` in `output` |
 | `--read-pc` | Senza `--mcp`: legge questo PC in un nuovo profilo con il nome del computer, come Questo PC, Leggi questo PC, e lo salva in `profiles/`; con un file `.xml` in `--out` scrive invece il file di risposte di quel profilo; le funzionalità e le capacità di Windows vengono lette solo quando il programma è eseguito come amministratore |
 | `--base PROFILE` | Con `--read-pc`: il profilo da cui parte la lettura, indicato come per `--build`; per impostazione predefinita la preimpostazione Office |

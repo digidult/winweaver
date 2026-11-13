@@ -384,6 +384,9 @@ struct Full {
     users_import: Option<usersview::UsersImport>,
     /// The import being renamed in the settings and the name typed so far.
     renaming: Option<(String, String)>,
+    /// A catalog file whose rules run code, waiting for the answer to the question before its
+    /// import.
+    pending_import: Option<Box<CatalogFile>>,
     /// The files the dialog of the page hands over for a purpose (a browser).
     #[cfg(target_arch = "wasm32")]
     web: app::web::WebState,
@@ -433,6 +436,7 @@ impl WinWeaver {
                 running_skipped: Vec::new(),
                 users_import: None,
                 renaming: None,
+                pending_import: None,
                 #[cfg(target_arch = "wasm32")]
                 web: Default::default(),
             },
