@@ -273,7 +273,9 @@ Registrierung und die Regeln der geladenen Kataloge, die den Schlüssel oder den
 **Neuer Schlüssel**, **Neuer Wert**, **Bearbeiten** und **Löschen** sind in der Leiste, und ein Löschen
 fragt zuerst. **Speichern** schreibt jede Zeile zurück: die Kommentare und die Zeilen, die das Programm
 nicht liest, bleiben an ihrem Platz. Eine über **Dieser PC** gespeicherte Datei nennt ihre Regeln in
-Kommentaren, und der Pfeil eines solchen Kommentars zeigt die Regel im Profil.
+Kommentaren, und der Pfeil eines solchen Kommentars zeigt die Regel im Profil. Ein Schlüssel, den die
+Datei löscht und dann wieder schreibt (so wird eine Liste gespeichert, die die Werte ihres Schlüssels
+ersetzt), steht einmal im Baum, mit ↻ als neu angelegt markiert, mit den Werten, die er bekommt.
 
 Eine Gruppenrichtliniendatei (`Registry.pol`) öffnet sich ebenfalls in einem eigenen Tab: die Dateien des
 Computers und der Benutzer dieses Windows (**Menü, Gruppenrichtlinie**; die Leiste eines Profils, eines

@@ -412,7 +412,11 @@ change, read the section of the part it touches.
   `Registry::rename_key` copies and deletes, `NativeRegistry` uses `RegRenameKey`).
 
 - Registry files: the outline is a tree of the keys by default (`regfileview::tree_rows`, the folded
-  keys in `RegFileDoc::closed`; List and Tree in the command bar set `Extra::regfile_tree`), the
+  keys in `RegFileDoc::closed`; List and Tree in the command bar set `Extra::regfile_tree`). A key the
+  file names in several entries is the last of them in the tree, what the import leaves; a key a
+  line above deletes, with itself or a key it is in, is made anew (`regfileview::made_anew`: the
+  icon ↻ in the outline, a chip and a line in its head). A list that replaces the values of its key
+  is written so (`[-key]`, then `[key]`), and the tree showed the deletion alone before 0.1.52. The
   rules that write a key fold (`Extra::writers_open` at first) and scroll inside a third of the
   window. Apply to this PC applies the selected value, key or the whole file
   (`RegFile::changes`, `regfile::apply_changes` with the registry of the window) after a question

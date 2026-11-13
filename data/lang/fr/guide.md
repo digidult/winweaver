@@ -278,7 +278,9 @@ les règles des catalogues chargés qui écrivent la clé ou la valeur sélectio
 **Nouvelle valeur**, **Modifier** et **Supprimer** sont dans la barre, et une suppression demande
 d'abord. **Enregistrer** réécrit chaque ligne : les commentaires et les lignes que le programme ne lit
 pas restent à leur place. Un fichier enregistré depuis **Ce PC** nomme ses règles dans des commentaires,
-et la flèche d'un tel commentaire montre la règle dans le profil.
+et la flèche d'un tel commentaire montre la règle dans le profil. Une clé que le fichier supprime puis
+écrit de nouveau (une liste qui remplace les valeurs de sa clé est enregistrée ainsi) apparaît une fois
+dans l'arbre, marquée ↻ comme recréée, avec les valeurs qu'elle reçoit.
 
 Un fichier de stratégie de groupe (`Registry.pol`) s'ouvre aussi dans son propre onglet : les fichiers de
 l'ordinateur et des utilisateurs de ce Windows (**Menu, Stratégie de groupe** ; la barre d'un profil, d'un

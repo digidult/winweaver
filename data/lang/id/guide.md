@@ -252,7 +252,9 @@ antaranya, tautan ke tab registri, serta aturan dari katalog yang dimuat yang me
 nilai terpilih. **Kunci baru**, **Nilai baru**, **Sunting**, dan **Hapus** ada di bilah, dan penghapusan
 bertanya terlebih dahulu. **Simpan** menulis kembali setiap baris: komentar dan baris yang tidak dibaca
 program tetap di tempatnya. File yang disimpan dari **PC Ini** menyebut aturannya dalam komentar, dan
-panah komentar seperti itu menunjukkan aturan di profil.
+panah komentar seperti itu menunjukkan aturan di profil. Kunci yang dihapus lalu ditulis lagi oleh file
+(daftar yang mengganti nilai kuncinya disimpan seperti itu) tampil sekali di pohon, ditandai ↻ sebagai
+dibuat ulang, dengan nilai yang diterimanya.
 
 Berkas Kebijakan Grup (`Registry.pol`) juga terbuka di tabnya sendiri: berkas komputer dan pengguna
 Windows ini (**Menu, Kebijakan Grup**; bilah profil, katalog dan registri) atau berkas `.pol` mana pun.

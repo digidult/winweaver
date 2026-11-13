@@ -263,6 +263,8 @@ cataloghi caricati che scrivono la chiave o il valore selezionato. **Nuova chiav
 **Modifica** ed **Elimina** sono nella barra, e un'eliminazione chiede prima. **Salva** riscrive ogni
 riga: i commenti e le righe che il programma non legge restano al loro posto. Un file salvato da **Questo
 PC** nomina le sue regole nei commenti, e la freccia di un tale commento mostra la regola nel profilo.
+Una chiave che il file elimina e poi scrive di nuovo (così si salva un elenco che sostituisce i valori
+della sua chiave) compare una volta nell'albero, segnata ↻ come ricreata, con i valori che riceve.
 
 Anche un file di Criteri di gruppo (`Registry.pol`) si apre in una scheda propria: i file del computer e
 degli utenti di questo Windows (**Menu, Criteri di gruppo**; la barra di un profilo, di un catalogo e del

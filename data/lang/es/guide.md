@@ -273,7 +273,9 @@ las reglas de los catálogos cargados que escriben la clave o el valor seleccion
 **Nuevo valor**, **Editar** y **Eliminar** están en la barra, y una eliminación pregunta antes.
 **Guardar** vuelve a escribir cada línea: los comentarios y las líneas que el programa no lee se quedan
 donde estaban. Un archivo guardado desde **Este equipo** nombra sus reglas en comentarios, y la flecha de
-ese comentario muestra la regla en el perfil.
+ese comentario muestra la regla en el perfil. Una clave que el archivo elimina y luego vuelve a escribir
+(así se guarda una lista que reemplaza los valores de su clave) aparece una vez en el árbol, marcada con
+↻ como creada de nuevo, con los valores que recibe.
 
 Un archivo de directiva de grupo (`Registry.pol`) también se abre en su propia pestaña: los archivos del
 equipo y de los usuarios de este Windows (**Menú, Directiva de grupo**; la barra de un perfil, un catálogo

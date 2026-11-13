@@ -257,7 +257,9 @@ yorumlarla, kayıt defteri sekmesine bir bağlantı ve anahtarı ya da seçili d
 kataloglardaki kurallar. **Yeni anahtar**, **Yeni değer**, **Düzenle** ve **Sil** çubuktadır; silme önce
 sorar. **Kaydet** her satırı geri yazar: yorumlar ve programın okumadığı satırlar yerinde kalır. **Bu
 bilgisayar** ile kaydedilen bir dosya kurallarını yorumlarda adlandırır ve böyle bir yorumun oku, kuralı
-profilde gösterir.
+profilde gösterir. Dosyanın önce silip sonra yeniden yazdığı bir anahtar (anahtarının değerlerini
+değiştiren bir liste böyle kaydedilir) ağaçta bir kez, yeniden oluşturulduğunu gösteren ↻ işaretiyle ve
+aldığı değerlerle görünür.
 
 Bir Grup İlkesi dosyası (`Registry.pol`) da kendi sekmesinde açılır: bu Windows'un bilgisayar ve
 kullanıcı dosyaları (**Menü, Grup İlkesi**; profil, katalog ve kayıt defteri çubuğu) ya da herhangi bir

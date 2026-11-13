@@ -251,7 +251,9 @@ types of regedit and the comments between them, a link to the registry tab and t
 catalogs that write the key or the selected value. **New key**, **New value**, **Edit** and **Delete**
 are in the bar, and a deletion asks first. **Save** writes every line back: the comments and the lines
 the program does not read stay where they were. A file saved from **This PC** names its rules in
-comments, and the arrow of such a comment shows the rule in the profile.
+comments, and the arrow of such a comment shows the rule in the profile. A key the file deletes and
+then writes again (a list that replaces the values of its key is saved so) shows once in the tree,
+marked ↻ as made anew, with the values it gets.
 
 A Group Policy file (`Registry.pol`) opens in a tab of its own as well: the files of the computer and of
 the users of this Windows (**Menu, Group Policy**; the bar of a profile, a catalog and the registry) or

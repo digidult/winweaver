@@ -1022,5 +1022,7 @@
   "Read the report {path}: {summary}": "Report {path} letto: {summary}",
   "failed: {what} {note}": "non riuscito: {what} {note}",
   "skipped: {what} {note}": "ignorato: {what} {note}",
-  "{status}: {what} {note}": "{status}: {what} {note}"
+  "{status}: {what} {note}": "{status}: {what} {note}",
+  "Deleted first, then made anew": "Prima eliminata, poi ricreata",
+  "A line above deletes this key or a key it is in, so the import makes it anew with the values below alone.": "Una riga più in alto elimina questa chiave o una chiave che la contiene, quindi l'importazione la ricrea solo con i valori qui sotto."
 }

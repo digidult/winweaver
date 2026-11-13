@@ -4336,7 +4336,7 @@ dependencies = [
 
 [[package]]
 name = "winweaver"
-version = "0.1.51"
+version = "0.1.52"
 dependencies = [
  "serde_json",
  "windows-sys 0.61.2",
@@ -4349,7 +4349,7 @@ dependencies = [
 
 [[package]]
 name = "winweaver-core"
-version = "0.1.51"
+version = "0.1.52"
 dependencies = [
  "aes",
  "base64",
@@ -4371,7 +4371,7 @@ dependencies = [
 
 [[package]]
 name = "winweaver-mcp"
-version = "0.1.51"
+version = "0.1.52"
 dependencies = [
  "indexmap",
  "serde",
@@ -4384,7 +4384,7 @@ dependencies = [
 
 [[package]]
 name = "winweaver-ui"
-version = "0.1.51"
+version = "0.1.52"
 dependencies = [
  "eframe",
  "egui_kittest",
@@ -4404,7 +4404,7 @@ dependencies = [
 
 [[package]]
 name = "winweaver-win"
-version = "0.1.51"
+version = "0.1.52"
 dependencies = [
  "serde_json",
  "windows",
@@ -4416,7 +4416,7 @@ dependencies = [
 
 [[package]]
 name = "winweaverweb"
-version = "0.1.51"
+version = "0.1.52"
 dependencies = [
  "getrandom 0.4.3",
  "wasm-bindgen-futures",
@@ -4471,7 +4471,7 @@ dependencies = [
 
 [[package]]
 name = "wwlite"
-version = "0.1.51"
+version = "0.1.52"
 dependencies = [
  "egui_kittest",
  "wasm-bindgen-futures",

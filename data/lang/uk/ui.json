@@ -1022,5 +1022,7 @@
   "Read the report {path}: {summary}": "Звіт {path} прочитано: {summary}",
   "failed: {what} {note}": "не вдалося: {what} {note}",
   "skipped: {what} {note}": "пропущено: {what} {note}",
-  "{status}: {what} {note}": "{status}: {what} {note}"
+  "{status}: {what} {note}": "{status}: {what} {note}",
+  "Deleted first, then made anew": "Спершу видаляється, потім створюється наново",
+  "A line above deletes this key or a key it is in, so the import makes it anew with the values below alone.": "Рядок вище видаляє цей ключ або ключ, у якому він лежить, тож імпорт створює його наново лише зі значеннями нижче."
 }

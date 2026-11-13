@@ -2,7 +2,7 @@
 
 For agents and developers: where things are, what to read first, which rules apply, where the
 information that changes is.
-Updated with every change of structure, commands or task status. Last update: 11.11.2026.
+Updated with every change of structure, commands or task status. Last update: 13.11.2026.
 
 Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
@@ -103,7 +103,7 @@ Every folder and module: `docs/spec/04-architecture.md`, section 10. Next to the
     files and logs, which stay English). A new rule needs its texts in
     every `data/catalog/lang/<code>.json` (`translations_cover_every_rule`); `package/lang/be/ui.json` may
     lag (English fills the gaps).
-11. Versions: `version` of the workspace `Cargo.toml` (0.1.51 on 11.11.2026) grows with every
+11. Versions: `version` of the workspace `Cargo.toml` (0.1.52 on 13.11.2026) grows with every
     pull request that reaches `main`. An agent changes the third number alone (0.1.45 to 0.1.46);
     the first and the second change only on the word of the customer. Every build
     names its commit: `winweaver_core::BUILD` is `<version>+<12 digits of the commit>` (`build.rs` of the core,

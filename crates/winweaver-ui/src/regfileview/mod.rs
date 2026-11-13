@@ -119,6 +119,42 @@ pub fn items(lines: &[Line]) -> Vec<Item> {
     out
 }
 
+/// The key lines a line above deletes, with the key itself or a key it is in: the import makes
+/// such a key anew, with the values that follow it alone. A list that replaces the values of its
+/// key is written so (`[-key]`, then `[key]` with the list), and a file may delete a key to drop a
+/// value of another type.
+pub(crate) fn made_anew(lines: &[Line]) -> HashSet<usize> {
+    let full = |path: &str| {
+        registry::normalize(path)
+            .unwrap_or_else(|| path.trim_matches('\\').to_owned())
+            .to_lowercase()
+    };
+    let mut deleted: HashSet<String> = HashSet::new();
+    let mut out = HashSet::new();
+    for (i, line) in lines.iter().enumerate() {
+        let Line::Key { path, delete } = line else {
+            continue;
+        };
+        let path = full(path);
+        if *delete {
+            deleted.insert(path);
+            continue;
+        }
+        let mut prefix = String::new();
+        for part in path.split('\\') {
+            if !prefix.is_empty() {
+                prefix.push('\\');
+            }
+            prefix.push_str(part);
+            if deleted.contains(&prefix) {
+                out.insert(i);
+                break;
+            }
+        }
+    }
+    out
+}
+
 /// Whether a key is in the default user profile as the files of the plans load it.
 fn in_default_user(path: &str) -> bool {
     let lower = path.to_lowercase();

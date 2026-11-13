@@ -1022,5 +1022,7 @@
   "Read the report {path}: {summary}": "Bericht {path} gelesen: {summary}",
   "failed: {what} {note}": "fehlgeschlagen: {what} {note}",
   "skipped: {what} {note}": "übersprungen: {what} {note}",
-  "{status}: {what} {note}": "{status}: {what} {note}"
+  "{status}: {what} {note}": "{status}: {what} {note}",
+  "Deleted first, then made anew": "Wird zuerst gelöscht, dann neu angelegt",
+  "A line above deletes this key or a key it is in, so the import makes it anew with the values below alone.": "Eine Zeile weiter oben löscht diesen Schlüssel oder einen Schlüssel, in dem er liegt, daher legt der Import ihn nur mit den Werten unten neu an."
 }

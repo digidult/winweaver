@@ -1022,5 +1022,7 @@
   "Read the report {path}: {summary}": "Laporan {path} dibaca: {summary}",
   "failed: {what} {note}": "gagal: {what} {note}",
   "skipped: {what} {note}": "dilewati: {what} {note}",
-  "{status}: {what} {note}": "{status}: {what} {note}"
+  "{status}: {what} {note}": "{status}: {what} {note}",
+  "Deleted first, then made anew": "Dihapus dulu, lalu dibuat ulang",
+  "A line above deletes this key or a key it is in, so the import makes it anew with the values below alone.": "Baris di atas menghapus kunci ini atau kunci yang memuatnya, sehingga impor membuatnya ulang hanya dengan nilai di bawah."
 }

@@ -11,8 +11,13 @@ pub(crate) enum Node {
     Folder(String),
 }
 
-/// The title, the count, the icon and whether an entry is shown muted.
-fn row_parts(lines: &[Line], item: &Item) -> (String, String, &'static str, bool) {
+/// The title, the count, the icon and whether an entry is shown muted. A key a line above
+/// deletes (`made`, `made_anew`) is made anew: the icon says so.
+fn row_parts(
+    lines: &[Line],
+    item: &Item,
+    made: &HashSet<usize>,
+) -> (String, String, &'static str, bool) {
     match item {
         Item::Key { line, lines: range } => {
             let (path, delete) = match &lines[*line] {
@@ -25,6 +30,8 @@ fn row_parts(lines: &[Line], item: &Item) -> (String, String, &'static str, bool
                 .count();
             if delete {
                 (path, String::new(), icons::DELETE, true)
+            } else if made.contains(line) {
+                (path, values.to_string(), icons::REFRESH, false)
             } else {
                 (path, values.to_string(), icons::FOLDER, false)
             }
@@ -47,8 +54,13 @@ fn row_parts(lines: &[Line], item: &Item) -> (String, String, &'static str, bool
 }
 
 /// The row of an entry in the list of the outline.
-pub(crate) fn outline_row(lines: &[Line], item: &Item, index: usize) -> tree::Row<Node> {
-    let (title, right, icon, muted) = row_parts(lines, item);
+pub(crate) fn outline_row(
+    lines: &[Line],
+    item: &Item,
+    index: usize,
+    made: &HashSet<usize>,
+) -> tree::Row<Node> {
+    let (title, right, icon, muted) = row_parts(lines, item, made);
     tree::Row {
         key: Node::Item(index),
         depth: 0,
@@ -74,11 +86,15 @@ fn item_path(lines: &[Line], item: &Item) -> Option<String> {
 }
 
 /// The keys of the file as a tree of their paths, as regedit shows them: a part of a path no key
-/// of the file names is a folder; the comments outside the keys follow at the end.
+/// of the file names is a folder; the comments outside the keys follow at the end. A key the file
+/// names in several entries is the last of them, what the import leaves: a list that replaces the
+/// values of its key deletes the key and then writes it (`[-key]`, `[key]`), and the tree shows
+/// the key made anew with its values, not the deletion.
 pub(crate) fn tree_rows(
     lines: &[Line],
     items: &[Item],
     closed: &HashSet<String>,
+    made: &HashSet<usize>,
 ) -> Vec<tree::Row<Node>> {
     struct Part {
         name: String,
@@ -124,9 +140,7 @@ pub(crate) fn tree_rows(
             };
             parent = Some(n);
         }
-        if let Some(n) = parent
-            && parts[n].item.is_none()
-        {
+        if let Some(n) = parent {
             parts[n].item = Some(i);
         }
     }
@@ -137,7 +151,7 @@ pub(crate) fn tree_rows(
         let open = !closed.contains(&part.path.to_lowercase());
         let (right, icon, muted) = match part.item {
             Some(i) => {
-                let (_, right, icon, muted) = row_parts(lines, &items[i]);
+                let (_, right, icon, muted) = row_parts(lines, &items[i], made);
                 (right, icon, muted)
             }
             None => (String::new(), icons::FOLDER, true),
@@ -163,7 +177,7 @@ pub(crate) fn tree_rows(
     }
     for (i, item) in items.iter().enumerate() {
         if matches!(item, Item::Notes { .. }) {
-            rows.push(outline_row(lines, item, i));
+            rows.push(outline_row(lines, item, i, made));
         }
     }
     rows
@@ -175,6 +189,7 @@ pub(crate) fn outline(
     ui: &mut egui::Ui,
     doc: &mut RegFileDoc,
     items: &[Item],
+    made: &HashSet<usize>,
     selected: Option<usize>,
     as_tree: bool,
 ) {
@@ -196,7 +211,7 @@ pub(crate) fn outline(
         switch: None,
     }];
     if as_tree && words.is_empty() {
-        rows.extend(tree_rows(lines, items, &doc.closed));
+        rows.extend(tree_rows(lines, items, &doc.closed, made));
     } else {
         for (i, item) in items.iter().enumerate() {
             if !words.is_empty() {
@@ -206,7 +221,7 @@ pub(crate) fn outline(
                     continue;
                 }
             }
-            rows.push(outline_row(lines, item, i));
+            rows.push(outline_row(lines, item, i, made));
         }
     }
     let wanted = selected.map_or(Node::File, Node::Item);
@@ -282,6 +297,7 @@ pub(crate) fn key_head(
     doc: &RegFileDoc,
     line: usize,
     values: usize,
+    made_anew: bool,
     catalog: &Catalog,
     texts: Option<&CatalogTexts>,
     imports: &[CatalogFile],
@@ -308,6 +324,9 @@ pub(crate) fn key_head(
                     trf("{n} values", &[("n", &values)])
                 };
                 style::chip(ui, &count, false);
+                if made_anew {
+                    style::chip(ui, tr("Deleted first, then made anew"), true);
+                }
             }
             if in_default_user(path) {
                 style::chip(ui, tr("Default user profile"), false);
@@ -321,6 +340,12 @@ pub(crate) fn key_head(
             }
             crate::polview::link(ui, path, value.as_deref(), acts);
         });
+        if made_anew && !*delete {
+            let text = tr(
+                "A line above deletes this key or a key it is in, so the import makes it anew with the values below alone.",
+            );
+            ui.label(style::muted(ui, text, 12.0));
+        }
         if in_default_user(path) {
             let text = tr(
                 "The default user profile: load its hive here before the import, as the comment at the top of the file says.",
@@ -571,10 +596,11 @@ pub fn regfile_view(
         );
     }
     let items = items(&doc.file.lines);
+    let made = made_anew(&doc.file.lines);
     let selected = doc.item(&items);
     let p = style::palette(ui);
     widgets::side_panel(ui, "regfile-outline", 380.0, |ui| {
-        outline(ui, doc, &items, selected, options.tree);
+        outline(ui, doc, &items, &made, selected, options.tree);
     });
     egui::CentralPanel::default()
         .frame(egui::Frame::new().fill(p.bg))
@@ -602,6 +628,7 @@ pub fn regfile_view(
                         doc,
                         *line,
                         values,
+                        made.contains(line),
                         catalog,
                         texts,
                         imports,

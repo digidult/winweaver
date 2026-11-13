@@ -1022,5 +1022,7 @@
   "Read the report {path}: {summary}": "{path} raporu okundu: {summary}",
   "failed: {what} {note}": "başarısız: {what} {note}",
   "skipped: {what} {note}": "atlandı: {what} {note}",
-  "{status}: {what} {note}": "{status}: {what} {note}"
+  "{status}: {what} {note}": "{status}: {what} {note}",
+  "Deleted first, then made anew": "Önce silinir, sonra yeniden oluşturulur",
+  "A line above deletes this key or a key it is in, so the import makes it anew with the values below alone.": "Yukarıdaki bir satır bu anahtarı ya da onu içeren bir anahtarı siler; bu yüzden içe aktarma onu yalnızca aşağıdaki değerlerle yeniden oluşturur."
 }
