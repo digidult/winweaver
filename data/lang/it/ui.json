@@ -1112,5 +1112,10 @@
   "windowsPE: a setting or a command of the answer file": "windowsPE: un'impostazione o un comando del file di risposte",
   "{key} is not a key of the machine or of the users": "{key} non è una chiave del computer o degli utenti",
   "{name} runs code of its own: {n} rules with scripts, commands, programs or settings of the answer file. A profile that turns them on runs them as SYSTEM during the installation or on this PC. Import it only from a source you trust.": "{name} esegue codice proprio: {n} regole con script, comandi, programmi o impostazioni del file di risposte. Un profilo che le attiva le esegue come SYSTEM durante l'installazione o su questo PC. Importalo solo da una fonte di cui ti fidi.",
-  "{value} is not a byte in hex": "{value} non è un byte in esadecimale"
+  "{value} is not a byte in hex": "{value} non è un byte in esadecimale",
+  "A new id of the catalog renames its file at the save and every policy and group whose id starts with admx. and the old id. The open profiles and the bookmarks follow the renamed policies at the save; a profile file that is not open keeps the old ids.": "Un nuovo id del catalogo rinomina al salvataggio il suo file e ogni criterio e gruppo il cui id inizia con admx. e il vecchio id. I profili aperti e i segnalibri seguono i criteri rinominati al salvataggio; un file di profilo non aperto conserva i vecchi id.",
+  "An import {id} is there already": "Un'importazione {id} esiste già",
+  "Id": "Id",
+  "Renames it in the whole catalog: the rules that name it and its translations follow": "Lo rinomina in tutto il catalogo: le regole che lo nominano e le sue traduzioni seguono",
+  "Saved; the renamed options changed in {n} open profiles: save them too": "Salvato; le opzioni rinominate sono cambiate in {n} profili aperti: salvate anche quelli"
 }

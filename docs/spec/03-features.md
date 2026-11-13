@@ -157,8 +157,9 @@ lists the planned changes.
   tab into a catalog open in its editor or into a new one, with its ids and its texts in other languages
   (`CatalogFile::copy_from`).
 - The editor of a catalog (`01-ui.md` section 18) edits the policies, groups and translations of a
-  catalog file with every feature of the built-in catalog, the answer file included, and New catalog
-  makes an empty import.
+  catalog file with every feature of the built-in catalog, the answer file included, renames the ids of
+  a policy, a group or the whole file across the catalog and the open profiles, and New catalog makes an
+  empty import.
 - Templates in UTF-8 or UTF-16 with its mark (the templates of vendors such as Chrome, Edge, Brave and
   Office); a second copy of a policy in one import is left out and listed as skipped, and policies of two
   namespaces with one prefix and one name are told apart by the namespace.

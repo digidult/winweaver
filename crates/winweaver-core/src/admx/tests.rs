@@ -608,6 +608,81 @@ fn a_catalog_file_of_version_1_is_read() {
     assert_eq!(again.texts, read.texts, "the new form reads back the same");
 }
 
+/// A policy, a group and the file get new ids across the file: the Disabled rule, the
+/// conflicts, the groups of the rules and the translations follow; a taken id or one outside the
+/// imports changes nothing.
+#[test]
+fn ids_are_renamed_across_the_catalog_file() {
+    let mut f = sample();
+    let pairs = f
+        .rename_rule("admx.sample.turnoff", "admx.sample.switch")
+        .unwrap();
+    assert_eq!(
+        pairs,
+        [
+            (
+                "admx.sample.turnoff".to_owned(),
+                "admx.sample.switch".to_owned()
+            ),
+            (
+                "admx.sample.turnoff.off".to_owned(),
+                "admx.sample.switch.off".to_owned()
+            ),
+        ]
+    );
+    let off = f
+        .rules
+        .iter()
+        .find(|r| r.id == "admx.sample.switch.off")
+        .unwrap();
+    assert_eq!(off.conflicts, ["admx.sample.switch"]);
+    assert!(f.texts["uk"].rules.contains_key("admx.sample.switch"));
+    assert!(!f.texts["uk"].rules.contains_key("admx.sample.turnoff"));
+    let other = f
+        .rules
+        .iter()
+        .find(|r| !r.id.starts_with("admx.sample.switch"))
+        .unwrap()
+        .id
+        .clone();
+    let before = f.clone();
+    assert!(
+        f.rename_rule("admx.sample.switch", &other).is_err(),
+        "a taken id"
+    );
+    assert!(
+        f.rename_rule("admx.sample.switch", "sample.switch")
+            .is_err(),
+        "outside the imports"
+    );
+    assert_eq!(f, before, "a failed rename changes nothing");
+    // A group: its rules and the groups in it follow.
+    let group = f.groups[1].id.clone();
+    let inside: Vec<String> = f
+        .rules
+        .iter()
+        .filter(|r| r.group == group)
+        .map(|r| r.id.clone())
+        .collect();
+    f.rename_group(&group, "admx.test.renamed").unwrap();
+    for id in &inside {
+        let r = f.rules.iter().find(|r| r.id == *id).unwrap();
+        assert_eq!(r.group, "admx.test.renamed");
+    }
+    // The file: the ids named after its old id take the new one, the others stay.
+    let pairs = f.rename_id("mine").unwrap();
+    assert_eq!(f.id, "mine");
+    assert!(f.groups.iter().any(|g| g.id == "admx.mine"));
+    assert!(f.groups.iter().all(|g| !g.id.starts_with("admx.test")));
+    assert!(
+        f.rules.iter().any(|r| r.id == "admx.sample.switch"),
+        "not named after the file"
+    );
+    assert!(pairs.iter().all(|(o, _)| o.starts_with("admx.test")));
+    f.check().unwrap();
+    assert!(f.rename_id("not.an.id").is_err());
+}
+
 #[test]
 fn a_policy_a_built_in_rule_writes_is_linked_to_it() {
     let f = sample();

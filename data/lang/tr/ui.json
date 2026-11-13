@@ -1112,5 +1112,10 @@
   "windowsPE: a setting or a command of the answer file": "windowsPE: yanıt dosyasının bir ayarı ya da komutu",
   "{key} is not a key of the machine or of the users": "{key} bilgisayarın ya da kullanıcıların bir anahtarı değil",
   "{name} runs code of its own: {n} rules with scripts, commands, programs or settings of the answer file. A profile that turns them on runs them as SYSTEM during the installation or on this PC. Import it only from a source you trust.": "{name} kendi kodunu çalıştırır: betik, komut, program ya da yanıt dosyası ayarı içeren {n} kural. Bunları açan bir profil, kurulum sırasında ya da bu bilgisayarda SYSTEM olarak çalıştırır. Yalnızca güvendiğiniz bir kaynaktan içe aktarın.",
-  "{value} is not a byte in hex": "{value} onaltılık bir bayt değil"
+  "{value} is not a byte in hex": "{value} onaltılık bir bayt değil",
+  "A new id of the catalog renames its file at the save and every policy and group whose id starts with admx. and the old id. The open profiles and the bookmarks follow the renamed policies at the save; a profile file that is not open keeps the old ids.": "Kataloğun yeni kimliği, kaydederken dosyasını ve kimliği admx. ile eski kimlikle başlayan her ilkeyi ve grubu yeniden adlandırır. Açık profiller ve yer imleri kaydederken yeniden adlandırılan ilkeleri izler; açık olmayan bir profil dosyası eski kimlikleri korur.",
+  "An import {id} is there already": "{id} içe aktarımı zaten var",
+  "Id": "Kimlik",
+  "Renames it in the whole catalog: the rules that name it and its translations follow": "Tüm katalogda yeniden adlandırır: onu anan kurallar ve çevirileri de izler",
+  "Saved; the renamed options changed in {n} open profiles: save them too": "Kaydedildi; yeniden adlandırılan seçenekler {n} açık profilde değişti: onları da kaydedin"
 }

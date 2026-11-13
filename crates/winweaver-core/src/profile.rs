@@ -207,6 +207,28 @@ impl Profile {
     }
 
     /// Whether the rule is chosen on (before the resolver).
+    /// Gives the choices of rules new ids, the ones of the loaded catalog and the unknown ones, in
+    /// their places; the count of the choices renamed. A catalog of the user renamed its rules.
+    pub fn rename_rules(&mut self, pairs: &[(String, String)]) -> usize {
+        let mut count = 0;
+        let mut renamed = |id: String| match pairs.iter().find(|(o, _)| *o == id) {
+            Some((_, n)) => {
+                count += 1;
+                n.clone()
+            }
+            None => id,
+        };
+        self.rules = std::mem::take(&mut self.rules)
+            .into_iter()
+            .map(|(id, c)| (renamed(id), c))
+            .collect();
+        self.unknown = std::mem::take(&mut self.unknown)
+            .into_iter()
+            .map(|(id, c)| (renamed(id), c))
+            .collect();
+        count
+    }
+
     pub fn is_on(&self, id: &str) -> bool {
         self.rules.get(id).is_some_and(|c| c.on)
     }

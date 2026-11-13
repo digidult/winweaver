@@ -1,7 +1,7 @@
 //! A catalog file (`.wwcatalog`): the rules and groups of one import, read, checked, changed
 //! and written.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 
 use indexmap::IndexMap;
@@ -220,6 +220,175 @@ impl CatalogFile {
         next.check()?;
         *self = next;
         Ok(())
+    }
+
+    /// Gives a policy of the file a new id, with its Disabled rule `<id>.off`: their ids, the
+    /// rules of the file that need or conflict with them and their translations. The new id is an
+    /// id of an import (`admx.` and the characters of an id) that no rule of the file has; the
+    /// whole file is checked and a failure changes nothing. The pairs of the old and the new ids,
+    /// none when the id stays.
+    pub fn rename_rule(&mut self, old: &str, new: &str) -> Result<Vec<(String, String)>, String> {
+        let base = old.strip_suffix(".off").unwrap_or(old);
+        let new = new.trim();
+        let new_base = new.strip_suffix(".off").unwrap_or(new);
+        if !self.rules.iter().any(|r| r.id == base) {
+            return Err(format!("the file has no policy {base}"));
+        }
+        if new_base == base {
+            return Ok(Vec::new());
+        }
+        import_id(new_base)?;
+        let mut pairs = vec![(base.to_owned(), new_base.to_owned())];
+        let off = format!("{base}.off");
+        if self.rules.iter().any(|r| r.id == off) {
+            pairs.push((off, format!("{new_base}.off")));
+        }
+        if let Some((_, taken)) = pairs
+            .iter()
+            .find(|(_, n)| self.rules.iter().any(|r| r.id == *n))
+        {
+            return Err(format!("{taken} is there already"));
+        }
+        let mut next = self.clone();
+        next.rename_rules(&pairs);
+        next.check()?;
+        *self = next;
+        Ok(pairs)
+    }
+
+    /// Gives a group of the file a new id: its id, the parent of the groups in it, the group of
+    /// its policies and its translations, as `rename_rule`.
+    pub fn rename_group(&mut self, old: &str, new: &str) -> Result<(), String> {
+        let new = new.trim();
+        if !self.groups.iter().any(|g| g.id == old) {
+            return Err(format!("the file has no group {old}"));
+        }
+        if new == old {
+            return Ok(());
+        }
+        import_id(new)?;
+        if self.groups.iter().any(|g| g.id == new) {
+            return Err(format!("{new} is there already"));
+        }
+        let mut next = self.clone();
+        next.rename_groups(&[(old.to_owned(), new.to_owned())]);
+        next.check()?;
+        *self = next;
+        Ok(())
+    }
+
+    /// Gives the file a new id, and every id of its groups and rules that is `admx.<old id>` or
+    /// starts with `admx.<old id>.` the new one in its place: the ids the program gives to a new
+    /// catalog (`custom-1`) and to its policies (`admx.custom-1.<title>`) become names of the
+    /// user. The new id is a word of the characters of an id without a dot; no other rule or
+    /// group of the file may have a new id already. The pairs of the old and the new rule ids.
+    pub fn rename_id(&mut self, new: &str) -> Result<Vec<(String, String)>, String> {
+        let new = new.trim();
+        if !check::is_safe_id(new) || new.contains('.') || new.len() > 80 {
+            return Err(format!(
+                "{new} is not an id: lower case letters, digits, hyphens and underscores"
+            ));
+        }
+        if new == self.id {
+            return Ok(Vec::new());
+        }
+        let (from, to) = (format!("admx.{}", self.id), format!("admx.{new}"));
+        let moved = |id: &str| -> Option<String> {
+            if id == from {
+                return Some(to.clone());
+            }
+            let rest = id.strip_prefix(&from)?.strip_prefix('.')?;
+            Some(format!("{to}.{rest}"))
+        };
+        let rules: Vec<(String, String)> = self
+            .rules
+            .iter()
+            .filter_map(|r| Some((r.id.clone(), moved(&r.id)?)))
+            .collect();
+        let groups: Vec<(String, String)> = self
+            .groups
+            .iter()
+            .filter_map(|g| Some((g.id.clone(), moved(&g.id)?)))
+            .collect();
+        let old_rules: HashSet<&str> = rules.iter().map(|(o, _)| o.as_str()).collect();
+        let old_groups: HashSet<&str> = groups.iter().map(|(o, _)| o.as_str()).collect();
+        let kept_rule = |id: &str| {
+            self.rules
+                .iter()
+                .any(|r| r.id == id && !old_rules.contains(id))
+        };
+        let kept_group = |id: &str| {
+            self.groups
+                .iter()
+                .any(|g| g.id == id && !old_groups.contains(id))
+        };
+        if let Some((_, taken)) = rules.iter().find(|(_, n)| kept_rule(n)) {
+            return Err(format!("{taken} is there already"));
+        }
+        if let Some((_, taken)) = groups.iter().find(|(_, n)| kept_group(n)) {
+            return Err(format!("{taken} is there already"));
+        }
+        let mut next = self.clone();
+        next.id = new.to_owned();
+        next.rename_rules(&rules);
+        next.rename_groups(&groups);
+        next.check()?;
+        *self = next;
+        Ok(rules)
+    }
+
+    /// Gives rules new ids everywhere in the file: their ids, the rules that need or conflict
+    /// with them and their translations.
+    fn rename_rules(&mut self, pairs: &[(String, String)]) {
+        let map: HashMap<&str, &str> = pairs
+            .iter()
+            .map(|(o, n)| (o.as_str(), n.as_str()))
+            .collect();
+        let renamed = |id: &mut String| {
+            if let Some(n) = map.get(id.as_str()) {
+                *id = (*n).to_owned();
+            }
+        };
+        for r in &mut self.rules {
+            renamed(&mut r.id);
+            r.requires.iter_mut().for_each(renamed);
+            r.conflicts.iter_mut().for_each(renamed);
+        }
+        for lang in self.texts.values_mut() {
+            lang.rules = std::mem::take(&mut lang.rules)
+                .into_iter()
+                .map(|(id, t)| (map.get(id.as_str()).map_or(id, |n| (*n).to_owned()), t))
+                .collect();
+        }
+    }
+
+    /// Gives groups new ids everywhere in the file: their ids, the parents of the groups, the
+    /// groups of the rules and their translations.
+    fn rename_groups(&mut self, pairs: &[(String, String)]) {
+        let map: HashMap<&str, &str> = pairs
+            .iter()
+            .map(|(o, n)| (o.as_str(), n.as_str()))
+            .collect();
+        let renamed = |id: &mut String| {
+            if let Some(n) = map.get(id.as_str()) {
+                *id = (*n).to_owned();
+            }
+        };
+        for g in &mut self.groups {
+            renamed(&mut g.id);
+            if let Some(p) = g.parent.as_mut() {
+                renamed(p);
+            }
+        }
+        for r in &mut self.rules {
+            renamed(&mut r.group);
+        }
+        for lang in self.texts.values_mut() {
+            lang.groups = std::mem::take(&mut lang.groups)
+                .into_iter()
+                .map(|(id, t)| (map.get(id.as_str()).map_or(id, |n| (*n).to_owned()), t))
+                .collect();
+        }
     }
 
     /// Takes a policy out of the file with its Disabled rule `<id>.off`, and the conflicts that
@@ -652,6 +821,18 @@ fn check_action(r: &Rule, a: &Action) -> Result<(), String> {
     };
     if texts.iter().any(|t| !safe_text(t, 16383)) {
         return unsafe_text();
+    }
+    Ok(())
+}
+
+/// Whether a text is an id of an import: `admx.` and the characters of an id after it, within
+/// the length of an id.
+fn import_id(id: &str) -> Result<(), String> {
+    let rest = id.strip_prefix("admx.").unwrap_or_default();
+    if rest.is_empty() || !check::is_safe_id(id) || id.len() > 200 || id.ends_with('.') {
+        return Err(format!(
+            "{id} is not an id of an import: admx. and lower case letters, digits, dots, hyphens and underscores"
+        ));
     }
     Ok(())
 }

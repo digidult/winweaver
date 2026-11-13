@@ -232,7 +232,10 @@ Diğer altında yer alır. **Uygula** tüm dosyayı yerleşik katalog nasıl den
 başarısız olursa hiçbir şey değişmez. Kaydet (Ctrl+S) dosyayı yazar ve yeniden yükler. Seçili grup, bir
 sorudan sonra **Grubu kaldır** ile içindeki tüm grup ve ilkelerle birlikte kaldırılır; dosyanın en üst grubu
 kalır. Kendi betikleri, komutları ya da programları olan bir katalog yalnızca bir sorudan sonra içe aktarılır:
-böyle bir kataloğu yalnızca güvendiğiniz bir kaynaktan içe aktarın.
+böyle bir kataloğu yalnızca güvendiğiniz bir kaynaktan içe aktarın. **Yeniden adlandır** düğmesiyle **Kimlik**
+alanı bir ilkeye, bir gruba ya da tüm kataloğa tüm katalogda yeni bir kimlik verir; kataloğun yeni kimliği
+dosyasını ve eskisine göre adlandırılmış her kimliği yeniden adlandırır (`admx.custom-1.mute`,
+`admx.office.mute` olur) ve kaydederken açık profiller ile yer imleri de izler.
 
 Karşılaştırma bir sekmede açılır: farklı ilkeler kategorilerinin ağacında, yalnızca ilk katalogda,
 yalnızca ikincisinde olanlar ve farklı olanlar için anahtarlarla; seçili ilke her iki katalogdaki haliyle

@@ -508,3 +508,100 @@ fn a_catalog_with_code_asks_before_its_import_and_the_editor_writes_everything()
     assert_eq!(uk.title.as_deref(), Some("Привіт"));
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+/// A policy renamed in the editor keeps its choice in an open profile, and a new id of the catalog
+/// writes its file under the new name and loads it from there.
+#[test]
+fn a_renamed_policy_follows_into_the_open_profiles() {
+    let dir = std::env::temp_dir().join(format!("winweaver-rename-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let catalog = Catalog::embedded().unwrap();
+    let settings = Settings {
+        extra: Extra {
+            loaded_imports: Some(Vec::new()),
+            ..Extra::default()
+        },
+        ..Settings::default()
+    };
+    let mut app = Window::new(WinWeaver::new(catalog, Vec::new()), settings);
+    app.app.full.imports_dir = dir.join("imports");
+    app.app.full.marks_path = dir.join("bookmarks.wwmarks");
+    app.apply(vec![Act::Catalog(CatalogAct::New)]);
+    let Some(Doc::CatalogEdit(d)) = app.shell.docs.get_mut(app.shell.active) else {
+        panic!("the editor");
+    };
+    d.new_name = "Mute".to_owned();
+    d.new_policy();
+    if let Some(form) = d.form.as_mut() {
+        let mut row = cataledit::ActionRow::of(&winweaver_core::catalog::Action::Reg {
+            path: "HKLM:\\X".to_owned(),
+            name: "Mute".to_owned(),
+            kind: winweaver_core::catalog::RegKind::DWord,
+            value: serde_json::Value::from(1),
+            default: None,
+            why: String::new(),
+        });
+        row.key = "HKEY_LOCAL_MACHINE\\Software\\Policies\\Mute".to_owned();
+        form.actions.push(row);
+    }
+    d.apply();
+    assert!(d.error.is_none(), "{:?}", d.error);
+    app.apply(vec![Act::Shell(ShellAct::Save)]);
+    let editor = app.shell.active;
+    app.apply(vec![Act::File(FileAct::NewProfile(None))]);
+    let profile_tab = app.shell.active;
+    let Some(Doc::Profile(p)) = app.shell.docs.get_mut(profile_tab) else {
+        panic!("the profile");
+    };
+    p.profile.set_on("admx.custom-1.mute", true);
+    app.shell.active = editor;
+    let Some(Doc::CatalogEdit(d)) = app.shell.docs.get_mut(editor) else {
+        panic!("the editor");
+    };
+    d.new_file_id = "office".to_owned();
+    d.rename_file();
+    assert!(d.error.is_none(), "{:?}", d.error);
+    d.select(&TreeKey::Rule("admx.office.mute".to_owned()));
+    if let Some(form) = d.form.as_mut() {
+        form.new_id = "admx.office.quiet".to_owned();
+    }
+    d.rename_rule();
+    assert!(d.error.is_none(), "{:?}", d.error);
+    assert_eq!(
+        d.renamed,
+        [(
+            "admx.custom-1.mute".to_owned(),
+            "admx.office.quiet".to_owned()
+        )],
+        "two renames of one rule are one"
+    );
+    app.apply(vec![Act::Shell(ShellAct::Save)]);
+    let imports = dir.join("imports");
+    assert!(
+        imports.join("office.wwcatalog").exists(),
+        "{}",
+        app.shell.status
+    );
+    assert!(
+        !imports.join("custom-1.wwcatalog").exists(),
+        "the old file goes"
+    );
+    assert!(app.app.catalog.rule("admx.office.quiet").is_some());
+    let loaded = app
+        .shell
+        .settings
+        .extra
+        .loaded_imports
+        .clone()
+        .unwrap_or_default();
+    assert_eq!(loaded, ["office"]);
+    let Some(Doc::Profile(profile)) = app.shell.docs.get(profile_tab) else {
+        panic!("the profile");
+    };
+    assert!(
+        profile.profile.is_on("admx.office.quiet"),
+        "the choice follows"
+    );
+    assert!(profile.dirty);
+    std::fs::remove_dir_all(&dir).unwrap();
+}

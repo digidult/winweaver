@@ -1112,5 +1112,10 @@
   "windowsPE: a setting or a command of the answer file": "windowsPE: параметр или команда файла ответов",
   "{key} is not a key of the machine or of the users": "{key} не раздел компьютера или пользователей",
   "{name} runs code of its own: {n} rules with scripts, commands, programs or settings of the answer file. A profile that turns them on runs them as SYSTEM during the installation or on this PC. Import it only from a source you trust.": "{name} выполняет собственный код: {n} правил со скриптами, командами, программами или параметрами файла ответов. Профиль, который их включает, выполняет их от имени SYSTEM во время установки или на этом ПК. Импортируйте его только из источника, которому доверяете.",
-  "{value} is not a byte in hex": "{value} не байт в шестнадцатеричном виде"
+  "{value} is not a byte in hex": "{value} не байт в шестнадцатеричном виде",
+  "A new id of the catalog renames its file at the save and every policy and group whose id starts with admx. and the old id. The open profiles and the bookmarks follow the renamed policies at the save; a profile file that is not open keeps the old ids.": "Новый id каталога при сохранении переименовывает его файл и каждую политику и группу, id которых начинается с admx. и старого id. Открытые профили и закладки переходят на переименованные политики при сохранении; файл профиля, который не открыт, сохраняет старые id.",
+  "An import {id} is there already": "Импорт {id} уже есть",
+  "Id": "Id",
+  "Renames it in the whole catalog: the rules that name it and its translations follow": "Переименовывает во всём каталоге: правила, которые его называют, и его переводы тоже меняются",
+  "Saved; the renamed options changed in {n} open profiles: save them too": "Сохранено; переименованные опции изменены в {n} открытых профилях: сохраните и их"
 }

@@ -39,6 +39,21 @@ pub struct Bookmark {
     pub created: String,
 }
 
+impl Bookmarks {
+    /// Gives the bookmarks of rules new ids (a catalog of the user renamed its rules); the count
+    /// of the bookmarks renamed.
+    pub fn rename_rules(&mut self, pairs: &[(String, String)]) -> usize {
+        let mut count = 0;
+        for b in &mut self.items {
+            if let Some((_, new)) = pairs.iter().find(|(old, _)| *old == b.item) {
+                b.item.clone_from(new);
+                count += 1;
+            }
+        }
+        count
+    }
+}
+
 impl Bookmark {
     /// The bookmark of an option, with the profile it was made in.
     pub fn option(item: &str, path: &str) -> Self {

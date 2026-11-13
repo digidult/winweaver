@@ -236,7 +236,10 @@ che scrive solo il registro sotto Criteri, il resto sotto Altro. **Applica** con
 controlla il catalogo integrato, e nulla cambia se il controllo fallisce. Salva (Ctrl+S) scrive il file e lo
 ricarica. **Rimuovi il gruppo** rimuove il gruppo selezionato, dopo una domanda, con tutti i gruppi e i
 criteri che contiene; il gruppo superiore del file resta. Un catalogo con script, comandi o programmi propri
-si importa solo dopo una domanda: importate un catalogo così solo da una fonte di cui vi fidate.
+si importa solo dopo una domanda: importate un catalogo così solo da una fonte di cui vi fidate. Il campo
+**Id** con **Rinomina** dà a un criterio, a un gruppo o a tutto il catalogo un nuovo id in tutto il catalogo;
+un nuovo id del catalogo rinomina il suo file e ogni id chiamato come il vecchio (`admx.custom-1.mute` diventa
+`admx.office.mute`), e al salvataggio i profili aperti e i segnalibri seguono.
 
 Il confronto si apre in una scheda: i criteri che differiscono nell'albero delle loro categorie, con
 interruttori per quelli solo nel primo catalogo, solo nel secondo e i diversi, e il criterio selezionato

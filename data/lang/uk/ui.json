@@ -1112,5 +1112,10 @@
   "windowsPE: a setting or a command of the answer file": "windowsPE: параметр або команда файлу відповідей",
   "{key} is not a key of the machine or of the users": "{key} не є розділом комп'ютера чи користувачів",
   "{name} runs code of its own: {n} rules with scripts, commands, programs or settings of the answer file. A profile that turns them on runs them as SYSTEM during the installation or on this PC. Import it only from a source you trust.": "{name} виконує власний код: {n} правил зі скриптами, командами, програмами чи параметрами файлу відповідей. Профіль, що їх вмикає, виконує їх від імені SYSTEM під час встановлення або на цьому ПК. Імпортуйте його лише з джерела, якому довіряєте.",
-  "{value} is not a byte in hex": "{value} не є байтом у шістнадцятковому вигляді"
+  "{value} is not a byte in hex": "{value} не є байтом у шістнадцятковому вигляді",
+  "A new id of the catalog renames its file at the save and every policy and group whose id starts with admx. and the old id. The open profiles and the bookmarks follow the renamed policies at the save; a profile file that is not open keeps the old ids.": "Новий id каталогу під час збереження перейменовує його файл і кожну політику та групу, id яких починається з admx. і старого id. Відкриті профілі й закладки переходять на перейменовані політики під час збереження; файл профілю, який не відкрито, зберігає старі id.",
+  "An import {id} is there already": "Імпорт {id} уже є",
+  "Id": "Id",
+  "Renames it in the whole catalog: the rules that name it and its translations follow": "Перейменовує в усьому каталозі: правила, що його називають, і його переклади теж змінюються",
+  "Saved; the renamed options changed in {n} open profiles: save them too": "Збережено; перейменовані опції змінено у {n} відкритих профілях: збережіть і їх"
 }

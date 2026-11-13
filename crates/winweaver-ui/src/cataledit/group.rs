@@ -62,6 +62,7 @@ pub(super) fn group_form(
     );
     ui.label(style::strong(ui, &form.group.title, 18.0));
     crate::views::id_line(ui, &id);
+    let mut rename = false;
     ui.weak(trf(
         "{n} policies",
         &[(
@@ -76,6 +77,7 @@ pub(super) fn group_form(
         .show(ui, |ui| {
             text_row(ui, tr("Title"), &mut form.group.title, 1);
             text_row(ui, tr("Description"), &mut form.group.summary, 3);
+            rename = super::id_row(ui, &mut form.new_id, &id);
             ui.label(tr("In"));
             let parent = form.group.parent.clone().unwrap_or_default();
             let shown = parents
@@ -109,4 +111,7 @@ pub(super) fn group_form(
         )
     });
     form_buttons(ui, apply, remove, acts);
+    if rename {
+        doc.rename_group();
+    }
 }

@@ -620,21 +620,91 @@ impl WinWeaver {
         let Some(Doc::CatalogEdit(d)) = shell.docs.get_mut(shell.active) else {
             return;
         };
-        let result = d.file.check().and_then(|()| d.file.save(&d.path));
+        // An import whose id changed is written under its new name, and its old file goes.
+        let moved = d.import && d.file.id != d.saved_id;
+        let path = if moved {
+            let name = format!("{}.{}", d.file.id, admx::CATALOG_EXTENSION);
+            self.full.imports_dir.join(name)
+        } else {
+            d.path.clone()
+        };
+        let taken = moved
+            && (ww_base::files::exists(&path) || self.imports.iter().any(|f| f.id == d.file.id));
+        if taken {
+            let id = d.file.id.clone();
+            shell.save_failed(trf("An import {id} is there already", &[("id", &id)]));
+            return;
+        }
+        let result = d.file.check().and_then(|()| d.file.save(&path));
         if let Err(e) = result {
             shell.save_failed(e);
             return;
         }
+        if moved {
+            ww_base::files::remove(&d.path);
+            d.path = path.clone();
+        }
         d.dirty = false;
-        let path = d.path.clone();
+        let old_id = std::mem::replace(&mut d.saved_id, d.file.id.clone());
+        let renamed = std::mem::take(&mut d.renamed);
         let reload = d.import.then(|| d.file.clone());
         shell.saved(&path);
         if let Some(file) = reload {
-            if let Some(slot) = self.imports.iter_mut().find(|f| f.id == file.id) {
-                *slot = file;
+            self.catalog_saved(shell, &old_id, file, &renamed);
+        }
+    }
+
+    /// Takes a saved catalog file of an import into the imports in place of the one of `old_id`
+    /// (the id it had on the disk), its new id into the settings and the tabs, and the renames
+    /// of its rules into the open profiles and the bookmarks.
+    pub(crate) fn catalog_saved(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        old_id: &str,
+        file: CatalogFile,
+        renamed: &[(String, String)],
+    ) {
+        let new_id = file.id.clone();
+        if let Some(slot) = self.imports.iter_mut().find(|f| f.id == old_id) {
+            *slot = file;
+        }
+        if new_id != old_id {
+            if let Some(list) = shell.settings.extra.loaded_imports.as_mut() {
+                for id in list.iter_mut().filter(|id| *id == old_id) {
+                    id.clone_from(&new_id);
+                }
+                shell.settings_dirty = true;
             }
-            self.refresh_import_list();
-            self.rebuild_catalog(shell);
+            for doc in &mut shell.docs {
+                if let Doc::Catalog(c) = doc
+                    && c.id == old_id
+                    && c.file.is_none()
+                {
+                    c.id.clone_from(&new_id);
+                }
+            }
+        }
+        let mut profiles = 0;
+        if !renamed.is_empty() {
+            for doc in &mut shell.docs {
+                if let Doc::Profile(d) = doc
+                    && d.profile.rename_rules(renamed) > 0
+                {
+                    d.dirty = true;
+                    profiles += 1;
+                }
+            }
+            if self.full.marks.rename_rules(renamed) > 0 {
+                let _ = self.full.marks.save(&self.full.marks_path);
+            }
+        }
+        self.refresh_import_list();
+        self.rebuild_catalog(shell);
+        if profiles > 0 {
+            shell.status = trf(
+                "Saved; the renamed options changed in {n} open profiles: save them too",
+                &[("n", &profiles)],
+            );
         }
     }
 
@@ -650,6 +720,11 @@ impl WinWeaver {
             shell.save_failed(e);
             return;
         }
+        if d.import && d.file.id != d.saved_id && self.imports.iter().any(|f| f.id == d.file.id) {
+            let id = d.file.id.clone();
+            shell.save_failed(trf("An import {id} is there already", &[("id", &id)]));
+            return;
+        }
         let name = d
             .path
             .file_name()
@@ -661,7 +736,15 @@ impl WinWeaver {
             return;
         }
         d.dirty = false;
+        // An import whose id changed is kept under its new name, and its old file goes.
+        if d.import && d.file.id != d.saved_id {
+            let name = format!("{}.{}", d.file.id, admx::CATALOG_EXTENSION);
+            ww_base::files::remove(&d.path);
+            d.path = self.full.imports_dir.join(name);
+        }
         let kept = d.import.then(|| d.file.save(&d.path));
+        let old_id = std::mem::replace(&mut d.saved_id, d.file.id.clone());
+        let renamed = std::mem::take(&mut d.renamed);
         let reload = d.import.then(|| d.file.clone());
         shell.status = match kept {
             Some(Err(e)) => trf(
@@ -671,11 +754,7 @@ impl WinWeaver {
             _ => trf("Downloaded {name}", &[("name", &name)]),
         };
         if let Some(file) = reload {
-            if let Some(slot) = self.imports.iter_mut().find(|f| f.id == file.id) {
-                *slot = file;
-            }
-            self.refresh_import_list();
-            self.rebuild_catalog(shell);
+            self.catalog_saved(shell, &old_id, file, &renamed);
         }
     }
 

@@ -31,8 +31,9 @@ pub use param::ParamRow;
 
 /// The selected policy as the form edits it.
 pub struct Form {
-    /// The id of the policy in the file.
+    /// The id of the policy in the file, and the new id typed for it.
     pub id: String,
+    pub new_id: String,
     /// The policy: its texts and choices are edited in place; its parameters, actions, search
     /// words and lists of rules in the fields below, which Apply puts back.
     pub rule: Rule,
@@ -50,6 +51,8 @@ pub struct Form {
 /// The selected group as the form edits it.
 pub struct GroupForm {
     pub group: Group,
+    /// The new id typed for the group.
+    pub new_id: String,
     /// The translations of the group by language code.
     pub texts: IndexMap<String, GroupText>,
 }
@@ -70,8 +73,15 @@ pub struct EditorDoc {
     pub error: Option<String>,
     /// The title of a new group or policy, typed in the bar of the form.
     pub new_name: String,
-    /// The name of the file as the form of the file edits it.
+    /// The name of the file as the form of the file edits it, and the new id typed for it.
     pub name: String,
+    pub new_file_id: String,
+    /// The id the file has on the disk: a save of an import whose id changed writes it under its
+    /// new name and removes the old file.
+    pub saved_id: String,
+    /// The rules renamed since the last save, old and new id, for the open profiles and the
+    /// bookmarks at the save.
+    pub renamed: Vec<(String, String)>,
     /// The language of the translations the forms show, and the languages offered: the ones of
     /// the interface and the ones the file has texts in, by code with their native names.
     pub lang: String,
@@ -104,6 +114,7 @@ impl Form {
             .collect();
         Self {
             id: rule.id.clone(),
+            new_id: rule.id.clone(),
             tags: rule.tags.join(", "),
             requires: rule.requires.join(" "),
             conflicts: rule.conflicts.join(" "),
@@ -188,6 +199,9 @@ impl EditorDoc {
             .unwrap_or_default();
         Self {
             name: file.name.clone(),
+            new_file_id: file.id.clone(),
+            saved_id: file.id.clone(),
+            renamed: Vec::new(),
             file,
             path,
             import,
@@ -227,6 +241,7 @@ impl EditorDoc {
                         .collect();
                     GroupForm {
                         group: group.clone(),
+                        new_id: group.id.clone(),
                         texts,
                     }
                 });
@@ -287,6 +302,84 @@ impl EditorDoc {
             }
             Err(e) => self.error = Some(e),
         }
+    }
+
+    /// Gives the selected policy (and its Disabled rule) the id typed in its form, after the
+    /// form is applied: the file changes at once, and the open profiles and the bookmarks at the
+    /// save.
+    pub fn rename_rule(&mut self) {
+        let Some(form) = &self.form else {
+            return;
+        };
+        let (old, new) = (form.id.clone(), form.new_id.trim().to_owned());
+        self.apply();
+        if self.error.is_some() {
+            return;
+        }
+        match self.file.rename_rule(&old, &new) {
+            Ok(pairs) => {
+                let selected = pairs
+                    .iter()
+                    .find(|(o, _)| *o == old)
+                    .map_or(old, |(_, n)| n.clone());
+                self.note_renames(&pairs);
+                self.select(&TreeKey::Rule(selected));
+            }
+            Err(e) => self.error = Some(e),
+        }
+    }
+
+    /// Gives the selected group the id typed in its form, after the form is applied.
+    pub fn rename_group(&mut self) {
+        let Some(form) = &self.group_form else {
+            return;
+        };
+        let (old, new) = (form.group.id.clone(), form.new_id.trim().to_owned());
+        self.apply();
+        if self.error.is_some() {
+            return;
+        }
+        match self.file.rename_group(&old, &new) {
+            Ok(()) => {
+                self.dirty |= old != new;
+                if self.expanded.remove(&old) {
+                    self.expanded.insert(new.clone());
+                }
+                self.select(&TreeKey::Group(new));
+            }
+            Err(e) => self.error = Some(e),
+        }
+    }
+
+    /// Gives the file the id typed in its form, and its policies and groups named after the old
+    /// one the new one.
+    pub fn rename_file(&mut self) {
+        let new = self.new_file_id.trim().to_owned();
+        match self.file.rename_id(&new) {
+            Ok(pairs) => {
+                self.dirty |= self.file.id != self.saved_id || !pairs.is_empty();
+                self.note_renames(&pairs);
+                self.expanded = self.file.groups.iter().map(|g| g.id.clone()).collect();
+                self.form = None;
+                self.group_form = None;
+                self.group = None;
+                self.error = None;
+            }
+            Err(e) => self.error = Some(e),
+        }
+    }
+
+    /// Adds renames to the ones since the last save: a rule renamed twice is one rename from its
+    /// first id, and a rule named back is no rename.
+    fn note_renames(&mut self, pairs: &[(String, String)]) {
+        for (old, new) in pairs {
+            self.dirty = true;
+            match self.renamed.iter_mut().find(|(_, n)| n == old) {
+                Some(pair) => pair.1.clone_from(new),
+                None => self.renamed.push((old.clone(), new.clone())),
+            }
+        }
+        self.renamed.retain(|(o, n)| o != n);
     }
 
     /// A new policy in the selected group (or the first one) with the typed title.
@@ -471,6 +564,7 @@ fn form_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
 
 /// The form of the file, when nothing is selected: its name.
 fn file_form(ui: &mut egui::Ui, doc: &mut EditorDoc, apply: &mut bool) {
+    let mut rename = false;
     ui.label(style::strong(ui, &doc.file.name, 18.0));
     crate::views::id_line(ui, &doc.file.id);
     ui.add_space(6.0);
@@ -481,7 +575,14 @@ fn file_form(ui: &mut egui::Ui, doc: &mut EditorDoc, apply: &mut bool) {
             ui.label(tr("Name"));
             ui.add(egui::TextEdit::singleline(&mut doc.name).desired_width(f32::INFINITY));
             ui.end_row();
+            let id = doc.file.id.clone();
+            if id_row(ui, &mut doc.new_file_id, &id) {
+                rename = true;
+            }
         });
+    ui.weak(tr(
+        "A new id of the catalog renames its file at the save and every policy and group whose id starts with admx. and the old id. The open profiles and the bookmarks follow the renamed policies at the save; a profile file that is not open keeps the old ids.",
+    ));
     ui.add_space(8.0);
     ui.weak(tr(
         "Select a policy in the tree to edit it, or a group to add one to it.",
@@ -490,6 +591,32 @@ fn file_form(ui: &mut egui::Ui, doc: &mut EditorDoc, apply: &mut bool) {
     if ui.button(tr("Apply")).clicked() {
         *apply = true;
     }
+    if rename {
+        doc.rename_file();
+    }
+}
+
+/// The line of the grid with the id of a policy, a group or the file and the button that gives it
+/// the id typed; whether the button was pressed (or Enter in the field).
+fn id_row(ui: &mut egui::Ui, new_id: &mut String, id: &str) -> bool {
+    ui.label(tr("Id"));
+    let mut pressed = false;
+    ui.horizontal(|ui| {
+        let width = (ui.available_width() - 110.0).max(200.0);
+        let field = ui.add(
+            egui::TextEdit::singleline(new_id)
+                .font(egui::TextStyle::Monospace)
+                .desired_width(width),
+        );
+        let enter = field.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+        let changed = new_id.trim() != id;
+        let button = ui
+            .add_enabled(changed, egui::Button::new(tr("Rename")))
+            .on_hover_text(tr("Renames it in the whole catalog: the rules that name it and its translations follow"));
+        pressed = changed && (enter || button.clicked());
+    });
+    ui.end_row();
+    pressed
 }
 
 /// The buttons at the end of a form: Apply, and the removal of what the form edits.

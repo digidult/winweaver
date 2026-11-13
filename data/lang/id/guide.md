@@ -227,7 +227,10 @@ registri di Kebijakan, sisanya di Lainnya. **Terapkan** memeriksa seluruh file s
 diperiksa, dan tidak ada yang berubah bila pemeriksaan gagal. Simpan (Ctrl+S) menulis file dan memuatnya lagi.
 **Hapus grup** menghapus grup yang dipilih, setelah sebuah pertanyaan, beserta semua grup dan kebijakan di
 dalamnya; grup teratas file tetap ada. Katalog dengan skrip, perintah, atau program sendiri hanya diimpor
-setelah sebuah pertanyaan: impor katalog seperti itu hanya dari sumber yang Anda percayai.
+setelah sebuah pertanyaan: impor katalog seperti itu hanya dari sumber yang Anda percayai. Kolom **Id** dengan
+**Ganti nama** memberi kebijakan, grup, atau seluruh katalog id baru di seluruh katalog; id baru katalog
+mengganti nama filenya dan setiap id yang dinamai menurut id lama (`admx.custom-1.mute` menjadi
+`admx.office.mute`), dan saat disimpan profil yang terbuka serta penanda ikut berubah.
 
 Perbandingan terbuka di sebuah tab: kebijakan yang berbeda dalam pohon kategorinya, dengan sakelar untuk
 yang hanya ada di katalog pertama, hanya di katalog kedua dan yang berbeda, serta kebijakan terpilih apa

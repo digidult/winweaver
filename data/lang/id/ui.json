@@ -1112,5 +1112,10 @@
   "windowsPE: a setting or a command of the answer file": "windowsPE: pengaturan atau perintah file jawaban",
   "{key} is not a key of the machine or of the users": "{key} bukan kunci mesin atau pengguna",
   "{name} runs code of its own: {n} rules with scripts, commands, programs or settings of the answer file. A profile that turns them on runs them as SYSTEM during the installation or on this PC. Import it only from a source you trust.": "{name} menjalankan kodenya sendiri: {n} aturan dengan skrip, perintah, program, atau pengaturan file jawaban. Profil yang mengaktifkannya menjalankannya sebagai SYSTEM saat instalasi atau di PC ini. Impor hanya dari sumber yang Anda percayai.",
-  "{value} is not a byte in hex": "{value} bukan byte dalam heksadesimal"
+  "{value} is not a byte in hex": "{value} bukan byte dalam heksadesimal",
+  "A new id of the catalog renames its file at the save and every policy and group whose id starts with admx. and the old id. The open profiles and the bookmarks follow the renamed policies at the save; a profile file that is not open keeps the old ids.": "Id baru katalog mengganti nama filenya saat disimpan, juga setiap kebijakan dan grup yang id-nya diawali admx. dan id lama. Profil yang terbuka dan penanda mengikuti kebijakan yang diganti namanya saat disimpan; file profil yang tidak terbuka tetap memakai id lama.",
+  "An import {id} is there already": "Impor {id} sudah ada",
+  "Id": "Id",
+  "Renames it in the whole catalog: the rules that name it and its translations follow": "Mengganti namanya di seluruh katalog: aturan yang menyebutnya dan terjemahannya ikut berubah",
+  "Saved; the renamed options changed in {n} open profiles: save them too": "Tersimpan; opsi yang diganti namanya berubah di {n} profil terbuka: simpan juga profil itu"
 }

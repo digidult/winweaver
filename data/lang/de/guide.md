@@ -246,7 +246,10 @@ ganze Datei, wie der eingebaute Katalog geprüft wird, und nichts ändert sich, 
 Speichern (Ctrl+S) schreibt die Datei und lädt sie neu. Eine gewählte Gruppe entfernt **Gruppe entfernen**
 nach einer Frage mit allen Gruppen und Richtlinien darin; die oberste Gruppe der Datei bleibt. Ein Katalog mit
 eigenen Skripten, Befehlen oder Programmen wird erst nach einer Frage importiert: importieren Sie einen
-solchen Katalog nur aus einer Quelle, der Sie vertrauen.
+solchen Katalog nur aus einer Quelle, der Sie vertrauen. Das Feld **ID** mit **Umbenennen** gibt einer
+Richtlinie, einer Gruppe oder dem ganzen Katalog eine neue ID im ganzen Katalog; eine neue ID des Katalogs
+benennt seine Datei und jede nach der alten benannte ID um (`admx.custom-1.mute` wird `admx.office.mute`), und
+beim Speichern folgen die offenen Profile und die Lesezeichen.
 
 Der Vergleich öffnet sich in einem Tab: die abweichenden Richtlinien im Baum ihrer Kategorien, mit
 Schaltern für die nur im ersten Katalog, nur im zweiten und die unterschiedlichen, und die gewählte

@@ -246,7 +246,10 @@ el archivo como se comprueba el catálogo integrado, y nada cambia si la comprob
 escribe el archivo y lo vuelve a cargar. **Quitar el grupo** quita el grupo seleccionado, tras una pregunta,
 con todos los grupos y directivas que contiene; el grupo superior del archivo se queda. Un catálogo con
 scripts, comandos o programas propios se importa solo tras una pregunta: importe un catálogo así solo desde
-una fuente de confianza.
+una fuente de confianza. El campo **Id** con **Cambiar nombre** da a una directiva, un grupo o todo el
+catálogo un id nuevo en todo el catálogo; un id nuevo del catálogo renombra su archivo y cada id nombrado
+según el anterior (`admx.custom-1.mute` pasa a ser `admx.office.mute`), y al guardar los perfiles abiertos y
+los marcadores lo siguen.
 
 La comparación se abre en una pestaña: las directivas que difieren en el árbol de sus categorías, con
 interruptores para las que solo están en el primer catálogo, solo en el segundo y las distintas, y la

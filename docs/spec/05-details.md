@@ -282,6 +282,18 @@ change, read the section of the part it touches.
   parameter; `ParamRow`: the values of a choice). Apply goes through `CatalogFile::put_rule_with_texts` or
   `put_group`, which check the whole file, and the form starts again from the file. Save (Ctrl+S) checks
   and writes the file and loads a loaded import again; a removal asks first.
+- The renames of a catalog file: `CatalogFile::rename_rule` (the policy and its `.off` rule, the
+  requires and conflicts, the keys of the translations), `rename_group` (the parents, the groups of the
+  rules, the translations) and `rename_id` (the id of the file and every id that is `admx.<old id>` or
+  starts with `admx.<old id>.`, the ids a new catalog and its policies get); a new id is an id of an
+  import no other rule or group of the file has, and the whole file is checked. The editor applies its
+  form first, then renames, and keeps the renames of rules since the save (`EditorDoc::renamed`, a rule
+  renamed twice is one rename from its first id). At the save (`WinWeaver::catalog_saved`) an import
+  whose id changed (`EditorDoc::saved_id`) is written as `<new id>.wwcatalog` and the old file goes,
+  unless another import has the new id; the loaded imports of the settings and the catalog tabs take the
+  new id; `Profile::rename_rules` renames the choices of the open profiles (marked changed) and
+  `Bookmarks::rename_rules` the bookmarks, before the catalog is merged again. A profile file that is not
+  open keeps the old ids, which show as unknown options.
 - A catalog file is checked as a catalog of its own (`CatalogFile::check`): the checks of the built-in
   catalog run on its rules in a catalog of the three roots and its groups (`as_catalog`; a policy without
   actions yet, one the editor just made, only for its place), and its rules may need or conflict with

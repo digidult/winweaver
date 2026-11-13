@@ -251,7 +251,10 @@ contrôlé, et rien ne change si le contrôle échoue. Enregistrer (Ctrl+S) écr
 **Supprimer le groupe** retire le groupe sélectionné, après une question, avec tous les groupes et stratégies
 qu'il contient ; le groupe supérieur du fichier reste. Un catalogue avec ses propres scripts, commandes ou
 programmes n'est importé qu'après une question : importez un tel catalogue uniquement depuis une source de
-confiance.
+confiance. Le champ **Id** avec **Renommer** donne à une stratégie, un groupe ou tout le catalogue un nouvel
+id dans tout le catalogue ; un nouvel id du catalogue renomme son fichier et chaque id nommé d'après l'ancien
+(`admx.custom-1.mute` devient `admx.office.mute`), et à l'enregistrement les profils ouverts et les signets
+suivent.
 
 La comparaison s'ouvre dans un onglet : les stratégies qui diffèrent dans l'arbre de leurs catégories,
 avec des cases pour celles du premier catalogue seul, du second seul et les différentes, et la stratégie

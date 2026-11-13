@@ -71,6 +71,7 @@ pub(super) fn rule_form(
     };
     ui.label(style::strong(ui, &form.rule.title, 18.0));
     crate::views::id_line(ui, &form.id);
+    let mut rename = false;
     if let Some((id, name)) = import {
         ui.horizontal_wrapped(|ui| {
             let text = trf("Show in the catalog {name}", &[("name", &name)]);
@@ -103,6 +104,7 @@ pub(super) fn rule_form(
         .show(ui, |ui| {
             text_row(ui, tr("Title"), &mut form.rule.title, 1);
             text_row(ui, tr("Description"), &mut form.rule.summary, 4);
+            rename = super::id_row(ui, &mut form.new_id, &form.id);
             ui.label(tr("Group"));
             let shown = groups
                 .iter()
@@ -192,4 +194,7 @@ pub(super) fn rule_form(
         crate::question::remove_policy(form.id.clone()).into(),
     );
     form_buttons(ui, apply, Some(remove), acts);
+    if rename {
+        doc.rename_rule();
+    }
 }

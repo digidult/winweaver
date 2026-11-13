@@ -227,7 +227,9 @@ Other. **Apply** checks the whole file as the built-in catalog is checked, and n
 fails. Save (Ctrl+S) writes the file and loads it again. A selected group goes with **Remove the group**,
 after a question, with every group and policy under it; the top group of the file stays. A catalog with
 scripts, commands or programs of its own is imported only after a question: import such a catalog only from a
-source you trust.
+source you trust. The field **Id** with **Rename** gives a policy, a group or the whole catalog a new id
+across the catalog; a new id of the catalog renames its file and every id named after the old one
+(`admx.custom-1.mute` becomes `admx.office.mute`), and at the save the open profiles and the bookmarks follow.
 
 The comparison opens in a tab: the policies that differ in the tree of their categories, with switches
 for the ones only in the first catalog, only in the second and the different ones, and the selected
