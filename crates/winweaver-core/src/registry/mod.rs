@@ -92,6 +92,25 @@ pub fn normalize(path: &str) -> Option<String> {
     })
 }
 
+/// A key in the forms a search finds it in, a line each: as written, as regedit names it
+/// (`HKEY_LOCAL_MACHINE\X`) and with the short name of its hive (`HKLM\X`).
+pub fn key_forms(path: &str) -> String {
+    let mut out = path.to_owned();
+    if let Some(full) = normalize(path) {
+        if let Some((hive, rest)) = full.split_once('\\')
+            && let Some((_, short)) = HIVES.iter().find(|(long, _)| *long == hive)
+        {
+            out.push('\n');
+            out.push_str(short);
+            out.push('\\');
+            out.push_str(rest);
+        }
+        out.push('\n');
+        out.push_str(&full);
+    }
+    out
+}
+
 /// The key above a path, `None` for a hive.
 pub fn parent(path: &str) -> Option<&str> {
     path.rsplit_once('\\').map(|(p, _)| p)

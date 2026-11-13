@@ -342,7 +342,15 @@ fn list_panel(ui: &mut egui::Ui, doc: &mut UsersDoc, acts: &mut Vec<Act>) {
         .enumerate()
         .filter(|(_, u)| {
             words.is_empty() || {
-                let text = format!("{} {} {}", u.name, u.full_name, u.profile_path);
+                let text = format!(
+                    "{} {} {} {} {} {:?}",
+                    u.name,
+                    u.full_name,
+                    u.description,
+                    u.profile_path,
+                    u.group(),
+                    u.state
+                );
                 matches_words(&text, &words)
             }
         })

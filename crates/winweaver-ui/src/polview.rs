@@ -632,8 +632,8 @@ pub fn pol_view(
                 .enumerate()
                 .filter(|(_, e)| {
                     if !words.is_empty() {
-                        let (_, data) = data_of(&e.action);
-                        let text = format!("{}\n{}\n{data}", e.key, e.name);
+                        let (kind, data) = data_of(&e.action);
+                        let text = format!("{}\n{}\n{data}\n{kind}", e.key, e.name);
                         return matches_words(&text, &words);
                     }
                     doc.sel

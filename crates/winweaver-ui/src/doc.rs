@@ -144,7 +144,9 @@ impl DocKind {
             #[cfg(feature = "mcp")]
             DocKind::Mcp => "Filter the journal (Ctrl+F)",
             #[cfg(feature = "full")]
-            DocKind::Catalog | DocKind::Compare => "Search policies (Ctrl+F)",
+            DocKind::Catalog | DocKind::Compare | DocKind::CatalogEdit => {
+                "Search policies (Ctrl+F)"
+            }
             #[cfg(feature = "full")]
             DocKind::RegFile => "Search the keys, values and comments (Ctrl+F)",
             #[cfg(feature = "full")]
@@ -152,7 +154,7 @@ impl DocKind {
             #[cfg(feature = "full")]
             DocKind::Pol => "Search the keys, values and data (Ctrl+F)",
             #[cfg(feature = "full")]
-            DocKind::Registry | DocKind::CatalogEdit => "",
+            DocKind::Registry => "",
         }
     }
 
@@ -616,6 +618,10 @@ impl Tab for RegistryDoc {
 impl Tab for EditorDoc {
     fn title(&self) -> String {
         EditorDoc::title(self)
+    }
+
+    fn search(&mut self) -> Option<&mut Search> {
+        Some(&mut self.search)
     }
 
     fn dirty(&self) -> bool {

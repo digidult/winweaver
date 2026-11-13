@@ -56,7 +56,7 @@ pub(super) const GET_RULE: Tool = Tool {
 
 pub(super) const SEARCH_RULES: Tool = Tool {
     name: "search_rules",
-    description: "Rules whose id, title, summary or tags hold every word of the query.",
+    description: "Rules that hold every word of the query in any of their fields: the id, the texts, the search words, the parameters and their values, the titles of their groups, and what the actions name (registry keys in every form, value names and values, settings and commands of the answer file, scripts, services, features, apps, programs).",
     needs: Needs::READ,
     schema: || {
         schema(
@@ -227,18 +227,6 @@ fn param_json(
 }
 
 /// Whether a rule matches every word of a query.
-fn matches(rule: &Rule, words: &[String]) -> bool {
-    let hay = format!(
-        "{} {} {} {}",
-        rule.id,
-        rule.title,
-        rule.summary,
-        rule.tags.join(" ")
-    )
-    .to_lowercase();
-    words.iter().all(|w| hay.contains(w.as_str()))
-}
-
 fn list_groups(server: &Server, state: &mut State, args: &Args<'_>) -> Outcome {
     let catalog = &server.catalog;
     let parent = args.str("parent");
@@ -352,10 +340,11 @@ fn search_rules(server: &Server, state: &mut State, args: &Args<'_>) -> Outcome 
     let limit = args.limit("limit", 20, LIST_LIMIT);
     let resolution = resolution(server, state);
     let only = only_on(args);
+    let index = catalog.search_index(None);
     let found: Vec<&Rule> = catalog
         .rules()
         .iter()
-        .filter(|r| matches(r, &words))
+        .filter(|r| index.matches(&r.id, &words))
         .filter(|r| !only || shown_on(state, &resolution, &r.id))
         .collect();
     Ok(json!({

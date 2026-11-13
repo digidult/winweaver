@@ -175,6 +175,7 @@ impl WinWeaver {
                 file,
                 doc,
                 &self.catalog,
+                texts_for(&self.texts, &i18n::current()),
                 &self.imports,
                 &shell.settings,
                 acts,

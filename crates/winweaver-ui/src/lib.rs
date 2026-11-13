@@ -54,6 +54,7 @@ use std::path::PathBuf;
 
 use eframe::egui;
 use winweaver_core::admx::CatalogFile;
+use winweaver_core::catalog::search::SearchIndex;
 use winweaver_core::catalog::{Catalog, Rule, TREE_ROOTS, check};
 use winweaver_core::clock;
 use winweaver_core::i18n::CatalogTexts;
@@ -238,16 +239,33 @@ impl ProfileDoc {
         }
     }
 
-    /// Whether the tree shows a rule: it matches the words of the search and, with the filter
-    /// of the rules that are on, it is on.
-    pub(crate) fn shows(
-        &self,
-        texts: Option<&CatalogTexts>,
-        rule: &Rule,
-        words: &[String],
-    ) -> bool {
-        views::matches(texts, rule, words)
+    /// Whether the tree shows a rule: every word of the search is in its texts of the catalog
+    /// (`index`: every field in English and in the language of the interface, its registry keys,
+    /// value names and values) or in its choice in the profile, and, with the filter of the rules
+    /// that are on, it is on.
+    pub(crate) fn shows(&self, index: &SearchIndex, rule: &Rule, words: &[String]) -> bool {
+        let found = words.is_empty() || {
+            let hay = index.text(&rule.id);
+            let mut choice: Option<String> = None;
+            words.iter().all(|w| {
+                hay.contains(w.as_str())
+                    || choice
+                        .get_or_insert_with(|| self.choice_text(&rule.id))
+                        .contains(w.as_str())
+            })
+        };
+        found
             && (!self.only_on || self.profile.is_on(&rule.id) || self.resolution.shown_on(&rule.id))
+    }
+
+    /// The choice of a rule in the profile as a search finds it: its parameters and their values,
+    /// in lower case.
+    pub(crate) fn choice_text(&self, id: &str) -> String {
+        let choice = self.profile.rules.get(id).map(serde_json::to_string);
+        choice
+            .and_then(Result::ok)
+            .unwrap_or_default()
+            .to_lowercase()
     }
 
     fn select(&mut self, sel: Sel) {

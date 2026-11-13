@@ -111,9 +111,12 @@ password attendono una password principale prima del primo salvataggio.
   nel programma, che resta quindi con `winweaver.exe` anche se si sposta solo quel file.
 - **Barra dei comandi**: Nuovo, Apri, Salva, Verifica, Genera, Questo PC, Confronta. In una finestra
   stretta mostra solo le icone, nella riga di navigazione.
-- **Riga di navigazione**: Indietro e Avanti scorrono gli elementi selezionati; il percorso mostra dove
-  ti trovi e porta a qualsiasi livello; Segnalibro contrassegna la posizione; Cerca filtra l'albero
-  mentre digiti e ricorda le ricerche fatte.
+- **Riga di navigazione**: Indietro e Avanti scorrono gli elementi selezionati; il percorso mostra dove ti
+  trovi e porta a qualsiasi livello; Segnalibro contrassegna la posizione; Cerca filtra l'albero mentre
+  digiti e ricorda le ricerche fatte. La ricerca trova una regola da qualsiasi suo testo, in inglese e
+  nella lingua dell'interfaccia, dalle sue chiavi di registro in qualsiasi forma (`HKLM\...` o
+  `HKEY_LOCAL_MACHINE\...`), nomi dei valori e valori, e dai valori che le dà il profilo; le altre schede
+  cercano in tutto ciò che mostrano.
 - **Albero e riquadro dei dettagli**: l'albero a sinistra, l'elemento selezionato a destra. La
   descrizione si comprime con Ctrl+D. Le regole di un gruppo selezionato mostrano un interruttore alla
   fine delle loro righe.

@@ -152,6 +152,7 @@ fn shown(
     search: &crate::Search,
 ) -> Vec<usize> {
     let words = search.words();
+    let index = (!words.is_empty()).then(|| catalog.search_index(texts));
     (0..marks.items.len())
         .filter(|&i| {
             if words.is_empty() {
@@ -159,9 +160,15 @@ fn shown(
             }
             let b = &marks.items[i];
             let t = target(catalog, texts, imports, b);
+            let rule = index.as_ref().map_or("", |i| i.text(&b.item));
             let hay = format!(
-                "{} {} {} {} {}",
-                t.title, t.group, b.item, b.path, b.comment
+                "{} {} {} {} {}\n{rule}\n{}",
+                t.title,
+                t.group,
+                b.item,
+                b.path,
+                b.comment,
+                winweaver_core::registry::key_forms(&b.path)
             );
             matches_words(&hay, &words)
         })

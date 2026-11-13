@@ -605,3 +605,78 @@ fn a_renamed_policy_follows_into_the_open_profiles() {
     assert!(profile.dirty);
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+/// The search of a profile finds a rule by its registry key in the short form and by a value of
+/// its choice in the profile; the search of the editor of a catalog filters its tree.
+#[test]
+fn the_search_finds_registry_keys_choices_and_policies_of_the_editor() {
+    use winweaver_core::catalog::Action;
+    let catalog = Catalog::embedded().unwrap();
+    let (id, path) = catalog
+        .rules()
+        .iter()
+        .find_map(|r| {
+            r.actions.iter().find_map(|a| match a {
+                Action::Reg { path, .. } if path.starts_with("HKLM:\\") => {
+                    Some((r.id.clone(), path.clone()))
+                }
+                _ => None,
+            })
+        })
+        .unwrap();
+    let short = path.replacen("HKLM:\\", "HKLM\\", 1);
+    let mut app = Window::new(WinWeaver::new(catalog, Vec::new()), Settings::default());
+    app.apply(vec![Act::File(FileAct::NewProfile(None))]);
+    let Some(Doc::Profile(doc)) = app.shell.docs.get_mut(app.shell.active) else {
+        panic!("the profile");
+    };
+    let index = app.app.catalog.search_index(None);
+    let rule = app.app.catalog.rule(&id).unwrap();
+    let words =
+        |text: &str| -> Vec<String> { text.split_whitespace().map(str::to_lowercase).collect() };
+    assert!(doc.shows(&index, rule, &words(&short)), "{id} by {short}");
+    assert!(!doc.shows(&index, rule, &words("zz-no-such-value")));
+    // A value of the choice in the profile.
+    let with_text = app
+        .app
+        .catalog
+        .rules()
+        .iter()
+        .find(|r| {
+            r.params
+                .values()
+                .any(|p| matches!(p, winweaver_core::catalog::Param::Text { .. }))
+        })
+        .unwrap();
+    let name = with_text
+        .params
+        .iter()
+        .find(|(_, p)| matches!(p, winweaver_core::catalog::Param::Text { .. }))
+        .map(|(n, _)| n.clone())
+        .unwrap();
+    doc.profile.set_on(&with_text.id, true);
+    let catalog = app.app.catalog.clone();
+    let value = serde_json::Value::from("Zebra-Quartz-42");
+    doc.profile.set_param(&catalog, &with_text.id, &name, value);
+    assert!(doc.shows(&index, with_text, &words("zebra-quartz")));
+    // The editor of a new catalog: its tree shows only the policy of the search.
+    app.app.full.imports_dir = std::env::temp_dir()
+        .join(format!("winweaver-search-{}", std::process::id()))
+        .join("imports");
+    app.apply(vec![Act::Catalog(CatalogAct::New)]);
+    let Some(Doc::CatalogEdit(d)) = app.shell.docs.get_mut(app.shell.active) else {
+        panic!("the editor");
+    };
+    for title in ["Alpha", "Beta"] {
+        d.group = None;
+        d.new_name = title.to_owned();
+        d.new_policy();
+    }
+    d.search.text = "beta".to_owned();
+    let found: Vec<String> = d.file.rules.iter().map(|r| r.id.clone()).collect();
+    assert_eq!(found.len(), 2);
+    let index = d.file.search_index("en");
+    assert!(index.matches("admx.custom-1.beta", &words("beta")));
+    assert!(!index.matches("admx.custom-1.alpha", &words("beta")));
+    let _ = std::fs::remove_dir_all(app.app.full.imports_dir.parent().unwrap());
+}

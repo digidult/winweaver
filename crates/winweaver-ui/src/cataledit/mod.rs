@@ -19,6 +19,7 @@ use std::path::PathBuf;
 use eframe::egui;
 use indexmap::IndexMap;
 use winweaver_core::admx::CatalogFile;
+use winweaver_core::catalog::search::SearchIndex;
 use winweaver_core::catalog::{Group, ROOT_POLICIES, Rule};
 use winweaver_core::i18n::{GroupText, RuleText};
 
@@ -87,6 +88,11 @@ pub struct EditorDoc {
     pub lang: String,
     pub languages: Vec<(String, String)>,
     pub draft: ww::DraftState,
+    /// The search of the tree, and its index with what it was made of: the language, the count
+    /// of the changes of the file and its count of rules.
+    pub search: crate::Search,
+    pub changes: u64,
+    index: Option<((String, u64, usize), SearchIndex)>,
 }
 
 /// The languages a translation can be written in: the ones of the interface but English, and the
@@ -215,7 +221,33 @@ impl EditorDoc {
             lang,
             languages,
             draft,
+            search: crate::Search::default(),
+            changes: 0,
+            index: None,
         }
+    }
+
+    /// The rules of the file that hold every word of the search and the groups above them; an
+    /// index of the file is made again after a change.
+    fn filter(&mut self) -> Option<catalogview::Filter> {
+        let words = self.search.words();
+        if words.is_empty() {
+            return None;
+        }
+        let lang = crate::i18n::current();
+        let key = (lang.clone(), self.changes, self.file.rules.len());
+        if self.index.as_ref().is_none_or(|(k, _)| *k != key) {
+            self.index = Some((key, self.file.search_index(&lang)));
+        }
+        let (rules, groups) = match &self.index {
+            Some((_, index)) => catalogview::matches(&self.file, index, &words),
+            None => Default::default(),
+        };
+        Some(catalogview::Filter {
+            words: true,
+            rules,
+            groups,
+        })
     }
 
     pub fn title(&self) -> String {
@@ -289,6 +321,7 @@ impl EditorDoc {
         match result {
             Ok(()) => {
                 self.dirty = true;
+                self.changes += 1;
                 self.error = None;
                 // The form starts again from the file, as the check left it.
                 let key = match (&self.form, &self.group_form) {
@@ -341,6 +374,7 @@ impl EditorDoc {
         }
         match self.file.rename_group(&old, &new) {
             Ok(()) => {
+                self.changes += 1;
                 self.dirty |= old != new;
                 if self.expanded.remove(&old) {
                     self.expanded.insert(new.clone());
@@ -357,6 +391,7 @@ impl EditorDoc {
         let new = self.new_file_id.trim().to_owned();
         match self.file.rename_id(&new) {
             Ok(pairs) => {
+                self.changes += 1;
                 self.dirty |= self.file.id != self.saved_id || !pairs.is_empty();
                 self.note_renames(&pairs);
                 self.expanded = self.file.groups.iter().map(|g| g.id.clone()).collect();
@@ -374,6 +409,7 @@ impl EditorDoc {
     fn note_renames(&mut self, pairs: &[(String, String)]) {
         for (old, new) in pairs {
             self.dirty = true;
+            self.changes += 1;
             match self.renamed.iter_mut().find(|(_, n)| n == old) {
                 Some(pair) => pair.1.clone_from(new),
                 None => self.renamed.push((old.clone(), new.clone())),
@@ -403,6 +439,7 @@ impl EditorDoc {
         match result {
             Ok(id) => {
                 self.dirty = true;
+                self.changes += 1;
                 self.new_name.clear();
                 self.expanded.insert(group);
                 self.select(&TreeKey::Rule(id));
@@ -423,6 +460,7 @@ impl EditorDoc {
         match self.file.new_group(&parent, &self.new_name) {
             Ok(id) => {
                 self.dirty = true;
+                self.changes += 1;
                 self.new_name.clear();
                 self.expanded.insert(parent);
                 self.select(&TreeKey::Group(id));
@@ -442,6 +480,7 @@ impl EditorDoc {
         match self.file.remove_group(id) {
             Ok(_) => {
                 self.dirty = true;
+                self.changes += 1;
                 self.form = None;
                 self.group_form = None;
                 self.group = parent.filter(|p| self.file.groups.iter().any(|g| g.id == *p));
@@ -455,6 +494,7 @@ impl EditorDoc {
         match self.file.remove_rule(id) {
             Ok(()) => {
                 self.dirty = true;
+                self.changes += 1;
                 self.form = None;
             }
             Err(e) => self.error = Some(e),
@@ -465,14 +505,18 @@ impl EditorDoc {
 /// The tab: the tree on the left, the form on the right.
 pub fn editor_view(ui: &mut egui::Ui, doc: &mut EditorDoc, acts: &mut Vec<Act>) {
     let p = style::palette(ui);
+    let filter = doc.filter();
     widgets::side_panel(ui, "catalog-editor-tree", 360.0, |ui| {
         let mut out = Vec::new();
         let style = catalogview::RowStyle {
             lang: "",
-            filter: None,
+            filter: filter.as_ref(),
             counts: false,
             mute_off: true,
         };
+        if filter.as_ref().is_some_and(|f| f.rules.is_empty()) {
+            ui.weak(tr("Nothing matches the search."));
+        }
         // Every group whose parent is outside the file: under the policies, the installation
         // or the rest.
         let tops: Vec<&Group> = doc

@@ -13,7 +13,8 @@ use winweaver_core::i18n::CatalogTexts;
 
 use crate::ShellAct;
 use crate::i18n::{tr, trf};
-use crate::{Act, CatalogAct, ProfileAct, Search, matches_words, style, tree, widgets};
+use crate::{Act, CatalogAct, ProfileAct, Search, style, tree, widgets};
+use winweaver_core::catalog::search::SearchIndex;
 
 /// An open tab of a catalog.
 pub struct CatalogDoc {
@@ -34,6 +35,8 @@ pub struct CatalogDoc {
     pub reveal: bool,
     /// The selected row follows into view at the next frame.
     pub follow: bool,
+    /// The index of the full search of the file opened without importing it, with its language.
+    pub index: std::cell::RefCell<Option<(String, SearchIndex)>>,
 }
 
 impl CatalogDoc {
@@ -50,6 +53,7 @@ impl CatalogDoc {
             search: Search::default(),
             reveal: false,
             follow: false,
+            index: std::cell::RefCell::default(),
         }
     }
 
@@ -119,13 +123,15 @@ pub(crate) fn rule_translation(
 }
 
 /// The rules that hold every word of the search and the groups above them.
-fn matches(file: &CatalogFile, lang: &str, words: &[String]) -> (HashSet<String>, HashSet<String>) {
+pub(crate) fn matches(
+    file: &CatalogFile,
+    index: &SearchIndex,
+    words: &[String],
+) -> (HashSet<String>, HashSet<String>) {
     let mut rules = HashSet::new();
     let mut groups = HashSet::new();
     for rule in &file.rules {
-        let (title, summary) = rule_texts(file, lang, rule);
-        let hay = format!("{} {} {} {}", rule.id, rule.title, title, summary);
-        if !matches_words(&hay, words) {
+        if !index.matches(&rule.id, words) {
             continue;
         }
         rules.insert(rule.id.clone());
@@ -231,18 +237,35 @@ pub(crate) fn catalog_rows(
 }
 
 /// The tab: the tree on the left, the selected policy on the right.
+#[allow(clippy::too_many_arguments)]
 pub fn catalog_view(
     ui: &mut egui::Ui,
     file: &CatalogFile,
     doc: &CatalogDoc,
     catalog: &winweaver_core::catalog::Catalog,
+    texts: Option<&CatalogTexts>,
     imports: &[CatalogFile],
     settings: &crate::Settings,
     acts: &mut Vec<Act>,
 ) {
     let lang = crate::i18n::current();
     let words = doc.search.words();
-    let (rules, groups) = matches(file, &lang, &words);
+    let (rules, groups) = if words.is_empty() {
+        (HashSet::new(), HashSet::new())
+    } else if doc.file.is_some() {
+        // A file opened without importing it never changes: its index stays while its language
+        // does.
+        let mut cache = doc.index.borrow_mut();
+        if cache.as_ref().is_none_or(|(l, _)| *l != lang) {
+            *cache = Some((lang.clone(), file.search_index(&lang)));
+        }
+        match cache.as_ref() {
+            Some((_, index)) => matches(file, index, &words),
+            None => (HashSet::new(), HashSet::new()),
+        }
+    } else {
+        matches(file, &catalog.search_index(texts), &words)
+    };
     let filter = Filter {
         words: !words.is_empty(),
         rules,

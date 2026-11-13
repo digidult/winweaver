@@ -120,7 +120,10 @@ Kennwörter warten vor dem ersten Speichern auf ein Masterkennwort.
   Fenster zeigt sie nur Symbole, und zwar in der Navigationszeile.
 - **Navigationszeile**: Zurück und Vorwärts bewegen sich durch die Elemente, die Sie ausgewählt haben; die
   Pfadleiste zeigt, wo Sie sich befinden, und springt zu jeder Ebene; Lesezeichen markiert die Position;
-  Suchen filtert die Struktur während der Eingabe und merkt sich, wonach Sie gesucht haben.
+  Suchen filtert die Struktur während der Eingabe und merkt sich, wonach Sie gesucht haben. Die Suche
+  findet eine Regel über jeden ihrer Texte, auf Englisch und in der Sprache der Oberfläche, über ihre
+  Registrierungsschlüssel in jeder Form (`HKLM\...` oder `HKEY_LOCAL_MACHINE\...`), Wertnamen und Werte
+  und über die Werte, die das Profil ihr gibt; die anderen Tabs durchsuchen alles, was sie zeigen.
 - **Struktur und Detailbereich**: links die Struktur, rechts das ausgewählte Element. Die Beschreibung wird
   mit Ctrl+D eingeklappt. Die Regeln einer ausgewählten Gruppe zeigen am Ende ihrer Zeilen einen Schalter.
 - **Links**: jede Regel, Gruppe, jeder Katalog, jede Profildatei und jeder Registrierungsschlüssel, den

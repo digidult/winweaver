@@ -114,7 +114,10 @@ sandi utama sebelum penyimpanan pertama.
   bilah ini hanya menampilkan ikon, di baris navigasi.
 - **Baris navigasi**: Kembali dan Maju berpindah di antara item yang telah Anda pilih; jalur navigasi
   menunjukkan posisi Anda dan dapat melompat ke tingkat mana pun; Penanda menandai posisi; Cari memfilter
-  pohon saat Anda mengetik dan mengingat apa yang pernah Anda cari.
+  pohon saat Anda mengetik dan mengingat apa yang pernah Anda cari. Pencarian menemukan aturan lewat teks
+  apa pun miliknya, dalam bahasa Inggris dan bahasa antarmuka, lewat kunci registrinya dalam bentuk apa
+  pun (`HKLM\...` atau `HKEY_LOCAL_MACHINE\...`), nama nilai dan nilai, serta lewat nilai yang diberikan
+  profil; tab lain mencari di semua yang ditampilkannya.
 - **Pohon dan panel detail**: pohon di sebelah kiri, item yang dipilih di sebelah kanan. Deskripsi
   diciutkan dengan Ctrl+D. Aturan dari grup yang dipilih menampilkan tombol alih di ujung barisnya.
 - **Tautan**: setiap aturan, grup, katalog, file profil, dan kunci registri yang disebut tampilan

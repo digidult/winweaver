@@ -210,28 +210,6 @@ fn ptitle<'a>(texts: Option<&'a CatalogTexts>, rule: &'a Rule, name: &'a str) ->
     }
 }
 
-/// Whether a rule matches every word of the search.
-pub(crate) fn matches(texts: Option<&CatalogTexts>, rule: &Rule, words: &[String]) -> bool {
-    if words.is_empty() {
-        return true;
-    }
-    let mut hay = format!(
-        "{} {} {} {} {}",
-        rule.id,
-        rule.title,
-        rule.summary,
-        rule.tags.join(" "),
-        rtitle(texts, rule)
-    );
-    hay.push(' ');
-    hay.push_str(rsummary(texts, rule));
-    for tag in texts.map_or(&[][..], |t| t.rule_tags(rule)) {
-        hay.push(' ');
-        hay.push_str(tag);
-    }
-    matches_words(&hay, words)
-}
-
 /// A small on and off switch.
 fn switch(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
     let height = ui.spacing().interact_size.y * 0.75;

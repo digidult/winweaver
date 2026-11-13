@@ -272,6 +272,15 @@ change, read the section of the part it touches.
   `Settings::desc_sections` gives the parts of the description open at first (the id of a part holds the
   setting, so a change shows at once).
 
+- The full search (`catalog::search`): `SearchIndex` holds the text of every rule in lower case (its
+  fields, its translation, the titles of its groups, what its actions name, a key in the forms of
+  `registry::key_forms`). `Catalog::search_index` makes it at the first search in a language and keeps it
+  until another language is asked; a merged catalog is a new `Catalog` with a new index, so the index of a
+  profile, a diff, the bookmarks and an import follows the imports. A catalog file opened without
+  importing it keeps its index in its tab (`CatalogFile::search_index`, by language), a comparison the
+  indexes of both files, the editor one made again after a change (`EditorDoc::changes`). A rule of a
+  profile matches when every word is in its index text or in its choice (`ProfileDoc::choice_text`); the
+  MCP tool `search_rules` reads the English index.
 - The editor of a catalog (`Doc::CatalogEdit`, the folder `cataledit/`: `mod.rs` the document, the
   forms and Apply; `rule.rs`, `param.rs`, `action.rs`, `group.rs`, `texts.rs` the parts of the forms):
   Edit in the bar of a catalog tab (`Act::EditCatalog`, an import or the file of the tab) or New catalog

@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::ShellAct;
+use winweaver_core::catalog::search::SearchIndex;
 
 /// The key of a row of the profile tree: what it selects and, for a rule, the group it is drawn
 /// under, since a policy of two imports shows in both trees.
@@ -13,6 +14,7 @@ pub(crate) fn tree_rows(
     rows: &mut Vec<tree::Row<Key>>,
     catalog: &Catalog,
     texts: Option<&CatalogTexts>,
+    index: &SearchIndex,
     doc: &ProfileDoc,
     words: &[String],
     gid: &str,
@@ -24,7 +26,7 @@ pub(crate) fn tree_rows(
     };
     let rules = catalog.rules_under(gid);
     let filtered = !words.is_empty() || doc.only_on;
-    if filtered && !rules.iter().any(|r| doc.shows(texts, r, words)) {
+    if filtered && !rules.iter().any(|r| doc.shows(index, r, words)) {
         return;
     }
     let total = rules.len();
@@ -74,6 +76,7 @@ pub(crate) fn tree_rows(
             rows,
             catalog,
             texts,
+            index,
             doc,
             words,
             &child.id,
@@ -83,7 +86,7 @@ pub(crate) fn tree_rows(
     }
     let group_selected = matches!(&doc.sel, Sel::Group(g) if g == gid);
     for rule in catalog.rules_in(gid) {
-        if !doc.shows(texts, rule, words) {
+        if !doc.shows(index, rule, words) {
             continue;
         }
         let linked = linked_rule(doc, rule).is_some();
@@ -129,7 +132,10 @@ pub(crate) fn unknown_rows(rows: &mut Vec<tree::Row<Key>>, doc: &ProfileDoc, wor
     let unknown = &doc.profile.unknown;
     let shown: Vec<(&String, &Value)> = unknown
         .iter()
-        .filter(|(id, choice)| matches_words(id, words) && (!doc.only_on || unknown_on(choice)))
+        .filter(|(id, choice)| {
+            let hay = format!("{id} {choice}");
+            matches_words(&hay, words) && (!doc.only_on || unknown_on(choice))
+        })
         .collect();
     if unknown.is_empty() || shown.is_empty() {
         return;
@@ -181,9 +187,12 @@ pub fn tree_view(
     acts: &mut Vec<Act>,
 ) {
     let words = search.words();
+    let index = catalog.search_index(texts);
     let mut rows = Vec::new();
     for root in catalog.child_groups(None) {
-        tree_rows(&mut rows, catalog, texts, doc, &words, &root.id, 0, inline);
+        tree_rows(
+            &mut rows, catalog, texts, &index, doc, &words, &root.id, 0, inline,
+        );
     }
     if show_unknown {
         unknown_rows(&mut rows, doc, &words);

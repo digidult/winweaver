@@ -203,10 +203,11 @@ fn search_text(line: &Line) -> String {
     match line {
         Line::Blank => String::new(),
         Line::Comment(t) | Line::Other(t) => t.to_lowercase(),
-        Line::Key { path, .. } => path.to_lowercase(),
+        Line::Key { path, .. } => registry::key_forms(path).to_lowercase(),
         Line::Value { name, data } => {
             let shown = data.as_ref().map(Data::display).unwrap_or_default();
-            format!("{name} {shown}").to_lowercase()
+            let kind = data.as_ref().map(Data::type_name).unwrap_or_default();
+            format!("{name} {shown} {kind}").to_lowercase()
         }
     }
 }

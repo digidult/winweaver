@@ -3,10 +3,12 @@
 pub mod check;
 pub mod embedded;
 pub mod model;
+pub mod search;
 pub mod values;
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 pub use model::{
     Action, EnumValue, Group, GroupsFile, Level, Lines, ListNames, Param, Phase, Pick, RegKind,
@@ -80,7 +82,13 @@ pub struct Catalog {
     rule_index: HashMap<String, usize>,
     /// Rules shown in a group of another tree too: (the group, the rule).
     aliases: Vec<(String, String)>,
+    /// The index of the full search in the language it was last asked in, made once per catalog
+    /// and language.
+    search: Arc<Mutex<Option<IndexOf>>>,
 }
+
+/// The index of the full search of a catalog with the code of its language.
+type IndexOf = (String, Arc<search::SearchIndex>);
 
 impl Catalog {
     /// Builds a catalog and checks that every reference (parent, group, requires, conflicts)
@@ -150,6 +158,7 @@ impl Catalog {
             group_index,
             rule_index,
             aliases: Vec::new(),
+            search: Arc::default(),
         };
         for root in TREE_ROOTS {
             if catalog.group(root).is_none() {
@@ -167,6 +176,25 @@ impl Catalog {
             }
         }
         Ok(catalog)
+    }
+
+    /// The index of the full search of the catalog in the language of a translation (`None`
+    /// for English): made at the first search in a language and kept until another language is
+    /// asked; a catalog changed is a new catalog with an index of its own.
+    pub fn search_index(
+        &self,
+        texts: Option<&crate::i18n::CatalogTexts>,
+    ) -> Arc<search::SearchIndex> {
+        let code = texts.map_or("en", |t| t.code.as_str());
+        let mut cache = self.search.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some((c, index)) = cache.as_ref()
+            && c == code
+        {
+            return index.clone();
+        }
+        let index = Arc::new(search::SearchIndex::new(self, texts));
+        *cache = Some((code.to_owned(), index.clone()));
+        index
     }
 
     /// The catalog embedded in the executable.

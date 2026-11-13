@@ -109,9 +109,11 @@ password before the first save.
   built into the program, so it stays with `winweaver.exe` moved alone.
 - **Command bar**: New, Open, Save, Check, Build, This PC, Compare. In a narrow window it shows icons
   only, in the navigation row.
-- **Navigation row**: Back and Forward move through the items you selected; the breadcrumb shows
-  where you are and jumps to any level; Bookmark marks the position; Search filters the tree as
-  you type and remembers what you searched.
+- **Navigation row**: Back and Forward move through the items you selected; the breadcrumb shows where you
+  are and jumps to any level; Bookmark marks the position; Search filters the tree as you type and
+  remembers what you searched. The search finds a rule by any of its texts, in English and in the language
+  of the interface, by its registry keys in any form (`HKLM\...` or `HKEY_LOCAL_MACHINE\...`), value names
+  and values, and by the values the profile gives it; the other tabs search everything they show.
 - **Tree and detail panel**: the tree on the left, the selected item on the right. The description
   folds with Ctrl+D. The rules of a selected group show a switch at the end of their rows.
 - **Links**: every rule, group, catalog, profile file and registry key a view names leads to it: the

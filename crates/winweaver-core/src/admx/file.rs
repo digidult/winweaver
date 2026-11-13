@@ -8,6 +8,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::catalog::search::SearchIndex;
 use crate::catalog::{
     Action, Catalog, Group, Level, Param, Phase, ROOT_POLICIES, Rule, TREE_ROOTS, check, embedded,
 };
@@ -734,6 +735,36 @@ impl CatalogFile {
         }
         self.texts
             .retain(|_, l| !l.groups.is_empty() || !l.rules.is_empty());
+    }
+
+    /// The index of the full search of the rules of the file in a language: their fields, the
+    /// titles of their groups and their texts in the language.
+    pub fn search_index(&self, lang: &str) -> SearchIndex {
+        let texts = self.texts.get(lang);
+        let groups = |rule: &Rule| {
+            let mut out = Vec::new();
+            let mut next = Some(rule.group.as_str());
+            let mut steps = 0;
+            while let Some(id) = next {
+                let Some(g) = self.groups.iter().find(|g| g.id == id) else {
+                    break;
+                };
+                out.push(g.title.clone());
+                let own = texts.and_then(|t| t.groups.get(id));
+                if let Some(t) = own.and_then(|t| t.title.as_deref()) {
+                    out.push(t.to_owned());
+                }
+                steps += 1;
+                if steps > self.groups.len() {
+                    break;
+                }
+                next = g.parent.as_deref();
+            }
+            out
+        };
+        SearchIndex::of_rules(&self.rules, groups, |rule| {
+            texts.and_then(|t| t.rules.get(&rule.id))
+        })
     }
 
     /// The translation of the file into a language, in the form of the translations of the

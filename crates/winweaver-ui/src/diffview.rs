@@ -162,9 +162,11 @@ fn shown<'a>(catalog: &'a Catalog, texts: Option<&CatalogTexts>, doc: &DiffDoc) 
     let words = doc.search.words();
     let mut items = items(catalog, texts, &doc.diff);
     if !words.is_empty() {
+        let index = catalog.search_index(texts);
         items.retain(|item| {
+            let rule = item.rule.map_or("", |r| index.text(&r.id));
             let hay = format!(
-                "{} {} {} {} {} {}",
+                "{} {} {} {} {} {}\n{rule}",
                 item.key,
                 item.title,
                 item.group,

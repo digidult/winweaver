@@ -112,9 +112,12 @@ ana parola bekler.
   böylece yalnızca `winweaver.exe` taşınsa da lisans onunla kalır.
 - **Komut çubuğu**: Yeni, Aç, Kaydet, Denetle, Oluştur, Bu bilgisayar, Karşılaştır. Dar bir pencerede
   yalnızca simgeleri gösterir ve bunlar gezinti satırına taşınır.
-- **Gezinti satırı**: Geri ve İleri, seçtiğiniz öğeler arasında gezinir; içerik haritası nerede
-  olduğunuzu gösterir ve herhangi bir düzeye atlar; Yer işareti konumu işaretler; Arama, siz yazdıkça
-  ağacı filtreler ve aradıklarınızı hatırlar.
+- **Gezinti satırı**: Geri ve İleri, seçtiğiniz öğeler arasında gezinir; içerik haritası nerede olduğunuzu
+  gösterir ve herhangi bir düzeye atlar; Yer işareti konumu işaretler; Arama, siz yazdıkça ağacı filtreler
+  ve aradıklarınızı hatırlar. Arama bir kuralı İngilizce ve arayüz dilindeki herhangi bir metniyle,
+  herhangi bir biçimdeki kayıt defteri anahtarlarıyla (`HKLM\...` ya da `HKEY_LOCAL_MACHINE\...`), değer
+  adları ve değerleriyle ve profilin ona verdiği değerlerle bulur; diğer sekmeler gösterdikleri her şeyde
+  arar.
 - **Ağaç ve ayrıntı paneli**: solda ağaç, sağda seçili öğe. Açıklama Ctrl+D ile daraltılır. Seçili bir
   grubun kuralları, satırlarının sonunda bir anahtar gösterir.
 - **Bağlantılar**: bir görünümün adını verdiği her kural, grup, katalog, profil dosyası ve kayıt defteri

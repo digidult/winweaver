@@ -11,6 +11,7 @@ use crate::ShellAct;
 use crate::catalogview::{group_title, rule_texts};
 use crate::i18n::{tr, trf};
 use crate::{Act, CatalogAct, Search, matches_words, style, tree, views, widgets};
+use winweaver_core::catalog::search::SearchIndex;
 
 /// Where a policy of the comparison is: only in the first catalog, only in the second, or in
 /// both with differences.
@@ -72,6 +73,8 @@ pub struct CompareDoc {
     pub reveal: bool,
     /// The selected row follows into view at the next frame.
     pub follow: bool,
+    /// The indexes of the full search of both catalogs, with their language.
+    pub index: std::cell::RefCell<Option<(String, SearchIndex, SearchIndex)>>,
 }
 
 /// The joiner of the titles of a category in its key.
@@ -134,6 +137,7 @@ impl CompareDoc {
             shown: [true; 3],
             reveal: false,
             follow: false,
+            index: std::cell::RefCell::default(),
         }
     }
 
@@ -162,8 +166,20 @@ impl CompareDoc {
         if !self.shown[entry.side.index()] {
             return false;
         }
+        let mut cache = self.index.borrow_mut();
+        if cache.as_ref().is_none_or(|(l, ..)| l != lang) {
+            let (first, second) = (
+                self.first.search_index(lang),
+                self.second.search_index(lang),
+            );
+            *cache = Some((lang.to_owned(), first, second));
+        }
+        let (first, second) = match cache.as_ref() {
+            Some((_, a, b)) => (a.text(&entry.id), b.text(&entry.id)),
+            None => ("", ""),
+        };
         let hay = format!(
-            "{} {} {}",
+            "{} {} {}\n{first}\n{second}",
             entry.id,
             self.policy_title(lang, &entry.id),
             entry.path.join(" ")

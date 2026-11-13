@@ -119,9 +119,13 @@ premier enregistrement.
   intégrée au programme, qui reste donc avec `winweaver.exe` même déplacé seul.
 - **Barre de commandes** : Nouveau, Ouvrir, Enregistrer, Vérifier, Générer, Ce PC, Comparer. Dans une
   fenêtre étroite, elle n'affiche que des icônes, dans la ligne de navigation.
-- **Ligne de navigation** : Précédent et Suivant parcourent les éléments que vous avez sélectionnés ;
-  le fil d'Ariane indique où vous êtes et permet d'atteindre n'importe quel niveau ; Signet marque la
-  position ; Rechercher filtre l'arborescence au fil de la saisie et mémorise vos recherches.
+- **Ligne de navigation** : Précédent et Suivant parcourent les éléments que vous avez sélectionnés ; le
+  fil d'Ariane indique où vous êtes et permet d'atteindre n'importe quel niveau ; Signet marque la
+  position ; Rechercher filtre l'arborescence au fil de la saisie et mémorise vos recherches. La recherche
+  trouve une règle par n'importe lequel de ses textes, en anglais et dans la langue de l'interface, par
+  ses clés de registre sous toute forme (`HKLM\...` ou `HKEY_LOCAL_MACHINE\...`), noms de valeurs et
+  valeurs, et par les valeurs que le profil lui donne ; les autres onglets cherchent dans tout ce qu'ils
+  affichent.
 - **Arborescence et volet de détails** : l'arborescence à gauche, l'élément sélectionné à droite. La
   description se réduit avec Ctrl+D. Les règles d'un groupe sélectionné affichent un commutateur en fin
   de ligne.

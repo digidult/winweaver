@@ -119,7 +119,10 @@ cuentas; sus contraseñas esperan una contraseña maestra antes del primer guard
   estrecha solo muestra iconos, en la fila de navegación.
 - **Fila de navegación**: Atrás y Adelante recorren los elementos que has seleccionado; la ruta de
   navegación muestra dónde estás y salta a cualquier nivel; Marcador marca la posición; Buscar filtra el
-  árbol mientras escribes y recuerda lo que has buscado.
+  árbol mientras escribes y recuerda lo que has buscado. La búsqueda encuentra una regla por cualquiera de
+  sus textos, en inglés y en el idioma de la interfaz, por sus claves del registro en cualquier forma
+  (`HKLM\...` o `HKEY_LOCAL_MACHINE\...`), nombres de valores y valores, y por los valores que le da el
+  perfil; las demás pestañas buscan en todo lo que muestran.
 - **Árbol y panel de detalles**: el árbol a la izquierda y el elemento seleccionado a la derecha. La
   descripción se contrae con Ctrl+D. Las reglas de un grupo seleccionado muestran un conmutador al final de
   sus filas.
