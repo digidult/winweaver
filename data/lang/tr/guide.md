@@ -274,7 +274,10 @@ sorar. **Kaydet** her satırı geri yazar: yorumlar ve programın okumadığı s
 bilgisayar** ile kaydedilen bir dosya kurallarını yorumlarda adlandırır ve böyle bir yorumun oku, kuralı
 profilde gösterir. Dosyanın önce silip sonra yeniden yazdığı bir anahtar (anahtarının değerlerini
 değiştiren bir liste böyle kaydedilir) ağaçta bir kez, yeniden oluşturulduğunu gösteren ↻ işaretiyle ve
-aldığı değerlerle görünür.
+aldığı değerlerle görünür. Bir profilin çubuğundaki **.reg olarak** seçili seçeneği parametreleriyle ya
+da seçili grubun açık seçeneklerini bir sekmede açık kayıt defteri dosyasına veya yenisine kopyalar;
+böylece farklı grupların seçenekleri tek bir dosyaya girer; her kural, bir profilden kaydedilen her
+kayıt defteri dosyasında olduğu gibi, katalogdaki başlığını ve açıklamasını yorumlarda alır.
 
 Bir Grup İlkesi dosyası (`Registry.pol`) da kendi sekmesinde açılır: bu Windows'un bilgisayar ve
 kullanıcı dosyaları (**Menü, Grup İlkesi**; profil, katalog ve kayıt defteri çubuğu) ya da herhangi bir

@@ -297,7 +297,11 @@ d'abord. **Enregistrer** réécrit chaque ligne : les commentaires et les lignes
 pas restent à leur place. Un fichier enregistré depuis **Ce PC** nomme ses règles dans des commentaires,
 et la flèche d'un tel commentaire montre la règle dans le profil. Une clé que le fichier supprime puis
 écrit de nouveau (une liste qui remplace les valeurs de sa clé est enregistrée ainsi) apparaît une fois
-dans l'arbre, marquée ↻ comme recréée, avec les valeurs qu'elle reçoit.
+dans l'arbre, marquée ↻ comme recréée, avec les valeurs qu'elle reçoit. **En .reg** dans la barre d'un
+profil copie l'option sélectionnée avec ses paramètres, ou les options activées du groupe sélectionné,
+dans un fichier de registre ouvert dans un onglet ou dans un nouveau, de sorte que des options de
+groupes différents vont dans un seul fichier ; chaque règle reçoit son titre et sa description du
+catalogue en commentaires, comme dans tout fichier de registre enregistré depuis un profil.
 
 Un fichier de stratégie de groupe (`Registry.pol`) s'ouvre aussi dans son propre onglet : les fichiers de
 l'ordinateur et des utilisateurs de ce Windows (**Menu, Stratégie de groupe** ; la barre d'un profil, d'un

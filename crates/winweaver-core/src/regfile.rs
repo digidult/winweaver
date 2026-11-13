@@ -388,9 +388,34 @@ impl RegFile {
     /// and the skipped ones as comments. The default user profile is the hive the apply script
     /// loads at `HKEY_USERS\UnattendDefault`, which the comment at the top tells how to load.
     pub fn from_plan(plan: &Plan, title: &str) -> Self {
+        Self::from_plan_described(plan, title, &|_| None)
+    }
+
+    /// The registry steps of a plan as a registry file, as `from_plan`, with the title and the
+    /// description `describe` gives a rule in comments under its id.
+    pub fn from_plan_described(plan: &Plan, title: &str, describe: &Describe<'_>) -> Self {
         let mut file = Self::default();
         file.note(title);
         file.note(&format!("Made by WinWeaver {}", crate::BUILD));
+        file.add_plan(plan, describe);
+        file.lines.push(Line::Blank);
+        file
+    }
+
+    /// The lines of the rules of a plan, as a registry file holds them after its header: every
+    /// rule with its id, title and description in comments and its keys and values, the steps a
+    /// registry file cannot hold and the rules left out as comments; how to load the hive of the
+    /// default user profile when the plan writes it. What a rule copied into an open registry
+    /// file adds to it.
+    pub fn plan_lines(plan: &Plan, describe: &Describe<'_>) -> Vec<Line> {
+        let mut file = Self::default();
+        file.add_plan(plan, describe);
+        file.lines
+    }
+
+    /// Adds the lines of the rules of a plan.
+    fn add_plan(&mut self, plan: &Plan, describe: &Describe<'_>) {
+        let file = self;
         if plan.uses_default_user() {
             for text in DEFAULT_USER {
                 file.note(text);
@@ -403,6 +428,9 @@ impl RegFile {
                 rule = step.rule.clone();
                 file.lines.push(Line::Blank);
                 file.note(&format!("Rule {rule}"));
+                if let Some((title, summary)) = describe(&rule) {
+                    file.describe(&title, &summary);
+                }
                 key = None;
             }
             let value = |name: &str, data: Option<Data>| Line::Value {
@@ -493,8 +521,30 @@ impl RegFile {
                 file.note(&format!("  {rule}: {why}"));
             }
         }
-        file.lines.push(Line::Blank);
-        file
+    }
+
+    /// The title and the description of a rule as comments: the title on a line, the description
+    /// in lines of at most 100 characters, a paragraph after another.
+    fn describe(&mut self, title: &str, summary: &str) {
+        if !title.trim().is_empty() {
+            self.note(title.trim());
+        }
+        for paragraph in summary.lines().map(str::trim).filter(|p| !p.is_empty()) {
+            let mut line = String::new();
+            for word in paragraph.split_whitespace() {
+                if !line.is_empty() && line.chars().count() + 1 + word.chars().count() > 100 {
+                    self.note(&line);
+                    line.clear();
+                }
+                if !line.is_empty() {
+                    line.push(' ');
+                }
+                line.push_str(word);
+            }
+            if !line.is_empty() {
+                self.note(&line);
+            }
+        }
     }
 
     /// Adds a comment line, whatever the text holds: a line break (or another control
@@ -526,6 +576,9 @@ impl RegFile {
 }
 
 /// How to bring the default user profile into a registry file of a plan.
+/// The title and the description of a rule by its id, for the comments of a registry file.
+pub type Describe<'a> = dyn Fn(&str) -> Option<(String, String)> + 'a;
+
 const DEFAULT_USER: [&str; 3] = [
     "The values of HKEY_USERS\\UnattendDefault go to the default user profile: load it first with",
     "  reg load HKU\\UnattendDefault C:\\Users\\Default\\NTUSER.DAT",

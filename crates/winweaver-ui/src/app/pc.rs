@@ -345,7 +345,8 @@ impl WinWeaver {
         revert: bool,
         stem: &str,
     ) {
-        let reg = export::reg(&self.catalog, profile, ids, revert, stem);
+        let texts = texts_for(&self.texts, &i18n::current());
+        let reg = export::reg(&self.catalog, texts, profile, ids, revert, stem);
         if reg.values == 0 {
             let text = tr("Nothing for a registry file: the selection writes no registry value");
             shell.status = text.to_owned();

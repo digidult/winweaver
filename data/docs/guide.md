@@ -266,7 +266,11 @@ are in the bar, and a deletion asks first. **Save** writes every line back: the 
 the program does not read stay where they were. A file saved from **This PC** names its rules in
 comments, and the arrow of such a comment shows the rule in the profile. A key the file deletes and
 then writes again (a list that replaces the values of its key is saved so) shows once in the tree,
-marked ↻ as made anew, with the values it gets.
+marked ↻ as made anew, with the values it gets. **To .reg** in the bar of a profile copies the
+selected option with its parameters, or the options of the selected group that are on, into a
+registry file open in a tab or into a new one, so options of different groups go into one file;
+every rule comes with its title and description from the catalog in comments, as in every registry
+file saved from a profile.
 
 A Group Policy file (`Registry.pol`) opens in a tab of its own as well: the files of the computer and of
 the users of this Windows (**Menu, Group Policy**; the bar of a profile, a catalog and the registry) or

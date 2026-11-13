@@ -291,7 +291,11 @@ las reglas de los catálogos cargados que escriben la clave o el valor seleccion
 donde estaban. Un archivo guardado desde **Este equipo** nombra sus reglas en comentarios, y la flecha de
 ese comentario muestra la regla en el perfil. Una clave que el archivo elimina y luego vuelve a escribir
 (así se guarda una lista que reemplaza los valores de su clave) aparece una vez en el árbol, marcada con
-↻ como creada de nuevo, con los valores que recibe.
+↻ como creada de nuevo, con los valores que recibe. **A .reg** en la barra de un perfil copia la opción
+seleccionada con sus parámetros, o las opciones activadas del grupo seleccionado, en un archivo de
+registro abierto en una pestaña o en uno nuevo, así que opciones de grupos distintos van a un solo
+archivo; cada regla lleva su título y su descripción del catálogo en comentarios, como en todo archivo de
+registro guardado desde un perfil.
 
 Un archivo de directiva de grupo (`Registry.pol`) también se abre en su propia pestaña: los archivos del
 equipo y de los usuarios de este Windows (**Menú, Directiva de grupo**; la barra de un perfil, un catálogo

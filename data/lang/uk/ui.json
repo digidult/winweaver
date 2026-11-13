@@ -1117,5 +1117,11 @@
   "An import {id} is there already": "Імпорт {id} уже є",
   "Id": "Id",
   "Renames it in the whole catalog: the rules that name it and its translations follow": "Перейменовує в усьому каталозі: правила, що його називають, і його переклади теж змінюються",
-  "Saved; the renamed options changed in {n} open profiles: save them too": "Збережено; перейменовані опції змінено у {n} відкритих профілях: збережіть і їх"
+  "Saved; the renamed options changed in {n} open profiles: save them too": "Збережено; перейменовані опції змінено у {n} відкритих профілях: збережіть і їх",
+  "A new registry file": "Новий файл реєстру",
+  "No registry file is open.": "Жоден файл реєстру не відкрито.",
+  "Select an option or a group first.": "Спершу виберіть опцію або групу.",
+  "The selected option with its parameters, or the options of the group that are on, with their descriptions:": "Вибрана опція з її параметрами або увімкнені опції групи, з описами:",
+  "{n} values of {rules} options added to {file}": "{n} значень із {rules} опцій додано до {file}",
+  "{n} values of {rules} options in a new registry file": "{n} значень із {rules} опцій у новому файлі реєстру"
 }

@@ -358,3 +358,67 @@ fn a_registry_file_opens_in_its_tab_and_keeps_its_comments() {
     assert!(!text.contains("WinWeaver]"), "{text}");
     std::fs::remove_dir_all(&dir).unwrap();
 }
+
+/// The selected option of a profile goes into a new registry file and into one open in a tab,
+/// with its id, its title and its description in comments, after the lines the file had.
+#[test]
+fn an_option_of_a_profile_goes_into_a_registry_file() {
+    use winweaver_core::catalog::Action;
+    use winweaver_core::regfile::{Line, RegFile};
+    let catalog = Catalog::embedded().unwrap();
+    let rule = catalog
+        .rules()
+        .iter()
+        .find(|r| {
+            r.params.is_empty()
+                && !r.actions.is_empty()
+                && r.actions
+                    .iter()
+                    .all(|a| matches!(a, Action::Reg { path, .. } if path.starts_with("HKLM:")))
+        })
+        .unwrap()
+        .clone();
+    let mut app = Window::new(WinWeaver::new(catalog, Vec::new()), Settings::default());
+    app.apply(vec![Act::File(FileAct::NewProfile(None))]);
+    let profile_tab = app.shell.active;
+    if let Some(Doc::Profile(doc)) = app.shell.docs.get_mut(profile_tab) {
+        doc.sel = Sel::Rule(rule.id.clone());
+    }
+    app.apply(vec![Act::RegFile(RegFileAct::AddRules(None))]);
+    let Some(Doc::RegFile(new)) = app.shell.docs.get(app.shell.active) else {
+        panic!("a new registry file: {}", app.shell.status);
+    };
+    assert!(new.dirty);
+    let comment = |file: &RegFile, text: &str| {
+        file.lines
+            .iter()
+            .any(|l| matches!(l, Line::Comment(c) if c == &format!("; {text}")))
+    };
+    assert!(comment(&new.file, &format!("Rule {}", rule.id)));
+    assert!(comment(&new.file, &rule.title), "the title of {}", rule.id);
+    // A registry file open in a tab gets the lines after its own.
+    let open =
+        RegFile::parse("Windows Registry Editor Version 5.00\r\n\r\n; mine\r\n\r\n").unwrap();
+    let before = open.lines.len();
+    let doc = regfileview::RegFileDoc::new(open, std::path::PathBuf::from("mine.reg"));
+    app.shell.open_tab(Doc::RegFile(Box::new(doc)));
+    let target = app.shell.active;
+    app.shell.active = profile_tab;
+    app.apply(vec![Act::RegFile(RegFileAct::AddRules(Some(target)))]);
+    assert_eq!(app.shell.active, target, "the file comes to the front");
+    let Some(Doc::RegFile(d)) = app.shell.docs.get(target) else {
+        panic!("the registry file");
+    };
+    assert!(d.dirty);
+    assert!(d.file.lines.len() > before);
+    assert!(comment(&d.file, "mine"), "its own lines stay");
+    assert!(comment(&d.file, &rule.title));
+    let values = d
+        .file
+        .lines
+        .iter()
+        .filter(|l| matches!(l, Line::Value { .. }))
+        .count();
+    assert!(values > 0);
+    assert!(matches!(d.file.lines.last(), Some(Line::Blank)));
+}

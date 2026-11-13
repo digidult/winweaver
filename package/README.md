@@ -25,13 +25,16 @@ keeps its settings and files in that folder. The guide opens at the first start 
   return them to the Windows defaults as administrator with a backup of every value, and undo a change from its backup.
   The script steps of the rules (.NET 3.5 and drivers from the media, services, accounts) run natively too.
   For other PCs it saves stand-alone scripts that apply, revert, audit and undo; their audit report opens as a profile.
-  The registry values of an apply or a return also go to a registry file (`.reg`) for regedit.
+  The registry values of an apply or a return also go to a registry file (`.reg`) for regedit, every rule with
+  its title and description in comments; To .reg copies the selected option into a registry file open in a tab.
 - **Policy templates**: import the ADMX templates of this Windows, of a folder, of a zip archive (as Chrome, Edge and
   Firefox ship them, read without unpacking) or a catalog file, also zipped; their policies
   become rules. Only the imports checked in the settings are loaded. Options of a profile whose catalog is not
   loaded stay in the profile under Unknown options and are left out of the build; Load catalogs finds and loads
   their imports. Compare sets two catalogs side by side; Edit opens a catalog in an editor, New catalog starts
-  one of your own. An `.admx` or `.wwcatalog` file also opens as a tab without importing.
+  one of your own: its policies have every feature of the built-in ones (the answer file, scripts, every kind of
+  action), their translations and ids are edited there, and a catalog with code asks before its import. An
+  `.admx` or `.wwcatalog` file also opens as a tab without importing.
 - **Group Policy files** (`Registry.pol`): the files of this Windows or any `.pol` file in a tab, their entries
   edited, the root chosen for a file outside Group Policy, the entries of another `.pol` or `.reg` file added, the
   file saved as `.reg`. **Catalogs compared** in a tab, their report saved as Markdown; policies and groups copied
@@ -109,7 +112,7 @@ move or go to another PC; a file elsewhere keeps its full path.
 ## Keys
 
 F1 guide, F7 check, F9 build, Ctrl+N new profile, Ctrl+O open, Ctrl+S save, Ctrl+Shift+S save as, Ctrl+, settings,
-Ctrl+F search in the tab, Ctrl+B bookmark,
+Ctrl+F search in the tab (a rule by any of its texts, registry keys, value names and values), Ctrl+B bookmark,
 Ctrl+D description, Ctrl+W close the tab, Ctrl+Tab next tab, Ctrl+Shift+PgUp and PgDn move the tab, Alt+Left and
 Alt+Right back and forward. In the tree and the lists: the arrows, Home, End, Page Up and Down, Space to switch, Enter
 to open.

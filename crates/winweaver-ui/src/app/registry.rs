@@ -3,6 +3,81 @@
 use crate::*;
 
 impl WinWeaver {
+    /// Copies the selected option of the profile in front (on, with its parameters), or the
+    /// options in effect of its selected group, into the registry file of the tab `target` or of a
+    /// new tab: every rule with its id, title and description in comments, as a registry file
+    /// saved from a profile has them.
+    pub(crate) fn rules_to_reg_file(
+        &mut self,
+        shell: &mut Shell<WinWeaver>,
+        target: Option<usize>,
+    ) {
+        let Some(Doc::Profile(doc)) = shell.docs.get(shell.active) else {
+            return;
+        };
+        let mut profile = doc.profile.clone();
+        let ids: Vec<String> = match &doc.sel {
+            Sel::Rule(id) => {
+                profile.set_on(id, true);
+                vec![id.clone()]
+            }
+            Sel::Group(g) => self
+                .catalog
+                .rules_under(g)
+                .iter()
+                .filter(|r| doc.resolution.in_effect(&r.id))
+                .map(|r| r.id.clone())
+                .collect(),
+            _ => Vec::new(),
+        };
+        let name = profile.name.clone();
+        let plan = winweaver_core::apply::plan_apply(&self.catalog, &profile, &ids, "reg");
+        let texts = texts_for(&self.texts, &i18n::current());
+        let catalog = &self.catalog;
+        let describe = |id: &str| export::describe(catalog, texts, id);
+        let lines = RegFile::plan_lines(&plan, &describe);
+        let values = lines
+            .iter()
+            .filter(|l| matches!(l, regfile::Line::Value { .. }))
+            .count();
+        if values == 0 {
+            let text = tr("Nothing for a registry file: the selection writes no registry value");
+            shell.status = text.to_owned();
+            return;
+        }
+        let rules = ids.len();
+        match target {
+            Some(i) => {
+                let Some(Doc::RegFile(r)) = shell.docs.get_mut(i) else {
+                    return;
+                };
+                r.add_lines(lines);
+                let file = r
+                    .path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().into_owned())
+                    .unwrap_or_default();
+                shell.active = i;
+                shell.status = trf(
+                    "{n} values of {rules} options added to {file}",
+                    &[("n", &values), ("rules", &rules), ("file", &file)],
+                );
+            }
+            None => {
+                let title = format!("Options of the profile {name}");
+                let file = RegFile::from_plan_described(&plan, &title, &describe);
+                let path = output_dir().join(format!("Options-{}.reg", file_stem(&name)));
+                let mut doc = regfileview::RegFileDoc::new(file, path);
+                doc.dirty = true;
+                shell.open_tab(Doc::RegFile(Box::new(doc)));
+                shell.status = trf(
+                    "{n} values of {rules} options in a new registry file",
+                    &[("n", &values), ("rules", &rules)],
+                );
+            }
+        }
+    }
+
     /// Opens a registry file in a tab of its own, or brings its tab to the front.
     pub(crate) fn open_reg_path(&mut self, shell: &mut Shell<WinWeaver>, path: PathBuf) {
         shell.open_file(
@@ -522,6 +597,7 @@ impl WinWeaver {
                 }
             }
             RegFileAct::Apply(scope) => self.apply_reg_file_to_pc(shell, scope),
+            RegFileAct::AddRules(target) => self.rules_to_reg_file(shell, target),
             RegFileAct::ClearMessages => {
                 if let Some(Doc::RegFile(d)) = shell.docs.get_mut(shell.active) {
                     d.applied.clear();

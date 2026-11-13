@@ -563,7 +563,8 @@ fn export_files(args: &[String], reg: bool) -> Result<(), Stop> {
     let stem = export::file_stem(&path.file_stem().unwrap_or_default().to_string_lossy());
     let dir = winweaver_ui::output_dir();
     if reg {
-        let made = export::reg(&catalog, &profile, &ids, kind == ScriptKind::Revert, &stem);
+        let revert = kind == ScriptKind::Revert;
+        let made = export::reg(&catalog, None, &profile, &ids, revert, &stem);
         if made.values == 0 {
             let text = "nothing for a registry file: the rules write no registry value";
             return Err(failed(text));

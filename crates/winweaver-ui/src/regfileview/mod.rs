@@ -608,6 +608,27 @@ impl RegFileDoc {
         Some((out, text))
     }
 
+    /// Adds lines at the end of the file, before its last empty lines, and selects the first entry
+    /// of them: the rules a profile copies into the file.
+    pub fn add_lines(&mut self, lines: Vec<Line>) {
+        let mut end = self.file.lines.len();
+        while end > 0 && matches!(self.file.lines[end - 1], Line::Blank) {
+            end -= 1;
+        }
+        let first = lines
+            .iter()
+            .position(|l| matches!(l, Line::Key { .. }))
+            .map(|p| end + p);
+        self.file.lines.splice(end..end, lines);
+        if !matches!(self.file.lines.last(), Some(Line::Blank)) {
+            self.file.lines.push(Line::Blank);
+        }
+        self.at = first.or(Some(end));
+        self.line = None;
+        self.dirty = true;
+        self.follow = true;
+    }
+
     /// Removes lines of the file.
     pub fn remove_lines(&mut self, lines: &[usize]) {
         let mut sorted = lines.to_vec();

@@ -469,6 +469,9 @@ pub enum RegFileAct {
     Apply(regfileview::ApplyScope),
     /// Clears the errors of the last apply from the message bar of the tab.
     ClearMessages,
+    /// Copies the selected option of the profile in front, or the options in effect of its
+    /// selected group, into the registry file of a tab (by its index) or a new one.
+    AddRules(Option<usize>),
 }
 
 #[cfg(all(test, feature = "full"))]

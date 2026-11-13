@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use crate::apply;
 use crate::catalog::Catalog;
 use crate::diff::Diff;
+use crate::i18n::CatalogTexts;
 use crate::profile::Profile;
 use crate::regfile::{Line, RegFile};
 use crate::scripts::{self, ScriptPlan};
@@ -186,9 +187,34 @@ pub fn scripts(
     Ok(Scripts { files, done })
 }
 
+/// The title and the description of a rule of the catalog in a language (`None` for English), for
+/// the comments of a registry file.
+pub fn describe(
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    id: &str,
+) -> Option<(String, String)> {
+    let rule = catalog.rule(id)?;
+    Some(match texts {
+        Some(t) => (
+            t.rule_title(rule).to_owned(),
+            t.rule_summary(rule).to_owned(),
+        ),
+        None => (rule.title.clone(), rule.summary.clone()),
+    })
+}
+
 /// The registry file of the apply (or the return, `revert`) of the rules `ids` of a profile; the
-/// steps a registry file cannot hold are comments in it.
-pub fn reg(catalog: &Catalog, profile: &Profile, ids: &[String], revert: bool, stem: &str) -> Reg {
+/// steps a registry file cannot hold are comments in it, and every rule has its title and
+/// description from the catalog in the language of `texts` (English without it).
+pub fn reg(
+    catalog: &Catalog,
+    texts: Option<&CatalogTexts>,
+    profile: &Profile,
+    ids: &[String],
+    revert: bool,
+    stem: &str,
+) -> Reg {
     let name = &profile.name;
     let (plan, title, file_name) = if revert {
         (
@@ -203,7 +229,7 @@ pub fn reg(catalog: &Catalog, profile: &Profile, ids: &[String], revert: bool, s
             format!("Apply-{stem}.reg"),
         )
     };
-    let file = RegFile::from_plan(&plan, &title);
+    let file = RegFile::from_plan_described(&plan, &title, &|id| describe(catalog, texts, id));
     let values = file
         .lines
         .iter()
@@ -311,8 +337,37 @@ mod tests {
             Done::Script(plan) => assert!(plan.applied.contains(&rule)),
             Done::Audit(_) => panic!("an apply"),
         }
-        let reg = reg(&catalog, &profile, &ids, true, "Other");
-        assert_eq!(reg.name, "Revert-Other.reg");
+        let reverted = reg(&catalog, None, &profile, &ids, true, "Other");
+        assert_eq!(reverted.name, "Revert-Other.reg");
+        // Every rule has its title from the catalog under its id, in the language given.
+        let written = catalog
+            .rules()
+            .iter()
+            .find(|r| {
+                r.params.is_empty()
+                    && !r.actions.is_empty()
+                    && r.actions.iter().all(|a| {
+                        matches!(a, crate::catalog::Action::Reg { path, .. } if path.starts_with("HKLM:"))
+                    })
+            })
+            .unwrap();
+        let id = written.id.clone();
+        let mut on = Profile::new("On", catalog.version());
+        on.set_on(&id, true);
+        let ids = vec![id.clone()];
+        let comment = |file: &RegFile, text: &str| {
+            file.lines
+                .iter()
+                .any(|l| matches!(l, Line::Comment(c) if c == &format!("; {text}")))
+        };
+        let english = reg(&catalog, None, &on, &ids, false, "On");
+        assert!(comment(&english.file, &format!("Rule {id}")));
+        assert!(comment(&english.file, &written.title), "the title of {id}");
+        let texts = crate::i18n::CatalogTexts::embedded().unwrap();
+        let uk = texts.iter().find(|t| t.code == "uk").unwrap();
+        let ukrainian = reg(&catalog, Some(uk), &on, &ids, false, "On");
+        let own = uk.rule_title(written);
+        assert!(comment(&ukrainian.file, own), "the Ukrainian title of {id}");
     }
 
     #[test]

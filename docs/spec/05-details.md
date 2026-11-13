@@ -444,6 +444,15 @@ change, read the section of the part it touches.
   Delete asks), Rename (F2) renames the selected value or else the key (`registry::rename_value`;
   `Registry::rename_key` copies and deletes, `NativeRegistry` uses `RegRenameKey`).
 
+- The lines of a plan in a registry file (`RegFile::from_plan_described`, `RegFile::plan_lines`): every
+  rule starts with a blank line and the comment `; Rule <id>` (which the outline turns into a link),
+  then its title and its description in lines of at most 100 characters (`export::describe`: the
+  translation of the interface in the window, English in `--reg`), then its keys and values; the notes
+  of the hive of the default user come before the rules when the plan writes it. `from_plan` is the same
+  without descriptions. To .reg of a profile (`RegFileAct::AddRules`, `WinWeaver::rules_to_reg_file`)
+  plans the selected rule as on with its parameters, or the rules of the selected group in effect, and
+  adds the lines before the last empty lines of the file (`RegFileDoc::add_lines`) or makes a new tab
+  `Options-<profile>.reg` in the output folder, unsaved.
 - Registry files: the outline is a tree of the keys by default (`regfileview::tree_rows`, the folded
   keys in `RegFileDoc::closed`; List and Tree in the command bar set `Extra::regfile_tree`). A key the
   file names in several entries is the last of them in the tree, what the import leaves; a key a

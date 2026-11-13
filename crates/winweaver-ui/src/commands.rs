@@ -55,11 +55,12 @@ pub enum Menu {
     Pol,
     CopyTo,
     PolRoot,
+    ToRegFile,
 }
 
 #[cfg(feature = "full")]
 impl Menu {
-    const ALL: [Menu; 8] = [
+    const ALL: [Menu; 9] = [
         Menu::ThisPc,
         Menu::CompareProfile,
         Menu::Catalogs,
@@ -68,6 +69,7 @@ impl Menu {
         Menu::Pol,
         Menu::CopyTo,
         Menu::PolRoot,
+        Menu::ToRegFile,
     ];
 
     /// The menu by the number of its button.
@@ -89,6 +91,7 @@ impl Menu {
             Menu::Pol => (icons::SCRIPT, tr("Group Policy"), 280.0),
             Menu::CopyTo => (icons::DUPLICATE, tr("Copy to"), 280.0),
             Menu::PolRoot => (icons::REGISTRY, tr("Root"), 300.0),
+            Menu::ToRegFile => (icons::PAGE, tr("To .reg"), 300.0),
         };
         ww::commands::menu(icon, label, width, self as usize)
     }
@@ -199,6 +202,7 @@ impl WinWeaver {
                 Item::Separator,
                 Menu::ThisPc.item(),
                 Menu::CompareProfile.item(),
+                Menu::ToRegFile.item(),
                 Item::Separator,
                 Menu::Catalogs.item(),
                 Menu::Pol.item(),

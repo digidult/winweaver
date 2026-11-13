@@ -279,8 +279,12 @@ passwords when the master password is given, and makes a users file of its accou
 - A `.reg` file opens in a tab (`01-ui.md` section 16) and saves back with every line kept
   (`02-documents.md` section 12); its keys open in the registry tab, and the rules that write them are
   named.
-- This PC saves the apply and the return of a selection as registry files, with a comment naming the rule
-  before its steps and the steps a registry file cannot hold as comments.
+- This PC saves the apply and the return of a selection as registry files, with comments naming the rule
+  before its steps, with its title and its description from the catalog (in the language of the
+  interface; English from the command line), and the steps a registry file cannot hold as comments.
+- To .reg in the command bar of a profile copies the selected option, or the options of the selected
+  group that are on, into a registry file open in a tab or into a new one, with the same comments
+  (`01-ui.md` section 16).
 
 ## 15. Files, folders and the command line
 

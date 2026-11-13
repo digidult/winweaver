@@ -268,7 +268,10 @@ bertanya terlebih dahulu. **Simpan** menulis kembali setiap baris: komentar dan 
 program tetap di tempatnya. File yang disimpan dari **PC Ini** menyebut aturannya dalam komentar, dan
 panah komentar seperti itu menunjukkan aturan di profil. Kunci yang dihapus lalu ditulis lagi oleh file
 (daftar yang mengganti nilai kuncinya disimpan seperti itu) tampil sekali di pohon, ditandai ↻ sebagai
-dibuat ulang, dengan nilai yang diterimanya.
+dibuat ulang, dengan nilai yang diterimanya. **Ke .reg** di bilah profil menyalin opsi yang dipilih
+beserta parameternya, atau opsi grup terpilih yang aktif, ke file registri yang terbuka di tab atau ke
+file baru, sehingga opsi dari grup berbeda masuk ke satu file; setiap aturan mendapat judul dan
+deskripsinya dari katalog dalam komentar, seperti di setiap file registri yang disimpan dari profil.
 
 Berkas Kebijakan Grup (`Registry.pol`) juga terbuka di tabnya sendiri: berkas komputer dan pengguna
 Windows ini (**Menu, Kebijakan Grup**; bilah profil, katalog dan registri) atau berkas `.pol` mana pun.

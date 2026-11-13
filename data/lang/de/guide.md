@@ -291,6 +291,11 @@ nicht liest, bleiben an ihrem Platz. Eine über **Dieser PC** gespeicherte Datei
 Kommentaren, und der Pfeil eines solchen Kommentars zeigt die Regel im Profil. Ein Schlüssel, den die
 Datei löscht und dann wieder schreibt (so wird eine Liste gespeichert, die die Werte ihres Schlüssels
 ersetzt), steht einmal im Baum, mit ↻ als neu angelegt markiert, mit den Werten, die er bekommt.
+**Als .reg** in der Leiste eines Profils kopiert die gewählte Option mit ihren Parametern oder die
+eingeschalteten Optionen der gewählten Gruppe in eine in einem Tab geöffnete Registrierungsdatei oder
+in eine neue, sodass Optionen verschiedener Gruppen in eine Datei kommen; jede Regel bekommt ihren
+Titel und ihre Beschreibung aus dem Katalog als Kommentare, wie in jeder aus einem Profil
+gespeicherten Registrierungsdatei.
 
 Eine Gruppenrichtliniendatei (`Registry.pol`) öffnet sich ebenfalls in einem eigenen Tab: die Dateien des
 Computers und der Benutzer dieses Windows (**Menü, Gruppenrichtlinie**; die Leiste eines Profils, eines

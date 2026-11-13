@@ -242,6 +242,7 @@ impl WinWeaver {
             Menu::RegFileApply => regfile_apply_menu(shell, ui, acts),
             Menu::Pol => pol_menu(ui, acts),
             Menu::CopyTo => copy_to_menu(shell, ui, acts),
+            Menu::ToRegFile => to_reg_menu(shell, ui, acts),
             Menu::PolRoot => pol_root_menu(shell, ui, acts),
         }
     }
@@ -420,6 +421,42 @@ fn copy_to_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>
     ui.separator();
     if menu_entry(ui, icons::NEW, tr("A new catalog"), "", true) {
         acts.push(Act::Catalog(CatalogAct::CopyTo(None)));
+    }
+}
+
+#[cfg(feature = "full")]
+/// Where the selected option of the profile in front, or the options of its selected group, go as
+/// lines of a registry file: a registry file open in a tab, or a new one.
+fn to_reg_menu(shell: &Shell<WinWeaver>, ui: &mut egui::Ui, acts: &mut Vec<Act>) {
+    let selected = matches!(
+        shell.active_doc(),
+        Some(Doc::Profile(p)) if matches!(p.sel, Sel::Rule(_) | Sel::Group(_))
+    );
+    if !selected {
+        ui.weak(tr("Select an option or a group first."));
+        return;
+    }
+    ui.weak(tr("The selected option with its parameters, or the options of the group that are on, with their descriptions:"));
+    let mut files = 0;
+    for (i, doc) in shell.docs.iter().enumerate() {
+        if let Doc::RegFile(r) = doc {
+            files += 1;
+            let name = r
+                .path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            if menu_entry(ui, icons::PAGE, &name, "", true) {
+                acts.push(Act::RegFile(RegFileAct::AddRules(Some(i))));
+            }
+        }
+    }
+    if files == 0 {
+        ui.weak(tr("No registry file is open."));
+    }
+    ui.separator();
+    if menu_entry(ui, icons::NEW, tr("A new registry file"), "", true) {
+        acts.push(Act::RegFile(RegFileAct::AddRules(None)));
     }
 }
 

@@ -1117,5 +1117,11 @@
   "An import {id} is there already": "Un'importazione {id} esiste già",
   "Id": "Id",
   "Renames it in the whole catalog: the rules that name it and its translations follow": "Lo rinomina in tutto il catalogo: le regole che lo nominano e le sue traduzioni seguono",
-  "Saved; the renamed options changed in {n} open profiles: save them too": "Salvato; le opzioni rinominate sono cambiate in {n} profili aperti: salvate anche quelli"
+  "Saved; the renamed options changed in {n} open profiles: save them too": "Salvato; le opzioni rinominate sono cambiate in {n} profili aperti: salvate anche quelli",
+  "A new registry file": "Un nuovo file di registro",
+  "No registry file is open.": "Nessun file di registro è aperto.",
+  "Select an option or a group first.": "Selezionate prima un'opzione o un gruppo.",
+  "The selected option with its parameters, or the options of the group that are on, with their descriptions:": "L'opzione selezionata con i suoi parametri, o le opzioni attive del gruppo, con le loro descrizioni:",
+  "{n} values of {rules} options added to {file}": "{n} valori di {rules} opzioni aggiunti a {file}",
+  "{n} values of {rules} options in a new registry file": "{n} valori di {rules} opzioni in un nuovo file di registro"
 }

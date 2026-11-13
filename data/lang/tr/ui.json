@@ -1117,5 +1117,11 @@
   "An import {id} is there already": "{id} içe aktarımı zaten var",
   "Id": "Kimlik",
   "Renames it in the whole catalog: the rules that name it and its translations follow": "Tüm katalogda yeniden adlandırır: onu anan kurallar ve çevirileri de izler",
-  "Saved; the renamed options changed in {n} open profiles: save them too": "Kaydedildi; yeniden adlandırılan seçenekler {n} açık profilde değişti: onları da kaydedin"
+  "Saved; the renamed options changed in {n} open profiles: save them too": "Kaydedildi; yeniden adlandırılan seçenekler {n} açık profilde değişti: onları da kaydedin",
+  "A new registry file": "Yeni bir kayıt defteri dosyası",
+  "No registry file is open.": "Açık bir kayıt defteri dosyası yok.",
+  "Select an option or a group first.": "Önce bir seçenek ya da grup seçin.",
+  "The selected option with its parameters, or the options of the group that are on, with their descriptions:": "Seçili seçenek parametreleriyle ya da grubun açık seçenekleri, açıklamalarıyla:",
+  "{n} values of {rules} options added to {file}": "{rules} seçeneğin {n} değeri {file} dosyasına eklendi",
+  "{n} values of {rules} options in a new registry file": "{rules} seçeneğin {n} değeri yeni bir kayıt defteri dosyasında"
 }

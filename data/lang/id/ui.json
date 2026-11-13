@@ -1117,5 +1117,11 @@
   "An import {id} is there already": "Impor {id} sudah ada",
   "Id": "Id",
   "Renames it in the whole catalog: the rules that name it and its translations follow": "Mengganti namanya di seluruh katalog: aturan yang menyebutnya dan terjemahannya ikut berubah",
-  "Saved; the renamed options changed in {n} open profiles: save them too": "Tersimpan; opsi yang diganti namanya berubah di {n} profil terbuka: simpan juga profil itu"
+  "Saved; the renamed options changed in {n} open profiles: save them too": "Tersimpan; opsi yang diganti namanya berubah di {n} profil terbuka: simpan juga profil itu",
+  "A new registry file": "File registri baru",
+  "No registry file is open.": "Tidak ada file registri yang terbuka.",
+  "Select an option or a group first.": "Pilih dulu sebuah opsi atau grup.",
+  "The selected option with its parameters, or the options of the group that are on, with their descriptions:": "Opsi yang dipilih dengan parameternya, atau opsi grup yang aktif, beserta deskripsinya:",
+  "{n} values of {rules} options added to {file}": "{n} nilai dari {rules} opsi ditambahkan ke {file}",
+  "{n} values of {rules} options in a new registry file": "{n} nilai dari {rules} opsi dalam file registri baru"
 }
