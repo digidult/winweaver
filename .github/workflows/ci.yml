@@ -97,6 +97,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ci-files
+          retention-days: 3
           path: |
             Cargo.lock
             fmt.patch
@@ -147,6 +148,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: screenshots
+          retention-days: 7
           path: target/screenshots
           if-no-files-found: ignore
       - name: Catalog check
@@ -257,16 +259,19 @@ jobs:
         if: env.PACKAGE == 'true'
         with:
           name: presentation-${{ env.VERSION }}
+          retention-days: 7
           path: dist-presentation/
       - uses: actions/upload-artifact@v4
         if: env.PACKAGE == 'true'
         with:
           name: WinWeaver-${{ env.VERSION }}
+          retention-days: 7
           path: dist/
       - uses: actions/upload-artifact@v4
         if: env.PACKAGE == 'true'
         with:
           name: wwlite-${{ env.VERSION }}
+          retention-days: 7
           path: dist-wwlite/
 
   build-web:
@@ -331,6 +336,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: wwlite-web-${{ env.VERSION }}
+          retention-days: 7
           path: dist-web/
 
   release:

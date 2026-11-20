@@ -870,6 +870,9 @@ change, read the section of the part it touches.
   in a few minutes; the Windows job runs the tests of the window, the tests that change Windows and
   the archives.
 
+- Every upload of `ci.yml` sets `retention-days` (7, `ci-files` 3): the artifacts count against the 0.5 GB
+  a month of Actions storage of the free plan for every hour they are kept, and the 90 days of the
+  repository kept a week of runs of the mirror (about 740 MB) above it in October 2026.
 - The workflow gives the token of a run the right to read the repository and nothing more
   (`permissions: contents: read` at its top); the job `release` alone asks for `contents: write`.
   wasm-bindgen is unpacked in CI only when its SHA-256 is the one its release names (the file
