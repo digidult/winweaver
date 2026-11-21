@@ -8,8 +8,8 @@ name: CI
 # parts of its task alone: checks=false leaves out the Linux job (its checks ran on the computer of the
 # developer), package=false the release builds, the archives and their checks (tests and screenshots
 # alone), windows=false the Windows job, web=false the browser edition. The jobs after the Linux one
-# run side by side. W# comes from supakov/ww, a private git dependency of its branch main, read with
-# the token of the secret WW_TOKEN.
+# run side by side. W# comes from supakov/ww, a public git dependency of its branch main, at its last
+# commit.
 on:
   push:
     tags: ["v*"]
@@ -59,13 +59,10 @@ jobs:
           components: rustfmt, clippy
           targets: x86_64-pc-windows-gnu, wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-      - name: W# of the branch main (supakov/ww, a private git dependency)
-        # The token of the secret WW_TOKEN reads supakov/ww (AGENTS.md, section 5); cargo fetches it
-        # with git, and takes the last commit of main.
+      - name: W# of the branch main (supakov/ww, a public git dependency)
+        # cargo fetches it with git and takes the last commit of main (AGENTS.md, section 5).
         shell: bash
-        run: |
-          git config --global url."https://x-access-token:${{ secrets.WW_TOKEN }}@github.com/supakov/ww".insteadOf "https://github.com/supakov/ww"
-          cargo update -p ww -p ww-base
+        run: cargo update -p ww -p ww-base
       - name: Format check
         id: fmt
         run: cargo fmt --all --check
@@ -122,13 +119,10 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - name: W# of the branch main (supakov/ww, a private git dependency)
-        # The token of the secret WW_TOKEN reads supakov/ww (AGENTS.md, section 5); cargo fetches it
-        # with git, and takes the last commit of main.
+      - name: W# of the branch main (supakov/ww, a public git dependency)
+        # cargo fetches it with git and takes the last commit of main (AGENTS.md, section 5).
         shell: bash
-        run: |
-          git config --global url."https://x-access-token:${{ secrets.WW_TOKEN }}@github.com/supakov/ww".insteadOf "https://github.com/supakov/ww"
-          cargo update -p ww -p ww-base
+        run: cargo update -p ww -p ww-base
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
       - name: Tests
@@ -285,13 +279,10 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
-      - name: W# of the branch main (supakov/ww, a private git dependency)
-        # The token of the secret WW_TOKEN reads supakov/ww (AGENTS.md, section 5); cargo fetches it
-        # with git, and takes the last commit of main.
+      - name: W# of the branch main (supakov/ww, a public git dependency)
+        # cargo fetches it with git and takes the last commit of main (AGENTS.md, section 5).
         shell: bash
-        run: |
-          git config --global url."https://x-access-token:${{ secrets.WW_TOKEN }}@github.com/supakov/ww".insteadOf "https://github.com/supakov/ww"
-          cargo update -p ww -p ww-base
+        run: cargo update -p ww -p ww-base
       - name: Release build (wasm32)
         run: |
           cargo build --release -p wwlite --no-default-features --features glow --target wasm32-unknown-unknown
