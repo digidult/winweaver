@@ -2,9 +2,9 @@
 
 For agents and developers: where things are, what to read first, which rules apply, where the
 information that changes is.
-Updated with every change of structure, commands or task status. Last update: 20.11.2026.
+Updated with every change of structure, commands or task status. Last update: 21.11.2026.
 
-Repository: https://github.com/digidult/winweaver (private, branch `main`). Commits are authored by
+Repository: https://github.com/digidult/winweaver (public since 21.11.2026, branch `main`). Commits are authored by
 `digidult <271767060+digidult@users.noreply.github.com>` (a local `git config` of this clone, never global).
 A commit made by an agent ends with the line `Co-Authored-By: <agent model> <noreply@anthropic.com>`.
 
@@ -103,9 +103,9 @@ Every folder and module: `docs/spec/04-architecture.md`, section 10. Next to the
     files and logs, which stay English). A new rule needs its texts in
     every `data/catalog/lang/<code>.json` (`translations_cover_every_rule`); `package/lang/be/ui.json` may
     lag (English fills the gaps).
-11. Versions: `version` of the workspace `Cargo.toml` (0.1.57 on 20.11.2026) grows with every
-    pull request that reaches `main`. An agent changes the third number alone (0.1.45 to 0.1.46);
-    the first and the second change only on the word of the customer. Every build
+11. Versions: `version` of the workspace `Cargo.toml` (0.1.57 on 21.11.2026) changes only when the
+    customer asks for it (from 21.11.2026); a pull request leaves it as it is, and its changes go into
+    the notes of the version in `docs/releases/`. Every build
     names its commit: `winweaver_core::BUILD` is `<version>+<12 digits of the commit>` (`build.rs` of the core,
     `WINWEAVER_COMMIT` set by CI), shown by `--version`, About, the logs, the MCP server, the answer file
     and the scripts.
@@ -193,17 +193,13 @@ CI builds only releases:
 3. Pushes, pull requests and merges run nothing. A newer run of the same branch cancels the older one.
 4. The Linux job comes first and the other jobs only after it, side by side: the Windows job
    (`build-windows`) and the job `build-web` (Ubuntu: wwlite for the browser, the artifact
-   `wwlite-web-<version>`). A release waits for both. A whole run took 41 minutes on 04.11.2026,
-   on the runner of 2 processors a private repository gets. Every job fetches W# (supakov/ww, a
-   private repository) with the token of the secret `WW_TOKEN` (a token that reads supakov/ww; the
-   mirror needs it too) and takes the last commit of `main`.
-5. The mirror: when the Actions minutes of digidult/winweaver are used up, its run fails in a few
-   seconds with the annotation "The job was not started because recent account payments have failed
-   or your spending limit needs to be increased". Then the same commit runs in the private mirror
-   https://github.com/stanislavperec-ua/winweaver (the remote `mirror` of the clone): `git push mirror
-   <branch>`, then `gh workflow run ci.yml --ref <branch> -R stanislavperec-ua/winweaver`; tags never go
-   there. The pull requests and the merges stay in digidult/winweaver. The minutes reset on the first
-   day of a month, or the customer sets a budget.
+   `wwlite-web-<version>`). A release waits for both. A whole run took 41 minutes on 04.11.2026.
+   Every job fetches W# (supakov/ww, public since 21.11.2026) without a token and takes the last
+   commit of `main`.
+5. The repositories are public since 21.11.2026, so the runs of their standard runners use no paid
+   minutes, and the mirror https://github.com/stanislavperec-ua/winweaver (the remote `mirror` of the
+   clone), where runs went in October 2026 while the minutes of digidult were used up, is not needed:
+   every run is a run of digidult/winweaver.
 6. Storage: the free plan of an account holds 0.5 GB of Actions storage a month, the artifacts counted
    for every hour they are kept. A run keeps its artifacts 7 days (`ci-files` 3, `retention-days` of
    every upload), enough to take the archives and the screenshots of an acceptance; the release job
@@ -223,9 +219,11 @@ winweaver --mcp stdio --mode read
 winweaver --mcp http --port 8765 --token <token> --mode edit --read-pc
 ```
 
-A release: set `version` in the workspace `Cargo.toml`, add `docs/releases/v<version>.md`, merge, then tag
-only when the customer asks for the release of that version in so many words; the job `release`
-publishes the zips with the notes:
+A release: the customer names the version (set in the workspace `Cargo.toml` by a pull request with
+`docs/releases/v<version>.md`), then a tag only when the customer asks for that release in so many
+words; the job `release` publishes the zips with the notes `docs/releases/<tag>.md` (the notes GitHub
+makes without the file). A tag with a hyphen (`v0.1.57-alpha`, `v0.2.0-beta.1`) is a pre-release of the
+version of `Cargo.toml`, which names the archives:
 
 ```bash
 git tag -a v0.3.0 -m "WinWeaver 0.3.0"

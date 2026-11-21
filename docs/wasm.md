@@ -204,7 +204,8 @@ as GitHub Pages serves it with gzip. A build gives the real number.
 ## 5. Plan
 
 Decisions of the customer first: the embedded list of languages for the web; the host (Pages of a
-private repository needs GitHub Pro, Team or Enterprise, and the site is public [15]; else the CI
+private repository needs GitHub Pro, Team or Enterprise, and the site is public [15]; the repository is
+public since 21.11.2026; else the CI
 artifact on any static server, since a page opened from `file://` cannot load its wasm module in
 Chromium); whether drafts of profiles with passwords may stay in `localStorage`.
 

@@ -168,8 +168,8 @@ echo wasm-bindgen %WBG_V%: %WBG%
 
 rem ---- W# of the branch main -------------------------------------------------------------------
 
-rem W# is a git dependency of the branch main of supakov/ww (private: cargo fetches it with git and
-rem its credentials); its last commit comes into Cargo.lock before every build.
+rem W# is a git dependency of the branch main of supakov/ww (public: cargo fetches it with git);
+rem its last commit comes into Cargo.lock before every build.
 call :step "W# of the branch main"
 call "%CARGO_CMD%" update -p ww -p ww-base
 if errorlevel 1 goto failed

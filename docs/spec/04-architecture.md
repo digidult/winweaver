@@ -224,7 +224,7 @@ The repository, folder by folder and module by module.
 │                          in dist/, on demand the checks, the screenshots, the slides (section 5)
 ├── .github/workflows/ci.yml  CI: fmt (a patch artifact), clippy (wwlite for wasm32 too) and tests of
 │                          winweaver-core on Linux; clippy, tests, the catalog check, the release build and
-│                          the zip on Windows (W# of main first, read with the token WW_TOKEN); the
+│                          the zip on Windows (W# of main first, a public git dependency); the
 │                          job build-web (wwlite for the browser, the artifact
 │                          wwlite-web-<version>); a tag v<version> publishes a release with
 │                          docs/releases/v<version>.md
