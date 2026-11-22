@@ -228,6 +228,8 @@ The repository, folder by folder and module by module.
 │                          job build-web (wwlite for the browser, the artifact
 │                          wwlite-web-<version>); a tag v<version> publishes a release with
 │                          docs/releases/v<version>.md
+├── .github/workflows/site.yml  the site on Vercel: winweaverweb of a release onto the branch vercel
+├── vercel.json            Vercel deploys the branch vercel alone (the site), never main
 ├── crates/
 │   ├── winweaver-core/    pure Rust, compiles everywhere: catalog/ (model, embedded data, checks, values: the
 │   │                      texts, numbers and items of the values of actions, read once), jsonfile (strict

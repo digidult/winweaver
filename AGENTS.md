@@ -200,7 +200,13 @@ CI builds only releases:
    minutes, and the mirror https://github.com/stanislavperec-ua/winweaver (the remote `mirror` of the
    clone), where runs went in October 2026 while the minutes of digidult were used up, is not needed:
    every run is a run of digidult/winweaver.
-6. Storage: the free plan of an account holds 0.5 GB of Actions storage a month, the artifacts counted
+6. The site: WinWeaver in a browser at https://winweaver.vercel.app. Vercel builds nothing (it has no
+   Rust): the workflow `site.yml` puts the archive `winweaverweb` of a release, unpacked, on the branch
+   `vercel` (one commit, pushed again by every run), the production branch of the Vercel project, which
+   serves it as it is (`crates/winweaverweb/web/vercel.json`). It runs after CI has published a release,
+   and on demand: `gh workflow run site.yml` (the newest release, pre-releases too) or `-f tag=<tag>`.
+   The `vercel.json` of the root keeps Vercel from deploying any other branch.
+7. Storage: the free plan of an account holds 0.5 GB of Actions storage a month, the artifacts counted
    for every hour they are kept. A run keeps its artifacts 7 days (`ci-files` 3, `retention-days` of
    every upload), enough to take the archives and the screenshots of an acceptance; the release job
    takes them in its own run and publishes the zips to the Releases, which do not count. A whole run

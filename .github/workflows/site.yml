@@ -1,0 +1,71 @@
+name: Site
+
+# WinWeaver in a browser on Vercel (winweaver.vercel.app). Vercel builds no Rust, so it builds nothing:
+# the archive winweaverweb of a release goes, unpacked, to the branch vercel, the production branch of
+# the Vercel project, which serves its files as they are (crates/winweaverweb/web/vercel.json). It runs
+# after CI has published a release (a tag v*), and on demand for the release of a tag (empty: the
+# newest, pre-releases too). The branch holds one commit, made again by every run.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The release whose winweaverweb goes to the site (empty: the newest, pre-releases too)"
+        type: string
+        default: ""
+
+# The token of a run pushes the branch vercel.
+permissions:
+  contents: write
+
+concurrency:
+  group: site
+  cancel-in-progress: true
+
+jobs:
+  site:
+    name: The browser edition to the branch vercel
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       startsWith(github.event.workflow_run.head_branch, 'v'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: crates/winweaverweb/web
+      - name: The page of the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          if [ -z "$TAG" ]; then
+            TAG="$(gh release list -R "$GITHUB_REPOSITORY" --limit 1 --json tagName -q '.[0].tagName')"
+          fi
+          gh release download "$TAG" -R "$GITHUB_REPOSITORY" --pattern 'winweaverweb-*.zip' --dir release
+          unzip -q release/winweaverweb-*.zip -d unpacked
+          # The page with its module at the root of the site, the edition in one file beside it, the
+          # list of the files of the folder the page reads (none yet) and the configuration of Vercel.
+          mkdir site
+          cp -r unpacked/winweaverweb/files/. site/
+          cp unpacked/winweaverweb/winweaverweb.html site/winweaverweb.html
+          python3 crates/winweaverweb/web/manifest.py site
+          cp crates/winweaverweb/web/vercel.json site/vercel.json
+          ls -l site
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+      - name: The branch vercel
+        working-directory: site
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init -q -b vercel
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "WinWeaver in a browser, $TAG"
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" vercel

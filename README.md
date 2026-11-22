@@ -15,7 +15,8 @@ translations, drafts and the session, with the program bringing its documents an
 system of its plugins live in [supakov/ww](https://github.com/supakov/ww), a git dependency of this
 repository. The light edition `wwlite` (`wwlite-<version>.zip`)
 keeps the profile editor and the build of `autounattend.xml` alone, and runs in a browser too
-(`wwlite-web-<version>.zip`, a page for any static web server).
+(`wwlite-web-<version>.zip`, a page for any static web server). WinWeaver itself runs in a browser at
+https://winweaver.vercel.app, the page of the newest release, without the parts that need Windows.
 
 Licence: [MIT](LICENSE).
 

@@ -870,6 +870,15 @@ change, read the section of the part it touches.
   in a few minutes; the Windows job runs the tests of the window, the tests that change Windows and
   the archives.
 
+- The site (`site.yml`, https://winweaver.vercel.app): after a run of CI started by a tag push ends in
+  success (`workflow_run`, the head branch is the tag) or on demand, it downloads `winweaverweb-*.zip`
+  of the release, puts `files/` at the root of the site with `winweaverweb.html` beside it, writes
+  `files.json` with `manifest.py` and adds `crates/winweaverweb/web/vercel.json` (the preset Other with
+  `framework: null`, no install and no build, `.wasm` as `application/wasm`, every file revalidated),
+  then pushes the folder as the one commit of the orphan branch `vercel` with the token of the run.
+  The Vercel project has `vercel` as its production branch and no root directory; the `vercel.json` of
+  the root of `main` (`git.deploymentEnabled`: `**` false, `vercel` true) keeps every other branch from
+  a deployment of Vercel, which would fail without Rust.
 - Every upload of `ci.yml` sets `retention-days` (7, `ci-files` 3): the artifacts count against the 0.5 GB
   a month of Actions storage of the free plan for every hour they are kept, and the 90 days of the
   repository kept a week of runs of the mirror (about 740 MB) above it in October 2026.

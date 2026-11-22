@@ -60,7 +60,8 @@ with the feature `full` of winweaver-ui, without its features `pc` (This PC, the
 the native apply, the accounts of a PC) and `mcp` (the MCP server), for `wasm32-unknown-unknown`
 with `glow`. CI (the job `build-web`) and `build-all.cmd` make `winweaverweb-<version>`:
 `winweaverweb.html` (one file, `single.py`), `files/` (the page for a server), its `README.md` and
-`manifest.py`.
+`manifest.py`. The page of the newest release is the site https://winweaver.vercel.app (the workflow
+`site.yml` and the branch `vercel`, `docs/spec/05-details.md` section 8).
 
 - **Every file of WinWeaver**: Open and a drop take a profile, an answer file, a diff, bookmarks,
   a catalog file, a zip archive of policy templates (`admx::read_archive_bytes`), a users file, a
