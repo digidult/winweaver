@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WinWeaver</title>
+  <!-- The page of WinWeaver in a browser (winweaverweb): the canvas the window draws in, a text while
+       the module loads, and the glue wasm-bindgen writes (winweaverweb.js, winweaverweb_bg.wasm) next to
+       this file. Serve the folder over http; a page opened from file:// cannot load the module. -->
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #f3f4f6; }
+    canvas { display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%; outline: none; }
+    #loading_text { position: absolute; top: 40%; width: 100%; text-align: center; font-family: system-ui, sans-serif; color: #444; }
+  </style>
+</head>
+<body>
+  <canvas id="winweaverweb"></canvas>
+  <p id="loading_text">WinWeaver is loading...</p>
+  <script>
+    // The keys of WinWeaver a browser would also act on (caret browsing, find, a bookmark):
+    // the page keeps them, so only the program answers. Letters by their place (code), so a
+    // Cyrillic layout keeps them too; the keys the browser keeps for itself are never asked.
+    window.addEventListener("keydown", (e) => {
+      const plain = !e.ctrlKey && !e.altKey && !e.metaKey;
+      const ctrl = e.ctrlKey && !e.altKey && !e.metaKey;
+      const alt = e.altKey && !e.ctrlKey && !e.metaKey;
+      if ((plain && ["F2", "F3", "F7", "F9"].includes(e.key))
+        || (ctrl && ["KeyF", "KeyD", "KeyB"].includes(e.code))
+        || (alt && ["KeyN", "KeyW", "KeyI", "PageUp", "PageDown"].includes(e.code))) {
+        e.preventDefault();
+      }
+    }, true);
+  </script>
+  <script type="module">
+    import init from "./winweaverweb.js";
+    init().catch((e) => {
+      const p = document.getElementById("loading_text");
+      if (p) { p.textContent = "winweaverweb did not start: " + e; }
+      console.error(e);
+    });
+  </script>
+</body>
+</html>
